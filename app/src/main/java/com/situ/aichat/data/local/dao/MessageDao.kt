@@ -242,6 +242,14 @@ interface MessageDao {
     suspend fun updateEmbedding(uuid: String, embedding: ByteArray)
 
     /**
+     * 图片理解摘要回填（[com.situ.aichat.chat.image.ImageMemorySummaryService]）。
+     * 单列 UPDATE 而非整行 @Update：摘要是**异步**生成的，期间同一条消息可能已被别处改过
+     *（送达回执 / 嵌入回填），整行 copy 回写会用陈旧快照覆盖它们（钱路审计的老教训）。
+     */
+    @Query("UPDATE messages SET mediaMemorySummary = :summary WHERE messageUUID = :uuid")
+    suspend fun updateMediaMemorySummary(uuid: String, summary: String)
+
+    /**
      * Vector-memory startup self-heal (14.5a; 1:1 iOS `VectorMemoryService.clearAllEmbeddings`): wipe ALL
      * stored embeddings so the backfill pass re-embeds them with the new model. Called only when the embedding
      * model signature changed (a different ONNX asset baked into a future build) — old vectors live in an

@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
+import com.situ.aichat.data.local.dao.ConversationDao
 import com.situ.aichat.data.local.dao.ScheduleDao
 import com.situ.aichat.data.local.dao.UserProfileDao
 import com.situ.aichat.data.local.entity.CharacterEntity
@@ -11,6 +12,7 @@ import com.situ.aichat.data.local.entity.MomentPostEntity
 import com.situ.aichat.data.model.ApiFunction
 import com.situ.aichat.data.model.MomentTriggerType
 import com.situ.aichat.data.model.dynamicInterests
+import com.situ.aichat.data.model.imagePaths
 import com.situ.aichat.data.model.personalitySpectrum
 import com.situ.aichat.data.remote.llm.ApiConfigValues
 import com.situ.aichat.data.remote.llm.ChatMessageDto
@@ -28,6 +30,10 @@ import com.situ.aichat.pet.growthStage
 import com.situ.aichat.pet.neglectPhase
 import com.situ.aichat.pet.species
 import com.situ.aichat.prompt.GeneratedContentValidator
+import com.situ.aichat.data.local.entity.OfflineMeetingMemoryEntity
+import com.situ.aichat.offline.MeetingMomentEchoPlanner
+import com.situ.aichat.offline.OfflineAfterglowService
+import com.situ.aichat.offline.OfflineMeetingGate
 import com.situ.aichat.prompt.PromptStrings
 import com.situ.aichat.prompt.memory.MemoryService
 import com.situ.aichat.prompt.schedule.CharacterSleepChecker
@@ -37,6 +43,7 @@ import com.situ.aichat.work.MomentCatchUpWorker
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
 import java.time.Duration
+import java.time.Instant
 import java.time.ZoneId
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
@@ -75,6 +82,7 @@ class MomentGenerationService @Inject constructor(
     private val petRepository: PetRepository,
     private val newPostNotifier: MomentNewPostNotifier,
     private val userProfileDao: UserProfileDao,
+    private val conversationDao: ConversationDao,
 ) {
 
     private data class GateState(val running: Boolean, val startedAt: Long)
@@ -123,6 +131,9 @@ class MomentGenerationService @Inject constructor(
                     // 4h 冷却（最近一条帖，含软删，对齐 iOS lastPost）
                     val lastTs = momentRepo.lastPostTimestampForCharacter(character.uuid)
                     if (MomentPostGuards.isCooldownActive(lastTs, nowMillis)) continue
+                    // 见面门（卷一 B1）：角色正在与用户线下见面 → 本轮不发帖（人在对面还刷朋友圈=当场穿帮）。
+                    // 与睡眠门并列；**不记欠帖**（见面不是「错过发帖窗口」，下一轮周期照常评估）。
+                    if (OfflineMeetingGate.characterInMeeting(conversationDao, character.uuid)) continue
                     // 睡眠 → 记欠帖（当天有效），醒后聊天补发（7.2.5）
                     if (sleepChecker.isSleeping(character.uuid, settings.scheduleSystemEnabled, nowMillis, zone)) {
                         MomentOwedPostStore.markOwedPost(context, character.uuid, nowMillis)
@@ -250,7 +261,11 @@ class MomentGenerationService @Inject constructor(
         val recentOwnContents = momentRepo.recentPostsForCharacter(character.uuid, RECENT_POSTS)
             .joinToString("\n") { it.content }
         val recentUserPosts = momentRepo.recentUserPosts(RECENT_POSTS).map {
-            RecentUserPost(DateFormatters.momentTimeDescription(it.timestamp, nowMillis, zone), it.content)
+            RecentUserPost(
+                timeDescription = DateFormatters.momentTimeDescription(it.timestamp, nowMillis, zone),
+                content = it.content,
+                hasImages = it.imagePaths.isNotEmpty(),
+            )
         }
         val hotInterests = MomentPostPromptBuilder.hotInterestNames(character.dynamicInterests)
         val traits = MomentPostPromptBuilder.personalityTraits(strings, character.personalitySpectrum.values)
@@ -309,6 +324,63 @@ class MomentGenerationService @Inject constructor(
         // 动态额外抬最短长度门：提示词要求 50-150 字，<MIN_POST_CONTENT_LENGTH 字基本可断定是聊天腔
         // 短回复/罐头输出而非动态（2026-07-07「嗯嗯，刚看到消息。」入库教训）；丢弃后下一轮周期重试。
         return result.takeIf { GeneratedContentValidator.isLikelyValid(it, MIN_POST_CONTENT_LENGTH) }
+    }
+
+    /**
+     * 见面后「朋友圈呼应帖」（卷二 §5④·图纸 §3.3）：生成正文 → 落库 → 排延迟互动 → 按设置推「新动态」通知。
+     *
+     * 走**既有** [generatePostContent] 装配（提示词基座 / 人称 / 忌口零碰），只往现成的 inspiration 灵感槽喂一段
+     * 见面素材（[MeetingMomentEchoContent.inspiration]·M3 逐字锁定）；帖身份 = `AUTO_DRAFT` + [MeetingMomentEchoPlanner.echoPostUuid]
+     * 确定性 uuid（不加枚举值；worker 重投 / 重装恢复经 upsert 恒至多一条）。见面日期口径与余温共用
+     * [OfflineAfterglowService.anchorLabel]。
+     *
+     * J9 内容防线：[MeetingMomentEchoContent.violation] 不过 → 把原因拼进灵感尾部**重写一次**，仍不过返回 null 静默放弃
+     * （宁缺毋滥·与朋友圈自动发帖「宁可不发绝不发错」同源）。
+     */
+    internal suspend fun generateEchoPost(
+        character: CharacterEntity,
+        config: ApiConfigValues,
+        row: OfflineMeetingMemoryEntity,
+        nowMillis: Long,
+        zone: ZoneId,
+    ): MomentPostEntity? {
+        val settings = settingsRepo.getAppSettings()
+        val strings = MomentPromptStrings.from(PromptStrings(context))
+        val nickname = userProfileDao.get()?.nickname.orEmpty().trim()
+        val callName = nickname.takeIf { it.isNotEmpty() && it != MeetingMomentEchoContent.USER_LITERAL }
+            ?: MeetingMomentEchoContent.FALLBACK_CALL_NAME
+        val dayLabel = OfflineAfterglowService.anchorLabel(row.startedAtMillis, Instant.ofEpochMilli(nowMillis), zone)
+        val base = MeetingMomentEchoContent.inspiration(dayLabel, callName, row.location, row.summary)
+        var feedback = ""
+        repeat(2) {
+            val content = generatePostContent(
+                character, config, settings.scheduleSystemEnabled, settings.petSystemEnabled,
+                strings, nowMillis, zone, giftInspiration = base + feedback,
+            )
+            val violation = MeetingMomentEchoContent.violation(content, nickname)
+            if (content != null && violation == null) {
+                val post = MomentPostEntity(
+                    uuid = MeetingMomentEchoPlanner.echoPostUuid(row.sessionId),
+                    content = content,
+                    timestamp = nowMillis,
+                    authorTypeRaw = "character",
+                    characterUuid = character.uuid,
+                    isAutoGenerated = true,
+                    triggerTypeRaw = MomentTriggerType.AUTO_DRAFT.raw,
+                    relatedGiftId = null,
+                )
+                momentRepo.upsert(post)
+                Log.d(TAG, "见面呼应帖已生成：${character.name} -> ${post.uuid}")
+                interactionService.scheduleGeneratedPostInteraction(post.uuid)
+                if (settings.momentNewPostNotificationEnabled) {
+                    newPostNotifier.notifyNewPosts(listOf(post), nowMillis, zone)
+                }
+                return post
+            }
+            Log.i(TAG, "见面呼应帖不合格（$violation）session=${row.sessionId}")
+            feedback = "（上一条不合格：$violation。请重写。）"
+        }
+        return null
     }
 
     /** 今日日程素材段（硬编码中文）。日程系统关 / 无今日日程 → ""。 */

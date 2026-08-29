@@ -10,13 +10,16 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.net.URI
 import java.util.concurrent.TimeUnit
 
 /**
  * Model-catalog providers — faithful port of iOS `Services/ModelCatalog/`.
  * Each provider fetches the available models for one provider type (GET /models or native
  * variants). Stateless; OkHttp client + Json passed in (mirrors iOS passing the URLSession).
+ */
+/**
+ * 每家一个实现，**一律实时拉取**（无任何写死的模型清单——用户 2026-08-28 拍板：
+ * 当前这个 API 里有什么模型就拉什么）。拉不到就抛 [ModelCatalogException]，由上层如实报错。
  */
 interface ModelCatalogProvider {
     suspend fun fetchModels(config: ApiConfigValues, client: OkHttpClient, json: Json): List<APIModelOption>
@@ -80,26 +83,31 @@ object ModelCatalogHttp {
 }
 
 /**
- * Normalize a base URL into an OpenAI-style `/v1/models` endpoint (shared by OpenAICompatible /
- * DeepSeek / MiniMax). Mirrors the identical `buildModelsURL` in those three iOS providers.
+ * OpenAI 风格 `/v1/models` 端点（OpenAICompatible / DeepSeek / MiniMax 共用）。
+ * 归一规则见 [ModelCatalogUrl]（全服务商单源）。
  */
-internal fun openAiStyleModelsUrl(baseUrl: String): String {
-    val uri = runCatching { URI(baseUrl.trim()) }.getOrNull() ?: throw ModelCatalogException.InvalidUrl
-    val scheme = uri.scheme ?: throw ModelCatalogException.InvalidUrl
-    val authority = uri.authority ?: throw ModelCatalogException.InvalidUrl
-    val segs = (uri.path ?: "").split("/").filter { it.isNotEmpty() }.toMutableList()
-    val lower = "/" + segs.joinToString("/").lowercase()
-    when {
-        lower.endsWith("/v1/models") -> Unit
-        lower.endsWith("/v1/chat/completions") -> {
-            repeat(2) { segs.removeAt(segs.lastIndex) } // drop completions, chat
-            segs.add("models")
-        }
-        lower.endsWith("/v1") -> segs.add("models")
-        else -> { segs.add("v1"); segs.add("models") }
-    }
-    return "$scheme://$authority/" + segs.joinToString("/")
+internal fun openAiStyleModelsUrl(baseUrl: String): String =
+    ModelCatalogUrl.modelsUrl(baseUrl, defaultVersion = listOf("v1"))
+
+/**
+ * 错误文案脱敏 —— 上屏前必经。服务端错误体会回显请求头（可能含 Authorization），Gemini 的 key 又拼在
+ * query 里、OkHttp 异常消息常带完整 URL；两者叠加会把密钥渲染进用户可见提示。这里：
+ * ① 整段抹掉出现的 apiKey；② 抹掉 URL 里的 key/token/api_key 等敏感 query 值；③ 抹掉 Bearer 串。
+ * 原始异常全文只进 Logcat。
+ */
+internal fun sanitizeCatalogErrorMessage(raw: String?, apiKey: String): String {
+    var s = raw?.trim().orEmpty()
+    if (s.isEmpty()) return "拉取模型列表失败"
+    val key = apiKey.trim()
+    if (key.length >= 8) s = s.replace(key, REDACTED)
+    s = SENSITIVE_QUERY.replace(s) { m -> "${m.groupValues[1]}=$REDACTED" }
+    s = BEARER.replace(s, "Bearer $REDACTED")
+    return s.take(200)
 }
+
+private const val REDACTED = "***"
+private val SENSITIVE_QUERY = Regex("(?i)\\b(key|api[_-]?key|token|access[_-]?token)=([^&\\s\"']+)")
+private val BEARER = Regex("(?i)Bearer\\s+[A-Za-z0-9._\\-]{8,}")
 
 // Shared OpenAI-style /models response ({data:[{id, owned_by}]}) — used by
 // OpenAICompatible / DeepSeek / MiniMax providers.

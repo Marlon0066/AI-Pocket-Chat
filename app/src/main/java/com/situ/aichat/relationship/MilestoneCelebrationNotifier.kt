@@ -7,8 +7,10 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.situ.aichat.R
+import com.situ.aichat.data.local.dao.ConversationDao
 import com.situ.aichat.data.repository.SettingsRepository
 import com.situ.aichat.notification.Notifier
+import com.situ.aichat.offline.OfflineMeetingGate
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -26,6 +28,7 @@ import javax.inject.Singleton
 class MilestoneCelebrationNotifier @Inject constructor(
     @ApplicationContext private val context: Context,
     private val settingsRepo: SettingsRepository,
+    private val conversationDao: ConversationDao,
 ) {
 
     /** P1-44 单槽：最后一条系统庆祝通知归属的角色 uuid。设备本地通知栏状态，自管 prefs 不进应用备份
@@ -42,6 +45,12 @@ class MilestoneCelebrationNotifier @Inject constructor(
         if (!settingsRepo.getAppSettings().milestoneNotificationEnabled) return
         if (!milestoneCelebrationDecision(historyNames, newName, triggerTypeRaw)) {
             Log.i(TAG, "抑制（phase-only/已见/降级/未知名/非自动）：$characterName → $newName")
+            return
+        }
+        // 见面闸（卷一 B5·J7）：该角色正在与用户线下见面 → 本次庆祝跳过（Toast 盖不住恒暗剧场、
+        // 通知同样穿帮）。**数据照记**（关系名分本体已落库，资料页可见），不做「攒到见面后补庆祝」。
+        if (OfflineMeetingGate.characterInMeeting(conversationDao, characterUuid)) {
+            Log.i(TAG, "里程碑庆祝跳过：见面进行中（数据已落）：$characterName → $newName")
             return
         }
         // 前台判定须在主线程读 ProcessLifecycleOwner（无现成全局 isForeground 状态）。

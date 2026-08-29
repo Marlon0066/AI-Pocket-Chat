@@ -225,7 +225,7 @@ internal class ChatReplyDeliverer(
                 val stored = deliverVoiceReply(stickerNormalized, character, voicePlan, emotionTag, mood.emoji, immediate, dotsAppearMillis)
                 if (stored.isNotEmpty()) {
                     finalizeDelivery(stored)
-                    notifyIfNotViewing(character, settings, stored, immediate)
+                    notifyIfNotViewing(character, settings, stored, immediate, isOfflineConversation = isOffline)
                     return DeliveredTurn(stored, deliveredStructuredAction, meetingMarkerCandidates)
                 }
                 // 语音 chunk 全空/全失败 → 回落文字投递（计数已按语音重置，罕见兜底）。
@@ -237,7 +237,7 @@ internal class ChatReplyDeliverer(
         val stored = deliverTextReply(stickerNormalized, settings, emotionTag, immediate, dotsAppearMillis, offlineSessionId)
         if (stored.isEmpty()) return DeliveredTurn(emptyList(), deliveredStructuredAction, meetingMarkerCandidates)
         finalizeDelivery(stored)
-        notifyIfNotViewing(character, settings, stored, immediate)
+        notifyIfNotViewing(character, settings, stored, immediate, isOfflineConversation = isOffline)
         return DeliveredTurn(stored, deliveredStructuredAction, meetingMarkerCandidates)
     }
 
@@ -498,7 +498,7 @@ internal class ChatReplyDeliverer(
         val preview = assistantDeliveryPreview(last.content, isOffline)
         if (preview == null) {
             // 线下：不写预览，仅刷新「最后活动时间」保鲜列表排序（同系统耳语 touchLastMessageDate）；预览文案保持
-            // 入场标记「（线下模式开始）」直到 recordOfflineExited 收尾覆写。
+            // 入场标记「正在见面中…」直到 recordOfflineExited 收尾覆写。
             conversationRepo.touchLastMessageDate(conversationUuid, last.timestamp)
         } else {
             conversationRepo.recordLastMessage(conversationUuid, preview, "assistant", last.timestamp)
@@ -510,19 +510,24 @@ internal class ChatReplyDeliverer(
      * [isViewVisible] 全覆盖）时，回复落库即发本地通知，像真人发消息。复用 [Notifier.post] 全套现成能力
      * （MessagingStyle 头像气泡 + 分组防轰炸 + 权限检查 + try/catch）。deliveryIdentifier=null=仅提醒不物化
      * （正文已在库里）；同会话同 id=后一条覆盖前一条不堆叠；immediate=取消兜底不打扰；尊重通知总开关。
-     * 线下沉浸叙事不通知（正文是带标签的叙事体，预览会漏标签；线下本就是沉浸场景）。
+     * 线下沉浸叙事不通知（正文是带标签的叙事体，预览会漏标签；线下本就是沉浸场景）——判定双源
+     * （消息标记 || [isOfflineConversation] 会话旗标），与 [finalizeDelivery] 的预览侧同口径（卷一 C3）。
      */
     private fun notifyIfNotViewing(
         character: CharacterEntity,
         settings: AppSettings,
         stored: List<MessageEntity>,
         immediate: Boolean,
+        isOfflineConversation: Boolean,
     ) {
         if (immediate) return
         if (isViewVisible.value) return
         if (!settings.notificationsEnabled) return
         val last = stored.last()
-        if (last.isOfflineMode) return
+        // 双源判定（卷一 C3）：本条标了线下 **或** 会话当前在见面中——后者兜底脏态（isInOfflineMode 而
+        // sessionId 缺失 → 消息漏标 isOfflineMode，但正文按 preserveOfflineTags 保留了叙事标签，
+        // 原先会把 [叙述]/[对话] 原样弹进通知栏）。本函数非 suspend 不能查库，故由 suspend 调用侧传入。
+        if (last.isOfflineMode || isOfflineConversation) return
         val body = MessagePreviewText.forMessage(last).take(100)
         if (body.isBlank()) return
         // 通知是尽力而为：任何失败（权限/渠道/系统异常）绝不反噬投递主链路（消息已落库）。

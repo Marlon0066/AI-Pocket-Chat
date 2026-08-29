@@ -90,6 +90,16 @@ object AppPanelIcons {
             .build()
     }
 
+    /** 照片：圆角相框 + 日点 + 远近双山（全曲线·与家族同 1.7 描边）。 */
+    val Photo: ImageVector by lazy {
+        builder("PanelPhoto")
+            .stroke("M6.6 4.8 H17.4 A2.8 2.8 0 0 1 20.2 7.6 V16.4 A2.8 2.8 0 0 1 17.4 19.2 H6.6 A2.8 2.8 0 0 1 3.8 16.4 V7.6 A2.8 2.8 0 0 1 6.6 4.8 Z")
+            .solid("M10.5 9.4 A1.4 1.4 0 0 1 7.7 9.4 A1.4 1.4 0 0 1 10.5 9.4 Z")
+            .stroke("M3.8 15.5 L8.3 11.4 L11.9 14.6")
+            .stroke("M11.2 14 L14.6 11 L20.2 15.9")
+            .build()
+    }
+
     /** 表情：圆角方贴 + 笑脸（双眼填充点 + 嘴弧）。 */
     val Sticker: ImageVector by lazy {
         builder("PanelSticker")

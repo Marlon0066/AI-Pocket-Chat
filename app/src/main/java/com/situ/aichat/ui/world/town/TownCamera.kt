@@ -26,10 +26,13 @@ internal class TownCamera(reduceMotion: Boolean, tiltDeadzonePx: Float) {
 
     private companion object {
         const val INITIAL_YAW = 0.7f
-        const val LANDED_PITCH = 0.62f
+        // ── R3 构图定版（用户 2026-08-28「比例要系统设计·不要一个改一个」）：静止构图目标 = 对版稿
+        // world_game_art_roadmap_mockup 台阶1/2 画面比例——天空 ≈38% / 远山带 ≈8% / 小镇 ≈54%。
+        // 双杆联动达成：退远（24→30·房/地/图整体变小）+ 放平（0.62→0.36·天空约占屏三成·天际线压到屏高约四成）。──
+        const val LANDED_PITCH = 0.36f
         const val INTRO_PITCH = 1.15f
         const val FAR_DIST = 38f          // intro 起点（高空）
-        const val LANDED_DIST = 24f       // intro 终点 / tDist 初值
+        const val LANDED_DIST = 30f       // intro 终点 / tDist 初值（R3：24→30 与俯角联动·见上）
         const val PITCH_MIN = 0.28f
         const val PITCH_MAX = 1.25f
         const val TDIST_MIN = 13f

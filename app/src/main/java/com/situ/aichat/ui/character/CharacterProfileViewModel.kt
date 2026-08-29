@@ -30,6 +30,7 @@ import com.situ.aichat.profile.StructuredMemoryStats
 import com.situ.aichat.R
 import com.situ.aichat.data.repository.CharacterRepository
 import com.situ.aichat.data.repository.ConversationRepository
+import com.situ.aichat.data.repository.OfflineMeetingMemoryRepository
 import com.situ.aichat.data.repository.PromiseRepository
 import com.situ.aichat.data.repository.SettingsRepository
 import com.situ.aichat.prompt.memory.ManualMemoryOrganizeService
@@ -96,6 +97,8 @@ class CharacterProfileViewModel @Inject constructor(
     private val economyLastViewed: EconomyLastViewedStore,
     private val conversationRepo: ConversationRepository,
     private val manualMemoryOrganize: ManualMemoryOrganizeService,
+    // 卷一 F4：见面回忆卡摘要走行 override（与回忆长廊同源）。
+    private val offlineMeetingMemoryRepository: OfflineMeetingMemoryRepository,
 ) : ViewModel() {
 
     val characterUuid: String = savedStateHandle.get<String>(ARG_CHARACTER_UUID).orEmpty()
@@ -227,7 +230,27 @@ class CharacterProfileViewModel @Inject constructor(
 
     val offlineSessions: StateFlow<List<OfflineMeetingSession>> =
         combine(characterFlow, messageDao.observeNonSystemForCharacter(characterUuid), sessionRefresh) { ch, _, _ -> ch }
-            .map { ch -> ch?.let { offlineExtractor.extractSessions(it) } ?: emptyList() }
+            .map { ch ->
+                val sessions = ch?.let { offlineExtractor.extractSessions(it) } ?: return@map emptyList()
+                // 卷一 F4：摘要/简版徽章从**行**override（与回忆屏 OfflineMeetingMemoryViewModel.reload 同模板）——
+                // 骨架仍从 marker 组装（见面一结束即显示），但 blob 早已冻结只读、注入宏直读行，资料页此前只读
+                // 骨架 → 摘要永远显示旧值/空。无行（pending）→ 保 extractSessions 原值。
+                offlineMeetingMemoryRepository.ensureSeeded(characterUuid)
+                val rowBySession = offlineMeetingMemoryRepository.byCharacter(characterUuid).associateBy { it.sessionId }
+                sessions.map { session ->
+                    val row = rowBySession[session.id]
+                    if (row == null) {
+                        session
+                    } else {
+                        session.copy(
+                            summaryText = row.summary.ifEmpty { null },
+                            // 卷二 G1：instant（即时要点骨架）与 fallback 同属「简版」——谓词只扩来源值不改形。
+                            usedFallbackSummary = row.sourceRaw == "fallback" ||
+                                row.sourceRaw == OfflineSummaryRetryCoordinator.SOURCE_INSTANT,
+                        )
+                    }
+                }
+            }
             .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 

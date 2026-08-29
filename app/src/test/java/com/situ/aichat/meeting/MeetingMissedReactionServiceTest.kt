@@ -60,9 +60,16 @@ class MeetingMissedReactionServiceTest {
         activity = "喝咖啡",
     )
 
-    private fun convRepo(offline: Boolean = false, found: Boolean = true): ConversationRepository {
+    private fun convRepo(offline: Boolean = false, found: Boolean = true, sessionId: String? = "sess-1"): ConversationRepository {
         val repo = mockk<ConversationRepository>()
-        val convo = if (found) mockk<ConversationEntity> { every { isInOfflineMode } returns offline } else null
+        val convo = if (found) {
+            mockk<ConversationEntity> {
+                every { isInOfflineMode } returns offline
+                every { currentOfflineSessionId } returns sessionId
+            }
+        } else {
+            null
+        }
         coEvery { repo.get(any()) } returns convo
         return repo
     }
@@ -120,20 +127,52 @@ class MeetingMissedReactionServiceTest {
         coVerify(exactly = 0) { store.markMissed(any(), any()) }
     }
 
-    @Test fun offlineConversation_marksMissedButNoHintNoReaction() = runBlocking {
+    /**
+     * 卷一 D1b（拍板⑪·2026-08-26 改判）：扫描时会话正在线下见面 = 用户正在赴这场约 → **判 honored**
+     * （旧行为 markMissed 先行、只跳过旁白，missed 终态仍落下 → 赴着约被记成爽约且无从更正）。
+     */
+    @Test fun offlineConversation_marksHonoredNotMissed_noHintNoReaction() = runBlocking {
         val dao = mockk<MeetingAppointmentDao>()
         val store = mockk<MeetingAppointmentStore>(relaxed = true)
         val msgRepo = mockk<MessageRepository>(relaxed = true)
         val gen = mockk<RecoveryReplyGenerator>(relaxed = true)
         val a = appt("u1", scheduledAt = now - 4 * 3600 * 1000)
         coEvery { dao.getAllAppointments() } returns listOf(a)
-        coEvery { store.markMissed("u1", any()) } returns a.copy(status = "missed")
+        coEvery { store.markHonored("u1", any(), any()) } returns a.copy(status = "honored")
 
         service(dao, store, convRepo = convRepo(offline = true), msgRepo = msgRepo, gen = gen).scanAndReact(now)
 
-        coVerify { store.markMissed("u1", any()) } // 数据照清
-        coVerify(exactly = 0) { msgRepo.upsert(any()) } // §7：线下不插反应
+        coVerify(exactly = 1) { store.markHonored("u1", "sess-1", any()) } // 链上当前 sessionId
+        coVerify(exactly = 0) { store.markMissed(any(), any()) } // 绝不再落 missed 终态
+        coVerify(exactly = 0) { msgRepo.upsert(any()) } // 不插「你没来」旁白
         coVerify(exactly = 0) { gen.generateAndPersist(any()) }
+    }
+
+    /** E8：honored 守卫拒绝（并发已取消/已赴约）→ 不抛错、不回落 missed。 */
+    @Test fun offlineConversation_honoredGuardRejected_stillNoMissed() = runBlocking {
+        val dao = mockk<MeetingAppointmentDao>()
+        val store = mockk<MeetingAppointmentStore>(relaxed = true)
+        val msgRepo = mockk<MessageRepository>(relaxed = true)
+        coEvery { dao.getAllAppointments() } returns listOf(appt("u1", scheduledAt = now - 4 * 3600 * 1000))
+        coEvery { store.markHonored("u1", any(), any()) } returns null
+
+        service(dao, store, convRepo = convRepo(offline = true), msgRepo = msgRepo).scanAndReact(now)
+
+        coVerify(exactly = 0) { store.markMissed(any(), any()) }
+        coVerify(exactly = 0) { msgRepo.upsert(any()) }
+    }
+
+    /** 脏态（旗标 true 而 sessionId 空）→ 仍判 honored，sessionId 传空串（fail-closed）。 */
+    @Test fun offlineDirtyState_marksHonoredWithEmptySession() = runBlocking {
+        val dao = mockk<MeetingAppointmentDao>()
+        val store = mockk<MeetingAppointmentStore>(relaxed = true)
+        val a = appt("u1", scheduledAt = now - 4 * 3600 * 1000)
+        coEvery { dao.getAllAppointments() } returns listOf(a)
+        coEvery { store.markHonored("u1", any(), any()) } returns a.copy(status = "honored")
+
+        service(dao, store, convRepo = convRepo(offline = true, sessionId = null)).scanAndReact(now)
+
+        coVerify(exactly = 1) { store.markHonored("u1", "", any()) }
     }
 
     @Test fun twoMissedSameConversation_twoHints_oneReaction() = runBlocking {

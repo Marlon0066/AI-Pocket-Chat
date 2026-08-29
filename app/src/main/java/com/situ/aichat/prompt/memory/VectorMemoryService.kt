@@ -57,6 +57,40 @@ class VectorMemoryService @Inject constructor(
 
     /** 为消息生成嵌入并写回（已有嵌入 / system / 空内容 / 结构化卡 / 太短 → 跳过）。 */
     suspend fun embedMessageIfNeeded(message: MessageEntity) {
+        // 图片消息 + 摘要还没回来 → **推迟**，交给摘要链在写完 mediaMemorySummary 后调
+        // [embedImageMessageAfterSummary]（ChatImageSender）。
+        // 不推迟的话，此刻 renderMemoryContent 恒产出无信息量的「发送了一张图片」，而 `embedding != null`
+        // 会永久挡住后续回填 → 每条图片消息的向量都是同一句话，既检索不到「那张海边的照片」，
+        // 这批同构向量还会互相高相似、挤占召回名额。
+        // ⚠️ [backfillMissingEmbeddings] **有意不加这条规则**：那是自愈兜底路径（进程被杀导致摘要链没跑完时），
+        // 宁可嵌一个弱向量，也不能让这条消息永远没有向量。两处口径不同是设计，别来「统一」。
+        if (message.imageRelativePath != null && message.mediaMemorySummary.isBlank()) return
+        embedIfEligible(message)
+    }
+
+    /**
+     * 摘要链跑完后由 `ChatImageSender` 调：**跳过上面那条「有图且无摘要」的推迟规则**。
+     *
+     * 语义差别：推迟闸判的是「摘要还没回来，再等等」；到了这个调用点，摘要链**已经跑完**，
+     * 此时的空摘要 = 真的没有描述可用（契约 §B5 三条兜底路径：「图片理解」路由无视觉能力 /
+     * 调用失败 / 返回空），该嵌什么就嵌什么，不该再等。
+     *
+     * ⚠️ **别把这个入口当成「兜底路径也能进索引」的保证**（R4 🔵-1 更正 R3 🟡-7 的措辞）：
+     * 兜底摘要为空时 `renderMemoryContent` 只产出「发送了一张图片」= **7 字**，撞上本类
+     * [MIN_CONTENT_LENGTH]（8·一条**与图片无关**的老规矩）→ [generateEmbedding] 返 null →
+     * 这一路**照样一个字都不写**，仍要等冷启动 [backfillMissingEmbeddings]（那里会写 [SENTINEL]，
+     * 等于这张照片永久搜不到）。这条现状与其成因由 `ChatImageSenderTest` 最后一例钉住。
+     *
+     * 那这个入口的价值在哪：**去掉对「7 < 8 这个巧合」的隐性依赖**。改用 [embedMessageIfNeeded]
+     * 的话，一旦有人把兜底文案改成 8 个字、或为图片放宽下限，推迟闸就会静默把这条消息永久挡在门外。
+     * 是否该为图片放宽那道下限（弱向量 vs 一堆同构向量互相挤占召回名额）= 产品取舍，
+     * 2026-08-29 用户拍板**不放宽**，改为在设置「功能 API 分配 › 图片理解」给辅助文字提示
+     * （见 IMAGE_MULTIMODAL §4 决策日志 7）。
+     */
+    suspend fun embedImageMessageAfterSummary(message: MessageEntity) = embedIfEligible(message)
+
+    /** 两个入口共用的嵌入本体（差别只在要不要先过「推迟」那道闸）。 */
+    private suspend fun embedIfEligible(message: MessageEntity) {
         if (message.embedding != null) return
         if (message.roleRaw == ROLE_SYSTEM || message.content.isEmpty()) return
         // 结构化卡（礼物 / 红包 / 通话 / 红包结算 / 线下卡）content 是 JSON / 标记文本：嵌原文会把红包 amount、礼物 cost、

@@ -6,12 +6,17 @@ package com.situ.aichat.data.model
  * `id` is the wire model name; `name` is the display label (defaults to id); `subtitle` is an
  * optional hint (owner / context length / deprecation notice); `supportedParameters` is the
  * OpenRouter capability list (drives the thinking-budget UI in 3.3c).
+ *
+ * [supportsVision] = **服务商官方元数据给出的视觉能力**（OpenRouter `architecture.input_modalities`
+ * 含 image / Anthropic `capabilities.image_input.supported`——各家 models 接口里只有这两家给）。
+ * `null` = 该服务商没给这项信息，不下结论（回落到名字关键词表 + 运行时探针）。
  */
 data class APIModelOption(
     val id: String,
     val name: String = id,
     val subtitle: String? = null,
     val supportedParameters: List<String>? = null,
+    val supportsVision: Boolean? = null,
 ) {
     /** Vendor group inferred from the model id, for grouped display. */
     val vendorGroup: String

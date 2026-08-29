@@ -15,10 +15,13 @@ import com.situ.aichat.data.model.VisionMode
 import com.situ.aichat.data.remote.llm.ApiBalanceResult
 import com.situ.aichat.data.remote.llm.ApiConfigValues
 import com.situ.aichat.data.remote.llm.modelcatalog.ModelCatalogService
+import com.situ.aichat.data.remote.llm.modelcatalog.sanitizeCatalogErrorMessage
 import com.situ.aichat.data.repository.ApiConfigRepository
 import com.situ.aichat.data.repository.ApiFunctionRouter
 import com.situ.aichat.data.repository.ConfigSaveResult
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -29,6 +32,39 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+/**
+ * 模型列表拉取的**显式状态机**。旧实现用「list + loading + error」三个平行 flow 表达，
+ * 无法区分「从没拉过」与「拉到 0 条」（服务端 200 但 data 为空时用户看到的和没拉过一模一样），
+ * 也无法表达「拉到了但用的是兜底表」。
+ */
+sealed interface ModelCatalogUiState {
+    /** 当前可选模型（失败态保留上一次成功的列表，不清空）。 */
+    val models: List<APIModelOption> get() = emptyList()
+    val isLoading: Boolean get() = false
+    /** 需要红字提示的话（失败原因 / 兜底告警）。 */
+    val error: String? get() = null
+
+    /** 从没拉过（或已作废）——展开下拉时自动拉一次。 */
+    data object Idle : ModelCatalogUiState
+
+    data class Loading(override val models: List<APIModelOption>) : ModelCatalogUiState {
+        override val isLoading: Boolean get() = true
+    }
+
+    /** 拿到列表（一律来自服务商实时返回——本 App 无任何写死的模型清单）。 */
+    data class Loaded(override val models: List<APIModelOption>) : ModelCatalogUiState
+
+    /** 拉取成功但服务商一个模型都没返回——与 [Idle] 明确区分，提示用户手输模型名。 */
+    data object Empty : ModelCatalogUiState
+
+    data class Failed(
+        val message: String,
+        override val models: List<APIModelOption>,
+    ) : ModelCatalogUiState {
+        override val error: String? get() = message
+    }
+}
 
 /** 保存反馈（settings-api-5）：成功(新建)清空输入 + 提示；失败弹错误提示且不离屏/不丢 key。 */
 sealed interface ApiSaveFeedback {
@@ -68,20 +104,27 @@ class ApiConfigViewModel @Inject constructor(
 
     // MARK: - Model catalog (3.3b)
 
-    private val _availableModels = MutableStateFlow<List<APIModelOption>>(emptyList())
-    val availableModels: StateFlow<List<APIModelOption>> = _availableModels.asStateFlow()
+    private val _modelCatalog = MutableStateFlow<ModelCatalogUiState>(ModelCatalogUiState.Idle)
+    val modelCatalogState: StateFlow<ModelCatalogUiState> = _modelCatalog.asStateFlow()
 
-    private val _modelsLoading = MutableStateFlow(false)
-    val modelsLoading: StateFlow<Boolean> = _modelsLoading.asStateFlow()
+    /** 当前在飞的拉取任务——防重入：连点只保留最后一次，旧任务取消（旧实现每次裸 launch，先回来的会关掉转圈、后回来的失败还会把已成功的列表抹掉）。 */
+    private var fetchJob: Job? = null
 
-    private val _modelsError = MutableStateFlow<String?>(null)
-    val modelsError: StateFlow<String?> = _modelsError.asStateFlow()
-
-    /** Fetch the available model list for the (unsaved) form values; updates [availableModels]. */
+    /**
+     * 拉取模型列表。旧实现的三个坑一并修掉：
+     * ① 无防重入 → 单 Job + 取消旧任务；
+     * ② 失败即 `emptyList()` → **失败不动已成功的列表**，只切错误态；
+     * ③ 「拉到 0 条」与「从没拉过」不可分 → 显式 [ModelCatalogUiState.Empty]。
+     */
     fun fetchModels(provider: ApiProviderType, baseUrl: String, apiKey: String) {
-        viewModelScope.launch {
-            _modelsLoading.value = true
-            _modelsError.value = null
+        // 表单还没填好就别报错：编辑屏冷启时 baseUrl/apiKey 要等 StateFlow 吐行 + 密钥库异步读回才有值，
+        // 这个窗口里点开下拉会拿空地址拉取 → 落 Failed(「地址无效」)。而 Failed 不会自愈（状态重建不经
+        // onValueChange，clearModels 不触发），用户得手点「重新拉取」才消。保持 Idle 即可，下次展开自然重拉。
+        if (baseUrl.isBlank()) return
+        val previous = _modelCatalog.value.models
+        fetchJob?.cancel()
+        fetchJob = viewModelScope.launch {
+            _modelCatalog.value = ModelCatalogUiState.Loading(previous)
             try {
                 val values = ApiConfigValues(
                     providerType = provider,
@@ -92,20 +135,28 @@ class ApiConfigViewModel @Inject constructor(
                     isThinkingModel = false,
                     maxOutputLength = MaxOutputLength.AUTO,
                 )
-                _availableModels.value = modelCatalog.fetchModels(values)
+                val models = modelCatalog.fetchModels(values)
+                _modelCatalog.value =
+                    if (models.isEmpty()) ModelCatalogUiState.Empty else ModelCatalogUiState.Loaded(models)
+            } catch (e: CancellationException) {
+                throw e // 协程取消不是拉取失败（旧实现裸 catch(Exception) 会误判成错误态）
             } catch (e: Exception) {
-                _availableModels.value = emptyList()
-                _modelsError.value = e.message ?: "拉取失败"
-            } finally {
-                _modelsLoading.value = false
+                _modelCatalog.value = ModelCatalogUiState.Failed(
+                    message = sanitizeCatalogErrorMessage(e.message, apiKey),
+                    models = previous,
+                )
             }
         }
     }
 
-    /** Clear the fetched model list (e.g. when the provider changes). */
+    /**
+     * 作废已拉到的列表——切服务商、**改 Base URL、改 API Key** 都要调（旧实现只在切服务商时调，
+     * 改完地址还一直显示上一个端点的模型列表）。回到 Idle 后下次展开会自动重拉一次。
+     */
     fun clearModels() {
-        _availableModels.value = emptyList()
-        _modelsError.value = null
+        fetchJob?.cancel()
+        fetchJob = null
+        _modelCatalog.value = ModelCatalogUiState.Idle
     }
 
     // MARK: - Account balance (3.3d)
@@ -147,7 +198,9 @@ class ApiConfigViewModel @Inject constructor(
                 ConfigSaveResult.SUCCESS -> {
                     _feedback.emit(ApiSaveFeedback.SavedCreate)
                     val newUuid = outcome.uuid ?: return@launch
-                    runDetection(newUuid) { repo.runCapabilityDetections(newUuid) }
+                    runDetection(newUuid) {
+                        repo.runCapabilityDetections(newUuid, catalogVisionFor(model))
+                    }
                 }
                 ConfigSaveResult.KEYCHAIN_FAILED -> _feedback.emit(ApiSaveFeedback.KeychainFailed)
                 ConfigSaveResult.DB_FAILED -> _feedback.emit(ApiSaveFeedback.DbFailed)
@@ -155,9 +208,25 @@ class ApiConfigViewModel @Inject constructor(
         }
     }
 
+    /**
+     * 该模型在**刚拉回的列表里**是否被服务商官方标注为有视觉能力
+     *（OpenRouter `architecture.input_modalities` / Anthropic `capabilities.image_input`——
+     * 只有这两家给）。null = 没这条信息，交回名字表 + 探针裁决。
+     *
+     * 从当前列表现取而不另存一份状态：用户可能手输模型名、也可能拉完列表后又改字，
+     * 单独存一份必然要处理各种失效时机；按名字回查天然不会过期。
+     */
+    private fun catalogVisionFor(modelName: String): Boolean? {
+        val target = modelName.trim()
+        if (target.isEmpty()) return null
+        return _modelCatalog.value.models.firstOrNull { it.id.equals(target, ignoreCase = true) }?.supportsVision
+    }
+
     fun redetect(uuid: String) {
         viewModelScope.launch {
-            runDetection(uuid) { repo.redetectCapabilities(uuid) }
+            // 手点「重新检测」也要带上官方元数据——否则这一下就把权威通道整条丢掉，退回只靠探针。
+            val model = configs.value.firstOrNull { it.uuid == uuid }?.modelName.orEmpty()
+            runDetection(uuid) { repo.redetectCapabilities(uuid, catalogVisionFor(model)) }
         }
     }
 
@@ -174,6 +243,9 @@ class ApiConfigViewModel @Inject constructor(
             _detecting.update { it - uuid }
         }
     }
+
+    /** 编辑屏预填：读出已存明文 key（默认打码显示·点眼睛可见），拉取模型列表因此能拿到真 key。 */
+    suspend fun storedApiKey(uuid: String): String = repo.storedApiKey(uuid)
 
     /** Save edits to an existing config; re-runs detection in the background if inputs changed. */
     fun updateConfig(
@@ -206,7 +278,9 @@ class ApiConfigViewModel @Inject constructor(
                 ConfigSaveResult.SUCCESS -> {
                     // 成功才离屏（保留安卓地道的「保存即返回」，无 UX 倒退）；失败留在屏上弹错误。
                     onSaved()
-                    if (outcome.needsDetect) runDetection(uuid) { repo.runCapabilityDetections(uuid) }
+                    if (outcome.needsDetect) {
+                        runDetection(uuid) { repo.runCapabilityDetections(uuid, catalogVisionFor(model)) }
+                    }
                 }
                 ConfigSaveResult.KEYCHAIN_FAILED -> _feedback.emit(ApiSaveFeedback.KeychainFailed)
                 ConfigSaveResult.DB_FAILED -> _feedback.emit(ApiSaveFeedback.DbFailed)

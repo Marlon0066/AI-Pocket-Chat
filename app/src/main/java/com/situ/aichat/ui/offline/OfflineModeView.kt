@@ -41,6 +41,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.situ.aichat.data.local.entity.MessageEntity
@@ -49,10 +51,15 @@ import com.situ.aichat.data.model.OfflineInviteJson
 import com.situ.aichat.offline.OfflineContentBlock
 import com.situ.aichat.offline.OfflineContentParser
 import com.situ.aichat.prompt.DirtyMessageDetector
+import com.situ.aichat.R
+import com.situ.aichat.sticker.StickerTagParser
 import com.situ.aichat.ui.chat.OfflineEndCardBubble
+import com.situ.aichat.ui.chat.VoiceMessageBubble
 import com.situ.aichat.ui.components.CharacterAvatar
 import com.situ.aichat.ui.components.rememberReduceMotion
+import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppTypography
+import com.situ.aichat.util.DateFormatters
 import kotlinx.coroutines.launch
 
 /**
@@ -75,6 +82,11 @@ fun OfflineModeView(
     themeColorHex: String?,
     chatWallpaperPath: String? = null,
     entryAnimationsEnabled: Boolean,
+    /** 卷三 §4.2：剧场内语音回听三参（全部转发 ChatScreen 现有同源值·本屏零新状态）——正在播放的消息 UUID。 */
+    playingVoiceId: String?,
+    /** 播放进度 lambda（非播放行喂 [ZeroProgress] 零常量·同 ChatMessageList 纪律）。 */
+    voiceProgress: () -> Float,
+    onVoiceToggle: (MessageEntity) -> Unit,
     onEndMeeting: () -> Unit,
     onContinueMeeting: (endCardUuid: String) -> Unit,
     modifier: Modifier = Modifier,
@@ -96,7 +108,11 @@ fun OfflineModeView(
     val showMiniLoading = !showLoadingScene && isWaitingForContent
 
     val listState = rememberLazyListState()
-    val itemCount = 1 + (if (showLoadingScene) 1 else offlineMessages.size + if (showMiniLoading) 1 else 0)
+    // 首次定位只认「内容项」数，恒存的 offline_header 装饰项不计：重进见面屏时 Room 流首帧吐空列表，
+    // 若在「仅剩装饰项」那帧消耗掉首次定位，随后消息灌入（声明序在装饰项之前）会让 key 锚点追着装饰项
+    // 从 index 0 漂到 N（视口=视觉顶部），isNearBottom 守卫再误判「用户已上翻」→ 永卡顶部不回底
+    //（PITFALLS「首项之前插入新项锚住原首项」的反转列表变体·2026-08-26）。
+    val contentCount = if (showLoadingScene) 1 else offlineMessages.size + if (showMiniLoading) 1 else 0
     // 反转底部锚定（2026-07-08 V10·契约 FABLE5_CHAT_REVERSE_LIST_PROPOSAL §8 收编）：与主聊天同配方——
     // index 0=最新内容钉底边，键盘/输入栏缩放视口时天然钉底（旧「IME 增长逐帧贴底」补偿及其竞态窗口整体退役）。
     // 声明序随之反转（先声明=视觉更靠底）；底部留白由 contentPadding 承担（替旧 spacer 项）。
@@ -106,8 +122,8 @@ fun OfflineModeView(
     val isNearBottom by remember {
         derivedStateOf { listState.firstVisibleItemIndex <= 1 }
     }
-    LaunchedEffect(itemCount) {
-        if (itemCount > 0 && (!didInitialScroll || isNearBottom)) {
+    LaunchedEffect(contentCount) {
+        if (contentCount > 0 && (!didInitialScroll || isNearBottom)) {
             if (didInitialScroll && !reduceMotion) listState.animateScrollToItem(0)
             else { listState.scrollToItem(0); didInitialScroll = true }
         }
@@ -151,6 +167,9 @@ fun OfflineModeView(
                         playedBefore = message.timestamp <= enteredAtMs,
                         playedIds = playedIds,
                         onBlockRevealed = onBlockRevealed,
+                        playingVoiceId = playingVoiceId,
+                        voiceProgress = voiceProgress,
+                        onVoiceToggle = onVoiceToggle,
                         onEndMeeting = onEndMeeting,
                         onContinueMeeting = onContinueMeeting,
                     )
@@ -178,6 +197,9 @@ private fun OfflineMessageContent(
     playedBefore: Boolean,
     playedIds: MutableSet<String>,
     onBlockRevealed: () -> Unit,
+    playingVoiceId: String?,
+    voiceProgress: () -> Float,
+    onVoiceToggle: (MessageEntity) -> Unit,
     onEndMeeting: () -> Unit,
     onContinueMeeting: (String) -> Unit,
 ) {
@@ -190,6 +212,16 @@ private fun OfflineMessageContent(
 
     when {
         dirtyReason != null -> OfflineDirtyFoldedBlock(isUser)
+
+        // 卷三 E1：剧场内用户语音消息=可回听的舞台深玻璃药丸 + 楷体转写随行（原先只剩转写文字·播放机制全复用）。
+        isUser && message.isVoiceMessage -> OfflineUserVoice(
+            message = message,
+            userName = userName,
+            themeColor = themeColor,
+            playingVoiceId = playingVoiceId,
+            voiceProgress = voiceProgress,
+            onVoiceToggle = onVoiceToggle,
+        )
 
         isUser -> OfflineUserBlocks(message.content, characterName, characterAvatarPath, userName, userAvatarPath, themeColor, onPhotoBackdrop)
 
@@ -240,6 +272,57 @@ private fun OfflineMessageContent(
                 }
             }
         }
+    }
+}
+
+/** 非播放行的进度常量（无快照依赖=绝不失效·同 ChatMessageList 的同名纪律）。 */
+private val ZeroProgress: () -> Float = { 0f }
+
+/**
+ * 剧场内的用户语音消息（卷三 §4.2·契约 FABLE5_MEETING_SEAM_PROPOSAL §5②/E1）：右对齐的舞台深玻璃药丸
+ * （[VoiceMessageBubble] onStage 换肤·播放/波形/时长机制零改）+ 其下楷体转写小字常显——剧场读的就是转写，
+ * 故不走气泡内部的「点击展开」（防双转写）；长按菜单剧场恒无、贴纸芯片不渲染（J5/J6）。
+ */
+@Composable
+private fun OfflineUserVoice(
+    message: MessageEntity,
+    userName: String,
+    themeColor: Color,
+    playingVoiceId: String?,
+    voiceProgress: () -> Float,
+    onVoiceToggle: (MessageEntity) -> Unit,
+) {
+    val transcript = remember(message.content) { StickerTagParser.stripStickerTags(message.content).trim() }
+    val isPlaying = message.messageUUID == playingVoiceId
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.End,
+    ) {
+        VoiceMessageBubble(
+            message = message,
+            isUser = true,
+            isPlaying = isPlaying,
+            progress = if (isPlaying) voiceProgress else ZeroProgress,
+            customStickers = emptyList(),
+            onToggle = { onVoiceToggle(message) },
+            onLongClick = {},
+            a11yDescription = stringResource(
+                R.string.a11y_bubble_voice,
+                userName,
+                DateFormatters.shortTime(message.timestamp),
+                transcript,
+            ),
+            shape = AppShapes.full,
+            onStage = true,
+            stageAccent = themeColor,
+        )
+        Text(
+            transcript,
+            style = OfflineTheater.voiceTranscript,
+            color = OfflineTheater.textFaint,
+            textAlign = TextAlign.End,
+            modifier = Modifier.padding(top = 2.dp),
+        )
     }
 }
 

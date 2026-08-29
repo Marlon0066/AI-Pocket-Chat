@@ -34,7 +34,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,8 +72,15 @@ fun OfflineImmersiveInputView(
     themeColor: Color = OfflineTheater.defaultAccent,
 ) {
     val total = OfflineInputSteps.size
-    var currentStep by remember { mutableIntStateOf(0) }
-    val stepTexts = remember { mutableStateListOf("", "", "", "") }
+    // 卷一 F1：进程死亡（系统回收）后草稿不丢——四步输入攒了几十字被杀掉重来最伤。
+    // 用户主动退出会话 = 栈弹出丢弃（与普通输入框同级，接受）。
+    var currentStep by rememberSaveable { mutableIntStateOf(0) }
+    val stepTexts = rememberSaveable(
+        saver = listSaver<SnapshotStateList<String>, String>(
+            save = { it.toList() },
+            restore = { it.toMutableStateList() },
+        ),
+    ) { mutableStateListOf("", "", "", "") }
     val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(currentStep) { runCatching { focusRequester.requestFocus() } }

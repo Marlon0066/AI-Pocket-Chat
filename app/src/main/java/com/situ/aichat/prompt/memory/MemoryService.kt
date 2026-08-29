@@ -5,6 +5,7 @@ import com.situ.aichat.data.local.dao.ConversationDao
 import com.situ.aichat.data.local.dao.MessageDao
 import com.situ.aichat.data.local.entity.ConversationEntity
 import com.situ.aichat.data.local.entity.MessageEntity
+import com.situ.aichat.data.model.MessageContentSentinels
 import com.situ.aichat.data.model.MessageKind
 import com.situ.aichat.data.remote.llm.ApiConfigValues
 import com.situ.aichat.data.remote.llm.ChatMessageDto
@@ -245,7 +246,9 @@ class MemoryService @Inject constructor(
                     val safe = messageLlmSafeText(msg, userLabel, charLabel) ?: return@mapNotNull null
                     val time = formatTimestamp(msg.timestamp)
                     val role = if (msg.roleRaw == ROLE_USER) userLabel else charLabel
-                    "[$time] $role：${renderMemoryContent(safe, msg.mediaMemorySummary, msg.imageRelativePath != null)}"
+                    // 图片语义已在 messageLlmSafeText 内完成（单源上移·见 MessageLlmSafeText 的 PLAIN_TEXT 分支），
+                    // 这里只补表情包语义——两处都做会把「发送了一张图片：…」再当正文套一层。
+                    "[$time] $role：${renderStickerSemantics(safe)}"
                 }
                 .joinToString("\n")
         }
@@ -255,18 +258,32 @@ class MemoryService @Inject constructor(
          * 任何代码都不应复制这段逻辑，否则同一条消息会在不同路径下渲染成不同文本，产生不同向量。
          */
         fun renderMemoryContent(content: String, mediaMemorySummary: String, hasImageAttachment: Boolean): String {
+            if (hasImageAttachment) return renderImageSemantics(content, mediaMemorySummary)
+            return renderStickerSemantics(content)
+        }
+
+        /**
+         * 图片消息 → 有语义的文本（不带图时的**唯一**表示法）。
+         * 有摘要就带上摘要（`mediaMemorySummary` = 图片理解产物），没有则只说「发送了一张图片」。
+         * 与 [MessageContentSentinels.IMAGE_PLACEHOLDER] 强耦合：正文若就是那个占位则整体替换，
+         * 否则保留用户配文并把图片作为附注挂上。
+         */
+        fun renderImageSemantics(content: String, mediaMemorySummary: String): String {
             val trimmedContent = content.trim()
             val trimmedMedia = mediaMemorySummary.trim()
-
-            if (hasImageAttachment) {
-                if (trimmedMedia.isEmpty()) {
-                    if (trimmedContent.isEmpty() || trimmedContent == "[图片]") return "发送了一张图片"
-                    return "$trimmedContent（并发送了一张图片）"
-                }
-                if (trimmedContent.isEmpty() || trimmedContent == "[图片]") return "发送了一张图片：$trimmedMedia"
-                return "$trimmedContent（图片内容：$trimmedMedia）"
+            val contentIsPlaceholderOnly =
+                trimmedContent.isEmpty() || trimmedContent == MessageContentSentinels.IMAGE_PLACEHOLDER
+            if (trimmedMedia.isEmpty()) {
+                if (contentIsPlaceholderOnly) return "发送了一张图片"
+                return "$trimmedContent（并发送了一张图片）"
             }
-            // 表情包标签转语义，避免原始标签进入记忆摘要/向量（1:1 iOS MemoryService.swift:464-470）。
+            if (contentIsPlaceholderOnly) return "发送了一张图片：$trimmedMedia"
+            return "$trimmedContent（图片内容：$trimmedMedia）"
+        }
+
+        /** 表情包标签转语义，避免原始标签进入记忆摘要/向量（1:1 iOS MemoryService.swift:464-470）。 */
+        fun renderStickerSemantics(content: String): String {
+            val trimmedContent = content.trim()
             if (StickerTagParser.isStickerOnly(trimmedContent)) {
                 val ids = StickerTagParser.extractStickerIds(trimmedContent)
                 val name = BuiltInStickerCatalog.byId[ids.firstOrNull() ?: ""]?.name ?: "表情包"

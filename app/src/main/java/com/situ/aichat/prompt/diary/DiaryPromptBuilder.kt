@@ -52,6 +52,12 @@ object DiaryPromptBuilder {
         giftInspiration: String? = null,
         moodHint: String = "",
         guide: DiaryGuideAnswers? = null,
+        /**
+         * 撰写页里用户**已经贴好**的照片张数（契约 §B8）。>0 时给一句「有 N 张照片但你看不到」——
+         * 否则用户先贴 9 张海边照再点「AI 帮我写」，生成的正文对照片完全无感知，只会复述当天聊天记录。
+         * 本期只补「知道有图」，真看图属日记二期。
+         */
+        photoCount: Int = 0,
         overrides: Map<String, String> = emptyMap(),
     ): String {
         val wordCountRange = resolveOverride(overrides, DiaryPromptField.WORD_COUNT_RANGE, DEFAULT_WORD_COUNT_RANGE)
@@ -85,6 +91,12 @@ object DiaryPromptBuilder {
         if (moodHint.isNotEmpty()) {
             parts.add(strings.moodHeader)
             parts.add(moodHint)
+            parts.add("")
+        }
+
+        // 4.5) 已贴照片提示（§B8·盲图口径与朋友圈 photosBlind、日记评论同形）。
+        if (photoCount > 0) {
+            parts.add(strings.photosBlind.format(photoCount))
             parts.add("")
         }
 

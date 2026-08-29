@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.Refresh
@@ -176,7 +177,7 @@ internal class ChatImmersiveMenuState {
 }
 
 /** 菜单动作枚举（壳换、动作面冻结）。 */
-internal enum class ImmersiveMenuAction { COPY, QUOTE, REGENERATE, CONVERT_TO_INVITE, DELETE }
+internal enum class ImmersiveMenuAction { COPY, SAVE_IMAGE, QUOTE, REGENERATE, CONVERT_TO_INVITE, DELETE }
 
 /**
  * 动作显示条件——自旧 DropdownMenu（ChatMessageRow）**逐字冻结**：复制/引用/删除=所有可开菜单的消息；
@@ -187,8 +188,11 @@ internal fun immersiveMenuActions(
     kind: MessageKind,
     isOfflineModeActive: Boolean,
     messageIsOffline: Boolean,
+    /** 图片消息（PLAIN_TEXT + 侧车 imageRelativePath）：换掉「复制」、给「保存到相册」（契约 §B7）。 */
+    hasImage: Boolean = false,
 ): List<ImmersiveMenuAction> = buildList {
-    add(ImmersiveMenuAction.COPY)
+    // 图片消息不给「复制」——它的正文是内部哨兵 `[图片]`，复制过去是三个没用的字符。
+    if (hasImage) add(ImmersiveMenuAction.SAVE_IMAGE) else add(ImmersiveMenuAction.COPY)
     add(ImmersiveMenuAction.QUOTE)
     if (!isUser) add(ImmersiveMenuAction.REGENERATE)
     if (!isUser && kind == MessageKind.PLAIN_TEXT && !isOfflineModeActive && !messageIsOffline) {
@@ -213,6 +217,7 @@ internal fun messageCopyText(message: MessageEntity): String {
 /** 动作文案（与旧 DropdownMenu **逐字一致**·菜单卡与行级 customActions 共用单源）。 */
 internal fun immersiveMenuActionLabel(action: ImmersiveMenuAction): String = when (action) {
     ImmersiveMenuAction.COPY -> "复制"
+    ImmersiveMenuAction.SAVE_IMAGE -> "保存到相册"
     ImmersiveMenuAction.QUOTE -> "引用"
     ImmersiveMenuAction.REGENERATE -> "重新生成"
     ImmersiveMenuAction.CONVERT_TO_INVITE -> "改成邀约"
@@ -309,6 +314,7 @@ internal fun ChatImmersiveMenuOverlay(
             kind = MessageKind.fromRaw(message.messageKindRaw),
             isOfflineModeActive = isOfflineModeActive,
             messageIsOffline = message.isOfflineMode,
+            hasImage = message.imageRelativePath != null,
         )
     }
 
@@ -392,6 +398,7 @@ internal fun ChatImmersiveMenuOverlay(
                     ImmersiveMenuAction.COPY -> scope.launch {
                         clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("message", messageCopyText(message))))
                     }
+                    ImmersiveMenuAction.SAVE_IMAGE -> actions.onSaveImage(message)
                     ImmersiveMenuAction.QUOTE -> actions.onQuote(message)
                     ImmersiveMenuAction.REGENERATE -> actions.onRegenerate()
                     ImmersiveMenuAction.CONVERT_TO_INVITE -> actions.onConvertToInvite(message)
@@ -448,6 +455,7 @@ private fun ImmersiveMenuCard(
                     val label = immersiveMenuActionLabel(action)
                     val icon = when (action) {
                         ImmersiveMenuAction.COPY -> Icons.Filled.ContentCopy
+                        ImmersiveMenuAction.SAVE_IMAGE -> Icons.Filled.FileDownload
                         ImmersiveMenuAction.QUOTE -> Icons.Filled.FormatQuote
                         ImmersiveMenuAction.REGENERATE -> Icons.Filled.Refresh
                         ImmersiveMenuAction.CONVERT_TO_INVITE -> Icons.AutoMirrored.Filled.DirectionsWalk

@@ -34,7 +34,8 @@ import javax.inject.Singleton
  * **触发**：App 启动 / 回前台由 [com.situ.aichat.ui.AppViewModel.onAppForeground] 调 [scanAndReact]（用户回到 App
  * 时反应自然浮现）。[running] 重入互斥防并发双反应；按会话经 [RecoveryClaimTracker] 与未答恢复协调、防同会话双答。
  *
- * **§7 坑**：① 线下见面进行中的会话跳过插反应（只清数据·避免「正见着面却怪你没来」）；② 旁白用纯括号叙述，
+ * **§7 坑**：① 线下见面进行中的会话**判已赴约**（`markHonored` 链当前 sessionId·卷一 D1b 拍板⑪·2026-08-26
+ * 取代旧「只跳过旁白但仍置 missed」——用户正在赴这场约，missed 是终态不再被扫、无从更正）；② 旁白用纯括号叙述，
  * **避开 DirtyMessageDetector 的保留段标题**（【见面 · 】等），免误伤脏消息检测。
  */
 @Singleton
@@ -64,10 +65,18 @@ class MeetingMissedReactionService @Inject constructor(
                 // 搁成「已 missed 却没旁白 → 反应永久丢失」（markMissed 终态后不再被扫，无从补）。返回是否需生成反应。
                 // markMissed 必须先于插旁白（作门）：并发已被取消/赴约的约定守卫拒绝 → 不插「你没来」错旁白。
                 val needsReaction = db.withTransaction {
-                    if (store.markMissed(appt.uuid, now) == null) return@withTransaction false // 守卫拒绝（并发已流转）
+                    // 卷一 D1b（拍板⑪）：**先**看会话是否正在线下见面——用户此刻正在赴这场约，
+                    // 判 honored 而不是 missed（旧实现 markMissed 先行，只跳过旁白，missed 终态仍落下 →
+                    // 赴着约却被记成爽约，且 missed 是终态不再被扫、无从更正）。守卫拒绝（并发已取消/已赴约）
+                    // 返 null → 照旧跳过。honored 改写与下面的 missed 分支同在这一笔事务内（原子不变量不破）。
                     val convo = conversationRepo.get(appt.conversationUuid)
-                    // 会话已删 / §7 线下见面中：只清数据（已置 missed），不插反应。
-                    if (convo == null || convo.isInOfflineMode) return@withTransaction false
+                    if (convo != null && convo.isInOfflineMode) {
+                        store.markHonored(appt.uuid, convo.currentOfflineSessionId.orEmpty(), now)
+                        return@withTransaction false
+                    }
+                    if (store.markMissed(appt.uuid, now) == null) return@withTransaction false // 守卫拒绝（并发已流转）
+                    // 会话已删：只清数据（已置 missed），不插反应。
+                    if (convo == null) return@withTransaction false
                     insertMissedHint(appt, now, zone)
                     true
                 }

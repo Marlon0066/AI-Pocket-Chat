@@ -260,8 +260,18 @@ object PromptBuilder {
         unsummarizedRoundsOutsideBaseWindow: Int = 0,
         /** P13.4b：路由配置是否支持音频输入（= config.audioInputEnabled）。false → 语音消息按转写纯文本发。 */
         audioInputEnabled: Boolean = false,
-        /** P13.4b：窗口内用户语音消息的音频字节（messageUUID → WAV 字节），由调用方预读；空=不挂音频段。 */
-        audioAttachments: Map<String, ByteArray> = emptyMap(),
+        /**
+         * P13.4b：窗口内用户语音消息的音频（messageUUID → **已预编码的裸 base64**），由调用方在 IO 线程
+         * 预读并编码；空=不挂音频段。（曾是 ByteArray 在此路径内编码——那会把 base64 压在主线程上。）
+         */
+        audioAttachments: Map<String, String> = emptyMap(),
+        /** 图片多模态：路由配置是否支持视觉（= config.visionEnabled）。false → 图片走语义占位文本。 */
+        visionEnabled: Boolean = false,
+        /**
+         * 图片多模态：窗口内用户图片消息的 **data URI**（messageUUID → `data:image/jpeg;base64,…`），
+         * 由调用方在 IO 线程预读编码，且**只取最近若干张**（拍板①：更早的图退化为语义占位）。
+         */
+        imageAttachments: Map<String, String> = emptyMap(),
         /** 等待期（Phase 9）：该角色「下一个已确认未来约定」（调用方预查 nextUpcomingForCharacter）；非空 + 非线下 → 注入【待见约定】。 */
         nextMeetingAppointment: MeetingAppointmentEntity? = null,
         /**
@@ -411,6 +421,8 @@ object PromptBuilder {
             allowStickers = appSettings.characterCanSendStickersEnabled,
             audioInputEnabled = audioInputEnabled,
             audioAttachments = audioAttachments,
+            visionEnabled = visionEnabled,
+            imageAttachments = imageAttachments,
             // 历史时间分割线门控（A5）：仅【普通在线聊天】(effectiveScene==ONLINE_CHAT) 时注入。effectiveScene 已把
             // 「脏状态传 OFFLINE_MEETING→回落 ONLINE_CHAT」（V-3 分割线恢复）与「健康线下→OFFLINE_MEETING」单源收敛；
             // 忙碌回复 / 语音通话等其它场景不插（与「仅在线聊天」一致）；线下叙事刻意不打时间戳线（时间感知模块照常）。
@@ -658,7 +670,9 @@ object PromptBuilder {
         extraMacros: Map<String, String> = emptyMap(),
         unsummarizedRoundsOutsideBaseWindow: Int = 0,
         audioInputEnabled: Boolean = false,
-        audioAttachments: Map<String, ByteArray> = emptyMap(),
+        audioAttachments: Map<String, String> = emptyMap(),
+        visionEnabled: Boolean = false,
+        imageAttachments: Map<String, String> = emptyMap(),
         worldInfo: WorldInfoActivationResult? = null,
         now: Instant = Instant.now(),
         /** 记忆改造二期·部件④ 见面时间线注记（图纸 §3.1）：透传给 [buildMessages]（见其同名参数）。 */
@@ -697,6 +711,8 @@ object PromptBuilder {
             unsummarizedRoundsOutsideBaseWindow = unsummarizedRoundsOutsideBaseWindow,
             audioInputEnabled = audioInputEnabled,
             audioAttachments = audioAttachments,
+            visionEnabled = visionEnabled,
+            imageAttachments = imageAttachments,
             worldInfo = worldInfo,
             now = now,
             meetingTimeline = meetingTimeline,

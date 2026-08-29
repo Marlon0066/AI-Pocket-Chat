@@ -67,7 +67,10 @@ class WorldNotifyServiceTest {
         context.getSharedPreferences("world_notify_state", 0).edit().clear().commit()
         context.getSharedPreferences("notification_post_ledger", 0).edit().clear().commit()
         stateStore = WorldNotifyStateStore(context)
-        service = WorldNotifyService(context, db.worldDao(), db.characterDao(), alarmScheduler, WorldLlmBudget(db), settingsRepo, stateStore)
+        service = WorldNotifyService(
+            context, db.worldDao(), db.characterDao(), alarmScheduler, WorldLlmBudget(db), settingsRepo, stateStore,
+            db.conversationDao(),
+        )
         service.foregroundCheck = { false } // 默认后台
         mockkObject(NotifierWorld)
         every { NotifierWorld.postArrival(any(), any(), any(), any()) } just Runs
@@ -263,6 +266,40 @@ class WorldNotifyServiceTest {
         service.fire(visitKey("cA"), t0 + 1000L)
         verify(exactly = 0) { NotifierWorld.postArrival(any(), any(), any(), any()) }
         assertEquals(0, notifSpend(t0 + 1000L))
+    }
+
+    // ─── 门9 见面（卷一 C4）：到达角色正与用户线下见面 → 静默吞·零消费 ───
+
+    @Test
+    fun `门9 见面中fire_跳_零消费`() = runBlocking {
+        tier(AppSettings.WORLD_NOTIFICATION_ALL)
+        seedState()
+        seedVisitRow("cA", "小晚", t0 - 1000L, t0)
+        db.conversationDao().upsert(
+            com.situ.aichat.data.local.entity.ConversationEntity(
+                uuid = "conv-cA", title = "小晚", characterUuid = "cA", creationDate = t0,
+                isInOfflineMode = true, currentOfflineSessionId = "sess-1",
+            ),
+        )
+        service.fire(visitKey("cA"), t0 + 1000L)
+        verify(exactly = 0) { NotifierWorld.postArrival(any(), any(), any(), any()) }
+        assertEquals("见面闸在门7/门8 之前 → 不排顺延闹钟、不扣额度", 0, notifSpend(t0 + 1000L))
+        verify(exactly = 0) { alarmScheduler.scheduleExact(any(), any(), any()) }
+    }
+
+    /** N1 对照：同夹具但会话非见面 → 照常发（证明上面的静默是见面闸拦下的）。 */
+    @Test
+    fun `门9 非见面_照常发`() = runBlocking {
+        tier(AppSettings.WORLD_NOTIFICATION_ALL)
+        seedState()
+        seedVisitRow("cA", "小晚", t0 - 1000L, t0)
+        db.conversationDao().upsert(
+            com.situ.aichat.data.local.entity.ConversationEntity(
+                uuid = "conv-cA", title = "小晚", characterUuid = "cA", creationDate = t0,
+            ),
+        )
+        service.fire(visitKey("cA"), t0 + 1000L)
+        verify(exactly = 1) { NotifierWorld.postArrival(any(), any(), any(), any()) }
     }
 
     // ─── E13 门7 排队顺延（重排同 key·now+120s·零额度消费） ───

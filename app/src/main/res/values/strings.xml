@@ -104,6 +104,15 @@
     <string name="chat_error_empty_reply">Reply generation failed. Please try again later</string>
     <string name="chat_network_disconnected">Network disconnected</string>
     <string name="chat_network_recovered">Network restored</string>
+    <string name="api_fn_chat_vision_on">This model can read images — the “Photo” button is available in chat.</string>
+    <string name="api_fn_chat_vision_off">This model cannot read images, so chat has no “Photo” button. If you know it does support images, open that config and set “Image understanding” to “Always on”.</string>
+    <string name="api_fn_image_vision_on">This model can read images — photos you send get a short text description saved to memory, so they stay searchable later.</string>
+    <string name="api_fn_image_vision_off">This model cannot read images, so photos you send are remembered only as “sent a photo” — recalling “that photo from the other day” will not find them. Point this at a vision-capable model to have their contents remembered. If you know the current model does support images, open that config and set “Image understanding” to “Always on”.</string>
+    <string name="chat_image_saved">Saved to your gallery</string>
+    <string name="chat_image_save_to_gallery_failed">Could not save to gallery</string>
+    <string name="chat_image_missing">Image unavailable</string>
+    <string name="chat_image_save_failed">Could not add that photo. Try picking it again.</string>
+    <string name="chat_image_input_fallback">The model could not read the photo; sent as a text description instead</string>
     <string name="voice_audio_input_fallback">This model doesn\'t support native audio input, so your voice was sent as text</string>
     <string name="voice_recording_hint">Slide up to cancel</string>
     <string name="voice_recording_cancel_hint">Release to cancel</string>
@@ -851,6 +860,7 @@
     <string name="notif_reply_hint">Reply…</string>
     <string name="notif_reply_status_replying">Replying…</string>
     <string name="notif_reply_status_deferred">Will reply soon</string>
+    <string name="notif_reply_status_in_meeting">Delivered · you two are meeting right now — open the app to continue</string>
     <!-- 13.8 · B2 claim red packet from notification (confirmation hides the amount; amount stays in-app) -->
     <string name="notif_red_packet_claim_action">Claim</string>
     <string name="notif_red_packet_claimed_title">🧧 Red packet claimed</string>
@@ -900,7 +910,7 @@
     <string name="api_fetching_models">Fetching…</string>
     <string name="api_select_model">Select a model (tap to fill)</string>
     <string name="api_refetch_models">Re-fetch</string>
-    <string name="api_model_filter_more">Type more to filter…</string>
+    <string name="api_models_empty_hint">Fetched — this provider returned no models. Type a model name instead.</string>
     <string name="api_model_no_match">No matching model</string>
 
     <!-- API balance (P3.3d) -->
@@ -1162,6 +1172,7 @@
 	<string name="diary_comment_intro">You are “%1$s”, with the personality: %2$s</string>
 	<string name="diary_comment_setup">Your character setup: %1$s</string>
 	<string name="diary_comment_friend_wrote">Your friend “%1$s” wrote a diary entry:</string>
+	<string name="diary_comment_photos_blind">(This entry has %1$d photo(s) attached, but you cannot see them. Do not describe the photos.)</string>
 	<string name="diary_comment_entry_quote">「%1$s」</string>
 	<string name="diary_comment_write">Write a comment on this diary in your own voice.</string>
 	<string name="diary_comment_req_header">Requirements:</string>

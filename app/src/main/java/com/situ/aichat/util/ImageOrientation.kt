@@ -2,11 +2,7 @@ package com.situ.aichat.util
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Matrix
 import android.net.Uri
-import android.util.Log
-import androidx.exifinterface.media.ExifInterface
-import java.io.ByteArrayInputStream
 
 /**
  * 「解出一张**摆正**的位图」的单一入口（甲 0）。
@@ -15,8 +11,13 @@ import java.io.ByteArrayInputStream
  * [ImageScaler.decodeSampled] 走裸 `BitmapFactory`，不读该标签 → 竖拍照片解出来是横躺的。头像裁剪屏与
  * 壁纸裁剪屏都吃这一口：取景时横躺，裁出来的成品同错。
  *
- * 职责边界：只管「解码 + 扶正」，**不落盘**（落盘归 [AvatarStore]/[WallpaperStore]）。
- * 解码底座复用 [ImageScaler.decodeSampled]（两趟 inSampleSize，防大图 OOM），本文件只加方向那一层。
+ * 职责边界：只管「解码 + 扶正 + 回收中间产物」，**不落盘**（落盘归 [AvatarStore]/[WallpaperStore]），
+ * 也**不自己算方向矩阵**——那是 [ImageScaler.matrixFor] 的活（纯几何·8 向含镜像·单源）。
+ *
+ * ⚠️ 2026-08-29 收单源：本文件原先自带一份只认 90/180/270 三种**旋转**的实现，与图片多模态卷新增的
+ * 8 向版本并存且行为不一致——同一张 `FLIP_HORIZONTAL` 的照片（部分前置摄像头 / 修图 app 产出）
+ * 发聊天会被正确镜像回来、拿去做头像却不会，用户看到同一张图左右相反。现统一走 [ImageScaler]，
+ * 头像与壁纸**首次获得镜像矫正**。
  */
 object ImageOrientation {
 
@@ -31,39 +32,11 @@ object ImageOrientation {
             context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
         }.getOrNull() ?: return null
         val decoded = ImageScaler.decodeSampled(bytes, maxEdge) ?: return null
-        return applyRotation(decoded, rotationDegreesOf(bytes))
+        // 矩阵单源在 [ImageScaler.matrixFor]（纯几何·8 向含三种镜像）。本函数只补它**不管**的那一半：
+        // 回收中间产物——这是本对象既有的契约（调用方 AvatarCropScreen / WallpaperCropScreen 只拿一张图，
+        // 不负责回收上一张），而 `normalizeByExif` 有意不回收（由 ContentImageStore 那条链自己管）。
+        val upright = ImageScaler.normalizeByExif(decoded, bytes)
+        if (upright !== decoded) decoded.recycle()
+        return upright
     }
-
-    /**
-     * 读 EXIF 方向 → 需要顺时针转多少度（0/90/180/270）。
-     *
-     * 拿字节而非 InputStream：调用方已把整图读进内存喂给解码器，这里再开一条 [ByteArrayInputStream]
-     * 即可——省一次 IO，也避免「同一条流被解码器消费完后 ExifInterface 读到空」的经典坑。
-     * 任何异常（非图片 / 截断 / 无 EXIF 段）→ 0，即「不转」（E2）。
-     */
-    internal fun rotationDegreesOf(bytes: ByteArray): Int = runCatching {
-        ExifInterface(ByteArrayInputStream(bytes)).rotationDegrees
-    }.getOrElse {
-        Log.w(TAG, "EXIF 方向读取失败，按不旋转处理", it)
-        0
-    }.let { if (it == 90 || it == 180 || it == 270) it else 0 }
-
-    /**
-     * 按 [degrees] 转出新图并回收原图；[degrees] 为 0 时原样返回（不白复制一张）。
-     * 90/270 会使宽高互换——下游裁剪数学一律吃**旋正后**的尺寸（E3）。
-     * 旋转失败（OOM 等）→ 返回原图，宁可方向不对也不让用户丢图。
-     */
-    internal fun applyRotation(bitmap: Bitmap, degrees: Int): Bitmap {
-        if (degrees == 0) return bitmap
-        val matrix = Matrix().apply { postRotate(degrees.toFloat()) }
-        return runCatching {
-            Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
-                .also { if (it !== bitmap) bitmap.recycle() }
-        }.getOrElse {
-            Log.w(TAG, "位图旋转失败，退回原图", it)
-            bitmap
-        }
-    }
-
-    private const val TAG = "ImageOrientation"
 }

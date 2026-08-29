@@ -6,6 +6,7 @@ import com.situ.aichat.data.local.AppDatabase
 import com.situ.aichat.data.local.dao.UserProfileDao
 import com.situ.aichat.data.local.entity.ConversationEntity
 import com.situ.aichat.data.local.entity.MessageEntity
+import com.situ.aichat.chat.image.ImageMemorySummaryService
 import com.situ.aichat.data.model.ApiFunction
 import com.situ.aichat.data.repository.ApiConfigRepository
 import com.situ.aichat.data.repository.CharacterRepository
@@ -68,6 +69,7 @@ internal class AssistantTurnController(
     private val replyDeliverer: ChatReplyDeliverer,
     private val voiceController: ChatVoiceController,
     private val vectorMemory: VectorMemoryService,
+    private val imageMemorySummaryService: ImageMemorySummaryService,
     private val dispatcher: ChatMessageDispatcher,
     private val typingSlot: StateFlow<TypingSlot?>,
     private val conversationFlow: StateFlow<ConversationEntity?>,
@@ -80,6 +82,19 @@ internal class AssistantTurnController(
     init {
         dispatcher.onReadyToSend = { launchWindowTurn() }
     }
+
+    /** 发图落库链（图片多模态一期）：落盘 + 建消息 + 摘要触发；落库/受理仍复用本类既有实现。 */
+    private val imageSender = ChatImageSender(
+        appContext = appContext,
+        conversationUuid = conversationUuid,
+        conversationRepo = conversationRepo,
+        characterRepo = characterRepo,
+        imageMemorySummaryService = imageMemorySummaryService,
+        errorFlow = errorFlow,
+        storeUserMessage = ::storeUserMessage,
+        acceptStoredUserMessage = ::acceptStoredUserMessage,
+        embedImageMessage = { uuid -> messageRepo.get(uuid)?.let { vectorMemory.embedImageMessageAfterSummary(it) } },
+    )
 
     /** 当前助手回合 job（发消息/重生成/线下触发）——线下结束时打断在投递/流式的回合（对齐 iOS streamingTask.cancel）。 */
     private var assistantTurnJob: Job? = null
@@ -200,7 +215,7 @@ internal class AssistantTurnController(
                 offlineSessionId = offlineSessionId,
             )
             // 列表预览「[语音] +前40字转写」（1:1 iOS lastMessagePreview = "[语音] " + text.prefix(40)；占位转写也照拼）。
-            storeUserMessage(userMessage, preview = "[语音] " + transcript.take(40)) // 2-4+3-1：NonCancellable+单事务
+            storeUserMessage(userMessage, preview = "[语音] " + transcript.take(40), inMeeting = offlineSessionId != null) // 2-4+3-1：NonCancellable+单事务
 
             acceptStoredUserMessage(userMessage, collectText = transcript)
         }
@@ -224,12 +239,21 @@ internal class AssistantTurnController(
      *   已受理的消息绝不半途丢失——用户看到「发出去了」就必须真的在库里。
      * - **单事务**（3-2 无头恢复同款·遵 CurrencyService 契约：事务内仅 suspend DAO 调用、不切调度器）：
      *   消息落库与列表预览翻转原子——中途死不再留下「消息在库、预览陈旧」的裂快照。
+     * - **[inMeeting]=true（线下见面中·卷一 A1）**：不写预览，仅 `touchLastMessageDate`（与 AI 侧
+     *   [assistantDeliveryPreview] 方案 A 同源）；三调用点按本条消息的线下打标结果传入（`offlineSessionId != null`）。
      */
-    private suspend fun storeUserMessage(userMessage: MessageEntity, preview: String) {
+    private suspend fun storeUserMessage(userMessage: MessageEntity, preview: String, inMeeting: Boolean) {
         withContext(NonCancellable) {
             db.withTransaction {
                 messageRepo.upsert(userMessage)
-                conversationRepo.recordLastMessage(conversationUuid, preview, "user", userMessage.timestamp)
+                if (inMeeting) {
+                    // 见面中（卷一 A1）：用户这句同样属「见面期间产生的消息」，绝不外显进日常聊天列表预览
+                    // （方案 A 同源·AI 侧守卫见 [assistantDeliveryPreview]）。仅刷新最后活动时间保鲜排序，
+                    // 列表预览保持入场标记直到见面收尾覆写。
+                    conversationRepo.touchLastMessageDate(conversationUuid, userMessage.timestamp)
+                } else {
+                    conversationRepo.recordLastMessage(conversationUuid, preview, "user", userMessage.timestamp)
+                }
             }
         }
     }
@@ -355,7 +379,7 @@ internal class AssistantTurnController(
                 isOfflineMode = offlineSessionId != null,
                 offlineSessionId = offlineSessionId,
             )
-            storeUserMessage(userMessage, preview = trimmed) // 2-4+3-1：NonCancellable+单事务（秒退不丢消息·快照不裂）
+            storeUserMessage(userMessage, preview = trimmed, inMeeting = offlineSessionId != null) // 2-4+3-1：NonCancellable+单事务（秒退不丢消息·快照不裂）
 
             acceptStoredUserMessage(userMessage, collectText = trimmed)
         }
@@ -385,11 +409,22 @@ internal class AssistantTurnController(
                 isOfflineMode = offlineSessionId != null,
                 offlineSessionId = offlineSessionId,
             )
-            storeUserMessage(userMessage, preview = "[表情包]") // 2-4+3-1：NonCancellable+单事务
+            storeUserMessage(userMessage, preview = "[表情包]", inMeeting = offlineSessionId != null) // 2-4+3-1：NonCancellable+单事务
             StickerRecentStore.recordUsage(appContext, stickerId)
 
             acceptStoredUserMessage(userMessage, collectText = content)
         }
+    }
+
+    /**
+     * 发送用户选中的图片（图片多模态一期·拍板③「选完即发」）。落库链在协作者
+     * [ChatImageSender] 里（加进本类会越 600 行硬上限）；此处只保留与文字/表情同款的
+     * 「三点态打断 + 起协程」两件事，保证四路发送入口的编排语义一致。
+     */
+    fun sendImages(uris: List<android.net.Uri>) {
+        if (uris.isEmpty()) return
+        interruptUndisplayedReplyIfAny()
+        scope.launch { imageSender.send(scope, uris) }
     }
 
     /** 重新生成：删除最后一轮 assistant 消息（连续尾段），用当前历史重跑助手回合。 */

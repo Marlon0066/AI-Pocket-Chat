@@ -100,7 +100,9 @@ class OfflineMeetingMemoryViewModel @Inject constructor(
             val row = rowBySession[s.id] ?: return@map s
             s.copy(
                 summaryText = row.summary.ifEmpty { null },
-                usedFallbackSummary = row.sourceRaw == "fallback",
+                // 卷二 G1：instant（即时要点骨架）与 fallback 同属「简版」——徽章谓词只扩来源值不改形。
+                usedFallbackSummary = row.sourceRaw == "fallback" ||
+                    row.sourceRaw == OfflineSummaryRetryCoordinator.SOURCE_INSTANT,
             )
         }
     }

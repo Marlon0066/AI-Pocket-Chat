@@ -11,14 +11,13 @@ import com.situ.aichat.data.local.entity.ScheduleEventEntity
 import com.situ.aichat.data.model.AppSettings
 import com.situ.aichat.data.repository.CharacterRepository
 import com.situ.aichat.data.repository.SettingsRepository
-import com.situ.aichat.prompt.notification.ProactiveMessageComposer
 import com.situ.aichat.util.StreakManager
 import com.situ.aichat.util.StreakStatus
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
+import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import java.util.UUID
 import kotlin.random.Random
 import javax.inject.Inject
@@ -38,6 +37,9 @@ import javax.inject.Singleton
  *
  * 安卓无「列出待发闹钟」API，故用 [NotificationSchedulerStore] 自记账（取消旧 / 跨角色错峰 / 重建判定）。
  * **学习反馈层**留 6.1e；**通知落成聊天消息**留 6.1d。
+ *
+ * 当前时刻 / 时区一律取自注入的 [clock]（生产绑定=系统钟，见 di.ClockModule；测试给 `Clock.fixed`
+ * 钉死——抖动散列吃日期、睡眠/免打扰闸吃时段，不钉死则断言随测试在哪天几点跑漂移）。
  */
 @Singleton
 class NotificationScheduler @Inject constructor(
@@ -50,6 +52,7 @@ class NotificationScheduler @Inject constructor(
     private val store: NotificationSchedulerStore,
     private val learningService: NotificationLearningService,
     private val activityBucketAnalyzer: ActivityBucketAnalyzer,
+    private val clock: Clock,
 ) {
 
     // MARK: - 公共入口
@@ -147,7 +150,7 @@ class NotificationScheduler @Inject constructor(
      */
     suspend fun suppressImpending(characterUuid: String, thresholdMillis: Long = 15L * 60 * 1000) {
         if (!settingsRepository.isCharacterNotificationEnabled(characterUuid)) return
-        val now = System.currentTimeMillis()
+        val now = clock.millis()
         val current = store.scheduledFor(characterUuid)
         val impending = current.filter { it.fireAtMillis - now in 1..thresholdMillis }
         if (impending.isEmpty()) return
@@ -173,8 +176,8 @@ class NotificationScheduler @Inject constructor(
             return
         }
 
-        val now = System.currentTimeMillis()
-        val zone = ZoneId.systemDefault()
+        val now = clock.millis()
+        val zone: ZoneId = clock.zone
         val status = StreakManager.checkStreak(character, now, zone)
         val streakLabel = StreakManager.streakStatusLabel(status)
         val todayString = Instant.ofEpochMilli(now).atZone(zone).toLocalDate().toString()
@@ -312,7 +315,7 @@ class NotificationScheduler @Inject constructor(
         val badgeCount = baseUnread + scheduled.size + 1
         val deliveryId = deliver(
             characterId, characterName, category, scheduledAt, conversationUuid, badgeCount,
-            occasionForCategory(category), scheduled, reservedDates,
+            ProactiveOccasionText.occasionForCategory(category), scheduled, reservedDates,
         )
         // P6.1e：调度时记 scheduled 台账 + 更新窗口 lastScheduledAt（发出后由 bridge 回填 deliveredAt 并物化）。
         // 台账 body 存空串——正文到点才现做，排程时不存在（V1）。
@@ -367,7 +370,7 @@ class NotificationScheduler @Inject constructor(
         val badgeCount = baseUnread + scheduled.size + 1
         val deliveryId = deliver(
             characterId, characterName, category, scheduledAt, conversationUuid, badgeCount,
-            occasionForEvent(event, zone), scheduled, reservedDates,
+            ProactiveOccasionText.occasionForEvent(event, zone), scheduled, reservedDates,
         )
         // 日程通知归类 streak_remind 复用学习数据，窗口据触发时刻派生。台账 body 空串（正文到点现做）。
         val zdt = Instant.ofEpochMilli(scheduledAt).atZone(zone)
@@ -513,31 +516,7 @@ class NotificationScheduler @Inject constructor(
             (NotificationTimePlanner.stableHash("$characterId|$category|$todayString") and Long.MAX_VALUE) %
                 JITTER_MINUTES_BOUND
 
-        /**
-         * 日程支由头（图纸 §3.1 锁定格式）：`TA 的日程：[HH:mm-HH:mm] 活动（在地点，心情🙂描述，内心想：独白）`。
-         * 非空字段才出对应逗号段；三段全空则只留时段与活动。纯函数（internal 供单测）。
-         */
-        internal fun occasionForEvent(event: ScheduleEventEntity, zone: ZoneId): String {
-            val formatter = DateTimeFormatter.ofPattern("HH:mm").withZone(zone)
-            val start = formatter.format(Instant.ofEpochMilli(event.startTime))
-            val end = formatter.format(Instant.ofEpochMilli(event.endTime))
-            val details = buildList {
-                if (event.location.isNotEmpty()) add("在${event.location}")
-                if (event.moodEmoji.isNotEmpty()) add("心情${event.moodEmoji}${event.moodText ?: ""}")
-                if (!event.innerThought.isNullOrEmpty()) add("内心想：${event.innerThought}")
-            }
-            val suffix = if (details.isEmpty()) "" else "（${details.joinToString("，")}）"
-            return "TA 的日程：[$start-$end] ${event.activity}$suffix"
-        }
-
-        /** 回退支由头（图纸 §3.1 锁定文案）。纯函数（internal 供单测）。 */
-        internal fun occasionForCategory(category: String): String = when (category) {
-            "morning" -> "早安问候"
-            "evening" -> "晚间问候"
-            "streak_remind" -> "想起对方，找个话题聊聊"
-            "random" -> "突然想到什么，想分享"
-            else -> ProactiveMessageComposer.FALLBACK_OCCASION
-        }
+        // occasion（由头）两函数已只搬不改迁出 → [ProactiveOccasionText]（拆分账本预授权拆缝·锁定文案随迁）。
 
         /** 稳定唯一 key（对齐 iOS identifier `aichat_streak_<charId>_<cat>`）。P1-25 移入 companion 供前向枚举。 */
         internal fun requestKeyFor(characterId: String, category: String): String =

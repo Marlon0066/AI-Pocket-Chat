@@ -8,6 +8,7 @@ import com.situ.aichat.data.model.GiftCardJson
 import com.situ.aichat.data.model.MessageKind
 import com.situ.aichat.data.model.OfflineInviteJson
 import com.situ.aichat.data.model.SystemEventJson
+import com.situ.aichat.offline.OfflineContentParser
 import com.situ.aichat.offline.OfflineMarkerEndPayload
 import com.situ.aichat.prompt.CalendarItemParser
 import com.situ.aichat.sticker.StickerTagParser
@@ -64,9 +65,15 @@ object MessagePreviewText {
         MessageKind.SCHEDULE_CARD, MessageKind.PLAIN_TEXT -> cleaned(content)
     }
 
-    /** 普通文本预览清洗：剥 `[#E1]`/`[#R1]` 日历标签 + 贴纸标签（与 [ChatScreen] 复制/朗读同口径）。 */
+    /**
+     * 普通文本预览清洗：剥 `[#E1]`/`[#R1]` 日历标签 + 贴纸标签（与 [ChatScreen] 复制/朗读同口径），
+     * 链尾再剥线下叙事标签（卷一 C3 **防御层**）：任何带 `[叙述]/[对话]/[场景：…]` 的文本进通知/快捷回复预览
+     * 前先剥干净——正常路径已被上游见面闸拦下，这里只兜脏态与历史遗留；普通文本无此类标签 = 原样返回，零副作用。
+     */
     private fun cleaned(content: String): String =
-        StickerTagParser.replaceStickerTagsForDisplay(CalendarItemParser.stripCalendarRefs(content))
+        OfflineContentParser.stripAllTags(
+            StickerTagParser.replaceStickerTagsForDisplay(CalendarItemParser.stripCalendarRefs(content)),
+        )
 
     // 与各插入点会话列表预览常量同口径：
     private const val RED_PACKET_PREVIEW = "🧧 红包" //          = ChatViewModel(发红包) / ProactiveGiftExecutor

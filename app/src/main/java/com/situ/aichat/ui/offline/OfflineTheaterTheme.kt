@@ -72,6 +72,14 @@ object OfflineTheater {
     /** 心绪签高光描边（玻璃语法）。 */
     val pillStroke = Color(0xFFFFFFFF).copy(alpha = 0.22f)
 
+    // ── 剧场语音（卷三 §4.2·剧场内可回听药丸） ──
+    /** 剧场语音波形未播段（暖白 28%·装饰不承载语义）。 */
+    val waveIdle = Color(0xFFF0E9E1).copy(alpha = 0.28f)
+    /** 剧场语音播放键圆底 alpha（强调色 16%）。 */
+    const val voicePlayCircleAlpha = 0.16f
+    /** 剧场语音转写小字：楷体 12sp / 行高 18。 */
+    val voiceTranscript: TextStyle = AppTypography.kaiQuote.copy(fontSize = 12.sp, lineHeight = 18.sp)
+
     // ── 强调色 ──
     /** 角色未设主题色时的默认强调色 = 陶土玫浅档（O3 拍板·替 teal #14B8A6）。 */
     val defaultAccent = Color(0xFFC99A86)

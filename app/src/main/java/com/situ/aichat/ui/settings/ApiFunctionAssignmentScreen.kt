@@ -50,6 +50,8 @@ fun ApiFunctionAssignmentScreen(
     val configs by viewModel.configs.collectAsStateWithLifecycle()
     val active by viewModel.activeConfig.collectAsStateWithLifecycle()
     val assignments by viewModel.assignments.collectAsStateWithLifecycle()
+    val chatVisionHint by viewModel.chatVisionHint.collectAsStateWithLifecycle()
+    val imageVisionHint by viewModel.imageUnderstandingVisionHint.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -80,6 +82,13 @@ fun ApiFunctionAssignmentScreen(
                                 activeName = active?.let { "${it.providerName} ${it.modelName}" },
                                 assignedUuid = assignments[fn],
                                 onSelect = { uuid -> viewModel.setAssignment(fn, uuid) },
+                                // 两行有联动提示：「聊天对话」决定聊天「+」里出不出「照片」；
+                                // 「图片理解」决定照片有没有文字描述（没有 = 长期记忆里搜不到这张照片）。
+                                footnote = when (fn) {
+                                    ApiFunction.CHAT -> chatVisionFootnote(chatVisionHint)
+                                    ApiFunction.IMAGE_UNDERSTANDING -> imageVisionFootnote(imageVisionHint)
+                                    else -> null
+                                },
                             )
                         }
                     }
@@ -97,6 +106,8 @@ private fun FunctionAssignmentRow(
     activeName: String?,
     assignedUuid: String?,
     onSelect: (String?) -> Unit,
+    /** 该行下方的联动提示（当前仅「聊天对话」用：说明发图入口会不会出现）；null=不显示。 */
+    footnote: String? = null,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val defaultLabel = activeName?.let { stringResource(R.string.api_fn_default_named, it) }
@@ -136,7 +147,42 @@ private fun FunctionAssignmentRow(
                 )
             }
         }
+        footnote?.let { text ->
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
     }
+}
+
+/**
+ * 「聊天对话」行的联动提示——把「这个模型看不看得懂图」翻译成用户真正关心的那句：
+ * 聊天「+」里到底有没有「照片」。看不懂图时同时给出**逃生口**（手动开启），
+ * 因为能力识别可能因服务商不给元数据 + 探针判不出而落到「不确定」。
+ */
+@Composable
+private fun chatVisionFootnote(hint: FunctionVisionHint): String? = when (hint) {
+    FunctionVisionHint.NO_CONFIG -> null // 一个配置都没有时，本屏其它地方已经在提示了
+    FunctionVisionHint.HAS_VISION -> stringResource(R.string.api_fn_chat_vision_on)
+    FunctionVisionHint.NO_VISION -> stringResource(R.string.api_fn_chat_vision_off)
+}
+
+/**
+ * 「图片理解」行的联动提示——把「这个模型看不看得懂图」翻译成用户真正关心的后果：
+ * 你发的照片以后**搜不搜得到**。
+ *
+ * 看不懂图时这条链会静默走兜底，照片在记忆里只剩「发送了一张图片」七个字，撞上向量库
+ * 那道与图片无关的 8 字下限 → 这张照片永远进不了语义检索。屏上不说，用户发现不了
+ * （R4 §五·用户 2026-08-29 拍板「用辅助文字说明一下」）。逃生口与「聊天对话」同款。
+ */
+@Composable
+private fun imageVisionFootnote(hint: FunctionVisionHint): String? = when (hint) {
+    FunctionVisionHint.NO_CONFIG -> null // 同上：一个配置都没有时本屏别处已在提示
+    FunctionVisionHint.HAS_VISION -> stringResource(R.string.api_fn_image_vision_on)
+    FunctionVisionHint.NO_VISION -> stringResource(R.string.api_fn_image_vision_off)
 }
 
 @Composable

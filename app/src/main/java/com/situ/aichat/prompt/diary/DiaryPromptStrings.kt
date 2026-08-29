@@ -37,6 +37,8 @@ data class DiaryPromptStrings(
     val outputOnly: String,
     // R2 心情闭环：手选心情段标题 + MOOD 尾行输出指令（与 DiaryMoodLineParser 强耦合·见其 KDoc）。
     val moodHeader: String,
+    /** 「这篇还附了 N 张照片，你看不到」——与日记评论、朋友圈盲图同一条资源（§B8）。 */
+    val photosBlind: String,
     val moodOutputRule: String,
     val userMessage: String,
     // U2① 三问引导：段标题 + 前导 + 三条「标签：内容」模板（撰写页答案注入·add-only §5 安全）。
@@ -74,6 +76,7 @@ data class DiaryPromptStrings(
             currentTime = strings.s(R.string.diary_prompt_current_time),
             outputOnly = strings.s(R.string.diary_prompt_output_only),
             moodHeader = strings.s(R.string.diary_prompt_mood_header),
+            photosBlind = strings.s(R.string.diary_comment_photos_blind),
             moodOutputRule = strings.s(R.string.diary_prompt_mood_output),
             userMessage = strings.s(R.string.diary_prompt_user_message),
             guideHeader = strings.s(R.string.diary_prompt_guide_header),

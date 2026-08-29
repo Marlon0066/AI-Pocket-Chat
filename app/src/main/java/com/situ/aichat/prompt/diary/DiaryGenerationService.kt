@@ -63,6 +63,8 @@ class DiaryGenerationService @Inject constructor(
         giftInspiration: String? = null,
         moodHint: String? = null,
         guide: DiaryGuideAnswers? = null,
+        /** 撰写页里已贴好的照片张数（§B8·「AI 帮我写」用；自动日记路恒 0）。 */
+        photoCount: Int = 0,
     ): DiaryDraft? {
         val config = apiConfigRepo.resolveConfigValues(ApiFunction.DIARY_GENERATION)
         if (config == null) {
@@ -103,6 +105,7 @@ class DiaryGenerationService @Inject constructor(
             giftInspiration = giftInspiration,
             moodHint = moodHint.orEmpty(),
             guide = guide,
+            photoCount = photoCount,
             overrides = emptyMap(),
         )
 

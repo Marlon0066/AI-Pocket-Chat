@@ -107,6 +107,34 @@ class WorldCastAnchorsTest {
         }
     }
 
+    // ---- 三期卷一 walking ----
+
+    @Test
+    fun `walking 环位客true_其余钉卡false`() {
+        val ringMystery = StagedNative("native:x", "x", "小X", discovered = false, placeId = null, oneLiner = "", stage = WorldAffinityStage.STRANGER)
+        val placeNat = StagedNative("native:y", "y", "小Y", discovered = true, placeId = "yunye_cafe", oneLiner = "", stage = WorldAffinityStage.STRANGER)
+        val p = placement(
+            cast(
+                chars = listOf(ch("u1", StageMode.IN_TOWN), ch("u2", StageMode.AT_PLACE, "yunye_cafe"), ch("u3", StageMode.SLEEPING)),
+                natives = listOf(ringMystery, placeNat),
+                pets = listOf(StagedPet("p1", "u1", "团子")),
+            ),
+        )
+        fun card(id: String) = p.cards.single { it.kind.id() == id }
+        assertTrue("IN_TOWN 角色走动", card("u1").walking)
+        assertTrue("环位神秘人也走动", card("native:x").walking)
+        assertFalse("AT_PLACE 角色钉卡", card("u2").walking)
+        assertFalse("睡着钉民居", card("u3").walking)
+        assertFalse("在地点原住民钉卡", card("native:y").walking)
+        assertFalse("宠物钉家", card("p1").walking)
+    }
+
+    @Test
+    fun `walking E5退环位的睡着卡不走`() {
+        val a = placement(cast(listOf(ch("u1", StageMode.SLEEPING))), fs = emptyList()).cards.single()
+        assertFalse("E5 退环位仍不走（月牙不上街）", a.walking)
+    }
+
     @Test
     fun `原住民程序城落环位_角色后接续`() {
         val nat = StagedNative("native:x", "x", "小X", discovered = true, placeId = null, oneLiner = "", stage = WorldAffinityStage.STRANGER)

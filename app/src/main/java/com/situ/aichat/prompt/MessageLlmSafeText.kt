@@ -10,6 +10,7 @@ import com.situ.aichat.data.model.SystemEventJson
 import com.situ.aichat.data.model.SystemEventType
 import com.situ.aichat.data.model.buildRedPacketLLMRepresentation
 import com.situ.aichat.gift.FestivalCalendar
+import com.situ.aichat.prompt.memory.MemoryService
 
 /**
  * **单一事实源**：把一条消息渲染成「可安全喂给 LLM / 写入长期记忆」的文本——结构化价值卡脱敏，无脱敏表示的卡丢弃。
@@ -33,8 +34,17 @@ import com.situ.aichat.gift.FestivalCalendar
  * 系统耳语 [MessageKind.SYSTEM_HINT] 按现状返回 `content`（它本就是喂模型的旁白·与各调用方既有行为一致·不在本次收口范围）。
  */
 internal fun messageLlmSafeText(message: MessageEntity, userName: String = "用户", charName: String = "角色"): String? = when (MessageKind.fromRaw(message.messageKindRaw)) {
-    // 可读文本（非结构化）：原文进 LLM 素材。
-    MessageKind.PLAIN_TEXT, MessageKind.SCHEDULE_CARD, MessageKind.SYSTEM_HINT -> message.content
+    // 普通文本：原文进 LLM 素材。**带图则先转图片语义**——图片消息照 iOS 口径不新增 MessageKind
+    //（= PLAIN_TEXT + 侧车 imageRelativePath），穷举 when 拦不住它，若这里不处理，日记/日程/主动通知/
+    // 故事/见面记忆五条旁路拿到的就是三个字符的 `[图片]` 噪音，而同一条消息在记忆链路里却是有语义的。
+    MessageKind.PLAIN_TEXT ->
+        if (message.imageRelativePath != null) {
+            MemoryService.renderImageSemantics(message.content, message.mediaMemorySummary)
+        } else {
+            message.content
+        }
+    // 其余可读文本（非结构化）：原文进 LLM 素材。
+    MessageKind.SCHEDULE_CARD, MessageKind.SYSTEM_HINT -> message.content
     // 礼物 → 「[系统记录：…送出礼物 | 名称=… | 分量=…]」，**永不露金币数字 / 原始 JSON**。角色名/用户名经参传（图纸一 R1·默认「角色」/「用户」·formatMessages 命名路传真名）。解析失败 → null（宁缺勿漏原文）。
     MessageKind.GIFT_CARD -> GiftCardJson.parse(message.content)?.llmRepresentation(charName, userName)
     // 红包「信封」卡 → 「[系统记录：发出红包 | 节日=… | 祝福=…]」，**永不露 amount**（没拆的神秘感）。解析失败 → null。

@@ -43,17 +43,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.situ.aichat.ui.components.clickableScale
 import com.situ.aichat.ui.designsystem.AppShapes
+import com.situ.aichat.ui.world.WorldSceneColors.EavesBubbleShadow
+import com.situ.aichat.ui.world.WorldSceneColors.EavesChipGlass
+import com.situ.aichat.ui.world.WorldSceneColors.EavesDot
+import com.situ.aichat.ui.world.WorldSceneColors.EavesWhisperGlass
 
 /**
  * 偷听 overlay（W12 图纸 §4.6·quickchat demo:L27-29/L150-176 逐值）：邀请 chip / 双气泡 / whisper 落账条。
- * 位置由 [InteriorSceneView] 投影后经 modifier 定位（同 pcard 家族）；颜色为 overlay 专属（§4.6 精确值·不入
- * [WorldSceneColors] 单源以免碰 §2 未列文件）。旁观动效：气泡入场 260ms 过冲·同人新句旧泡 600ms 渐隐（[exiting]）。
+ * 位置由 [InteriorSceneView] 投影后经 modifier 定位（同 pcard 家族）；颜色已收编 [WorldSceneColors] 单源
+ * （§4.6 精确值不变）。旁观动效：气泡入场 260ms 过冲·同人新句旧泡 600ms 渐隐（[exiting]）。
  */
 
-private val EavesChipGlass = Color(0x75101422) // rgba(16,20,34,.46)
-private val EavesWhisperGlass = Color(0x94101422) // rgba(16,20,34,.58)
-private val EavesBubbleShadow = Color(0x660A0E1A) // rgba(10,14,26,.4)
-private val EavesDot = Color(0xFFEAD9BE) // #EAD9BE
 private val EavesBubbleEnter = CubicBezierEasing(0.3f, 1.3f, 0.4f, 1f)
 
 /** 偷听气泡态（同一人新句 → 旧泡置 [exiting] 渐隐退场·绝不叠罗汉·§4.6）。 */

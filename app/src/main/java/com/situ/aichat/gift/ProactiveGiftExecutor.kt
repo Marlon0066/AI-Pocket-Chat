@@ -28,6 +28,7 @@ import com.situ.aichat.data.repository.ConversationRepository
 import com.situ.aichat.data.repository.MessageRepository
 import com.situ.aichat.data.local.entity.RedPacketRecordEntity
 import com.situ.aichat.economy.CurrencyService
+import com.situ.aichat.offline.OfflineMeetingGate
 import com.situ.aichat.offline.outgoingOfflineSessionId
 import com.situ.aichat.redpacket.RedPacketError
 import com.situ.aichat.redpacket.RedPacketExpirationScanService
@@ -160,6 +161,13 @@ class ProactiveGiftExecutor @Inject constructor(
             // 6. 找最近活跃 Conversation
             val conversation = conversationRepo.recentActiveConversationFor(character.uuid)
                 ?: return@withTransaction ExecuteResult.Skipped("角色无任何对话,跳过送礼")
+
+            // 6b. 见面闸（卷一 A4·拍板④「送礼红包攒到结束后」）：会话正在线下见面 → 早退 Skipped。
+            // 位置**必须在第 7 步扣钱之前**：Skipped 不写幂等流水 → relatedKey 未被占用 → 见面结束后维护线
+            // 下一次评估自然补送（与既有余额不足/月上限 Skipped 同型，不建显式队列）。金额/流水/幂等写法零碰。
+            if (OfflineMeetingGate.inMeeting(conversation)) {
+                return@withTransaction ExecuteResult.Skipped(SKIP_IN_MEETING)
+            }
 
             // 7. 扣钱 + 建 GiftRecord（senderType=character 反向）
             val recordUuid = UUID.randomUUID().toString()
@@ -311,6 +319,11 @@ class ProactiveGiftExecutor @Inject constructor(
                 val conversation = conversationRepo.recentActiveConversationFor(character.uuid)
                     ?: return@withTransaction ExecuteResult.Skipped("角色无任何对话,跳过发红包")
 
+                // 5b. 见面闸（卷一 A4·同礼物分支）：早退在第 6 步扣钱之前，不写幂等流水 → 结束后维护线补送。
+                if (OfflineMeetingGate.inMeeting(conversation)) {
+                    return@withTransaction ExecuteResult.Skipped(SKIP_IN_MEETING)
+                }
+
                 // 6. 扣钱 + 建 pending Record + 插 RED_PACKET 消息（节日红包带 festivalId）
                 val blessing = decision.redPacketBlessing ?: ""
                 val festivalId = if (trigger.type == ProactiveGiftTriggerType.FESTIVAL) trigger.metaId else null
@@ -367,6 +380,9 @@ class ProactiveGiftExecutor @Inject constructor(
 
     companion object {
         private const val TAG = "ProactiveGiftExecutor"
+
+        /** 见面中早退的 Skipped 文案（卷一 A4·锁定逐字）：不写幂等流水，见面结束后维护线自然补送。 */
+        private const val SKIP_IN_MEETING = "见面进行中·顺延（不写幂等流水，结束后维护线补送）"
 
         /** 陪送文案和礼物卡之间的时间间隔（毫秒），模仿真人「先看到礼物再说话」（iOS textMessageDelaySeconds=2）。 */
         const val TEXT_MESSAGE_DELAY_MS = 2000L

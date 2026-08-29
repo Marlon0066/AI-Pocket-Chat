@@ -1,6 +1,7 @@
 package com.situ.aichat.ui.chat
 
 import android.content.Context
+import com.situ.aichat.data.local.entity.ConversationEntity
 import com.situ.aichat.data.local.entity.MeetingAppointmentEntity
 import com.situ.aichat.data.model.AppSettings
 import com.situ.aichat.data.repository.SettingsRepository
@@ -37,6 +38,8 @@ class ChatOfflineControllerTest {
     private lateinit var settingsRepo: SettingsRepository
     private lateinit var offlineSummaryRetryCoordinator: OfflineSummaryRetryCoordinator
     private lateinit var meetingAppointmentStore: MeetingAppointmentStore
+    private lateinit var proactiveGiftMaintenance: com.situ.aichat.gift.ProactiveGiftMaintenanceService
+    private lateinit var conversationRepo: com.situ.aichat.data.repository.ConversationRepository
     private lateinit var appContext: Context
     private lateinit var infoToastFlow: MutableStateFlow<String?>
     private lateinit var recoveryPromptFlow: MutableStateFlow<Boolean>
@@ -45,6 +48,7 @@ class ChatOfflineControllerTest {
     private var cancelActiveTurnCount = 0
     private var afterSummaryCount = 0
     private var afterglowScheduledCount = 0
+    private var echoScheduledCount = 0
 
     @Before
     fun setUp() {
@@ -52,6 +56,8 @@ class ChatOfflineControllerTest {
         settingsRepo = mockk(relaxed = true)
         offlineSummaryRetryCoordinator = mockk(relaxed = true)
         meetingAppointmentStore = mockk(relaxed = true)
+        proactiveGiftMaintenance = mockk(relaxed = true)
+        conversationRepo = mockk(relaxed = true)
         appContext = mockk(relaxed = true)
         every { appContext.getString(any<Int>()) } returns "见面摘要稍后补全的提示"
         infoToastFlow = MutableStateFlow(null)
@@ -60,6 +66,7 @@ class ChatOfflineControllerTest {
         cancelActiveTurnCount = 0
         afterSummaryCount = 0
         afterglowScheduledCount = 0
+        echoScheduledCount = 0
         val scope = CoroutineScope(Dispatchers.Unconfined)
         controller = ChatOfflineController(
             scope = scope,
@@ -68,6 +75,7 @@ class ChatOfflineControllerTest {
             infoToastFlow = infoToastFlow,
             recoveryPromptVisibleFlow = recoveryPromptFlow,
             messageRepo = mockk(relaxed = true),
+            conversationRepo = conversationRepo,
             settingsRepo = settingsRepo,
             offlineMeetingService = offlineMeetingService,
             offlineSummaryRetryCoordinator = offlineSummaryRetryCoordinator,
@@ -77,6 +85,8 @@ class ChatOfflineControllerTest {
             cancelActiveTurn = { cancelActiveTurnCount++ },
             afterOfflineMemorySummary = { afterSummaryCount++ },
             scheduleOfflineAfterglow = { afterglowScheduledCount++ },
+            scheduleMeetingMomentEcho = { echoScheduledCount++ },
+            proactiveGiftMaintenanceService = proactiveGiftMaintenance,
         )
     }
 
@@ -113,7 +123,7 @@ class ChatOfflineControllerTest {
 
     @Test
     fun 接受邀约_有session_标记并触发回合() {
-        coEvery { offlineMeetingService.acceptOfflineInvite("conv-1") } returns "session-1"
+        coEvery { offlineMeetingService.acceptOfflineInvite("conv-1", "msg-1") } returns "session-1"
         controller.acceptOfflineInvite("msg-1")
         coVerify { offlineMeetingService.markInviteResponded("msg-1", "accepted") }
         assertEquals(1, runAssistantTurnCount)
@@ -121,7 +131,7 @@ class ChatOfflineControllerTest {
 
     @Test
     fun 接受邀约_无session_不触发回合() {
-        coEvery { offlineMeetingService.acceptOfflineInvite("conv-1") } returns null
+        coEvery { offlineMeetingService.acceptOfflineInvite("conv-1", "msg-1") } returns null
         controller.acceptOfflineInvite("msg-1")
         coVerify { offlineMeetingService.markInviteResponded("msg-1", "accepted") }
         assertEquals(0, runAssistantTurnCount)
@@ -178,6 +188,23 @@ class ChatOfflineControllerTest {
         coVerify { offlineMeetingService.finalizeOfflineMode("conv-1", OfflineMeetingService.ExitReason.USER_ENDED) }
         assertEquals(1, afterSummaryCount) // finalize 成功 → 补常规记忆摘要
         assertEquals(1, afterglowScheduledCount) // finalize 成功 → 排余温消息 worker（§3.10）
+        assertEquals(1, echoScheduledCount) // 卷二 §5④：finalize 成功 → 走一次朋友圈呼应掷点/排程
+    }
+
+    /** 卷一 A4b：见面结束成功 → 补跑一次主动送礼维护线（见面期被闸掉的礼物/红包当天补送·E5）。 */
+    @Test
+    fun 退出_finalize成功_补跑主动送礼维护线() {
+        coEvery { offlineMeetingService.finalizeOfflineMode(any(), any()) } returns true
+        controller.exitOfflineMode()
+        coVerify(exactly = 1) { proactiveGiftMaintenance.runMaintenance(any()) }
+    }
+
+    /** finalize 失败（本就不在见面）→ 不补跑，避免无谓 LLM 评估。 */
+    @Test
+    fun 退出_finalize返回false_不补跑维护线() {
+        coEvery { offlineMeetingService.finalizeOfflineMode(any(), any()) } returns false
+        controller.exitOfflineMode()
+        coVerify(exactly = 0) { proactiveGiftMaintenance.runMaintenance(any()) }
     }
 
     @Test
@@ -187,6 +214,7 @@ class ChatOfflineControllerTest {
         assertEquals(1, cancelActiveTurnCount)
         assertEquals(0, afterSummaryCount)
         assertEquals(0, afterglowScheduledCount) // finalize 失败 → 不排余温 worker
+        assertEquals(0, echoScheduledCount) // 也不掷呼应帖的点
     }
 
     @Test
@@ -237,15 +265,49 @@ class ChatOfflineControllerTest {
         assertEquals(1, runAssistantTurnCount)
     }
 
+    /** 进不去且会话**不在**见面（罕见：会话缺失等）→ 不 honored、不开场（原行为保持）。 */
     @Test
-    fun 赴约_已在线下startReturnsNull_不markHonored不触发() {
+    fun 赴约_startReturnsNull且非见面_不markHonored不触发() {
         val now = System.currentTimeMillis()
         coEvery { meetingAppointmentStore.get("appt-1") } returns appt(now - 60_000)
         coEvery { offlineMeetingService.startFromAppointment(any(), any(), any(), any()) } returns null
+        coEvery { conversationRepo.get("conv-1") } returns null
         controller.arriveAtAppointment("appt-1")
-        assertEquals(1, cancelActiveTurnCount) // 窗内已打断；startFromAppointment 返 null(已在线下)→ 不 honored/不开场
+        assertEquals(1, cancelActiveTurnCount) // 窗内已打断；startFromAppointment 返 null → 不 honored/不开场
         coVerify(exactly = 0) { meetingAppointmentStore.markHonored(any(), any(), any()) }
         assertEquals(0, runAssistantTurnCount)
+    }
+
+    /**
+     * 卷一 D1a（拍板⑪）：进不去是因为**已经在见面中**（用户正是在赴这场约）→ 补 markHonored 链当前 sessionId，
+     * 不能放着让爽约扫描判「你没来」；已在见面故不再重复开场。
+     */
+    @Test
+    fun 赴约_已在见面中_补markHonored不重复开场() {
+        val now = System.currentTimeMillis()
+        coEvery { meetingAppointmentStore.get("appt-1") } returns appt(now - 60_000)
+        coEvery { offlineMeetingService.startFromAppointment(any(), any(), any(), any()) } returns null
+        coEvery { conversationRepo.get("conv-1") } returns ConversationEntity(
+            uuid = "conv-1", title = "t", characterUuid = "c1", creationDate = 0L,
+            isInOfflineMode = true, currentOfflineSessionId = "sess-live",
+        )
+        controller.arriveAtAppointment("appt-1")
+        coVerify(exactly = 1) { meetingAppointmentStore.markHonored("appt-1", "sess-live", any()) }
+        assertEquals(0, runAssistantTurnCount)
+    }
+
+    /** 脏态（旗标 true 而 sessionId 空）→ 仍判已赴约，sessionId 传空串（fail-closed）。 */
+    @Test
+    fun 赴约_见面脏态_markHonored空sessionId() {
+        val now = System.currentTimeMillis()
+        coEvery { meetingAppointmentStore.get("appt-1") } returns appt(now - 60_000)
+        coEvery { offlineMeetingService.startFromAppointment(any(), any(), any(), any()) } returns null
+        coEvery { conversationRepo.get("conv-1") } returns ConversationEntity(
+            uuid = "conv-1", title = "t", characterUuid = "c1", creationDate = 0L,
+            isInOfflineMode = true, currentOfflineSessionId = null,
+        )
+        controller.arriveAtAppointment("appt-1")
+        coVerify(exactly = 1) { meetingAppointmentStore.markHonored("appt-1", "", any()) }
     }
 
     @Test

@@ -13,6 +13,7 @@ import com.situ.aichat.data.repository.ConversationRepository
 import com.situ.aichat.data.repository.MessageRepository
 import com.situ.aichat.notification.NotificationPayload
 import com.situ.aichat.notification.Notifier
+import com.situ.aichat.offline.OfflineMeetingGate
 import com.situ.aichat.prompt.MessageKindInference
 import com.situ.aichat.prompt.MessageSplitter
 import com.situ.aichat.prompt.memory.VectorMemoryService
@@ -50,6 +51,12 @@ class ProactiveReplyDeliverer @Inject constructor(
         text: String,
         logTag: String,
     ) {
+        // 见面闸（卷一 A7）：目标会话正在线下见面 = 人就在对面，绝不再从「手机那头」冒一条主动消息
+        // （余温/惦记回连都属「隔着手机想起你」的话术，当场穿帮）。按会话判定，脏态视同见面（fail-closed）。
+        if (OfflineMeetingGate.inMeeting(conversationRepo.get(conversationUuid))) {
+            Log.i(logTag, "目标会话见面中，放弃投递")
+            return
+        }
         val range = settings.sanitizedReplySegmentRange
         val segments = MessageSplitter.split(text, maxSegments = range.last, minSegments = range.first)
             .ifEmpty { listOf(text) }

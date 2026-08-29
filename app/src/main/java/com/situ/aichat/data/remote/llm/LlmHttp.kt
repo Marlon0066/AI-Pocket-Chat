@@ -12,6 +12,11 @@ import java.net.URI
 object LlmHttp {
 
     /**
+     * ⚠️ **与模型拉取路的规则目前不一致**（2026-08-29 登记）：`ModelCatalogUrl` 已升级为「识别任意版本段
+     * `/v\d+(alpha|beta)?` + 末尾 `#` 逃生口 + 保留 query」，而本函数仍是旧三分支——`https://host/api/v3`
+     * 这类中转在那边能打到 `/api/v3/models`，在这里却拼成 `/api/v3/v1/chat/completions` 而 404。
+     * 跨四路归一须单独立项（本函数是全部 LLM 往返的唯一出口，改它要配 T5 + 存量地址穷举）。
+     *
      * Normalize a base URL into a full chat/completions endpoint. Accepts:
      * 1) https://host  2) https://host/v1  3) https://host/.../chat/completions
      * Non-local http hosts are auto-upgraded to https (avoids leaking the Bearer key).

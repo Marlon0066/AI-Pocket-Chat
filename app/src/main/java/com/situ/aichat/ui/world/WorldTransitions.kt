@@ -14,6 +14,9 @@ import com.situ.aichat.ui.world.interior.InteriorGLView
 import com.situ.aichat.ui.world.planet.PlanetGLView
 import com.situ.aichat.ui.world.planet.PlanetMath
 import com.situ.aichat.ui.world.town.TownGLView
+import com.situ.aichat.ui.world.web.ContinentWebController
+import com.situ.aichat.ui.world.web.PlanetWebController
+import com.situ.aichat.ui.world.web.TownWebController
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
@@ -42,6 +45,20 @@ internal class WorldTransitions(private val scope: CoroutineScope, private val v
     var planetView: PlanetGLView? = null
     var continentView: ContinentGLView? = null
     var townView: TownGLView? = null
+
+    /**
+     * 网页小镇镜头口（一期绞杀第一刀·§3.4B）。非空 = 当前 Town 走 web 渲染；两者由 [WorldScreen] 的 Town
+     * 择一挂载互斥置换（挂 web 即置空 [townView]，回落 GL 即置空本项），故不会同时非空。
+     */
+    var townWeb: TownWebController? = null
+
+    /**
+     * 网页星球 / 网页大陆镜头口（二期绞杀第二刀·图纸 §3）。非空 = 该场景走 web 渲染；与对应 GL 视图由
+     * [WorldScreen] 的择一挂载互斥置换（挂 web 即置空 GL 项，回落 GL 即置空本项），故不会同时非空。
+     */
+    var planetWeb: PlanetWebController? = null
+    var continentWeb: ContinentWebController? = null
+
     var interiorView: InteriorGLView? = null
 
     /** W15.2 回家镜头进行中（非场景切换·不占 [phase]·防重入与相互挤占）。 */
@@ -89,6 +106,7 @@ internal class WorldTransitions(private val scope: CoroutineScope, private val v
     // ── 星球 → 大陆（金标点击 / overpinch·§3.6·9a）──
     fun startDiveToContinent(reduceMotion: Boolean, homeX: Int, homeY: Int, onHaptic: () -> Unit) {
         if (phase != WorldTransition.None || spinningHome) return
+        planetWeb?.let { return startDiveToContinentWeb(it, reduceMotion, homeX, homeY, onHaptic) } // 网页星球分支（§3·下同）
         val pv = planetView ?: return
         phase = WorldTransition.ToContinent
         onHaptic() // 俯冲触发轻点一次
@@ -114,6 +132,7 @@ internal class WorldTransitions(private val scope: CoroutineScope, private val v
     // ── 大陆 → 星球（overzoom / 系统返回 / 返回钮·§3.6·9a）──
     fun startReturnToPlanet(reduceMotion: Boolean) {
         if (phase != WorldTransition.None) return
+        continentWeb?.let { return startReturnToPlanetWeb(it, reduceMotion) }
         val cv = continentView ?: return
         phase = WorldTransition.ToPlanet
         scope.launch {
@@ -139,6 +158,7 @@ internal class WorldTransitions(private val scope: CoroutineScope, private val v
     // ── 大陆 → 小镇（按钮 / overpinch-in·§3.5·460ms 俯冲 dist→4.5·幕入@220·intro 幕后自跑一镜到底）──
     fun startDiveToTown(cityId: String, reduceMotion: Boolean, onHaptic: () -> Unit) {
         if (phase != WorldTransition.None) return
+        continentWeb?.let { return startDiveToTownWeb(it, cityId, reduceMotion, onHaptic) }
         val cv = continentView ?: return
         phase = WorldTransition.ToTown
         onHaptic() // 进镇触发轻点一次（同 9b 俯冲档）
@@ -161,6 +181,7 @@ internal class WorldTransitions(private val scope: CoroutineScope, private val v
     // ── 小镇 → 大陆（overzoom-out / 返回·§3.5·420ms 拉升 pitch→1.15 dist→38·幕入@200·恢复大陆姿态）──
     fun startReturnToContinent(reduceMotion: Boolean) {
         if (phase != WorldTransition.None) return
+        townWeb?.let { return startReturnToContinentWeb(it, reduceMotion) } // 网页小镇分支（§3.4B·下同）
         val tv = townView ?: return
         phase = WorldTransition.ToContinentFromTown
         scope.launch {
@@ -182,6 +203,7 @@ internal class WorldTransitions(private val scope: CoroutineScope, private val v
     // ── 小镇 → 室内（走进去·§4.9·380ms 俯冲 dist→13·幕入@180·intro 幕后自跑）──
     fun startDiveToInterior(cityId: String, placeId: String, reduceMotion: Boolean, onHaptic: () -> Unit) {
         if (phase != WorldTransition.None) return
+        townWeb?.let { return startDiveToInteriorWeb(it, cityId, placeId, reduceMotion, onHaptic) }
         val tv = townView ?: return
         phase = WorldTransition.ToInterior
         onHaptic() // 进室内触发轻点一次
@@ -198,6 +220,109 @@ internal class WorldTransitions(private val scope: CoroutineScope, private val v
                 }
                 curtainJob.join(); vm.enterInterior(cityId, placeId)
             }
+        }
+    }
+
+    // ── 网页小镇的两段离场（§3.4B·镜头动画交 JS 播，原生只管幕；时长/幕入延迟 = GL 版原值逐个照抄）──
+
+    /** 小镇 → 大陆（web）：JS 播 420ms 拉升（pitch→1.15/dist→38），幕入@200 + 240ms，幕满换场。 */
+    private fun startReturnToContinentWeb(tw: TownWebController, reduceMotion: Boolean) {
+        phase = WorldTransition.ToContinentFromTown
+        scope.launch {
+            if (reduceMotion) {
+                curtain.animateTo(1f, tween(240, easing = AppMotion.EaseInOut))
+            } else {
+                tw.playExit(420)
+                delay(200)
+                curtain.animateTo(1f, tween(240, easing = AppMotion.EaseInOut)) // 与 JS 的 420ms 并行·合计 440ms 同 GL
+            }
+            vm.backToContinent()
+        }
+    }
+
+    /** 小镇 → 室内（web）：JS 播 380ms 俯冲到该地点（dist→13），幕入@180 + 240ms；进室内前存桥缓存快照（J6）。 */
+    private fun startDiveToInteriorWeb(
+        tw: TownWebController, cityId: String, placeId: String, reduceMotion: Boolean, onHaptic: () -> Unit,
+    ) {
+        phase = WorldTransition.ToInterior
+        onHaptic() // 进室内触发轻点一次
+        scope.launch {
+            val snap = tw.poseSnapshot()
+            vm.saveTownCamera(snap, snap.dist)
+            if (reduceMotion) {
+                curtain.animateTo(1f, tween(240, easing = AppMotion.EaseInOut))
+            } else {
+                tw.playDiveToPlace(placeId, 380)
+                delay(180)
+                curtain.animateTo(1f, tween(240, easing = AppMotion.EaseInOut)) // 与 JS 的 380ms 并行·合计 420ms 同 GL
+            }
+            vm.enterInterior(cityId, placeId)
+        }
+    }
+
+    // ── 网页星球 / 网页大陆的三段离场（二期图纸 §3·§J7：镜头目标在原生算、动画交 JS 播，原生只管幕；
+    //    时长 / 幕入延迟 = GL 版原值逐个照抄）──
+
+    /** 星球 → 大陆（web）：JS 播 520ms 俯冲（yaw/pitch 由 [PlanetMath] 算·dist→1.45），幕入@280 + 240ms，幕满换场。 */
+    private fun startDiveToContinentWeb(
+        pw: PlanetWebController, reduceMotion: Boolean, homeX: Int, homeY: Int, onHaptic: () -> Unit,
+    ) {
+        phase = WorldTransition.ToContinent
+        onHaptic() // 俯冲触发轻点一次
+        scope.launch {
+            val (yaw, pitch, dist) = pw.poseSnapshot()
+            vm.savePlanetCamera(yaw, pitch, dist)
+            if (reduceMotion) {
+                curtain.animateTo(1f, tween(240, easing = AppMotion.EaseInOut))
+            } else {
+                val homeUnit = PlanetMath.homeUnitVector(homeX, homeY)
+                val (yawRaw, pitchT) = PlanetMath.diveTarget(homeUnit)
+                pw.playPose(PlanetMath.nearestYaw(yaw, yawRaw), pitchT, 1.45f, 520)
+                delay(280)
+                curtain.animateTo(1f, tween(240, easing = AppMotion.EaseInOut)) // 与 JS 的 520ms 并行·合计 520ms 同 GL
+            }
+            vm.enterContinent()
+        }
+    }
+
+    /** 大陆 → 星球（web）：先收卡，JS 播 460ms 拉升（pitch→1.12/dist→95），幕入@220 + 240ms；换场后仍等星球首帧再揭幕。 */
+    private fun startReturnToPlanetWeb(cw: ContinentWebController, reduceMotion: Boolean) {
+        phase = WorldTransition.ToPlanet
+        scope.launch {
+            cw.closeSheet()
+            if (reduceMotion) {
+                curtain.animateTo(1f, tween(240, easing = AppMotion.EaseInOut))
+            } else {
+                cw.playExit(460)
+                delay(220)
+                curtain.animateTo(1f, tween(240, easing = AppMotion.EaseInOut)) // 与 JS 的 460ms 并行·合计 460ms 同 GL
+            }
+            // 先建闸再换场（组合在下一帧才发生 → 无「信号先于等待」竞态），等星球真画出首帧再揭幕。
+            val firstFrame = CompletableDeferred<Unit>().also { planetFirstFrame = it }
+            vm.backToPlanet()
+            firstFrame.await()
+            curtain.animateTo(0f, tween(240, easing = AppMotion.EaseInOut)); phase = WorldTransition.None
+        }
+    }
+
+    /** 大陆 → 小镇（web）：先存姿态收卡，JS 播 460ms 俯冲到该站位（target→站位·dist→4.5），幕入@220 + 240ms。 */
+    private fun startDiveToTownWeb(
+        cw: ContinentWebController, cityId: String, reduceMotion: Boolean, onHaptic: () -> Unit,
+    ) {
+        phase = WorldTransition.ToTown
+        onHaptic() // 进镇触发轻点一次（同 9b 俯冲档）
+        scope.launch {
+            cw.closeSheet()
+            val (snap, tDist) = cw.poseSnapshot()
+            vm.saveContinentCamera(snap, tDist)
+            if (reduceMotion) {
+                curtain.animateTo(1f, tween(240, easing = AppMotion.EaseInOut))
+            } else {
+                cw.playDiveToSite(cityId, 460)
+                delay(220)
+                curtain.animateTo(1f, tween(240, easing = AppMotion.EaseInOut)) // 与 JS 的 460ms 并行·合计 460ms 同 GL
+            }
+            vm.enterTown(cityId)
         }
     }
 
@@ -230,7 +355,12 @@ internal class WorldTransitions(private val scope: CoroutineScope, private val v
         phase = WorldTransition.ToStarmap
         onHaptic() // 进星图轻点一次（俯冲同档）
         scope.launch {
-            planetView?.let { pv ->
+            // 第四段（星↔星图·图纸 §3 R1 修订后已列）：web 星球挂载时 planetView 恒为 null，不补这一支
+            // 会静默丢失出发前姿态（GL 版一直保住）。web 侧输入锁走 setFlags(interactive)，无需 setInputLocked。
+            planetWeb?.let { pw ->
+                val (yaw, pitch, dist) = pw.poseSnapshot()
+                vm.savePlanetCamera(yaw, pitch, dist)
+            } ?: planetView?.let { pv ->
                 pv.setInputLocked(true)
                 val snap = pv.cameraSnapshot()
                 vm.savePlanetCamera(snap.yaw, snap.pitch, snap.dist)

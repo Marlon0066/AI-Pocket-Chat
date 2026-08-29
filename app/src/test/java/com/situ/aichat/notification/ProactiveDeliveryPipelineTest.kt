@@ -10,6 +10,7 @@ import com.situ.aichat.data.model.AppSettings
 import com.situ.aichat.data.remote.llm.ApiConfigValues
 import com.situ.aichat.data.repository.ApiConfigRepository
 import com.situ.aichat.data.repository.CharacterRepository
+import com.situ.aichat.data.repository.ConversationRepository
 import com.situ.aichat.data.repository.SettingsRepository
 import com.situ.aichat.prompt.notification.ProactiveMessageComposer
 import io.mockk.coEvery
@@ -42,9 +43,11 @@ class ProactiveDeliveryPipelineTest {
     private val templateDao: NotificationTemplateDao = mockk()
     private val deliveryDao: NotificationDeliveryDao = mockk()
 
+    private val conversationRepository: ConversationRepository = mockk(relaxed = true)
+
     private val pipeline = ProactiveDeliveryPipeline(
         context, characterRepository, settingsRepository, scheduleDao,
-        evaluator, composer, apiConfigRepository, templateDao, deliveryDao,
+        evaluator, composer, apiConfigRepository, templateDao, deliveryDao, conversationRepository,
     )
 
     private val charId = "c-1"

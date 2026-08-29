@@ -125,6 +125,21 @@ class MessagePreviewTextTest {
         assertEquals("📅 未来约定", preview(MessageKind.FUTURE_MEETING_PROPOSAL_CARD, "{坏"))
     }
 
+    // ── 卷一 C3 防御层：线下叙事标签绝不进预览/通知（E13 幂等）──
+
+    @Test
+    fun 普通文本预览_剥线下叙事标签() {
+        assertEquals("你来啦。今天风挺大的", preview(MessageKind.PLAIN_TEXT, "[对话]你来啦。[/对话][动作]今天风挺大的[/动作]"))
+        assertEquals("咖啡馆靠窗的位置", preview(MessageKind.PLAIN_TEXT, "[场景：咖啡馆]咖啡馆靠窗的位置"))
+    }
+
+    @Test
+    fun 普通文本预览_无线下标签时原样(){
+        // E13：剥标签对普通文本零副作用（幂等），既有清洗口径不变。
+        assertEquals("晚上一起吃饭吗", preview(MessageKind.PLAIN_TEXT, "晚上一起吃饭吗"))
+        assertEquals("[表情包]", preview(MessageKind.PLAIN_TEXT, "[sticker:abc]"))
+    }
+
     @Test
     fun `所有结构化JSON卡的预览都不含裸JSON签名`() {
         val redPacket = RedPacketJson.encode(RedPacketData(type = "red_packet", recordUUID = "r1", amount = 99, blessingText = ""))

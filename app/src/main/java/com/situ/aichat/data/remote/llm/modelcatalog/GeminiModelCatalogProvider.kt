@@ -32,39 +32,20 @@ class GeminiModelCatalogProvider : ModelCatalogProvider {
             }
     }
 
+    /**
+     * 归一到原生 `/v1beta/models` 后挂上 `?key=`。路径归一走单源 [ModelCatalogUrl]；
+     * `stripTail=openai` 复刻既有纪律：OpenAI 兼容层只认 Bearer，原生路径用 query key，故剥掉该段。
+     */
     private fun buildModelsUrl(baseUrl: String, apiKey: String): String {
-        val uri = runCatching { URI(baseUrl.trim()) }.getOrNull() ?: throw ModelCatalogException.InvalidUrl
-        val scheme = uri.scheme ?: throw ModelCatalogException.InvalidUrl
-        val authority = uri.authority ?: throw ModelCatalogException.InvalidUrl
-        val segs = (uri.path ?: "").split("/").filter { it.isNotEmpty() }.toMutableList()
-        normalizeToModelsEndpoint(segs)
-        val newPath = "/" + segs.joinToString("/")
-
+        val normalized = ModelCatalogUrl.modelsUrl(
+            baseUrl,
+            defaultVersion = listOf("v1beta"),
+            stripTail = setOf("openai"),
+        )
+        val uri = runCatching { URI(normalized) }.getOrNull() ?: throw ModelCatalogException.InvalidUrl
         val keptQuery = (uri.query ?: "").split("&").filter { it.isNotEmpty() && !it.startsWith("key=") }
         val query = (keptQuery + "key=${URLEncoder.encode(apiKey, "UTF-8")}").joinToString("&")
-        return "$scheme://$authority$newPath?$query"
-    }
-
-    private fun normalizeToModelsEndpoint(segs: MutableList<String>) {
-        val lower = "/" + segs.joinToString("/").lowercase()
-        when {
-            // /openai/models → strip /openai (only accepts Bearer); native path uses ?key=.
-            lower.endsWith("/openai/models") -> {
-                repeat(2) { segs.removeAt(segs.lastIndex) } // models, openai
-                segs.add("models")
-            }
-            lower.endsWith("/models") || lower.contains("/models/") -> Unit
-            lower.endsWith("/openai/chat/completions") -> {
-                repeat(3) { segs.removeAt(segs.lastIndex) } // completions, chat, openai
-                segs.add("models")
-            }
-            lower.endsWith("/openai") -> {
-                segs.removeAt(segs.lastIndex) // openai
-                segs.add("models")
-            }
-            lower.endsWith("/v1beta") || lower.endsWith("/v1") -> segs.add("models")
-            else -> { segs.add("v1beta"); segs.add("models") }
-        }
+        return "${uri.scheme}://${uri.authority}${uri.path.orEmpty()}?$query"
     }
 
     @Serializable

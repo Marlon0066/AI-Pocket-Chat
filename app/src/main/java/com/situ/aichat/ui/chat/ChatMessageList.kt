@@ -236,6 +236,7 @@ internal fun ChatMessageList(
                                 voiceCascadePlay = voiceCascadePlay,
                                 flightTracking = flightRow,
                                 voiceSetupNeeded = voiceSetupNeeded,
+                                dividerEntryAnimation = newArrival, // 卷三 V3：离场分隔条落成只在新到达那一刻播
                             )
                         }
                     }

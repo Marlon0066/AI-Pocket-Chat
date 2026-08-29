@@ -4,6 +4,7 @@ import com.situ.aichat.data.local.dao.ConversationDao
 import com.situ.aichat.data.local.dao.MessageDao
 import com.situ.aichat.data.local.entity.MessageEntity
 import com.situ.aichat.data.repository.ConversationRepository
+import com.situ.aichat.offline.OfflineMeetingGate
 import com.situ.aichat.util.DateFormatters
 import java.time.ZoneId
 import java.util.UUID
@@ -57,6 +58,9 @@ class PetChatBubbleService @Inject constructor(
     ): Boolean {
         if (DAILY_LIMIT <= 0) return false
         val conversation = conversationDao.latestActiveForCharacter(characterUuid) ?: return false
+        // 见面闸（卷一 A3）：会话正在线下见面 → 不插宠物气泡（人在对面，宠物独白从「手机那头」冒出来穿帮；
+        // 且它恒线上标 + 顶预览，会盖掉见面期的活预览）。喂食/佩戴本体照常生效，只是这次没有聊天反馈。
+        if (OfflineMeetingGate.inMeeting(conversation)) return false
         val startOfDay = DateFormatters.startOfDayMillis(now, zone)
         if (messageDao.countPetMessagesSince(conversation.uuid, startOfDay) >= DAILY_LIMIT) return false
 

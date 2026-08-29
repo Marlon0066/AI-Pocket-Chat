@@ -56,6 +56,7 @@ import com.situ.aichat.prompt.CalendarItemParser
 import com.situ.aichat.prompt.DirtyMessageDetector
 import com.situ.aichat.ui.components.AppMotion
 import com.situ.aichat.ui.components.rememberReduceMotion
+import com.situ.aichat.prompt.memory.MemoryService
 import com.situ.aichat.sticker.StickerTagParser
 import com.situ.aichat.ui.components.LocalAppHaptics
 import com.situ.aichat.ui.designsystem.AppShapes
@@ -81,6 +82,10 @@ import kotlinx.coroutines.launch
 @androidx.compose.runtime.Immutable
 internal class MessageRowActions(
     val onVoiceToggle: (MessageEntity) -> Unit,
+    /** 点开图片气泡 → 全屏查看器（传原图路径，非缩略图）。 */
+    val onOpenImage: (String) -> Unit,
+    /** 长按菜单「保存到相册」（仅图片消息出现）。 */
+    val onSaveImage: (MessageEntity) -> Unit,
     val onQuote: (MessageEntity) -> Unit,
     val onDelete: (MessageEntity) -> Unit,
     /** M2 沉浸菜单：长按开菜单（消息 + 气泡在窗口内的边界·供覆盖层原位浮起与菜单定位）。 */
@@ -135,6 +140,8 @@ internal fun MessageRow(
     flightTracking: Boolean = false,
     /** VU3：当前角色仍缺可用音色（自愈显示门控）——仅失败通话卡（hadTtsFailure）且此为 true 时才长琥珀尾巴。 */
     voiceSetupNeeded: Boolean = false,
+    /** 卷三 V3：true=离场分隔条「新到达」一刻，走落成动画（历史回看恒 false·门控见 ChatMessageList 的 newArrival）。 */
+    dividerEntryAnimation: Boolean = false,
 ) {
     val isUser = message.roleRaw == "user"
     val kind = MessageKind.fromRaw(message.messageKindRaw)
@@ -171,7 +178,9 @@ internal fun MessageRow(
         OfflineMarkerEndPayload.parse(message.content)?.let {
             // offline-1：有 sessionId 才可点进回顾（对齐 iOS `if sessionId != nil`）。
             val onClick = message.offlineSessionId?.let { sid -> { actions.onReviewOffline(sid) } }
-            Box(Modifier.padding(top = topPadding)) { OfflineEndDivider(it.durationText, onClick = onClick) }
+            Box(Modifier.padding(top = topPadding)) {
+                OfflineEndDivider(it.durationText, onClick = onClick, entryAnimation = dividerEntryAnimation)
+            }
         }
         return
     }
@@ -228,7 +237,13 @@ internal fun MessageRow(
         val timeText = DateFormatters.relativeTimeString(
             message.timestamp, System.currentTimeMillis(), relStrings, detailed = true,
         )
-        val clean = StickerTagParser.replaceStickerTagsForDisplay(CalendarItemParser.stripCalendarRefs(message.content))
+        // 图片消息的正文是内部哨兵 `[图片]`——直接念出来读屏用户只会听到三个字符。IM5 把哨兵在五条
+        // 提示词旁路上都堵了，这里是漏掉的第六条（读屏）。有图片理解摘要就一并念出来。
+        val clean = if (message.imageRelativePath != null) {
+            MemoryService.renderImageSemantics(message.content, message.mediaMemorySummary)
+        } else {
+            StickerTagParser.replaceStickerTagsForDisplay(CalendarItemParser.stripCalendarRefs(message.content))
+        }
         val body = if (message.isVoiceMessage) {
             stringResource(R.string.a11y_bubble_voice, roleName, timeText, clean)
         } else {
@@ -271,12 +286,13 @@ internal fun MessageRow(
         val a11yMenuEligible = bubbleSentence != null && !message.isVoiceMessage && !hasStickerTags
         val a11yMenuActions = if (a11yMenuEligible) {
             remember(message.messageUUID, isOfflineModeActive, actions) {
-                immersiveMenuActions(isUser, kind, isOfflineModeActive, message.isOfflineMode).map { action ->
+                immersiveMenuActions(isUser, kind, isOfflineModeActive, message.isOfflineMode, message.imageRelativePath != null).map { action ->
                     CustomAccessibilityAction(immersiveMenuActionLabel(action)) {
                         when (action) {
                             ImmersiveMenuAction.COPY -> copyScope.launch {
                                 clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("message", messageCopyText(message))))
                             }
+                            ImmersiveMenuAction.SAVE_IMAGE -> actions.onSaveImage(message)
                             ImmersiveMenuAction.QUOTE -> actions.onQuote(message)
                             ImmersiveMenuAction.REGENERATE -> actions.onRegenerate()
                             ImmersiveMenuAction.CONVERT_TO_INVITE -> actions.onConvertToInvite(message)
@@ -380,6 +396,17 @@ internal fun MessageRow(
                     characterName = characterName,
                     onApply = { actions.onAppointmentChangeApply(message.messageUUID) },
                     onKeep = { actions.onAppointmentChangeKeep(message.messageUUID) },
+                )
+                // 图片消息（照 iOS 口径 = PLAIN_TEXT + 侧车 imageRelativePath，不新增 MessageKind）：
+                // 排在贴纸/脏消息之前——它的正文恒是哨兵 `[图片]`，不该再走那些文本判定。
+                message.imageRelativePath != null -> ChatImageBubble(
+                    imagePath = message.imageRelativePath,
+                    thumbnailPath = message.imageThumbnailRelativePath,
+                    shape = bubbleShape,
+                    maxWidth = bubbleMaxWidth,
+                    onClick = { actions.onOpenImage(message.imageRelativePath) },
+                    onLongClick = openMenu,
+                    a11yDescription = bubbleSentence,
                 )
                 isCard -> ScheduleCardBubble(content = message.content, onLongClick = openMenu)
                 isDirty && !dirtyExpanded -> DirtyFoldedBubble(shape = bubbleShape, onClick = { dirtyExpanded = true })

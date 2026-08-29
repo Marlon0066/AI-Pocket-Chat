@@ -49,6 +49,9 @@ object LogSource {
     // MARK: - 故事（iOS-parity）
     const val STORY_GENERATION = "故事生成"
 
+    // MARK: - 图片理解（iOS-parity·ApiFunction.IMAGE_UNDERSTANDING）
+    const val IMAGE_UNDERSTANDING = "图片理解"
+
     // MARK: - 日程（iOS-parity；天气调整安卓暂未做，常量保留=前向兼容）
     const val SCHEDULE_GENERATION = "日程生成"
     const val SCHEDULE_WEATHER_ADJUST = "日程天气调整"

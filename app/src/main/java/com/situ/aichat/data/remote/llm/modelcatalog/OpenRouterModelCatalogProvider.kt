@@ -7,9 +7,12 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
-import java.net.URI
 
-/** OpenRouter model catalog — faithful port of iOS OpenRouterModelCatalogProvider. */
+/**
+ * OpenRouter model catalog。
+ * 官方响应的 `architecture.input_modalities` 含 `"image"` = **视觉能力权威元数据**（各家 models 接口里
+ * 只有 OpenRouter 与 Anthropic 给出该信息）——读它即可免跑带图探针。
+ */
 class OpenRouterModelCatalogProvider : ModelCatalogProvider {
     override suspend fun fetchModels(
         config: ApiConfigValues,
@@ -17,7 +20,7 @@ class OpenRouterModelCatalogProvider : ModelCatalogProvider {
         json: Json,
     ): List<APIModelOption> {
         if (config.apiKey.trim().isEmpty()) throw ModelCatalogException.MissingApiKey
-        val url = buildModelsUrl(config.baseUrl)
+        val url = ModelCatalogUrl.modelsUrl(config.baseUrl, defaultVersion = listOf("api", "v1"))
         val body = ModelCatalogHttp.get(client, url, LlmHttp.authHeaders(config))
         val decoded = runCatching { json.decodeFromString(Response.serializer(), body) }
             .getOrNull() ?: throw ModelCatalogException.InvalidResponse
@@ -27,30 +30,9 @@ class OpenRouterModelCatalogProvider : ModelCatalogProvider {
                 name = it.name ?: it.id,
                 subtitle = it.subtitle(),
                 supportedParameters = it.supportedParameters,
+                supportsVision = it.visionFromModalities(),
             )
         }
-    }
-
-    private fun buildModelsUrl(baseUrl: String): String {
-        val uri = runCatching { URI(baseUrl.trim()) }.getOrNull() ?: throw ModelCatalogException.InvalidUrl
-        val scheme = uri.scheme ?: throw ModelCatalogException.InvalidUrl
-        val authority = uri.authority ?: throw ModelCatalogException.InvalidUrl
-        val segs = (uri.path ?: "").split("/").filter { it.isNotEmpty() }.toMutableList()
-        val lower = "/" + segs.joinToString("/").lowercase()
-        when {
-            lower.endsWith("/models") -> Unit
-            lower.endsWith("/chat/completions") -> {
-                repeat(2) { segs.removeAt(segs.lastIndex) } // drop completions, chat
-                segs.add("models")
-            }
-            else -> {
-                if (!lower.endsWith("/api/v1") && !lower.endsWith("/v1")) {
-                    segs.add("api"); segs.add("v1")
-                }
-                segs.add("models")
-            }
-        }
-        return "$scheme://$authority/" + segs.joinToString("/")
     }
 
     @Serializable
@@ -63,10 +45,19 @@ class OpenRouterModelCatalogProvider : ModelCatalogProvider {
         val description: String? = null,
         @SerialName("context_length") val contextLength: Int? = null,
         @SerialName("supported_parameters") val supportedParameters: List<String>? = null,
+        val architecture: Architecture? = null,
     ) {
+        /** null = 该条目没给模态信息（不下结论）；true/false = 权威判定。 */
+        fun visionFromModalities(): Boolean? {
+            val modalities = architecture?.inputModalities ?: return null
+            if (modalities.isEmpty()) return null
+            return modalities.any { it.equals("image", ignoreCase = true) }
+        }
+
         fun subtitle(): String? {
             val parts = buildList {
                 contextLength?.let { add("${formatContextLength(it)} ctx") }
+                if (visionFromModalities() == true) add("视觉")
                 if (supportsReasoningControl()) add("reasoning")
             }
             if (parts.isNotEmpty()) return parts.joinToString(" · ")
@@ -84,4 +75,9 @@ class OpenRouterModelCatalogProvider : ModelCatalogProvider {
             else -> "$value"
         }
     }
+
+    @Serializable
+    private data class Architecture(
+        @SerialName("input_modalities") val inputModalities: List<String>? = null,
+    )
 }

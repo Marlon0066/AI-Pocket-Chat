@@ -23,8 +23,8 @@ class TownCameraTest {
     fun intro_curveGoldenAt45Steps() {
         val cam = cam()
         repeat(45) { cam.integrate(frame, reduceMotion = false) } // introT=0.5 → k=0.875
-        assertEquals(25.75f, cam.snapshot.dist, 0.05f)
-        assertEquals(0.68625f, cam.snapshot.pitch, 0.005f)
+        assertEquals(31.0f, cam.snapshot.dist, 0.05f)   // 38 + (30 − 38)×0.875（R3 构图定版顺移）
+        assertEquals(0.45875f, cam.snapshot.pitch, 0.005f)  // 1.15 + (0.36 − 1.15)×0.875（R3 构图定版顺移）
     }
 
     @Test
@@ -45,8 +45,8 @@ class TownCameraTest {
     fun reduceMotion_startsLanded_noIntro_butGesturable() {
         val cam = cam(reduce = true)
         assertEquals("reduce 无 intro", 1f, cam.introFraction(), 0f)
-        assertEquals(24f, cam.snapshot.dist, eps)
-        assertEquals(0.62f, cam.snapshot.pitch, eps)
+        assertEquals(30f, cam.snapshot.dist, eps)   // R3 LANDED_DIST
+        assertEquals(0.36f, cam.snapshot.pitch, eps)   // R3 LANDED_PITCH
         // 手势仍可平移（reduce 不锁交互）。
         cam.setPointerDown(true); cam.onPanBy(2f, 0f); cam.integrate(frame, reduceMotion = true)
         assertEquals("拖动平移 target", -1.5f + 2f, cam.snapshot.tx, eps)
@@ -93,10 +93,10 @@ class TownCameraTest {
 
     @Test
     fun distFollow_frameRateIndependent_doubleStepIs0_1536() {
-        val cam = cam(reduce = true) // introT=1·dist=24·tDist=24
-        cam.onSelectPlace() // tDist = min(24,19) = 19
+        val cam = cam(reduce = true) // introT=1·dist=30·tDist=30（R3 构图定版）
+        cam.onSelectPlace() // tDist = min(30,19) = 19
         cam.integrate(2f / 60f, reduceMotion = true) // steps=2 → f = 1 − 0.92² = 0.1536
-        assertEquals(24f + (19f - 24f) * 0.1536f, cam.snapshot.dist, 1e-3f)
+        assertEquals(30f + (19f - 30f) * 0.1536f, cam.snapshot.dist, 1e-3f)
     }
 
     @Test

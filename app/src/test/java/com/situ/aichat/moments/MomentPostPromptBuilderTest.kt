@@ -239,6 +239,42 @@ class MomentPostPromptBuilderTest {
         assertFalse(text.contains("PETMENTION"))
     }
 
+    // ── 契约 §B8：用户近期动态的「（附带图片）」标注（R2 🟡-4 补实现·R3 🟡-4 补这两条锁） ──
+    // 措辞在这里**重新打字**、不引常量：引常量的话，改产线文案时测试跟着一起改，等于没测。
+
+    @Test fun `纯图无文案的动态_渲染成一句「一条只有图片的动态」而不是空串`() {
+        // 病灶：不带标注时这行是 `- [昨天] `，角色连「用户昨天发过东西」都读不出来。
+        assertEquals("（一条只有图片的动态）", renderUserPostLine(RecentUserPost("昨天", "", hasImages = true)))
+    }
+
+    @Test fun `有文案又配图的动态_正文后缀「附带图片」`() {
+        assertEquals("看海（附带图片）", renderUserPostLine(RecentUserPost("昨天", "看海", hasImages = true)))
+    }
+
+    @Test fun `没配图的动态_一个字都不加`() {
+        // 反向钉：标注只能在真有图时出现，否则角色会凭空以为每条动态都带图
+        assertEquals("看海", renderUserPostLine(RecentUserPost("昨天", "看海", hasImages = false)))
+        assertEquals("", renderUserPostLine(RecentUserPost("昨天", "", hasImages = false)))
+    }
+
+    @Test fun `装配后纯图动态那一行不为空_回归钉`() {
+        // 走完整 build：`hasImages` 有默认值 false 且 MomentGenerationService 是唯一构造点，
+        // 哪天有人重构那段 map 回到位置参数写法，标注会静默消失——这条钉住装配后的成品行。
+        val out = MomentPostPromptBuilder.build(
+            strings = ts(),
+            character = char(),
+            hotInterestNames = emptyList(),
+            personalityTraits = emptyList(),
+            recentUserPosts = listOf(RecentUserPost("昨天", "", hasImages = true)),
+            recentOwnContents = "",
+            nowContext = "NOWCTX",
+            schedulePrompt = "",
+            userName = "小明",
+        )
+        assertTrue(out.contains("- [昨天] （一条只有图片的动态）"))
+        assertFalse("绝不能留下 `- [昨天] ` 这样的空行", out.lines().any { it == "- [昨天] " })
+    }
+
     /** Assert [markers] appear in [text] in order (each found at/after the previous match). */
     private fun assertSubsequence(markers: List<String>, text: String) {
         var idx = 0

@@ -51,11 +51,12 @@ class OfflineMeetingService @Inject constructor(
     // MARK: - 进入线下模式
 
     /**
-     * 用户接受最近一张邀约卡（1:1 iOS acceptOfflineInvite）：提地点/活动/心事种子 → 进入。返回新 sessionId，
+     * 用户接受邀约卡（1:1 iOS acceptOfflineInvite）：提地点/活动/心事种子 → 进入。返回新 sessionId，
      * 已在线下 / 无会话则 null（调用方据此决定是否触发 AI 开场回合）。
+     * [inviteMessageUuid] = 用户实际点的那张卡（卷一 D2）；不传则回落「最近一张」扫描口径。
      */
-    suspend fun acceptOfflineInvite(conversationUuid: String): String? {
-        val extract = extractInviteInfo(conversationUuid)
+    suspend fun acceptOfflineInvite(conversationUuid: String, inviteMessageUuid: String? = null): String? {
+        val extract = extractInviteInfo(conversationUuid, inviteMessageUuid)
         return enterOfflineMode(
             conversationUuid = conversationUuid,
             location = extract.location,
@@ -181,7 +182,15 @@ class OfflineMeetingService @Inject constructor(
         )
 
         val userName = (userProfileDao.get()?.nickname ?: "").ifBlank { "用户" }
-        recordOfflineScheduleEvent(convo.characterUuid, "线下见面结束（$durationText）", "😌", "满足", isStart = false, now = now, userName = userName)
+        // 卷一 F2：结束日程事件取角色**此刻的真实心情**（见面中照常回写 lastMood*），不再写死「😌 满足」——
+        // 一场吵崩的见面在日程时间线上显示「满足」是硬穿帮。心情空（从未解析到）→ 回落原常量对。
+        val liveMood = characterRepo.get(convo.characterUuid)
+        val endMoodEmoji = liveMood?.lastMoodEmoji?.takeIf { it.isNotBlank() } ?: "😌"
+        val endMoodText = liveMood?.lastMoodText?.takeIf { it.isNotBlank() } ?: "满足"
+        recordOfflineScheduleEvent(
+            convo.characterUuid, "线下见面结束（$durationText）", endMoodEmoji, endMoodText,
+            isStart = false, now = now, userName = userName,
+        )
 
         // 标记待重试摘要 + 清线下状态（同事务原子，App 被杀不会卡在线下模式）。LLM 提取由 ChatViewModel.finalizeOffline
         // 在事务提交后触发（OfflineSummaryRetryCoordinator.retryOne，退避表 60/300/1800/7200/86400s + 规则兜底，10.2d）。
@@ -415,8 +424,26 @@ class OfflineMeetingService @Inject constructor(
 
     // MARK: - 内部
 
-    /** 从对话最近消息中提取最近一张邀约卡的地点/活动/心事种子（1:1 iOS extractInviteInfo，走 kind 判定不靠字符串）。 */
-    suspend fun extractInviteInfo(conversationUuid: String): InviteExtract {
+    /**
+     * 从对话最近消息中提取邀约卡的地点/活动/心事种子（1:1 iOS extractInviteInfo，走 kind 判定不靠字符串）。
+     *
+     * [inviteMessageUuid] 非空（卷一 D2）= **用户点的就是这张卡**：直接取该条，不再「扫最近一张」——
+     * 用户往回翻点旧卡时，扫描口径会把他带进另一场约（地点/活动全错）。该条已删 / 解析失败 / 不是邀约卡
+     * → 回落现状扫描路径（E7）。不传该参 = 行为与改动前逐字一致。
+     */
+    suspend fun extractInviteInfo(conversationUuid: String, inviteMessageUuid: String? = null): InviteExtract {
+        val byUuid = inviteMessageUuid
+            ?.let { messageRepo.get(it) }
+            ?.takeIf { it.messageKindRaw == MessageKind.OFFLINE_INVITE_CARD.raw }
+            ?.let { OfflineInviteJson.parse(it.content) }
+            ?.takeIf { it.type == OfflineInviteJson.TYPE_INVITE }
+        if (byUuid != null) {
+            return InviteExtract(
+                location = byUuid.location ?: "某个地方",
+                activity = byUuid.activity ?: "一起出去",
+                hiddenTension = byUuid.hiddenTension,
+            )
+        }
         val recent = messageRepo.recentChronological(conversationUuid, INVITE_SCAN_LIMIT)
         val invite = recent.lastOrNull { it.messageKindRaw == MessageKind.OFFLINE_INVITE_CARD.raw }
             ?.let { OfflineInviteJson.parse(it.content) }
@@ -471,7 +498,9 @@ class OfflineMeetingService @Inject constructor(
                     activity = activity,
                     moodEmoji = moodEmoji,
                     moodText = moodText,
-                    innerThought = if (isStart) "终于要和ta见面了" else "今天见面很开心",
+                    // 卷一 F2：结束分支不再写死「今天见面很开心」（同上，吵崩的见面照样「很开心」=穿帮）；
+                    // 开始分支文案零碰。
+                    innerThought = if (isStart) "终于要和ta见面了" else "和${userName}的见面结束了",
                     isPhoneAvailable = false,
                     eventTypeRaw = EVENT_TYPE_USER_INTERACTION,
                     sortOrder = nextSortOrder,
@@ -495,7 +524,8 @@ class OfflineMeetingService @Inject constructor(
             "，现在回来了。请以角色身份自然地接续场景——可以不动声色，也可以轻轻回应这段空档" +
                 "（比如注意到对方刚才走神、去了趟洗手间）；如果合适可以用 [时间：…] 标记流逝。" +
                 "只推进一小步，然后照常把对话空间留给用户。）"
-        private const val PREVIEW_ENTER = "（线下模式开始）"
+        // §5③（2026-08-26 过审·选 A）：会话列表在见面期间显示「正在见面中…」——活预览，不再是机械的模式提示。
+        private const val PREVIEW_ENTER = "正在见面中…"
         private const val PREVIEW_EXIT = "（线下见面结束）"
         private const val PREVIEW_END_CARD = "[线下结束]"
         private const val EVENT_TYPE_USER_INTERACTION = "userInteraction"

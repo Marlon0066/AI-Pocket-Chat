@@ -33,6 +33,7 @@ class DiaryCommentTest {
         exchangeYouWrote = "EXWROTE",
         exchangeUserCommented = "excomment<%1\$s|%2\$s>",
         exchangeReplyWrite = "EXWRITE",
+        photosBlind = "photos<%1\$d>",
     )
 
     @Test fun `prompt with character setup — full iOS order`() {

@@ -1,17 +1,21 @@
 package com.situ.aichat.ui.chat
 
 import android.content.Context
+import android.util.Log
 import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.MessageEntity
 import com.situ.aichat.data.model.MeetingStatus
 import com.situ.aichat.data.model.MeetingTimeGranularity
 import com.situ.aichat.data.model.MessageKind
+import com.situ.aichat.data.repository.ConversationRepository
 import com.situ.aichat.data.repository.MessageRepository
 import com.situ.aichat.data.repository.SettingsRepository
+import com.situ.aichat.gift.ProactiveGiftMaintenanceService
 import com.situ.aichat.meeting.MeetingAppointmentStore
 import com.situ.aichat.meeting.MeetingArrivalPolicy
 import com.situ.aichat.offline.OfflineChatVisibility
 import com.situ.aichat.offline.OfflineMarkerStartPayload
+import com.situ.aichat.offline.OfflineMeetingGate
 import com.situ.aichat.offline.OfflineMeetingService
 import com.situ.aichat.offline.OfflineReturnPolicy
 import com.situ.aichat.offline.OfflineSummaryRetryCoordinator
@@ -39,6 +43,8 @@ internal class ChatOfflineController(
     private val infoToastFlow: MutableStateFlow<String?>,
     private val recoveryPromptVisibleFlow: MutableStateFlow<Boolean>,
     private val messageRepo: MessageRepository,
+    // D1a：赴约撞见面时读会话线下态（卷一）。
+    private val conversationRepo: ConversationRepository,
     private val settingsRepo: SettingsRepository,
     private val offlineMeetingService: OfflineMeetingService,
     private val offlineSummaryRetryCoordinator: OfflineSummaryRetryCoordinator,
@@ -49,6 +55,10 @@ internal class ChatOfflineController(
     private val afterOfflineMemorySummary: suspend () -> Unit,
     // 见面结束成功分支排「余温消息」一次性 worker（§3.10·涟漪①）——VM 侧读 pending session + 排程（BackgroundScheduler 在 VM）。
     private val scheduleOfflineAfterglow: suspend () -> Unit,
+    // 见面结束成功分支掷点排「朋友圈呼应帖」一次性 worker（卷二 §5④）——掷点与排程同在 VM 侧（BackgroundScheduler 在 VM）。
+    private val scheduleMeetingMomentEcho: suspend () -> Unit,
+    // 见面结束后补跑一次主动送礼维护线（卷一 A4b）：见面期被闸掉的礼物/红包在结束当天补送。
+    private val proactiveGiftMaintenanceService: ProactiveGiftMaintenanceService,
 ) {
 
     // offline-1：点聊天流里的「线下见面结束」分隔条 → 只读见面回顾覆盖层（对齐 iOS OfflineMarkerCard onTapReview）。
@@ -108,7 +118,8 @@ internal class ChatOfflineController(
     fun acceptOfflineInvite(messageUuid: String) {
         serialize {
             offlineMeetingService.markInviteResponded(messageUuid, "accepted")
-            val sessionId = offlineMeetingService.acceptOfflineInvite(conversationUuid)
+            // 卷一 D2：把被点的那张卡的 uuid 传下去——往回翻点旧卡时不能被「扫最近一张」带进另一场约。
+            val sessionId = offlineMeetingService.acceptOfflineInvite(conversationUuid, messageUuid)
             if (sessionId != null) runAssistantTurn()
         }
     }
@@ -152,6 +163,14 @@ internal class ChatOfflineController(
             if (sessionId != null) {
                 meetingAppointmentStore.markHonored(appointmentUuid, sessionId)
                 serialize { runAssistantTurn() } // 已打断·isSending 已清 → 开场回合不会被丢
+            } else {
+                // 卷一 D1a（拍板⑪）：进不去的唯一常见原因 = **已经在见面中**（enterOfflineMode 幂等返 null）——
+                // 用户正是在赴这场约，绝不能放着不管让 Phase 11 爽约扫描把它判成「你没来」。这里补 markHonored
+                // 链上当前 sessionId；守卫拒绝（并发已取消/已赴约）返 null → 不再处理，不抛错。
+                val convo = conversationRepo.get(conversationUuid)
+                if (OfflineMeetingGate.inMeeting(convo)) {
+                    meetingAppointmentStore.markHonored(appointmentUuid, convo?.currentOfflineSessionId.orEmpty())
+                }
             }
         }
     }
@@ -227,6 +246,12 @@ internal class ChatOfflineController(
             triggerOfflineMeetingSummary()
             // 涟漪①：排「余温消息」一次性延迟 worker（recordOfflineExited 已设 pendingOfflineSummarySessionId·§3.10）。
             scheduleOfflineAfterglow()
+            // 涟漪②（卷二 §5④）：掷点决定这场见面要不要在 3–7 小时后发一条朋友圈呼应帖（未中签只打日志）。
+            scheduleMeetingMomentEcho()
+            // 卷一 A4b：见面期被见面闸早退（Skipped·未写幂等流水）的主动送礼/红包，在结束后补跑一次维护线
+            // 补送——不建显式队列（Skipped 不占 relatedKey，下次评估自然重来）。fire-and-forget，失败静默：
+            // App 被杀也有 AppViewModel 回前台的日常维护调用兜底。
+            scope.launch { runCatching { proactiveGiftMaintenanceService.runMaintenance() } }
         }
     }
 
@@ -236,9 +261,25 @@ internal class ChatOfflineController(
      */
     private fun triggerOfflineMeetingSummary() {
         scope.launch {
+            // 卷二 G1：先落一行「简版」即时要点（source=instant），顶住 LLM 摘要未落前的失忆空窗；
+            // 随后 retryOne 成功会按 sessionId 原位覆盖成 llm 行（=「替换」，Repository E6 幂等）。
+            // sessionId 与 retryOne 同源（会话的 pendingOfflineSummarySessionId）；即时要点失败绝不拖垮重试链。
+            runCatching {
+                val pendingSessionId = conversationRepo.get(conversationUuid)
+                    ?.pendingOfflineSummarySessionId
+                    ?.takeIf { it.isNotEmpty() }
+                if (pendingSessionId != null) {
+                    offlineSummaryRetryCoordinator.applyInstantGist(conversationUuid, pendingSessionId)
+                }
+            }.onFailure { Log.w(TAG_INSTANT_GIST, "见面即时要点落行失败（不影响重试链）：${it.message}") }
             if (offlineSummaryRetryCoordinator.retryOne(conversationUuid) == OfflineSummaryRetryCoordinator.RetryOutcome.FELL_BACK) {
                 infoToastFlow.value = appContext.getString(R.string.offline_meeting_summary_fallback_notice)
             }
         }
+    }
+
+    private companion object {
+        /** 卷二 G1 即时要点落行失败日志标签（只打 sessionId/异常摘要，绝不打见面内容）。 */
+        const val TAG_INSTANT_GIST = "ChatOfflineController"
     }
 }

@@ -36,6 +36,7 @@ import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 
@@ -164,9 +165,14 @@ class OfflineAfterglowServiceTest {
         verifyCompletion(0)
     }
 
-    @Test fun guard4_rowMissing_skips() {
+    /**
+     * 卷二 G2 顺移（图纸 §7 预裁决）：守卫④「无行」不再是静默跳过，而是判**摘要未熟**→ 返回 DEFER_SUMMARY
+     * 交 worker 30 分钟后再看一眼。不发消息的旧断言原样保留，只把「了结方式」这一条断言顺移。
+     */
+    @Test fun guard4_rowMissing_defersForSummary() {
         coEvery { memoryRepo.bySessionId("sess") } returns null
-        run()
+        val outcome = run()
+        assertEquals(OfflineAfterglowService.AfterglowOutcome.DEFER_SUMMARY, outcome)
         coVerify(exactly = 0) { messageRepo.latestVisibleMessage(any()) } // 守卫④在守卫③之前短路
         verifyCompletion(0)
         coVerify(exactly = 0) { messageRepo.upsert(any()) }

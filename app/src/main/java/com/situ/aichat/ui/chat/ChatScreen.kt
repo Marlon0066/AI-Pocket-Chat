@@ -1,8 +1,15 @@
 package com.situ.aichat.ui.chat
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -373,6 +380,8 @@ fun ChatScreen(
     // M2 沉浸菜单（契约 FABLE5_CHAT_TELEGRAM_MOTION_PROPOSAL §3·拍板 D4/D5）：长按气泡 → 拍窗口快照
     // （冻结画面+一次性毛玻璃）→ 开覆盖层。快照失败优雅退纯压暗档。状态瞬态不入 saveable（转屏即关=Telegram）。
     val immersiveMenu = remember { ChatImmersiveMenuState() }
+    // 图片相关瞬态（查看器开关 + 发图入口显隐）——收在 ChatImageState 里，屏内不再逐个摊开。
+    val imageState = rememberChatImageState(viewModel)
     // V9 删除弹簧预武装（契约 REVERSE_LIST §9）：删除点击时**先于下一帧**递增，列表据此临时启用位移弹簧
     // 保「收拢」观感（位移动画平时关闭=变身长高刚性锁步，见 ChatMessageList 声明处）。
     val deleteArm = remember { mutableStateOf(0L) }
@@ -382,6 +391,8 @@ fun ChatScreen(
     val actions = remember(viewModel, sheets) {
         MessageRowActions(
             onVoiceToggle = { viewModel.toggleVoicePlayback(it) },
+            onOpenImage = { path -> imageState.viewerImagePath = path },
+            onSaveImage = { msg -> viewModel.image.saveToGallery(msg.imageRelativePath) },
             onQuote = { viewModel.setReplyTarget(it) },
             onDelete = { msg ->
                 playDeleteSound() // 轻一声（静音/振动档自动跳过）
@@ -521,15 +532,8 @@ fun ChatScreen(
     // 全屏恒暗舞台（2026-07-06 拍板修订·契约 §4.2 修正）：见面态舞台层从内容区上移到窗口层——壁纸+幕布（或粒子/
     // 纯色舞台）铺满整屏含状态栏/输入托盘后，消灭「顶底亮壁纸夹中间暗舞台」的三明治割裂与两次裁切错位；
     // 亮壁纸层见面态不再绘制（舞台自绘壁纸且幕布底不透明，画了也是纯 overdraw）。非见面路径逐字节不动。
-    if (offlineChrome) {
-        OfflineBackgroundView(
-            backgroundStyle = appSettings.offlineBackgroundStyleRaw,
-            particleStyle = appSettings.offlineParticleStyleRaw,
-            backgroundColor = appSettings.offlineBackgroundColor,
-            themeColorHex = character?.offlineThemeColorHex,
-            chatWallpaperPath = chatWallpaperPath,
-        )
-    } else chatWallpaper?.let { wp ->
+    // 卷三 V1（图纸 §4.1-A）：舞台层改 AnimatedVisibility——旗标翻 false 后幕布多活 450ms（delay 250）渐掀；进入方向 None（N2/J1）。
+    if (!offlineChrome) chatWallpaper?.let { wp ->
         // 冷加载兜底（2026-07-06 拍板配套）：暖 peek 命中→壁纸第一帧即在、随整页从右滑入（含状态栏后）；
         // 异步晚到（冷）→柔和淡入一次、不再硬弹「状态栏事后适配」。背景垫 surface 底色置于 graphicsLayer 外
         // ——淡入期间保持整页不透明，避免透出转场中的底页；alpha 在 draw 层读取，不逐帧触发重组。
@@ -545,11 +549,28 @@ fun ChatScreen(
             contentScale = ContentScale.Crop,
         )
     }
+    AnimatedVisibility(
+        visible = offlineChrome,
+        enter = EnterTransition.None,
+        exit = if (reduceMotion) ExitTransition.None // E1：减弱动画→直切
+        else fadeOut(tween(450, delayMillis = 250, easing = AppMotion.EaseOut)),
+    ) {
+        OfflineBackgroundView(
+            backgroundStyle = appSettings.offlineBackgroundStyleRaw,
+            particleStyle = appSettings.offlineParticleStyleRaw,
+            backgroundColor = appSettings.offlineBackgroundColor,
+            themeColorHex = character?.offlineThemeColorHex,
+            chatWallpaperPath = chatWallpaperPath,
+        )
+    }
     Scaffold(
         // M2 沉浸菜单开着时：背后内容对读屏整体隐藏（Telegram IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         // 等价）——读屏只见覆盖层菜单；顺带静默期间的 liveRegion 播报（=Telegram 菜单期暂停应用内通知）。
         modifier = if (immersiveMenu.isOpen) Modifier.clearAndSetSemantics {} else Modifier,
-        containerColor = if (chatWallpaper != null) Color.Transparent else AppTheme.colors.surface.base,
+        // 卷三复核 R1·D-6 代办（遮挡类功能缺陷·REDLINES UI 例外②）：见面态（offlineChrome）必须透明——
+        // 无聊天壁纸的角色进见面时，恒暗舞台画在窗口层，此处不透明 surface.base 会把整个舞台盖住
+        //（浅底+被强制转浅的状态栏图标=几乎不可读）。A/B 已证为预存在缺陷（非卷三引入），修法=补一个透明条件。
+        containerColor = if (chatWallpaper != null || offlineChrome) Color.Transparent else AppTheme.colors.surface.base,
         // 壁纸全屏沉浸重构②：顶栏(ChatTopBar statusBarsPadding)/底栏(托盘 navigationBarsPadding)各自让位系统栏，
         // 故 content 区不再吃系统栏 inset（NavHost 去 consume 后默认 systemBars 会双吃，显式归零）。
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -621,6 +642,7 @@ fun ChatScreen(
                 voiceRecordingDurationMs = voiceRecordingDurationMs,
                 voiceRecordingCancelling = voiceRecordingCancelling,
                 offlineRecoveryVisible = offlineRecoveryVisible,
+                chatModelHasVision = imageState.chatModelHasVision,
                 onOpenStickerManagement = onOpenStickerManagement,
                 reduceMotion = reduceMotion,
             )
@@ -648,68 +670,86 @@ fun ChatScreen(
                 Box(Modifier.size(1.dp).semantics { liveRegion = LiveRegionMode.Polite; contentDescription = announce })
             }
             // M16 线下沉浸剧场：见面中整列表替换为 OfflineModeView（锚底滚动；舞台背景在上方窗口层全屏绘制）；否则常规消息列表。
-            if (conversation?.isInOfflineMode == true) {
-                OfflineModeView(
-                    offlineMessages = offlineMessages,
-                    isWaitingForContent = typingSlot != null || isSending,
-                    characterName = characterName,
-                    characterAvatarPath = avatarPath,
-                    userName = userName,
-                    userAvatarPath = userAvatarPath,
-                    themeColorHex = character?.offlineThemeColorHex,
-                    // chunk4：per-角色聊天壁纸盖过见面全局粒子/纯色背景（契约 §3.3/D8）。
-                    chatWallpaperPath = chatWallpaperPath,
-                    // P1-5：线下块入场动画与气泡情绪动画同一开关门控（=iOS OfflineModeView.swift:144
-                    // `let animEnabled = settings.emotionAnimationEnabled`）。
-                    entryAnimationsEnabled = appSettings.emotionAnimationEnabled,
-                    onEndMeeting = { viewModel.exitOfflineMode() },
-                    onContinueMeeting = { viewModel.continueOfflineMeeting(it) },
-                    modifier = Modifier.fillMaxSize(),
-                )
-            } else if (messagesLoaded && messages.isEmpty() && typingSlot == null) {
-                // B1：仅在"消息已加载且确实为空"时显空会话引导；加载中(!messagesLoaded)走下方空列表分支=稳定背景，不闪引导。
-                EmptyConversationHint(
-                    characterName = characterName,
-                    avatarPath = avatarPath,
-                    persona = character?.personalityDescription.orEmpty(),
-                    onStarter = { viewModel.send(it) },
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
-                )
-            } else {
-                // 审计 S2：常规消息列表分支整体搬 ChatMessageList.kt（含网络横幅/约定倒数条/回底 FAB·自带同尺寸
-                // Box=原 align 语义原位保留）；日历 toast 留本层外 Box = 堆叠次序不变。
-                ChatMessageList(
-                    viewModel = viewModel,
-                    sheets = sheets,
-                    listState = listState,
-                    scrollCoordinator = scrollCoordinator,
-                    listItems = listItems,
-                    messages = messages,
-                    dismissKeyboardOnDrag = dismissKeyboardOnDrag,
-                    playingVoiceId = playingVoiceId,
-                    voiceProgress = voiceProgressProvider,
-                    reduceMotion = reduceMotion,
-                    emotionAnimationEnabled = appSettings.emotionAnimationEnabled,
-                    animateArrivalsSinceMillis = animateArrivalsSinceMillis,
-                    entryScalePlayed = entryScalePlayed,
-                    emotionPlayed = emotionPlayed,
-                    emotionHiddenIntervals = emotionHiddenIntervals,
-                    actions = actions,
-                    userScrollEnabled = !immersiveMenu.isOpen,
-                    deleteArm = deleteArm,
-                    sendFlight = sendFlight,
-                    characterName = characterName,
-                    avatarPath = avatarPath,
-                    userName = userName,
-                    userAvatarPath = userAvatarPath,
-                    customStickers = customStickers,
-                    isOfflineModeActive = conversation?.isInOfflineMode == true,
-                    networkConnected = networkConnected,
-                    networkStatusChanged = networkStatusChanged,
-                    showScrollDown = showScrollDown,
-                    wallpaper = chatWallpaper,
-                    voiceSetupNeeded = voiceSetupNeed != null, // VU3：当前仍缺可用音色 → 失败通话卡长琥珀尾巴
-                )
+            // 卷三 V2（图纸 §4.1-B）：新内容渐亮 togetherWith 旧舞台谢幕（alpha→0+scale 0.98）；进入方向/RM 走 None（E1/E2）·分支体逐字未改。
+            AnimatedContent(
+                targetState = conversation?.isInOfflineMode == true,
+                transitionSpec = {
+                    if (initialState && !targetState && !reduceMotion) {
+                        val curtainFall = fadeOut(tween(350, easing = AppMotion.EaseOut)) +
+                            scaleOut(targetScale = 0.98f, animationSpec = tween(350, easing = AppMotion.EaseOut))
+                        fadeIn(tween(450, delayMillis = 250, easing = AppMotion.EaseOut)) togetherWith curtainFall
+                    } else {
+                        EnterTransition.None togetherWith ExitTransition.None
+                    }.using(SizeTransform(clip = false))
+                },
+                label = "offlineExitTransition",
+            ) { inOffline ->
+                if (inOffline) {
+                    OfflineModeView(
+                        offlineMessages = offlineMessages,
+                        isWaitingForContent = typingSlot != null || isSending,
+                        characterName = characterName,
+                        characterAvatarPath = avatarPath,
+                        userName = userName,
+                        userAvatarPath = userAvatarPath,
+                        themeColorHex = character?.offlineThemeColorHex,
+                        // chunk4：per-角色聊天壁纸盖过见面全局粒子/纯色背景（契约 §3.3/D8）。
+                        chatWallpaperPath = chatWallpaperPath,
+                        // P1-5：线下块入场动画与气泡情绪动画同一开关门控（=iOS OfflineModeView.swift:144
+                        // `let animEnabled = settings.emotionAnimationEnabled`）。
+                        entryAnimationsEnabled = appSettings.emotionAnimationEnabled,
+                        playingVoiceId = playingVoiceId, // 卷三 V5：剧场语音回听三参（与聊天列表同源·零新状态）
+                        voiceProgress = voiceProgressProvider,
+                        onVoiceToggle = { viewModel.toggleVoicePlayback(it) },
+                        onEndMeeting = { viewModel.exitOfflineMode() },
+                        onContinueMeeting = { viewModel.continueOfflineMeeting(it) },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else if (messagesLoaded && messages.isEmpty() && typingSlot == null) {
+                    // B1：仅在"消息已加载且确实为空"时显空会话引导；加载中(!messagesLoaded)走下方空列表分支=稳定背景，不闪引导。
+                    EmptyConversationHint(
+                        characterName = characterName,
+                        avatarPath = avatarPath,
+                        persona = character?.personalityDescription.orEmpty(),
+                        onStarter = { viewModel.send(it) },
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                    )
+                } else {
+                    // 审计 S2：常规消息列表分支整体搬 ChatMessageList.kt（含网络横幅/约定倒数条/回底 FAB·自带同尺寸
+                    // Box=原 align 语义原位保留）；日历 toast 留本层外 Box = 堆叠次序不变。
+                    ChatMessageList(
+                        viewModel = viewModel,
+                        sheets = sheets,
+                        listState = listState,
+                        scrollCoordinator = scrollCoordinator,
+                        listItems = listItems,
+                        messages = messages,
+                        dismissKeyboardOnDrag = dismissKeyboardOnDrag,
+                        playingVoiceId = playingVoiceId,
+                        voiceProgress = voiceProgressProvider,
+                        reduceMotion = reduceMotion,
+                        emotionAnimationEnabled = appSettings.emotionAnimationEnabled,
+                        animateArrivalsSinceMillis = animateArrivalsSinceMillis,
+                        entryScalePlayed = entryScalePlayed,
+                        emotionPlayed = emotionPlayed,
+                        emotionHiddenIntervals = emotionHiddenIntervals,
+                        actions = actions,
+                        userScrollEnabled = !immersiveMenu.isOpen,
+                        deleteArm = deleteArm,
+                        sendFlight = sendFlight,
+                        characterName = characterName,
+                        avatarPath = avatarPath,
+                        userName = userName,
+                        userAvatarPath = userAvatarPath,
+                        customStickers = customStickers,
+                        isOfflineModeActive = conversation?.isInOfflineMode == true,
+                        networkConnected = networkConnected,
+                        networkStatusChanged = networkStatusChanged,
+                        showScrollDown = showScrollDown,
+                        wallpaper = chatWallpaper,
+                        voiceSetupNeeded = voiceSetupNeed != null, // VU3：当前仍缺可用音色 → 失败通话卡长琥珀尾巴
+                    )
+                }
             }
 
             // P5.3b 日历操作成功提示，浮现在消息区顶部，4 秒自动消失（VM 计时）。
@@ -737,23 +777,21 @@ fun ChatScreen(
             reduceMotion = reduceMotion,
         )
 
-        // offline-1：只读见面回顾覆盖层（盖住聊天页含顶栏；系统返回键关闭，复用既有 OfflineReviewView）。
-        offlineReviewInfo?.let { info ->
-            BackHandler { viewModel.closeOfflineReview() }
-            OfflineReviewView(
-                messages = offlineReviewMessages,
-                meetingInfo = info,
-                characterName = characterName.ifEmpty { "角色" },
-                characterAvatarPath = avatarPath,
-                userName = userName.ifEmpty { "你" },
-                userAvatarPath = userAvatarPath,
-                themeColorHex = character?.offlineThemeColorHex,
-                backgroundStyle = appSettings.offlineBackgroundStyleRaw,
-                particleStyle = appSettings.offlineParticleStyleRaw,
-                backgroundColor = appSettings.offlineBackgroundColor,
-                chatWallpaperPath = chatWallpaperPath,
-                onBack = { viewModel.closeOfflineReview() },
-            )
-        }
+        // offline-1：只读见面回顾覆盖层（盖住聊天页含顶栏；系统返回键关闭）。
+        ChatOfflineReviewOverlay(
+            info = offlineReviewInfo,
+            messages = offlineReviewMessages,
+            characterName = characterName,
+            avatarPath = avatarPath,
+            userName = userName,
+            userAvatarPath = userAvatarPath,
+            themeColorHex = character?.offlineThemeColorHex,
+            appSettings = appSettings,
+            chatWallpaperPath = chatWallpaperPath,
+            onBack = { viewModel.closeOfflineReview() },
+        )
+
+        // 全屏图片查看器（Dialog 覆盖全屏·恒黑底）：点图片气泡开、单击/返回关。
+        ChatImageViewerHost(imageState)
     }
 }

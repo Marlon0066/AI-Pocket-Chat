@@ -136,4 +136,76 @@ object WorldSceneColors {
     /** 「你」核渐变上 / 下（#gGold·demo:L214）。 */
     val smGoldTop = Color(0xFFF2D9A0)
     val smGoldBottom = Color(0xFFD9A96B)
+
+    // ── 收编区：原散落各文件的 file-private 色常量归拢于此（值逐项不变；同值只留一份字面量，其余为别名）──
+    // 约定：新增世界屏颜色一律先进本表再使用；消费方经成员导入引用（import …WorldSceneColors.Xxx）。
+
+    /** 主行动胶囊渐变（135°·continent demo .act·L47）。原 WorldSiteSheet / StarmapSheets 各持副本。 */
+    val ActStart = Color(0xFFC99A86)
+    val ActEnd = Color(0xFFBE8A76)
+
+    // ── W12 快聊弹窗（原 WorldQuickChatSheet.kt·quickchat demo §4.2–4.5 精确值）──
+
+    val QcHeadBg = Color(0xA9121828) // rgba(18,24,40,.66)
+    val QcHandle = Color(0x47F5EFEA) // rgba(245,239,234,.28)
+    val QcStatus = Color(0xC7F5EFEA) // rgba(245,239,234,.78)
+    val QcClose = Color(0xA6F5EFEA) // rgba(245,239,234,.65)
+    val QcBusyStart = Color(0x33D69E5A) // rgba(214,158,90,.20)
+    val QcBusyEnd = Color(0x14D69E5A) // rgba(214,158,90,.08)
+    val QcBusyText = Color(0xFF9A6B33)
+    val QcBody = Color(0xF5FAF7F2) // rgba(250,247,242,.96)
+    val QcPill = Color(0x0E2E2925) // rgba(46,41,37,.055)
+    val QcUserStart = ActStart
+    val QcUserEnd = ActEnd
+    val QcTypingDot = Color(0xFFB4A798)
+    val QcRetryBg = Color(0x122E2925) // rgba(46,41,37,.07)
+    val QcInputBorder = Color(0x1F2E2925) // rgba(46,41,37,.12)
+    val QcInputBg = Color(0xFFFFFDF9)
+    val QcPlaceholder = Color(0xFFB4AA9E)
+    val QcInputFocus = Color(0x8CBE8A76) // rgba(190,138,118,.55)
+    val QcSendIcon = Color(0xFFFFF8F2)
+    val QcHairline = Color(0x122E2925)
+
+    // ── W12.5 蛋巢之约（原 EggNestSheet.kt·与快聊同值处已归并）──
+
+    val NsHeadBg = QcHeadBg
+    val NsHandle = QcHandle
+    val NsTitle = onGlass
+    val NsSub = QcStatus
+    val NsClose = QcClose
+    val NsBody = QcBody
+    val NsInk = sheetTitle
+    val NsStateText = Color(0xFF8A8378)
+    val NsBarTrack = Color(0x142E2925)
+    val NsBarStart = Color(0xFFD9B36E)
+    val NsBarEnd = gold
+    val NsChevron = Color(0xFFC9BFB4)
+    val NsFoot = sheetClose
+    val NsBodyText = sheetBody
+    val NsClayStart = ActStart
+    val NsClayEnd = ActEnd
+    val NsBtnHighlight = Color(0x47FFFFFF)
+    val NsBackBg = Color(0x142E2925)
+
+    // ── 偷听 overlay（原 WorldEavesdropOverlay.kt·quickchat demo:L27-29/L150-176 精确值）──
+
+    val EavesChipGlass = Color(0x75101422) // rgba(16,20,34,.46)
+    val EavesWhisperGlass = Color(0x94101422) // rgba(16,20,34,.58)
+    val EavesBubbleShadow = Color(0x660A0E1A) // rgba(10,14,26,.4)
+    val EavesDot = pcardStatus // #EAD9BE 同字面量复用
+
+    // ── 动态页英雄卡恒暗窗景族（原 WorldHeroCard.kt·W11 demo 逐值）──
+
+    val CardGradTop = Color(0xFF0B0F1B) // demo:L23 底渐变 0%
+    val CardGradMid = Color(0xFF141C36) // demo:L23 55%（同 spaceIndigo 字面量）
+    val CardGradBottom = Color(0xFF232447) // demo:L23 100%
+    val CardVioletColor = spaceViolet // demo:L27 紫雾
+    val HaloColorCore = Color(0x2496B4E6) // demo:L32 rgba(150,180,230,.14)
+    val HaloColorMid = Color(0x0D96B4E6) // demo:L32 .05
+    val MilkyC1 = Color(0x1FC8BEE6) // demo:L29 rgba(200,190,230,.12)
+    val MilkyC2 = Color(0x2EF0E1F0) // demo:L29 rgba(240,225,240,.18)
+    val MilkyC3 = Color(0x1AC8BEE6) // demo:L29 rgba(200,190,230,.10)
+    val CardText = onGlass // demo:L37 标题/星点色
+    val CardShadow = Color(0xCC0B0F1B) // demo:L37 rgba(11,15,27,.8)
+    val GoldGlow = gold.copy(alpha = 0.55f) // demo:L45 rgba(232,197,126,.55)
 }

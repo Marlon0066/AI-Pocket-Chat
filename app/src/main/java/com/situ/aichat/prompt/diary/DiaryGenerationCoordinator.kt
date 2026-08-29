@@ -130,8 +130,16 @@ class DiaryGenerationCoordinator @Inject constructor(
         dateMillis: Long,
         moodHint: String? = null,
         guide: DiaryGuideAnswers? = null,
-    ): DiaryDraft? =
-        service.generateDraft(dateMillis, ZoneId.systemDefault(), giftInspiration = null, moodHint = moodHint, guide = guide)
+        /** 撰写页里已贴好的照片张数（§B8）：让 AI 至少知道「有 N 张照片但看不到」，别写出与照片脱节的正文。 */
+        photoCount: Int = 0,
+    ): DiaryDraft? = service.generateDraft(
+        dateMillis = dateMillis,
+        zone = ZoneId.systemDefault(),
+        giftInspiration = null,
+        moodHint = moodHint,
+        guide = guide,
+        photoCount = photoCount,
+    )
 
     /**
      * 落自动日记 + R3「自动直发」：`diaryAutoPublishEnabled` 开 → isDraft=false 直接发布并走既有评论调度

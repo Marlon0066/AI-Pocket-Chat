@@ -43,13 +43,11 @@ import com.situ.aichat.ui.components.AppMotion
 import com.situ.aichat.ui.components.clickableScale
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.world.continent.ContinentSite
+import com.situ.aichat.ui.world.WorldSceneColors.ActEnd
+import com.situ.aichat.ui.world.WorldSceneColors.ActStart
 
 /** 站点卡入/出场缓动（demo:L38 字面量·带过冲 1.2）。 */
 private val SheetEasing = CubicBezierEasing(0.3f, 1.2f, 0.4f, 1f)
-
-/** 「走进小镇」按钮渐变（135°·demo 大陆 sheet .act·continent demo:L47）。 */
-private val ActStart = Color(0xFFC99A86)
-private val ActEnd = Color(0xFFBE8A76)
 
 /**
  * 底部站点卡（W9b 图纸 §4.6·demo:L35-46 全值）：暖纸面 18dp 圆角·标题 16sp SemiBold + 正文 13sp/行高 22sp·

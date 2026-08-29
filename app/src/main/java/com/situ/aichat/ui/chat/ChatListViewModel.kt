@@ -11,6 +11,7 @@ import com.situ.aichat.data.repository.ConversationDeletionService
 import com.situ.aichat.data.repository.ConversationRepository
 import com.situ.aichat.data.repository.MessageRepository
 import com.situ.aichat.data.repository.SettingsRepository
+import com.situ.aichat.offline.OfflineMeetingGate
 import com.situ.aichat.quickreply.ListQuickReplyService
 import com.situ.aichat.util.DateFormatters
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -130,7 +131,12 @@ class ChatListViewModel @Inject constructor(
     @OptIn(ExperimentalCoroutinesApi::class)
     val scheduleStatus: StateFlow<Map<String, String>> =
         combine(
-            activeRows.map { rows -> rows.map { it.conversation.characterUuid }.distinct() }.distinctUntilChanged(),
+            // 卷一 F5：见面中的会话排除在外 → 该行状态串缺席 = 状态行隐藏（不泄地点、不显过时线上日程）。
+            activeRows.map { rows ->
+                rows.filterNot { OfflineMeetingGate.inMeeting(it.conversation) }
+                    .map { it.conversation.characterUuid }
+                    .distinct()
+            }.distinctUntilChanged(),
             scheduleEnabled,
             ticker,
         ) { uuids, enabled, _ -> uuids to enabled }

@@ -52,6 +52,7 @@ class WorldNotifyRescheduleTest {
             context, db.worldDao(), db.characterDao(), alarmScheduler,
             mockk<WorldLlmBudget>(relaxed = true), mockk<SettingsRepository>(relaxed = true),
             mockk<WorldNotifyStateStore>(relaxed = true),
+            db.conversationDao(),
         )
         runBlocking { db.worldDao().upsertState(WorldStateEntity(seed = 1L, userTimezoneId = "UTC", createdAt = now)) }
     }

@@ -135,6 +135,15 @@
     <string name="chat_error_empty_reply">消息生成失败，请稍后重试</string>
     <string name="chat_network_disconnected">网络连接已断开</string>
     <string name="chat_network_recovered">网络已恢复</string>
+    <string name="api_fn_chat_vision_on">当前模型看得懂图，聊天「+」里可以发照片</string>
+    <string name="api_fn_chat_vision_off">当前模型看不懂图，聊天「+」里不会出现「照片」。如果你确定它支持看图，可到该配置里把「图片理解」改成「常开」</string>
+    <string name="api_fn_image_vision_on">当前模型看得懂图，你发的照片会自动生成一句文字描述存进记忆，以后还搜得到</string>
+    <string name="api_fn_image_vision_off">当前模型看不懂图，你发的照片只会被记成「发送了一张图片」——以后想让角色回忆「那天的照片」会搜不到。想让它真记住照片内容，在这里指一个带视觉能力的模型。如果你确定当前模型支持看图，可到该配置里把「图片理解」改成「常开」</string>
+    <string name="chat_image_saved">已保存到相册</string>
+    <string name="chat_image_save_to_gallery_failed">保存到相册失败</string>
+    <string name="chat_image_missing">图片已失效</string>
+    <string name="chat_image_save_failed">这张照片没能添加成功，重新选一次试试</string>
+    <string name="chat_image_input_fallback">对方没能看到这张图，已按文字描述发送</string>
     <string name="voice_audio_input_fallback">当前模型不支持语音输入，已转为文字发送</string>
     <string name="voice_recording_hint">上滑取消</string>
     <string name="voice_recording_cancel_hint">松手取消</string>
@@ -880,6 +889,7 @@
     <string name="notif_reply_hint">回复…</string>
     <string name="notif_reply_status_replying">正在回复…</string>
     <string name="notif_reply_status_deferred">稍后回复你</string>
+    <string name="notif_reply_status_in_meeting">已送达 · 你们正在见面中，打开应用继续</string>
     <!-- 13.8 · B2 红包一键领（确认通知不含金额，金额只在 App 内可见） -->
     <string name="notif_red_packet_claim_action">领取</string>
     <string name="notif_red_packet_claimed_title">🧧 红包已领取</string>
@@ -929,7 +939,7 @@
     <string name="api_fetching_models">拉取中…</string>
     <string name="api_select_model">选择模型（点选填入）</string>
     <string name="api_refetch_models">重新拉取</string>
-    <string name="api_model_filter_more">继续输入以筛选更多模型…</string>
+    <string name="api_models_empty_hint">已拉取，该服务商未返回模型——可直接输入模型名</string>
     <string name="api_model_no_match">没有匹配的模型</string>
 
     <!-- API 余额 (P3.3d) -->
@@ -1196,6 +1206,7 @@
 	<string name="diary_comment_intro">你是「%1$s」，性格：%2$s</string>
 	<string name="diary_comment_setup">你的角色设定：%1$s</string>
 	<string name="diary_comment_friend_wrote">你的朋友「%1$s」写了一篇日记：</string>
+	<string name="diary_comment_photos_blind">（这篇日记还附了 %1$d 张照片，但你看不到它们，别去描述照片内容。）</string>
 	<string name="diary_comment_entry_quote">「%1$s」</string>
 	<string name="diary_comment_write">请你以自己的风格对这篇日记写一条评论。</string>
 	<string name="diary_comment_req_header">要求：</string>

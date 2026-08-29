@@ -48,6 +48,9 @@ import com.situ.aichat.data.local.entity.ConversationEntity
 import com.situ.aichat.data.local.entity.GiftRecordEntity
 import com.situ.aichat.data.local.entity.MessageEntity
 import com.situ.aichat.data.local.entity.UserProfileEntity
+import com.situ.aichat.chat.image.ImageMemorySummaryService
+import com.situ.aichat.data.local.entity.resolvedConfigHasVision
+import com.situ.aichat.data.repository.ApiFunctionRouter
 import com.situ.aichat.data.model.AppSettings
 import com.situ.aichat.data.model.ApiFunction
 import com.situ.aichat.data.model.MeetingTimeGranularity
@@ -118,6 +121,7 @@ class ChatViewModel @Inject constructor(
     private val offlineMeetingMemoryRepository: com.situ.aichat.data.repository.OfflineMeetingMemoryRepository,
     private val characterWriteLock: CharacterWriteLock,
     private val apiConfigRepo: ApiConfigRepository,
+    private val apiFunctionRouter: ApiFunctionRouter,
     private val settingsRepo: SettingsRepository,
     private val stickerRepo: StickerRepository,
     private val petRepo: PetRepository,
@@ -129,6 +133,7 @@ class ChatViewModel @Inject constructor(
     private val calendarWriter: CalendarWriter,
     private val llmClient: LlmClient,
     private val vectorMemory: VectorMemoryService,
+    private val imageMemorySummaryService: ImageMemorySummaryService,
     private val worldBookPromptService: com.situ.aichat.worldbook.WorldBookPromptService,
     private val worldChatContextProvider: com.situ.aichat.world.link.WorldChatContextProvider,
     private val memoryService: MemoryService,
@@ -159,6 +164,8 @@ class ChatViewModel @Inject constructor(
     private val meetingAppointmentDao: MeetingAppointmentDao,
     private val meetingAppointmentStore: MeetingAppointmentStore,
     private val meetupNotificationService: MeetupNotificationService,
+    // 卷一 A4b：见面结束后补跑主动送礼维护线（见面期被闸掉的礼物/红包补送）。
+    private val proactiveGiftMaintenanceService: com.situ.aichat.gift.ProactiveGiftMaintenanceService,
     private val notificationNavigator: NotificationNavigator,
     private val ttsService: TtsService,
     private val ttsConfigRepo: TtsConfigurationRepository,
@@ -518,6 +525,7 @@ class ChatViewModel @Inject constructor(
         infoToastFlow = _infoToast,
         recoveryPromptVisibleFlow = _offlineRecoveryPromptVisible,
         messageRepo = messageRepo,
+        conversationRepo = conversationRepo,
         settingsRepo = settingsRepo,
         offlineMeetingService = offlineMeetingService,
         offlineSummaryRetryCoordinator = offlineSummaryRetryCoordinator,
@@ -528,6 +536,9 @@ class ChatViewModel @Inject constructor(
         // 审计 S3：摘要补跑搬 MemoryAnalysisTrigger；lambda 延迟解引用（该 trigger 构造晚于本 controller）。
         afterOfflineMemorySummary = { memoryAnalysisTrigger.checkAndTriggerAfterOffline() },
         scheduleOfflineAfterglow = ::scheduleOfflineAfterglow,
+        // 卷二 §5④：见面结束时掷点，中签才排「朋友圈呼应帖」worker（3–7 小时后发一条含蓄相关的动态）。
+        scheduleMeetingMomentEcho = ::scheduleMeetingMomentEcho,
+        proactiveGiftMaintenanceService = proactiveGiftMaintenanceService,
     )
 
     /**
@@ -550,6 +561,24 @@ class ChatViewModel @Inject constructor(
                 com.situ.aichat.work.OfflineAfterglowWorker.KEY_CHARACTER_UUID to convo.characterUuid,
                 com.situ.aichat.work.OfflineAfterglowWorker.KEY_SESSION_ID to sessionId,
             ),
+        )
+    }
+
+    /**
+     * 见面结束掷点排「朋友圈呼应帖」worker（卷二 §5④·图纸 §3.3）：75% 中签才排——未中签当场不排（省一个空转
+     * 任务）但**必打日志**可观测。首延/KEEP 见 [com.situ.aichat.work.MeetingMomentEchoWorker.scheduleFirst]；
+     * 其余守卫（发帖开关/深夜/睡眠/摘要熟没熟）一律到点时由 MeetingMomentEchoService 现评。
+     */
+    private suspend fun scheduleMeetingMomentEcho() {
+        val convo = conversationRepo.get(conversationUuid) ?: return
+        val sessionId = convo.pendingOfflineSummarySessionId?.takeIf { it.isNotEmpty() } ?: return
+        val roll = kotlin.random.Random.nextInt(100)
+        if (!com.situ.aichat.offline.MeetingMomentEchoPlanner.shouldPost(roll)) {
+            Log.i(TAG, "见面呼应帖未中签 roll=$roll session=$sessionId")
+            return
+        }
+        com.situ.aichat.work.MeetingMomentEchoWorker.scheduleFirst(
+            backgroundScheduler, conversationUuid, convo.characterUuid, sessionId,
         )
     }
 
@@ -763,6 +792,7 @@ class ChatViewModel @Inject constructor(
         replyDeliverer = replyDeliverer,
         voiceController = voiceController,
         vectorMemory = vectorMemory,
+        imageMemorySummaryService = imageMemorySummaryService,
         dispatcher = sendDispatcher,
         typingSlot = pendingAssistantSlot,
         conversationFlow = conversation,
@@ -776,6 +806,15 @@ class ChatViewModel @Inject constructor(
     fun send(text: String): Boolean = assistantTurnController.send(text)
     fun sendVoiceDraft() = assistantTurnController.sendVoiceDraft()
     fun sendStickerMessage(stickerId: String) = assistantTurnController.sendStickerMessage(stickerId)
+    fun sendImages(uris: List<android.net.Uri>) = assistantTurnController.sendImages(uris)
+
+    /** 图片能力面（发图入口显隐 + 存相册）——收进协作者，别让本已越 800 红线的 VM 继续长。 */
+    internal val image: ChatImageFacade = ChatImageFacade(
+        scope = viewModelScope,
+        appContext = appContext,
+        apiConfigRepo = apiConfigRepo,
+        functionRouter = apiFunctionRouter,
+    )
     fun regenerate() = assistantTurnController.regenerate()
 
     // 内部回合生命周期薄委托（网络重试 / onChatAppear / 线下回调经 VM 同名方法委托，原调用点字节不变）。

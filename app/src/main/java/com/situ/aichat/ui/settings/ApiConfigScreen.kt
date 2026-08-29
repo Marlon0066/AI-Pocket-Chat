@@ -93,9 +93,7 @@ fun ApiConfigScreen(
 ) {
     val configs by viewModel.configs.collectAsStateWithLifecycle()
     val detecting by viewModel.detecting.collectAsStateWithLifecycle()
-    val availableModels by viewModel.availableModels.collectAsStateWithLifecycle()
-    val modelsLoading by viewModel.modelsLoading.collectAsStateWithLifecycle()
-    val modelsError by viewModel.modelsError.collectAsStateWithLifecycle()
+    val modelCatalogState by viewModel.modelCatalogState.collectAsStateWithLifecycle()
     val balances by viewModel.balances.collectAsStateWithLifecycle()
     val assignments by viewModel.assignments.collectAsStateWithLifecycle() // settings-api-3 功能承接提示
     val undetermined by viewModel.undetermined.collectAsStateWithLifecycle() // settings-api-6 检测不确定提示
@@ -207,7 +205,10 @@ fun ApiConfigScreen(
                     val urlInsecure = baseUrl.isNotBlank() && !isHttpsBaseUrl(baseUrl)
                     AppTextField(
                         value = baseUrl,
-                        onValueChange = { baseUrl = it },
+                        onValueChange = {
+                            baseUrl = it
+                            viewModel.clearModels() // 换了端点，旧列表即刻作废
+                        },
                         label = "Base URL",
                         isError = urlInsecure,
                         supportingText = if (urlInsecure) stringResource(R.string.api_url_https_required) else null,
@@ -218,16 +219,17 @@ fun ApiConfigScreen(
                         ModelDropdownField(
                             model = model,
                             onModelChange = { model = it },
-                            availableModels = availableModels,
-                            loading = modelsLoading,
-                            error = modelsError,
+                            state = modelCatalogState,
                             onFetch = { viewModel.fetchModels(provider, baseUrl, apiKey) },
                         )
                         KnownCapabilityHint(model)
                     }
                     ApiKeyField(
                         value = apiKey,
-                        onValueChange = { apiKey = it },
+                        onValueChange = {
+                            apiKey = it
+                            viewModel.clearModels() // 换了 Key，旧列表即刻作废
+                        },
                         modifier = Modifier.fillMaxWidth(),
                     )
                     AppButton(
@@ -531,33 +533,39 @@ private fun CapabilityBadges(cfg: ApiConfigEntity, isDetecting: Boolean) {
 
 /**
  * Editable model field that doubles as a fetch-on-open, type-to-filter dropdown.
- * - Tapping the field/arrow auto-fetches the model list (once) for the current form values.
- * - Typing filters the fetched list (acts as the search box for long lists like OpenRouter);
- *   the prefilled/selected exact id shows the full list instead of filtering to itself.
+ * - Tapping the field/arrow auto-fetches the model list for the current form values —— **仅当状态是
+ *   [ModelCatalogUiState.Idle]**（旧实现的条件是「列表为空」，失败会清空列表 → 每次展开都重发一次
+ *   最长 20s 的请求；现在失败后停在 Failed 态，只由用户点「重新拉取」）。
+ * - Typing filters the fetched list; 精确命中已选 id 时不过滤成自己。
  * - Manual entry still works (just type a custom model name and don't pick).
- * - When a fetch needs a key, the catalog's "请先填写 API Key…" message shows in the menu.
+ * - 列表**全量可滚**（旧实现 take(100)，OpenRouter 300+ 模型时已选中的那个可能根本不在前 100 条里，
+ *   重开菜单选中态就消失了）；已选中项恒排首位保证可见。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ModelDropdownField(
     model: String,
     onModelChange: (String) -> Unit,
-    availableModels: List<APIModelOption>,
-    loading: Boolean,
-    error: String?,
+    state: ModelCatalogUiState,
     onFetch: () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val query = model.trim()
-    val isExactSelection = availableModels.any { it.id.equals(query, ignoreCase = true) }
+    val available = state.models
+    val isExactSelection = available.any { it.id.equals(query, ignoreCase = true) }
     val filtered = if (query.isEmpty() || isExactSelection) {
-        availableModels
+        available
     } else {
-        availableModels.filter {
+        available.filter {
             it.id.contains(query, ignoreCase = true) || it.name.contains(query, ignoreCase = true)
         }
     }
-    val shown = filtered.take(MODEL_LIST_CAP)
+    // 已选中项置顶：长列表里它可能排在很后面，滚动不到 = 看不到选中态。
+    val shown = if (isExactSelection) {
+        filtered.sortedByDescending { it.id.equals(query, ignoreCase = true) }
+    } else {
+        filtered
+    }
 
     AppDropdownTextField(
         value = model,
@@ -568,33 +576,32 @@ internal fun ModelDropdownField(
         expanded = expanded,
         onExpandedChange = {
             expanded = it
-            if (it && availableModels.isEmpty() && !loading) onFetch()
+            if (it && state is ModelCatalogUiState.Idle) onFetch()
         },
         label = "模型名",
-        loading = loading,
+        loading = state.isLoading,
         modifier = Modifier.fillMaxWidth(),
     ) {
+        state.error?.let { err ->
+            DropdownMenuItem(
+                text = { Text(err, color = MaterialTheme.colorScheme.error) },
+                onClick = {},
+                enabled = false,
+            )
+        }
         when {
-            loading -> DropdownMenuItem(
+            state.isLoading -> DropdownMenuItem(
                 text = { Text(stringResource(R.string.api_fetching_models)) },
                 onClick = {},
                 enabled = false,
             )
-            availableModels.isEmpty() -> {
-                error?.let { err ->
-                    DropdownMenuItem(
-                        text = { Text(err, color = MaterialTheme.colorScheme.error) },
-                        onClick = {},
-                        enabled = false,
-                    )
-                }
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.api_fetch_models)) },
-                    onClick = { onFetch() },
-                )
-            }
+            state is ModelCatalogUiState.Empty -> DropdownMenuItem(
+                text = { Text(stringResource(R.string.api_models_empty_hint)) },
+                onClick = {},
+                enabled = false,
+            )
             else -> {
-                if (shown.isEmpty()) {
+                if (available.isNotEmpty() && shown.isEmpty()) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.api_model_no_match)) },
                         onClick = {},
@@ -611,23 +618,22 @@ internal fun ModelDropdownField(
                         },
                     )
                 }
-                if (filtered.size > shown.size) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.api_model_filter_more)) },
-                        onClick = {},
-                        enabled = false,
-                    )
-                }
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.api_refetch_models)) },
-                    onClick = { onFetch() },
-                )
             }
+        }
+        if (!state.isLoading) {
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        stringResource(
+                            if (available.isEmpty()) R.string.api_fetch_models else R.string.api_refetch_models,
+                        ),
+                    )
+                },
+                onClick = { onFetch() },
+            )
         }
     }
 }
-
-private const val MODEL_LIST_CAP = 100
 
 @Composable
 private fun CapabilityChip(text: String) {

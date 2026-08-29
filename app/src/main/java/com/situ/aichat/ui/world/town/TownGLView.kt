@@ -74,9 +74,21 @@ internal class TownGLView(
         renderer.staticMode = staticMode
     }
 
-    /** 提交小镇几何 + 天空（几何在 Default 线程建好后传入·上传排到 GL 线程）。 */
-    fun submitTown(data: TownGeometryData, sky: TownSkyParams) {
-        queueEvent { renderer.submitTown(data, sky) }
+    /** 提交小镇几何 + 软影/光晕覆盖流 + 天空（几何在 Default 线程建好后传入·上传排到 GL 线程）。 */
+    fun submitTown(data: TownGeometryData, overlay: TownOverlayData, sky: TownSkyParams) {
+        queueEvent { renderer.submitTown(data, overlay, sky) }
+        requestRender()
+    }
+
+    /** 注入材质贴图（宿主在 IO 线程解码后调·§3.5·缺图桶自动回落无贴图路径）。 */
+    fun submitDetailTextures(bitmaps: Map<TownBucket, android.graphics.Bitmap>) {
+        renderer.submitDetailTextures(bitmaps)
+        requestRender()
+    }
+
+    /** 画层天空注入（R2·宿主 IO 解码后调·GL 线程首用懒上传·缺图自动回落渐变天空）。 */
+    fun submitPaintedSkies(dusk: android.graphics.Bitmap?, night: android.graphics.Bitmap?) {
+        renderer.submitPaintedSkies(dusk, night)
         requestRender()
     }
 

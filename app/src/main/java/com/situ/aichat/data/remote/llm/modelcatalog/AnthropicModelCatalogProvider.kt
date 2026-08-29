@@ -6,9 +6,12 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
-import java.net.URI
 
-/** Anthropic model catalog — faithful port of iOS AnthropicModelCatalogProvider (native /v1/models). */
+/**
+ * Anthropic model catalog — 原生 `/v1/models`。
+ * 官方响应自带 `capabilities.image_input.supported`（视觉能力**权威元数据**，与 OpenRouter 的
+ * `architecture.input_modalities` 并列为仅有的两家）——直接读它，省掉一次带图探针请求。
+ */
 class AnthropicModelCatalogProvider : ModelCatalogProvider {
     override suspend fun fetchModels(
         config: ApiConfigValues,
@@ -16,7 +19,7 @@ class AnthropicModelCatalogProvider : ModelCatalogProvider {
         json: Json,
     ): List<APIModelOption> {
         if (config.apiKey.trim().isEmpty()) throw ModelCatalogException.MissingApiKey
-        val url = buildModelsUrl(config.baseUrl)
+        val url = ModelCatalogUrl.modelsUrl(config.baseUrl, defaultVersion = listOf("v1"))
         val body = ModelCatalogHttp.get(
             client,
             url,
@@ -24,21 +27,14 @@ class AnthropicModelCatalogProvider : ModelCatalogProvider {
         )
         val decoded = runCatching { json.decodeFromString(Response.serializer(), body) }
             .getOrNull() ?: throw ModelCatalogException.InvalidResponse
-        return decoded.data.map { APIModelOption(id = it.id, name = it.displayName ?: it.id, subtitle = it.type) }
-    }
-
-    private fun buildModelsUrl(baseUrl: String): String {
-        val uri = runCatching { URI(baseUrl.trim()) }.getOrNull() ?: throw ModelCatalogException.InvalidUrl
-        val scheme = uri.scheme ?: throw ModelCatalogException.InvalidUrl
-        val authority = uri.authority ?: throw ModelCatalogException.InvalidUrl
-        val segs = (uri.path ?: "").split("/").filter { it.isNotEmpty() }.toMutableList()
-        val lower = "/" + segs.joinToString("/").lowercase()
-        when {
-            lower.endsWith("/v1/models") -> Unit
-            lower.endsWith("/v1") -> segs.add("models")
-            else -> { segs.add("v1"); segs.add("models") }
+        return decoded.data.map {
+            APIModelOption(
+                id = it.id,
+                name = it.displayName ?: it.id,
+                subtitle = it.type,
+                supportsVision = it.capabilities?.imageInput?.supported,
+            )
         }
-        return "$scheme://$authority/" + segs.joinToString("/")
     }
 
     @Serializable
@@ -49,5 +45,14 @@ class AnthropicModelCatalogProvider : ModelCatalogProvider {
         val id: String,
         @SerialName("display_name") val displayName: String? = null,
         val type: String? = null,
+        val capabilities: Capabilities? = null,
     )
+
+    @Serializable
+    private data class Capabilities(
+        @SerialName("image_input") val imageInput: Supported? = null,
+    )
+
+    @Serializable
+    private data class Supported(val supported: Boolean? = null)
 }

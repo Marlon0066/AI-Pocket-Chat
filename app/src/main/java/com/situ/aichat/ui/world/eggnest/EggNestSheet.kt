@@ -53,26 +53,24 @@ import com.situ.aichat.ui.components.AvatarColor
 import com.situ.aichat.ui.components.CharacterAvatar
 import com.situ.aichat.ui.components.clickableScale
 import com.situ.aichat.ui.designsystem.AppShapes
-
-// 局部色（图纸 §4.3 精确值·同 WorldQuickChatSheet 局部 val 惯例）。
-private val NsHeadBg = Color(0xA9121828)
-private val NsHandle = Color(0x47F5EFEA)
-private val NsTitle = Color(0xFFF5EFEA)
-private val NsSub = Color(0xC7F5EFEA)
-private val NsClose = Color(0xA6F5EFEA)
-private val NsBody = Color(0xF5FAF7F2)
-private val NsInk = Color(0xFF2E2925)
-private val NsStateText = Color(0xFF8A8378)
-private val NsBarTrack = Color(0x142E2925)
-private val NsBarStart = Color(0xFFD9B36E)
-private val NsBarEnd = Color(0xFFE8C57E)
-private val NsChevron = Color(0xFFC9BFB4)
-private val NsFoot = Color(0xFF9C938A)
-private val NsBodyText = Color(0xFF6B6258)
-private val NsClayStart = Color(0xFFC99A86)
-private val NsClayEnd = Color(0xFFBE8A76)
-private val NsBtnHighlight = Color(0x47FFFFFF)
-private val NsBackBg = Color(0x142E2925)
+import com.situ.aichat.ui.world.WorldSceneColors.NsBackBg
+import com.situ.aichat.ui.world.WorldSceneColors.NsBarEnd
+import com.situ.aichat.ui.world.WorldSceneColors.NsBarStart
+import com.situ.aichat.ui.world.WorldSceneColors.NsBody
+import com.situ.aichat.ui.world.WorldSceneColors.NsBodyText
+import com.situ.aichat.ui.world.WorldSceneColors.NsBtnHighlight
+import com.situ.aichat.ui.world.WorldSceneColors.NsChevron
+import com.situ.aichat.ui.world.WorldSceneColors.NsClayEnd
+import com.situ.aichat.ui.world.WorldSceneColors.NsClayStart
+import com.situ.aichat.ui.world.WorldSceneColors.NsClose
+import com.situ.aichat.ui.world.WorldSceneColors.NsFoot
+import com.situ.aichat.ui.world.WorldSceneColors.NsHandle
+import com.situ.aichat.ui.world.WorldSceneColors.NsHeadBg
+import com.situ.aichat.ui.world.WorldSceneColors.NsInk
+import com.situ.aichat.ui.world.WorldSceneColors.NsStateText
+import com.situ.aichat.ui.world.WorldSceneColors.NsBarTrack
+import com.situ.aichat.ui.world.WorldSceneColors.NsSub
+import com.situ.aichat.ui.world.WorldSceneColors.NsTitle
 
 private val NsEnterEasing = CubicBezierEasing(0.3f, 1.2f, 0.4f, 1f)
 

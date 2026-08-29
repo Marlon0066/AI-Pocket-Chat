@@ -77,7 +77,7 @@ class ListQuickReplyService @Inject constructor(
 
     /**
      * 只落用户消息（W12 C6 快聊·从 [sendAndAwait] **抽取**其前半·行为字节不变）：见面期随会话打线下标记 → 插 user
-     * [MessageEntity] → `recordLastMessage`。返回 false = 空白文本（不落库）。**忙碌快聊**需先即时落用户消息（气泡经消息流
+     * [MessageEntity] → 会话末条快照（见面中只 `touchLastMessageDate` 不写预览·卷一 A2a）。返回 false = 空白文本（不落库）。**忙碌快聊**需先即时落用户消息（气泡经消息流
      * 即时回显·§4.4 demo 行为）再延迟起回合，故拆此 insert-only 口；[sendAndAwait] 改为调它再 [generateReplyWithClaim]，
      * 既有调用方零感知（R1 复核 🔴-1）。
      */
@@ -101,7 +101,13 @@ class ListQuickReplyService @Inject constructor(
             ),
         )
         // 只写末条信息，不动 unread/lastReadDate（自己发的，不该让自己会话 +1 未读）。
-        conversationRepo.recordLastMessage(conversationUuid, trimmed, "user", now)
+        // 见面中（卷一 A2a）：这句属「见面期间产生的消息」，不写预览、仅刷新最后活动时间保鲜排序
+        //（与主路径 AssistantTurnController.storeUserMessage / AI 侧 assistantDeliveryPreview 方案 A 同源）。
+        if (offlineSessionId != null) {
+            conversationRepo.touchLastMessageDate(conversationUuid, now)
+        } else {
+            conversationRepo.recordLastMessage(conversationUuid, trimmed, "user", now)
+        }
         // 观测点（13.10a 分享投递共用此管线）：用户消息已真落库，只打长度不打内容。
         Log.d(TAG, "用户消息已落库 conv=$conversationUuid textLen=${trimmed.length}")
         // 火花续期（审计 R1-N8·2026-07-13 拍板）：语义与主路径 AssistantTurnController 同源（recordChat 同日

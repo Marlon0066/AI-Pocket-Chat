@@ -1,5 +1,8 @@
 package com.situ.aichat.ui.chat
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -78,6 +81,12 @@ private val InputCapsuleBottomNudge = (-2).dp
 private val PlusBareIconSize = 26.dp
 
 /**
+ * 一次选图上限（与朋友圈 / 日记九宫格同口径）。选完**逐张成一条消息**，
+ * 由既有的发送合并等待窗自然并成一轮回复。
+ */
+private const val MAX_CHAT_IMAGES_PER_PICK = 9
+
+/**
  * 聊天输入托盘 + 「+」功能面板宿主 + 弹层管家调用（审计刀C·自 [ChatScreen] bottomBar 抽出）：
  * 日历确认卡（队首）→ 沉浸输入分支 / 常规托盘（引用预览 + 语音草稿条 ↔ [「+」钮 · 输入胶囊 · 主行动钮]
  * × 录音中段）→ 面板区（高度 = max(实时键盘, 面板锁定)·布局 lambda 读 ime = 审计 P4 机制原样）→
@@ -114,6 +123,8 @@ internal fun ChatBottomBar(
     voiceRecordingDurationMs: Long,
     voiceRecordingCancelling: Boolean,
     offlineRecoveryVisible: Boolean,
+    /** 「聊天对话」模型是否看得懂图——决定「+」面板出不出「照片」格。 */
+    chatModelHasVision: Boolean,
     onOpenStickerManagement: () -> Unit,
     reduceMotion: Boolean,
 ) {
@@ -344,6 +355,12 @@ internal fun ChatBottomBar(
         } // end 普通输入栏分支（非沉浸输入）
         // chat「+」面板宿主（契约 §6）：底部区域高度 = max(实时键盘高度, 面板锁定高度)——替代旧 imePadding，
         // 键盘与面板轮流坐此区、输入托盘锚定不掉底；键盘态绘空(系统键盘占屏)、面板态绘功能面板。
+        // 发图入口（拍板③「选完即发」）：系统 Photo Picker 多选（与朋友圈/日记同源·无存储权限·无 GMS 依赖），
+        // 选完直接逐张成消息发出，不设预览确认页。
+        val photoPicker = rememberLauncherForActivityResult(
+            ActivityResultContracts.PickMultipleVisualMedia(MAX_CHAT_IMAGES_PER_PICK),
+        ) { uris -> if (uris.isNotEmpty()) viewModel.sendImages(uris) }
+
         val chatPanelItems = buildList {
             // 两排网格（方案 A·左对齐·见 ChatFunctionPanel）：第一排 送礼/红包/表情，第二排 见面/约见面。
             // 通话已移到顶栏右上角（仅见面外显示）。见面期间隐藏 送礼/红包/见面/约见面（礼物·红包属金路、见面里发会漏进普通
@@ -353,6 +370,20 @@ internal fun ChatBottomBar(
                 add(ChatPanelItem(AppPanelIcons.RedPacket, "红包") { inputPanel.dismiss(reduceMotion); sheets.showRedPacketSheet = true })
             }
             add(ChatPanelItem(AppPanelIcons.Sticker, "表情") { inputPanel.dismiss(reduceMotion); sheets.showPicker = true })
+            // 「照片」按**聊天对话模型的视觉能力**显隐（用户 2026-08-29 拍板修订原「入口常开」）：
+            // 纯文本模型收到图只会回一句读不懂图的话，与其事后降级不如根本不给按钮。
+            // 不随见面态隐藏——见面里给对方看张照片是合理的沉浸内容（与送礼/红包属金路、
+            // 「见面」会打断沉浸的理由都不同）。
+            if (chatModelHasVision) {
+                add(
+                    ChatPanelItem(AppPanelIcons.Photo, "照片") {
+                        inputPanel.dismiss(reduceMotion)
+                        photoPicker.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                        )
+                    },
+                )
+            }
             if (!isOfflineMode) {
                 add(ChatPanelItem(AppPanelIcons.Meet, "见面") { inputPanel.dismiss(reduceMotion); sheets.showManualMeetingSheet = true })
                 add(ChatPanelItem(AppPanelIcons.FutureMeet, "约见面") { inputPanel.dismiss(reduceMotion); sheets.showFutureMeetingSheet = true })

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>星球 · 数据驱动渲染</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  /* 契约：页面背景 #0D1220，加载瞬间与 App 同底不闪白 */
+  html,body { width:100%; height:100%; overflow:hidden; background:#0D1220; touch-action:none;
+    font-family:"PingFang SC","Noto Sans SC",-apple-system,sans-serif;
+    -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; }
+  /* D-9 真机实锤修复（2026-08-29·小米14 三屏黑）：「恰好铺满视口」的 WebGL 画布在部分
+     Android WebView 上既不被合成上屏、也收不到触摸（模拟器 20 行裸页最小复现同病同解）。
+     四边内缩 4px 打破精确等于视口的触发条件；backing 尺寸不动（JS 零改·three 内联样式被
+     !important 压住），视觉整体缩 0.4% 不可感、4px 底色边与深夜底同色。勿删勿改回铺满。 */
+  canvas#gl { display:block; position:fixed !important; left:4px !important; top:4px !important;
+    width:calc(100% - 8px) !important; height:calc(100% - 8px) !important; }
+  /* 纸感暗角 + 颗粒（不挡交互） */
+  #vig   { position:fixed; inset:0; pointer-events:none; z-index:6;
+           background:radial-gradient(ellipse at 50% 46%, transparent 52%, rgba(5,8,18,.34) 100%); }
+  #grain { position:fixed; inset:0; pointer-events:none; opacity:.07; z-index:7; }
+  #veil  { position:fixed; inset:0; background:#0D1220; z-index:40; pointer-events:none;
+           transition:opacity .7s ease; }
+  /* 家名签：动森式奶油木牌（一期 place-tag 同族），锚在家的投影上方，底尖对齐 */
+  .place-tag { position:fixed; left:0; top:0; z-index:10; transform:translate(-50%,-100%);
+    pointer-events:auto; cursor:pointer;
+    background:linear-gradient(rgba(255,252,244,.97), rgba(249,240,222,.95)); color:#54402A;
+    border:2px solid rgba(122,92,58,.55); border-radius:12px; padding:5px 12px 6px;
+    font-size:12px; font-weight:600; letter-spacing:.06em; white-space:nowrap;
+    box-shadow:0 3px 10px rgba(8,10,24,.5), 0 1px 0 rgba(255,255,255,.85) inset; }
+  .place-tag:hover { border-color:rgba(160,84,40,.8); }
+  .place-tag::after { content:""; position:absolute; left:50%; bottom:-6px; width:9px; height:9px;
+    background:rgba(249,240,222,.96); border-right:2px solid rgba(122,92,58,.55); border-bottom:2px solid rgba(122,92,58,.55);
+    transform:translateX(-50%) rotate(45deg); border-radius:0 0 3px 0; }
+  .place-tag .home-dot { display:inline-block; width:8px; height:8px; border-radius:50%;
+    background:#E8A24C; border:2px solid rgba(255,248,234,.9);
+    box-shadow:0 0 0 1.5px rgba(201,111,66,.55); margin-right:6px; vertical-align:1px; }
+  /* 屏缘指路雪佛龙：家转到背面时出现，点它 = 页面自己把球转回家正面 */
+  #chevron { position:fixed; left:0; top:0; z-index:12; width:52px; height:52px; display:none;
+    margin:-26px 0 0 -26px; pointer-events:auto; cursor:pointer;
+    background:radial-gradient(circle at 50% 42%, rgba(255,249,236,.96), rgba(246,231,204,.9));
+    border:2px solid rgba(122,92,58,.5); border-radius:50%;
+    box-shadow:0 4px 14px rgba(6,8,20,.55), 0 0 0 1px rgba(255,255,255,.5) inset;
+    animation:chevPulse 1.6s ease-in-out infinite; }
+  #chevron svg { position:absolute; left:50%; top:50%; width:22px; height:22px; margin:-11px 0 0 -11px; }
+  @keyframes chevPulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.1); } }
+  /* fps 角标：?fps=1 才显示 */
+  #fps { position:fixed; top:calc(env(safe-area-inset-top, 8px) + 8px); left:10px; z-index:15;
+    font-size:11px; color:#B8C4DE; background:rgba(13,18,32,.55); padding:3px 8px; border-radius:8px;
+    display:none; font-variant-numeric:tabular-nums; }
+  /* mock 自测面板（仅 ?mock=1） */
+  #mockUI { position:fixed; left:0; right:0; bottom:calc(env(safe-area-inset-bottom, 8px) + 10px); z-index:30;
+    display:none; flex-direction:column; align-items:center; gap:8px; pointer-events:none; }
+  .mrow { display:flex; gap:8px; pointer-events:auto; flex-wrap:wrap; justify-content:center; }
+  .mbtn { background:rgba(252,246,234,.88); color:#6B543A; border:1px solid rgba(120,86,52,.3);
+    border-radius:999px; padding:7px 16px; font-size:12px; cursor:pointer;
+    box-shadow:0 2px 8px rgba(8,6,4,.3); font-family:inherit; }
+  .mbtn.on { background:#C96F42; color:#FFF8EC; border-color:#C96F42; }
+</style>
+</head>
+<body>
+<div id="vig"></div>
+<div id="grain"></div>
+<div id="fps">— fps</div>
+<div id="chevron" title="回家">
+  <svg viewBox="0 0 24 24" fill="none" stroke="#B06A38" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 4 L17 12 L8 20"/>
+  </svg>
+</div>
+<div id="veil"></div>
+<div id="mockUI"><div class="mrow" id="mockRow"></div></div>
+<script src="three.min.js"></script>
+<script src="planet.js"></script>
+</body>
+</html>

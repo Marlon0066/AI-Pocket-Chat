@@ -67,22 +67,20 @@ import com.situ.aichat.ui.components.rememberReduceMotion
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.world.WorldGlassChip
 import com.situ.aichat.ui.world.WorldSceneColors
+import com.situ.aichat.ui.world.WorldSceneColors.CardGradBottom
+import com.situ.aichat.ui.world.WorldSceneColors.CardGradMid
+import com.situ.aichat.ui.world.WorldSceneColors.CardGradTop
+import com.situ.aichat.ui.world.WorldSceneColors.CardShadow
+import com.situ.aichat.ui.world.WorldSceneColors.CardText
+import com.situ.aichat.ui.world.WorldSceneColors.CardVioletColor
+import com.situ.aichat.ui.world.WorldSceneColors.GoldGlow
+import com.situ.aichat.ui.world.WorldSceneColors.HaloColorCore
+import com.situ.aichat.ui.world.WorldSceneColors.HaloColorMid
+import com.situ.aichat.ui.world.WorldSceneColors.MilkyC1
+import com.situ.aichat.ui.world.WorldSceneColors.MilkyC2
+import com.situ.aichat.ui.world.WorldSceneColors.MilkyC3
 import com.situ.aichat.ui.world.gl.PlanetCardTextureView
 import kotlin.random.Random
-
-// ── 卡内恒暗窗景专属字面量（demo 逐值转录·§4·不随主题）──
-private val CardGradTop = Color(0xFF0B0F1B)      // demo:L23 底渐变 0%
-private val CardGradMid = Color(0xFF141C36)      // demo:L23 55%
-private val CardGradBottom = Color(0xFF232447)   // demo:L23 100%
-private val CardVioletColor = Color(0xFF3A3050)  // demo:L27 紫雾
-private val HaloColorCore = Color(0x2496B4E6)    // demo:L32 rgba(150,180,230,.14)
-private val HaloColorMid = Color(0x0D96B4E6)     // demo:L32 .05
-private val MilkyC1 = Color(0x1FC8BEE6)          // demo:L29 rgba(200,190,230,.12)
-private val MilkyC2 = Color(0x2EF0E1F0)          // demo:L29 rgba(240,225,240,.18)
-private val MilkyC3 = Color(0x1AC8BEE6)          // demo:L29 rgba(200,190,230,.10)
-private val CardText = Color(0xFFF5EFEA)         // demo:L37 标题/星点色
-private val CardShadow = Color(0xCC0B0F1B)       // demo:L37 rgba(11,15,27,.8)
-private val GoldGlow = WorldSceneColors.gold.copy(alpha = 0.55f) // demo:L45 rgba(232,197,126,.55)
 
 private const val STAR_COUNT = 14 // demo:L125
 

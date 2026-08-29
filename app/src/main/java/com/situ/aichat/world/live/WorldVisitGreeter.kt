@@ -3,6 +3,7 @@ package com.situ.aichat.world.live
 import com.situ.aichat.data.local.entity.MessageEntity
 import com.situ.aichat.data.repository.ConversationRepository
 import com.situ.aichat.data.repository.MessageRepository
+import com.situ.aichat.offline.OfflineMeetingGate
 import com.situ.aichat.world.WorldSeeds
 import java.util.UUID
 import javax.inject.Inject
@@ -28,6 +29,9 @@ class WorldVisitGreeter @Inject constructor(
      */
     suspend fun greetArrival(characterUuid: String, characterName: String, travelKey: String, arriveAtMs: Long) {
         val conversationUuid = conversationRepo.getOrCreateForCharacter(characterUuid, characterName)
+        // 见面闸（卷一 A5·J6）：会话正在线下见面 → **本次开场白跳过、不补发**（人就在对面，「待会儿去找你」
+        // 当场穿帮）。位置在幂等 uuid 检查**之前**：未插入 = 不占用幂等位，下次旅行照常开场。
+        if (OfflineMeetingGate.inMeeting(conversationRepo.get(conversationUuid))) return
         val openerUuid = UUID.nameUUIDFromBytes("world:visitopener:$travelKey".toByteArray()).toString()
         if (messageRepo.get(openerUuid) != null) return // 幂等·不双插（E15）
         val text = OPENERS[variantOf(travelKey)]

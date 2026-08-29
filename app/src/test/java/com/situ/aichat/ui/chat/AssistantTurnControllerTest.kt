@@ -20,12 +20,15 @@ import com.situ.aichat.notification.NotificationLearningService
 import com.situ.aichat.offline.OfflineMeetingService
 import com.situ.aichat.prompt.memory.VectorMemoryService
 import com.situ.aichat.recovery.RecoveryClaimTracker
+import com.situ.aichat.util.ContentImageStore
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
 import io.mockk.mockkStatic
 import io.mockk.verify
+import io.mockk.unmockkObject
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -168,6 +171,7 @@ class AssistantTurnControllerTest {
         replyDeliverer = replyDeliverer,
         voiceController = voiceController,
         vectorMemory = vectorMemory,
+        imageMemorySummaryService = mockk(relaxed = true),
         dispatcher = ChatMessageDispatcher(scope, FakeDispatcherPersistence(), delayMs = { }),
         typingSlot = typingSlot,
         conversationFlow = conversationFlow,
@@ -196,6 +200,7 @@ class AssistantTurnControllerTest {
         replyDeliverer = replyDeliverer,
         voiceController = voiceController,
         vectorMemory = vectorMemory,
+        imageMemorySummaryService = mockk(relaxed = true),
         dispatcher = dispatcher,
         typingSlot = typingSlot,
         conversationFlow = conversationFlow,
@@ -209,6 +214,7 @@ class AssistantTurnControllerTest {
     fun tearDown() {
         unmockkStatic(Log::class) // 只卸自己 mock 的 Log，绝不 unmockkAll 污染同 JVM 后续测试类。
         unmockkStatic("androidx.room.RoomDatabaseKt")
+        unmockkObject(ContentImageStore) // 发图用例才 mock 它；没 mock 过时本调用是空操作。
     }
 
     // ────────────────── 健康线 2-5b（IM 语义·用户拍板 2026-07-03）──────────────────
@@ -319,6 +325,25 @@ class AssistantTurnControllerTest {
         coVerify { vectorMemory.embedMessageIfNeeded(any()) } // C1 受理即嵌（窗回合 userMessageForEmbed=null）
         coVerify { assistantTurnEngine.runAssistantTurn(any(), any(), any(), any(), any()) }
         assertFalse(isSending.value)
+    }
+
+    /** 卷一 A1：见面中用户消息不顶列表预览（方案 A 同源），只刷新最后活动时间；消息本体照常落库并打线下标。 */
+    @Test
+    fun 发文字_见面中_只刷新时间不写预览() = runBlocking {
+        coEvery { conversationRepo.get("conv-1") } returns convo(offlineSessionId = "sess-1")
+        assertTrue(controller.send("你好呀"))
+        coVerify(exactly = 1) { messageRepo.upsert(match { it.content == "你好呀" && it.isOfflineMode }) }
+        coVerify(exactly = 1) { conversationRepo.touchLastMessageDate("conv-1", any()) }
+        coVerify(exactly = 0) { conversationRepo.recordLastMessage(any(), any(), any(), any()) }
+    }
+
+    /** 卷一 A1：表情包路同源（三入口共用 storeUserMessage）。 */
+    @Test
+    fun 发表情_见面中_只刷新时间不写预览() = runBlocking {
+        coEvery { conversationRepo.get("conv-1") } returns convo(offlineSessionId = "sess-1")
+        controller.sendStickerMessage("s1")
+        coVerify(exactly = 1) { conversationRepo.touchLastMessageDate("conv-1", any()) }
+        coVerify(exactly = 0) { conversationRepo.recordLastMessage(any(), any(), any(), any()) }
     }
 
     @Test
@@ -511,7 +536,7 @@ class AssistantTurnControllerTest {
 
     private fun stubOfflineConversation(last: MessageEntity) {
         coEvery { conversationRepo.get("conv-1") } returns
-            convo(offlineSessionId = "sess-1", lastRole = "user", lastPreview = "（线下模式开始）")
+            convo(offlineSessionId = "sess-1", lastRole = "user", lastPreview = "正在见面中…")
         coEvery { messageRepo.offlineSessionMessages("conv-1", "sess-1") } returns listOf(last)
     }
 
@@ -551,5 +576,35 @@ class AssistantTurnControllerTest {
         coVerify(exactly = 0) { offlineMeetingService.insertReturnAfterAwayHint(any(), any()) }
         coVerify { assistantTurnEngine.runAssistantTurn(any(), any(), any(), any(), any()) }
         verify { recoveryClaimTracker.end("conv-1") }
+    }
+
+    // ────────────── 发图链接线（R4 🔵-3）──────────────
+
+    /**
+     * 摘要落库后**必须**走 `embedImageMessageAfterSummary`（跳过推迟闸）那个入口，而不是常规的
+     * `embedMessageIfNeeded`。
+     *
+     * 为什么值得单钉一条：`ChatImageSenderTest` 验的是「sender 会调注入的 lambda」（用的是假 lambda），
+     * `ImageEmbeddingDeferralTest` 验的是「两个入口口径不同」——**中间这一行「lambda 到底指向哪个方法」
+     * 两头都没碰**，改回 `embedMessageIfNeeded` 全绿（R4 🔵-3）。改回去的后果：摘要为空的兜底路径上
+     * 推迟闸 100% 挡住，这条消息要等冷启动回填才有机会进索引。
+     */
+    @Test
+    fun `发图_摘要跑完走跳过推迟闸的那个入口`() = runBlocking {
+        mockkObject(ContentImageStore)
+        coEvery { ContentImageStore.saveWithThumbnail(any(), any(), any(), any()) } returns
+            ContentImageStore.StoredImage(path = "/img/1.jpg", thumbnailPath = "/img/1_t.jpg")
+        // 摘要落库后按 uuid 重取最新实体：给一条带图消息，否则 `?.let` 整段跳过、断言测了个寂寞
+        coEvery { messageRepo.get(any()) } answers {
+            MessageEntity(
+                messageUUID = firstArg(), conversationUuid = "conv-1", roleRaw = "user",
+                content = "[图片]", timestamp = 1L, imageRelativePath = "/img/1.jpg",
+                mediaMemorySummary = "海边的黄昏",
+            )
+        }
+
+        controller.sendImages(listOf(mockk<android.net.Uri>()))
+
+        coVerify(exactly = 1) { vectorMemory.embedImageMessageAfterSummary(match { it.imageRelativePath == "/img/1.jpg" }) }
     }
 }

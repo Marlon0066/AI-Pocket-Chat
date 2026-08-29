@@ -25,8 +25,12 @@ internal fun CastCardKind.id(): String = when (this) {
     is CastCardKind.Pet -> staged.petUuid
 }
 
-/** 一张定位后的小镇卡（世界锚坐标）。 */
-internal data class CastCard(val kind: CastCardKind, val x: Float, val y: Float, val z: Float)
+/**
+ * 一张定位后的小镇卡（世界锚坐标）。[walking] = 三期卷一「居民走动」：true 仅「真在镇上闲逛」的环位客
+ * （IN_TOWN 角色 + 无固定点原住民·含未发现神秘人）——web 页拿它开走动（x/z 退作静止锚）；
+ * E5 退环位的睡着/在家卡恒 false（不许月牙满街跑）。GL 兜底忽略此字段照旧环摆。
+ */
+internal data class CastCard(val kind: CastCardKind, val x: Float, val y: Float, val z: Float, val walking: Boolean = false)
 
 /** 溢出「+N」chip（同锚 >3 时·§4.6A·锚在组中心）。 */
 internal data class CastOverflow(val x: Float, val y: Float, val z: Float, val count: Int)
@@ -68,6 +72,11 @@ internal object WorldCastAnchors {
         val ringChars = cast.characters.filter { it.mode == StageMode.IN_TOWN }.sortedBy { it.uuid }
         val ringNatives = cast.natives.filter { it.placeId == null }.sortedBy { it.nativeId }
         val ringN = ringChars.size + ringNatives.size
+        // 三期卷一：真环位客（≠ E5 退环位的睡着/在家卡）即走动客。
+        val walkingIds = buildSet {
+            ringChars.forEach { add(it.uuid) }
+            ringNatives.forEach { add(it.nativeId) }
+        }
         val (cx, cz) = townCenter(cast.cityId)
 
         fun ringAnchor(k: Int): Triple<Float, Float, Float> {
@@ -115,11 +124,11 @@ internal object WorldCastAnchors {
         }
         for (p in cast.pets) placeAnchor(homePlaceId)?.let { based += CastCardKind.Pet(p) to it }
 
-        return fanOut(based)
+        return fanOut(based, walkingIds)
     }
 
     /** 同锚分组 → 扇形偏移 + 上限 3 + 溢出 chip（§4.6A·E12）。 */
-    private fun fanOut(based: List<Pair<CastCardKind, Triple<Float, Float, Float>>>): CastPlacement {
+    private fun fanOut(based: List<Pair<CastCardKind, Triple<Float, Float, Float>>>, walkingIds: Set<String>): CastPlacement {
         val groups = based.groupBy { key(it.second) }
         val cards = mutableListOf<CastCard>()
         val overflows = mutableListOf<CastOverflow>()
@@ -128,7 +137,7 @@ internal object WorldCastAnchors {
             val shown = members.take(CARD_CAP)
             shown.forEachIndexed { k, (kind, anchor) ->
                 val dx = (k - (minOf(n, CARD_CAP) - 1) / 2f) * FAN_STEP
-                cards += CastCard(kind, anchor.first + dx, anchor.second, anchor.third)
+                cards += CastCard(kind, anchor.first + dx, anchor.second, anchor.third, walking = kind.id() in walkingIds)
             }
             if (n > CARD_CAP) {
                 val a = members.first().second

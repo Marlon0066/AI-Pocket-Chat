@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>大陆 · 数据驱动渲染</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  /* 契约：页面背景 #0D1220，加载瞬间与 App 同底不闪白 */
+  html,body { width:100%; height:100%; overflow:hidden; background:#0D1220; touch-action:none;
+    font-family:"PingFang SC","Noto Sans SC",-apple-system,sans-serif;
+    -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; }
+  /* D-9 真机实锤修复（2026-08-29·小米14 三屏黑）：「恰好铺满视口」的 WebGL 画布在部分
+     Android WebView 上既不被合成上屏、也收不到触摸（模拟器 20 行裸页最小复现同病同解）。
+     四边内缩 4px 打破精确等于视口的触发条件；backing 尺寸不动（JS 零改·three 内联样式被
+     !important 压住），视觉整体缩 0.4% 不可感、4px 底色边与深夜底同色。勿删勿改回铺满。 */
+  canvas#gl { display:block; position:fixed !important; left:4px !important; top:4px !important;
+    width:calc(100% - 8px) !important; height:calc(100% - 8px) !important; }
+  /* 纸感暗角 + 颗粒（不挡交互） */
+  #vig   { position:fixed; inset:0; pointer-events:none; z-index:6;
+           background:radial-gradient(ellipse at 50% 42%, transparent 55%, rgba(8,10,20,.28) 100%); }
+  #grain { position:fixed; inset:0; pointer-events:none; opacity:.06; z-index:7; }
+  #veil  { position:fixed; inset:0; background:#0D1220; z-index:40; pointer-events:none;
+           transition:opacity .7s ease; }
+  /* 站位名签：动森式奶油木牌（一期 place-tag 同族），锚在 (x, markerTop, z) 投影处，底尖对齐 */
+  .place-tag { position:fixed; left:0; top:0; z-index:10; transform:translate(-50%,-100%);
+    pointer-events:auto; cursor:pointer;
+    background:linear-gradient(rgba(255,252,244,.97), rgba(249,240,222,.95)); color:#54402A;
+    border:2px solid rgba(122,92,58,.55); border-radius:12px; padding:5px 12px 6px;
+    font-size:12px; font-weight:600; letter-spacing:.06em; white-space:nowrap;
+    box-shadow:0 3px 10px rgba(20,12,4,.38), 0 1px 0 rgba(255,255,255,.85) inset; }
+  .place-tag:hover { border-color:rgba(160,84,40,.8); }
+  .place-tag::after { content:""; position:absolute; left:50%; bottom:-6px; width:9px; height:9px;
+    background:rgba(249,240,222,.96); border-right:2px solid rgba(122,92,58,.55); border-bottom:2px solid rgba(122,92,58,.55);
+    transform:translateX(-50%) rotate(45deg); border-radius:0 0 3px 0; }
+  .place-tag .s-dot { display:inline-block; width:8px; height:8px; border-radius:50%;
+    background:#E8A24C; border:2px solid rgba(255,248,234,.9);
+    box-shadow:0 0 0 1.5px rgba(201,111,66,.55); margin-right:6px; vertical-align:1px; }
+  .place-tag.wonder .s-dot { background:#B48AC0; box-shadow:0 0 0 1.5px rgba(150,96,170,.55); }
+  .place-tag.wonder .s-glyph { color:#8E5FA0; margin-right:5px; font-size:11px; }
+  .place-tag.home .s-dot { background:#E8A24C; box-shadow:0 0 0 2px rgba(232,162,76,.45); }
+  .place-tag.home .s-glyph { color:#B06A38; margin-right:5px; font-size:11px; }
+  .place-tag.presence-here { border-color:rgba(201,111,66,.85);
+    box-shadow:0 3px 10px rgba(20,12,4,.38), 0 0 0 2px rgba(232,162,76,.4); }
+  .place-tag.presence-grey { opacity:.62; filter:grayscale(.7); }
+  /* 「TA 在这里」/「旅途中」徽记 chip：挂在名签上沿 */
+  .here-chip { position:absolute; left:50%; top:-21px; transform:translateX(-50%);
+    background:linear-gradient(rgba(255,214,140,.98), rgba(236,166,92,.96)); color:#5A3A16;
+    border:1.5px solid rgba(122,74,32,.5); border-radius:999px; padding:2px 9px 3px;
+    font-size:10px; font-weight:700; letter-spacing:.08em; white-space:nowrap;
+    box-shadow:0 2px 7px rgba(20,12,4,.35); }
+  .here-chip.grey { background:linear-gradient(rgba(226,224,218,.9), rgba(198,196,190,.9));
+    color:#5A5A54; border-color:rgba(90,90,84,.4); }
+  /* fps 角标：?fps=1 才显示 */
+  #fps { position:fixed; top:calc(env(safe-area-inset-top, 8px) + 8px); left:10px; z-index:15;
+    font-size:11px; color:#B8C4DE; background:rgba(13,18,32,.55); padding:3px 8px; border-radius:8px;
+    display:none; font-variant-numeric:tabular-nums; }
+  /* mock 自测面板（仅 ?mock=1） */
+  #mockUI { position:fixed; left:0; right:0; bottom:calc(env(safe-area-inset-bottom, 8px) + 10px); z-index:30;
+    display:none; flex-direction:column; align-items:center; gap:8px; pointer-events:none; }
+  .mrow { display:flex; gap:8px; pointer-events:auto; flex-wrap:wrap; justify-content:center; }
+  .mbtn { background:rgba(252,246,234,.88); color:#6B543A; border:1px solid rgba(120,86,52,.3);
+    border-radius:999px; padding:7px 16px; font-size:12px; cursor:pointer;
+    box-shadow:0 2px 8px rgba(8,6,4,.3); font-family:inherit; }
+  .mbtn.on { background:#C96F42; color:#FFF8EC; border-color:#C96F42; }
+</style>
+</head>
+<body>
+<div id="vig"></div>
+<div id="grain"></div>
+<div id="fps">— fps</div>
+<div id="veil"></div>
+<div id="mockUI">
+  <div class="mrow" id="mockRegions"></div>
+  <div class="mrow" id="mockPresence"></div>
+  <div class="mrow" id="mockActions"></div>
+</div>
+<script src="three.min.js"></script>
+<script src="continent.js"></script>
+</body>
+</html>

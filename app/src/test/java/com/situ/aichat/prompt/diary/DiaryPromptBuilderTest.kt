@@ -52,6 +52,7 @@ class DiaryPromptBuilderTest {
         calendarLine = "%1\$s-%2\$s %3\$s",
         eventUntitled = "UNTITLED",
         userFallback = "FALLBACK",
+        photosBlind = "photos<%1\$d>",
     )
 
     @Test fun `minimal — no overrides, all optional sections empty`() {
@@ -228,5 +229,25 @@ class DiaryPromptBuilderTest {
 
     @Test fun `formatDiaryMeetingLines 无见面 返回空`() {
         assertEquals("", formatDiaryMeetingLines(emptyList(), emptyMap(), zone))
+    }
+
+    // ── 契约 §B8：「AI 帮我写」的盲图提示（R2 🟡-4 补实现·R3 🟡-4 补这两条锁） ──
+
+    @Test fun `已贴照片时注入盲图提示_带真实张数`() {
+        // 病灶：用户先贴 9 张海边照再点「AI 帮我写」，生成的正文对照片完全无感知，只复述当天聊天记录。
+        val out = DiaryPromptBuilder.buildSystemPrompt(
+            strings = sentinelStrings(), userName = "U", nowMillis = nowMillis, zone = zone,
+            chatSummary = "", calendarSummary = "", photoCount = 3,
+        )
+        assertTrue("张数必须是真的传进去的那个数", out.contains("photos<3>"))
+    }
+
+    @Test fun `没贴照片时整段不注入`() {
+        // 反向钉：默认 0 张时若也注入，角色会凭空以为每篇日记都有照片
+        val out = DiaryPromptBuilder.buildSystemPrompt(
+            strings = sentinelStrings(), userName = "U", nowMillis = nowMillis, zone = zone,
+            chatSummary = "", calendarSummary = "", photoCount = 0,
+        )
+        assertFalse(out.contains("photos<"))
     }
 }

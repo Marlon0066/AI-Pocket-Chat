@@ -19,6 +19,7 @@ import com.situ.aichat.data.repository.MessageRepository
 import com.situ.aichat.notification.NotificationChannels
 import com.situ.aichat.notification.NotificationReplyThread
 import com.situ.aichat.notification.Notifier
+import com.situ.aichat.offline.OfflineMeetingGate
 import com.situ.aichat.quickreply.ListQuickReplyService
 import com.situ.aichat.ui.chat.MessagePreviewText
 import dagger.assisted.Assisted
@@ -30,7 +31,8 @@ import dagger.assisted.AssistedInject
  * 1. 立即回推「你刚打的那句 + 正在回复…」（[Notifier.postChatReply]）；
  * 2. 复用 B5 同款管线 [ListQuickReplyService.sendAndAwait]（落用户消息 + 占坑 + 跑完整一轮 LLM + 物化，**不重构
  *    ChatViewModel.runAssistantTurn**），等回合跑完；
- * 3. 读会话最近可见消息（含 AI 回复）回推最终态气泡（失败 → 「稍后回复你」，用户消息已落、恢复扫描兜底）。
+ * 3. 读会话最近可见消息（含 AI 回复）回推最终态气泡（失败 → 「稍后回复你」，用户消息已落、恢复扫描兜底）；
+ *    **目标会话在线下见面中**（卷一 A2b）→ 改回推「你那句 + 已送达 · 你们正在见面中」，不读可见消息（剧场叙事不外显）。
  *
  * 加急（[OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST]）= 用户发起的通知动作，HyperOS 通常允许起前台；配额耗尽
  * 降级普通任务但仍会跑。[getForegroundInfo] 在 minSdk 29/30 必需（复用故事生成的安静常驻渠道 + VISIBILITY_SECRET）。
@@ -69,10 +71,27 @@ class NotificationReplyWorker @AssistedInject constructor(
             statusHint = applicationContext.getString(R.string.notif_reply_status_replying),
         )
 
+        // 见面闸（卷一 A2b）：目标会话正在线下见面 → 这一轮的 AI 回复是剧场叙事（带 [叙述]/[对话] 标签且被
+        // 「见面细节不进日常聊天」的 SQL 滤掉），绝不能外显进通知栏。此处先读一次会话旗标，供 ③ 分终态。
+        val inMeeting = OfflineMeetingGate.inMeeting(conversationRepository.get(conversationUuid))
+
         // ② 跑完整一轮（复用 B5 同款落库 + 占坑 + LLM + 物化；异常不外泄，按失败处理）。
         val ok = runCatching { listQuickReply.sendAndAwait(conversationUuid, text) }
             .onFailure { Log.w(TAG, "通知回复跑回合失败：$conversationUuid", it) }
             .getOrDefault(false)
+
+        // ③-见面中（卷一 A2b·J4）：合成线程只放用户刚打的那句 + 「已送达 · 你们正在见面中」状态行——
+        // 既不把剧场叙事外显进通知（OfflineChatVisibility 铁则），也不静默吞（用户要知道话到了）。
+        // 故意**跳过** recentVisibleChronological：见面中刚落的两条会被「见面细节不进日常聊天」的 SQL 滤光，
+        // 读出来的是更早的旧对话，回推等于把过期内容当新回复弹给用户。ok=false 走下面的现状 deferred 分支（E6）。
+        if (ok && inMeeting) {
+            Notifier.postChatReply(
+                applicationContext, notificationId, conversationUuid, characterId, title, avatarPath,
+                messages = listOf(NotificationReplyThread.ReplyThreadMessage(text, isUser = true, timestamp = now)),
+                statusHint = applicationContext.getString(R.string.notif_reply_status_in_meeting),
+            )
+            return Result.success()
+        }
 
         // ③ 回推最终态：读会话最近可见消息（含真用户消息 + AI 回复）建气泡；失败 → 「稍后回复你」（用户消息已落、恢复扫描兜底）。
         val recent = messageRepository.recentVisibleChronological(conversationUuid, NotificationReplyThread.MAX_THREAD_MESSAGES)

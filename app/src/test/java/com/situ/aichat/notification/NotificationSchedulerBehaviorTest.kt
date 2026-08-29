@@ -28,7 +28,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.time.Clock
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 
 /**
@@ -38,9 +40,12 @@ import java.time.ZoneId
  * 1. `WorkManager.getInstance` 是 **Companion 方法**（`WorkManager$Companion.getInstance`）而非 Java static
  *    → 必须 `mockkObject(WorkManager.Companion)`；用 `mockkStatic` 拦不住，真实现会拿假 Context 撞
  *    `AbstractMethodError`。（本项目无 work-testing 依赖，F28/§9 不得新增。）
- * 2. `scheduleInternal` 内部直接取 `System.currentTimeMillis()` / `ZoneId.systemDefault()`，**无法注入时钟**
- *    → 所有事件时间戳一律以**真实 now** 为基准相对构造；凡涉及免打扰窗的用例，窗口都**从实际触发时刻反算**
- *    （而不是写死 23:00–07:30），使断言与"测试在几点跑"无关（否则半夜跑必 flaky）。
+ * 2. 时钟经构造注入 `Clock.fixed` **钉死**（2026-01-15 14:00 Asia/Shanghai），事件时间戳以该固定 now
+ *    相对构造，断言与真实几点/哪天跑彻底无关。旧写法（真实 now 相对构造）仍随**日期**漂移：日程支抖动
+ *    = djb2("$charId|schedule_i|日期") % 16，**抖动=0 的日期上** fireAt 恰落在候选事件自身 endTime
+ *    （闭区间端点），`currentEvent` 的 firstOrNull 先命中候选事件而非同覆盖的睡觉事件 → 睡眠闸用例
+ *    全天必挂（实锤 2026-08-28 抖动=0，曾被误诊「跨午夜 flaky」——其实是头天 08-27 抖动=15 恰好绿）。
+ *    **换钉死日期必须避开抖动=0**；免打扰窗用例仍从触发时刻反算窗口，双保险。钉死日抖动=5。
  *
  * 断言从图纸 §3.1 / V1 / V3 / V4 / V5 独立反推。
  */
@@ -62,11 +67,13 @@ class NotificationSchedulerBehaviorTest {
 
     private val charId = "c-1"
 
-    /** 与生产同源的时区（生产用 systemDefault，测试断言必须同源，否则 minuteOfDay 口径打架）。 */
-    private val zone: ZoneId = ZoneId.systemDefault()
+    /** 与生产同源的时区（生产取注入 Clock 的 zone = 本 clock 的 zone，断言必须同源，否则 minuteOfDay 口径打架）。 */
+    private val zone: ZoneId = ZoneId.of("Asia/Shanghai")
 
-    /** 真实 now 基准（生产不可注入时钟 → 一切相对它构造）。 */
-    private val now: Long = System.currentTimeMillis()
+    /** 钉死 now：2026-01-15 14:00。选日避开抖动=0（文件头约束 2），选时避开 21 点后回退支晚问候关窗。 */
+    private val now: Long = LocalDate.of(2026, 1, 15).atTime(14, 0).atZone(zone).toInstant().toEpochMilli()
+
+    private val clock: Clock = Clock.fixed(Instant.ofEpochMilli(now), zone)
 
     private fun minutesFromNow(minutes: Long): Long = now + minutes * 60_000L
 
@@ -111,6 +118,7 @@ class NotificationSchedulerBehaviorTest {
             // R1 🟡-1 活跃桶族迁出后：给**真**分析器（同一批 mock DAO），使桶取值与迁移前逐字节同源，
             // 而非 mock 掉它——那会把「只搬不改」的证据换成一句桩。
             ActivityBucketAnalyzer(conversationDao, messageDao),
+            clock,
         )
         coEvery { settingsRepository.isCharacterNotificationEnabled(charId) } returns true
         coEvery { characterRepository.get(charId) } returns character()
@@ -256,6 +264,9 @@ class NotificationSchedulerBehaviorTest {
 
     /** 睡眠闸（日程系统侧）与免打扰闸独立：触发时刻被"睡觉"事件覆盖 → 跳过。 */
     @Test fun scheduleBranch_fireTimeCoveredBySleepEvent_isSkipped() = runTest {
+        // 前提自检：抖动=0 时 fireAt==候选事件自身 endTime，睡眠闸意图不可达（文件头约束 2）——
+        // 换钉死日期若撞 0，让真因在此喊出来，而不是主断言语焉不详地红。
+        assertTrue("钉死日期的抖动=0，换个日期（文件头约束 2）", jitterFor(0) >= 1)
         stubSettings() // 免打扰关，隔离出睡眠闸
         // A：120min 后结束（候选，fireAt=120+抖动）；B：睡觉事件覆盖 [119, 200] → 罩住 fireAt
         stubTodaySchedule(

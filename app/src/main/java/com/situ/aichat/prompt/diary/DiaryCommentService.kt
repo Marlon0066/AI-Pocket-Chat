@@ -8,6 +8,7 @@ import com.situ.aichat.data.local.dao.CharacterDao
 import com.situ.aichat.data.local.dao.UserProfileDao
 import com.situ.aichat.data.local.entity.CharacterEntity
 import com.situ.aichat.data.model.ApiFunction
+import com.situ.aichat.data.model.imagePaths
 import com.situ.aichat.data.model.DiaryVisibility
 import com.situ.aichat.data.remote.llm.ChatMessageDto
 import com.situ.aichat.data.repository.ApiConfigRepository
@@ -117,6 +118,7 @@ class DiaryCommentService @Inject constructor(
                 userName = userName,
                 entryContent = entry.content,
                 userComment = root.content,
+                photoCount = entry.imagePaths.size,
             )
             val content = completeComment(system, strings.replyUserMessage, author.name, config) ?: return
             diaryRepository.addComment(
@@ -145,6 +147,7 @@ class DiaryCommentService @Inject constructor(
             entryContent = entry.content,
             rootComment = root.content,
             userReply = userReply.content,
+            photoCount = entry.imagePaths.size,
         )
         val content = completeComment(system, strings.replyUserMessage, character.name, config) ?: return
         diaryRepository.addComment(
@@ -186,7 +189,7 @@ class DiaryCommentService @Inject constructor(
                 commented.add(character.uuid) // 早前已评过（worker 重试）→ 点赞口径仍算评论者
                 continue
             }
-            val content = generateComment(strings, character, entry.content, userName, config) ?: continue
+            val content = generateComment(strings, character, entry.content, userName, config, entry.imagePaths.size) ?: continue
             diaryRepository.addComment(entryUuid, content, character.uuid, System.currentTimeMillis())
             commented.add(character.uuid)
             if (i < count - 1) delay(Random.nextLong(10_000, 30_001)) // 10..30s（1:1 iOS）
@@ -207,6 +210,8 @@ class DiaryCommentService @Inject constructor(
         entryContent: String,
         userName: String,
         config: com.situ.aichat.data.remote.llm.ApiConfigValues,
+        /** 日记附图张数（§B8）：>0 时给角色一句「有 N 张照片但你看不到」，免得评论与照片脱节。 */
+        photoCount: Int,
     ): String? {
         val system = DiaryCommentPromptBuilder.build(
             strings = strings,
@@ -215,6 +220,7 @@ class DiaryCommentService @Inject constructor(
             systemPrompt = character.systemPrompt,
             userName = userName,
             entryContent = entryContent,
+            photoCount = photoCount,
         )
         return completeComment(system, strings.userMessage, character.name, config)
     }

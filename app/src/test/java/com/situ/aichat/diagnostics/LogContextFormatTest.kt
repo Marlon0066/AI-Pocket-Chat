@@ -1,5 +1,6 @@
 package com.situ.aichat.diagnostics
 
+import com.situ.aichat.data.remote.llm.ChatContentPart
 import com.situ.aichat.data.remote.llm.ChatMessageDto
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -102,6 +103,56 @@ class LogContextFormatTest {
         assertEquals("😀😀", body)
         assertFalse(Character.isHighSurrogate(body.last()))
         assertTrue(clipped.contains("共 ${text.length} 字"))
+    }
+
+    // ── REDLINES §3「内容类日志用替身」：base64 绝不落进诊断库（R3 🔵-4 补锁） ──
+    // 现实现是安全的（sealed when 穷举，媒体段只渲染替身），但**没有任何断言守着**——
+    // 一次手滑把 `[图片 · 约 N KB]` 改成 `part.url`，就把几百 KB base64 写进 SQLite 的日志表。
+
+    @Test
+    fun 带图消息的日志正文只留替身_base64一个字符都不落库() {
+        val fakePayload = "A".repeat(4_000) // 冒充一张图的 base64 载荷
+        val msg = ChatMessageDto(
+            role = "user",
+            content = null, // 多模态消息 content 恒 null，正文全在 contentParts 里
+            contentParts = listOf(
+                ChatContentPart.Text("这是我拍的"),
+                ChatContentPart.ImageUrl("data:image/jpeg;base64,$fakePayload"),
+            ),
+        )
+
+        val out = LogContextFormat.storedContext(listOf(msg))
+
+        assertFalse("绝不能出现 base64 前缀", out.contains("base64,"))
+        assertFalse("载荷本体更不能出现", out.contains(fakePayload))
+        assertTrue("text 段要照常在（否则排障时看不出说了什么）", out.contains("这是我拍的"))
+        assertTrue("图片要留一个带量级的替身", Regex("""\[图片 · 约 \d+ KB]""").containsMatchIn(out))
+    }
+
+    @Test
+    fun 带语音消息同样只留替身() {
+        val fakeWav = "B".repeat(2_000)
+        val msg = ChatMessageDto(
+            role = "user",
+            content = null,
+            contentParts = listOf(ChatContentPart.InputAudio(fakeWav, "wav")),
+        )
+
+        val out = LogContextFormat.storedContext(listOf(msg))
+
+        assertFalse(out.contains(fakeWav))
+        assertTrue(Regex("""\[语音 · 约 \d+ KB]""").containsMatchIn(out))
+    }
+
+    @Test
+    fun 带图消息的token估算不再按零算() {
+        // plainText 喂 TokenEstimator：早先直接 `content.orEmpty()`，带图那轮整条按 0 token 算
+        val msg = ChatMessageDto(
+            role = "user",
+            content = null,
+            contentParts = listOf(ChatContentPart.Text("看这个"), ChatContentPart.ImageUrl("data:image/jpeg;base64,${"C".repeat(1_000)}")),
+        )
+        assertTrue(LogContextFormat.plainText(listOf(msg)).isNotEmpty())
     }
 
     @Test

@@ -7,8 +7,31 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
 
-/** 一座小镇的三角流几何（[TownGeometry.buildTown] 产出·GL 上传用 Float 交错流·9 分量/顶点·水体在 lit 流内·demo 无独立水 pass）。 */
-internal class TownGeometryData(val lit: FloatArray, val emis: FloatArray)
+/**
+ * 材质桶（台阶1 图纸 §3.2 锁定路由·枚举序 = 锁定渲染序 ground→stone→plain→wall→roof→foliage）。分桶只为
+ * 「每桶绑各自材质贴图」——顶点格式与坐标/颜色一律零改（顶点数守恒有 T1 钉死）。[PLAIN] 桶不贴图。
+ */
+internal enum class TownBucket { GROUND, STONE, PLAIN, WALL, ROOF, FOLIAGE }
+
+/**
+ * 一座小镇的三角流几何（[TownGeometry.buildTown] 产出·GL 上传用 Float 交错流·9 分量/顶点）：lit 按 §3.2 分成
+ * 六桶（水体仍在 lit 侧的 [plain] 桶内·demo 无独立水 pass）+ [emis] 自发光一流。
+ */
+internal class TownGeometryData(
+    val ground: FloatArray,
+    val stone: FloatArray,
+    val wall: FloatArray,
+    val roof: FloatArray,
+    val foliage: FloatArray,
+    val plain: FloatArray,
+    val emis: FloatArray,
+) {
+    /** lit 六桶按 §3.2 锁定渲染序配对其材质桶（渲染器逐桶换绑贴图用）。 */
+    val litByBucket: List<Pair<TownBucket, FloatArray>> = listOf(
+        TownBucket.GROUND to ground, TownBucket.STONE to stone, TownBucket.PLAIN to plain,
+        TownBucket.WALL to wall, TownBucket.ROOF to roof, TownBucket.FOLIAGE to foliage,
+    )
+}
 
 /**
  * 小镇盒景几何构建（W9c 图纸 §2/§4.1A-D·demo:L141-188 逐式）：地面 52×52 + 水体（西河/东海）+ 建筑（box+屋顶+
@@ -28,95 +51,113 @@ internal object TownGeometry {
     private val SEA = rgb(0x35787C)
     private val BEACH = rgb(0xEDD9AC)
 
+    /**
+     * 街/广场判据（§3.2 锁定）：薄（[TownBox.h] ≤ 0.12）且大面积（sx×sz ≥ 6.0）的环境盒 = 石板铺装 →
+     * [TownBucket.STONE]；其余环境盒（码头板/长椅/礁石/窑…）走 [TownBucket.PLAIN]。
+     */
+    private fun isPaving(b: TownBox) = b.h <= 0.12 && b.sx * b.sz >= 6.0
+
     fun buildTown(spec: TownLayoutSpec): TownGeometryData {
-        val lit = TriStream(1 shl 15)
+        val ground = TriStream(1024)
+        val stone = TriStream(2048)
+        val wall = TriStream(1 shl 14)
+        val roof = TriStream(1 shl 14)
+        val foliage = TriStream(4096)
+        val plain = TriStream(4096)
         val emis = TriStream(2048)
 
-        // ── 地面 52×52（demo:L144·顶点序 = 面法线朝上）+ 水体（西河/东海·lit 流内·demo:L146）──
-        lit.quad(v(-26.0, 0.0, 26.0), v(26.0, 0.0, 26.0), v(26.0, 0.0, -26.0), v(-26.0, 0.0, -26.0), spec.ground)
+        // ── 地面 52×52（demo:L144·顶点序 = 面法线朝上）→ ground 桶；水体（西河/东海·demo:L146）→ plain（不贴图·半透水观感零变）──
+        ground.quad(v(-26.0, 0.0, 26.0), v(26.0, 0.0, 26.0), v(26.0, 0.0, -26.0), v(-26.0, 0.0, -26.0), spec.ground)
         when (spec.water) {
             TownWater.WEST_RIVER ->
-                lit.quad(v(-16.5, 0.03, 26.0), v(-11.5, 0.03, 26.0), v(-11.5, 0.03, -26.0), v(-16.5, 0.03, -26.0), RIVER)
+                plain.quad(v(-16.5, 0.03, 26.0), v(-11.5, 0.03, 26.0), v(-11.5, 0.03, -26.0), v(-16.5, 0.03, -26.0), RIVER)
             TownWater.EAST_SEA -> {
-                lit.quad(v(13.0, 0.03, 26.0), v(26.0, 0.03, 26.0), v(26.0, 0.03, -26.0), v(13.0, 0.03, -26.0), SEA)
-                lit.quad(v(10.5, 0.02, 26.0), v(13.0, 0.02, 26.0), v(13.0, 0.02, -26.0), v(10.5, 0.02, -26.0), BEACH)
+                plain.quad(v(13.0, 0.03, 26.0), v(26.0, 0.03, 26.0), v(26.0, 0.03, -26.0), v(13.0, 0.03, -26.0), SEA)
+                plain.quad(v(10.5, 0.02, 26.0), v(13.0, 0.02, 26.0), v(13.0, 0.02, -26.0), v(10.5, 0.02, -26.0), BEACH)
             }
             TownWater.NONE -> Unit
         }
 
-        // ── 建筑（box + roof(sx×1.12, 1.1, sz×1.16) + 发光窗·demo:L169-171）──
+        // ── 建筑（box → wall + roof(sx×1.12, 1.1, sz×1.16) → roof + 发光窗 → emis·demo:L169-171）──
         for (b in spec.buildings) {
-            lit.box(b.cx, 0.0, b.cz, b.sx, b.h, b.sz, b.wall)
-            lit.roof(b.cx, b.h, b.cz, b.sx * 1.12, 1.1, b.sz * 1.16, b.roof)
+            wall.box(b.cx, 0.0, b.cz, b.sx, b.h, b.sz, b.wall)
+            roof.roof(b.cx, b.h, b.cz, b.sx * 1.12, 1.1, b.sz * 1.16, b.roof)
             windows(emis, b.cx, 0.8, b.cz + b.sz / 2, b.windows)
         }
 
-        // ── 填充民居（2.4×1.8×2.1 + roof 2.7×0.9×2.45 #6B5A50 + 1 窗·demo:L184-186）──
+        // ── 填充民居（2.4×1.8×2.1 → wall + roof 2.7×0.9×2.45 #6B5A50 → roof + 1 窗·demo:L184-186）──
         for (f in spec.fillers) {
-            lit.box(f.cx, 0.0, f.cz, 2.4, 1.8, 2.1, f.wall)
-            lit.roof(f.cx, 1.8, f.cz, 2.7, 0.9, 2.45, ROOF_FILLER)
+            wall.box(f.cx, 0.0, f.cz, 2.4, 1.8, 2.1, f.wall)
+            roof.roof(f.cx, 1.8, f.cz, 2.7, 0.9, 2.45, ROOF_FILLER)
             windows(emis, f.cx, 0.7, f.cz + 1.05, 1)
         }
 
-        // ── 灯柱（lit 柱 0.14×1.6×0.14 #4A4038 + emis 灯头 0.3³·demo:L138-139·[TownLantern.baseY] 支持台上灯）──
+        // ── 灯柱（柱 0.14×1.6×0.14 #4A4038 → plain + emis 灯头 0.3³·demo:L138-139·[TownLantern.baseY] 支持台上灯）──
         for (l in spec.lanterns) {
-            lit.box(l.cx, l.baseY, l.cz, 0.14, 1.6, 0.14, LANTERN_POST)
+            plain.box(l.cx, l.baseY, l.cz, 0.14, 1.6, 0.14, LANTERN_POST)
             emis.box(l.cx, l.baseY + 1.6, l.cz, 0.3, 0.3, 0.3, WINDOW)
         }
 
-        // ── 树（trunk box 0.28s×trunkH·s×0.28s #6B5138 + 四面锥 r0.85s×coneH·s·demo:L125-132·普通/椰树变体）──
+        // ── 树（trunk box → plain + 四面锥 r0.85s×coneH·s → foliage·demo:L125-132·普通/椰树变体）──
         for (t in spec.trees) {
-            lit.box(t.cx, 0.0, t.cz, 0.28 * t.s, t.trunkH * t.s, 0.28 * t.s, TRUNK)
-            lit.cone(t.cx, t.trunkH * t.s, t.cz, 0.85 * t.s, t.coneH * t.s, t.leaf)
+            plain.box(t.cx, 0.0, t.cz, 0.28 * t.s, t.trunkH * t.s, 0.28 * t.s, TRUNK)
+            foliage.cone(t.cx, t.trunkH * t.s, t.cz, 0.85 * t.s, t.coneH * t.s, t.leaf)
         }
 
-        // ── 环境件（码头/窑/高台/石板/灯塔/长椅/礁石/栈道 = lit boxes·窑口/顶灯 = emis boxes·滩伞 = lit cones）──
-        for (bx in spec.litBoxes) lit.box(bx.cx, bx.y0, bx.cz, bx.sx, bx.h, bx.sz, bx.col)
+        // ── 环境件（街/广场石板 → stone·其余码头/窑/高台/灯塔/长椅/礁石/栈道 → plain·窑口/顶灯 = emis·滩伞 cone → plain）──
+        for (bx in spec.litBoxes) (if (isPaving(bx)) stone else plain).box(bx.cx, bx.y0, bx.cz, bx.sx, bx.h, bx.sz, bx.col)
         for (bx in spec.emisBoxes) emis.box(bx.cx, bx.y0, bx.cz, bx.sx, bx.h, bx.sz, bx.col)
-        for (c in spec.cones) lit.cone(c.cx, c.y, c.cz, c.r, c.h, c.col)
+        for (c in spec.cones) plain.cone(c.cx, c.y, c.cz, c.r, c.h, c.col)
 
         // ── 语法建筑原语件（§3.1·[TownGrammar] 产出·corner-anchored → center 换算发射；程序城/精修补充段填充·精修主体恒空）──
-        emitGrammar(lit, emis, spec.grammar)
+        emitGrammar(wall, roof, plain, emis, spec.grammar)
 
-        return TownGeometryData(lit.toFloatArray(), emis.toFloatArray())
+        return TownGeometryData(
+            ground.toFloatArray(), stone.toFloatArray(), wall.toFloatArray(), roof.toFloatArray(),
+            foliage.toFloatArray(), plain.toFloatArray(), emis.toFloatArray(),
+        )
     }
 
-    /** 发射一批语法原语件（§3.1·墙/烟囱/门廊/招牌 = lit 盒·窗 = emis 盒·屋顶按 [RoofStyle] 分派 [gable]/[pyramid]/[parapet]）。 */
-    private fun emitGrammar(lit: TriStream, emis: TriStream, parts: List<GrammarPart>) {
+    /**
+     * 发射一批语法原语件（§3.1）。§3.2 分桶路由：LitBox 高 ≥ 1.2 = 墙体 → [wall]，其余小件（烟囱/门廊柱/
+     * 门廊顶板/招牌）→ [plain]；屋顶三式（含 FLAT 的 parapet 三盒）→ [roof]；窗 → [emis]。
+     */
+    private fun emitGrammar(wall: TriStream, roof: TriStream, plain: TriStream, emis: TriStream, parts: List<GrammarPart>) {
         for (p in parts) when (p) {
-            is GrammarPart.LitBox -> lit.box(p.x + p.sx / 2, p.y, p.z + p.sz / 2, p.sx, p.h, p.sz, p.col)
+            is GrammarPart.LitBox ->
+                (if (p.h >= 1.2) wall else plain).box(p.x + p.sx / 2, p.y, p.z + p.sz / 2, p.sx, p.h, p.sz, p.col)
             is GrammarPart.EmisBox -> emis.box(p.x + p.sx / 2, p.y, p.z + p.sz / 2, p.sx, p.h, p.sz, p.col)
             is GrammarPart.Roof -> when (p.style) {
-                RoofStyle.GABLE -> gable(lit, p.x, p.y, p.z, p.sx, p.h, p.sz, p.col)
-                RoofStyle.PYRAMID -> pyramid(lit, p.x, p.y, p.z, p.sx, p.h, p.sz, p.col)
-                RoofStyle.FLAT -> parapet(lit, p.x, p.y, p.z, p.sx, p.h, p.sz, p.col)
+                RoofStyle.GABLE -> gable(roof, p.x, p.y, p.z, p.sx, p.h, p.sz, p.col)
+                RoofStyle.PYRAMID -> pyramid(roof, p.x, p.y, p.z, p.sx, p.h, p.sz, p.col)
+                RoofStyle.FLAT -> parapet(roof, p.x, p.y, p.z, p.sx, p.h, p.sz, p.col)
             }
         }
     }
 
     /** 双坡脊顶（board:L77·脊沿 x）——几何 = 复用的 continent [TriStream.roof]（两坡面 + 两山墙三角）·corner→center 换算。 */
-    private fun gable(lit: TriStream, x: Double, y: Double, z: Double, sx: Double, h: Double, sz: Double, col: DoubleArray) {
-        lit.roof(x + sx / 2, y, z + sz / 2, sx, h, sz, col)
+    private fun gable(out: TriStream, x: Double, y: Double, z: Double, sx: Double, h: Double, sz: Double, col: DoubleArray) {
+        out.roof(x + sx / 2, y, z + sz / 2, sx, h, sz, col)
     }
 
     /**
      * 四坡锥顶（board:L85·矩形底 + 单顶点）——continent `cone` 仅方底故此处新增矩形版：四面三角，绕序沿用 `cone`
      * （外向法线·参 [TriStream.cone]），顶点在底面中心正上方 `y+h`。
      */
-    private fun pyramid(lit: TriStream, x: Double, y: Double, z: Double, sx: Double, h: Double, sz: Double, col: DoubleArray) {
+    private fun pyramid(out: TriStream, x: Double, y: Double, z: Double, sx: Double, h: Double, sz: Double, col: DoubleArray) {
         val x1 = x + sx; val z1 = z + sz
         val apex = v(x + sx / 2, y + h, z + sz / 2)
-        lit.tri(v(x, y, z1), v(x1, y, z1), apex, col)   // +Z 面
-        lit.tri(v(x1, y, z1), v(x1, y, z), apex, col)   // +X 面
-        lit.tri(v(x1, y, z), v(x, y, z), apex, col)     // -Z 面
-        lit.tri(v(x, y, z), v(x, y, z1), apex, col)     // -X 面
+        out.tri(v(x, y, z1), v(x1, y, z1), apex, col)   // +Z 面
+        out.tri(v(x1, y, z1), v(x1, y, z), apex, col)   // +X 面
+        out.tri(v(x1, y, z), v(x, y, z), apex, col)     // -Z 面
+        out.tri(v(x, y, z), v(x, y, z1), apex, col)     // -X 面
     }
 
     /** 平顶女儿墙（board:L124·底板 + 两侧墙 = 三盒·[h] = 底板厚 0.18·侧墙 0.14×0.3×sz·右墙贴 [sx] 右缘）。 */
-    private fun parapet(lit: TriStream, x: Double, y: Double, z: Double, sx: Double, h: Double, sz: Double, col: DoubleArray) {
-        lit.box(x + sx / 2, y, z + sz / 2, sx, h, sz, col)                        // 底板
-        lit.box(x + 0.07, y + h, z + sz / 2, 0.14, 0.3, sz, col)                  // 左女儿墙
-        lit.box(x + sx - 0.07, y + h, z + sz / 2, 0.14, 0.3, sz, col)             // 右女儿墙
+    private fun parapet(out: TriStream, x: Double, y: Double, z: Double, sx: Double, h: Double, sz: Double, col: DoubleArray) {
+        out.box(x + sx / 2, y, z + sz / 2, sx, h, sz, col)                        // 底板
+        out.box(x + 0.07, y + h, z + sz / 2, 0.14, 0.3, sz, col)                  // 左女儿墙
+        out.box(x + sx - 0.07, y + h, z + sz / 2, 0.14, 0.3, sz, col)             // 右女儿墙
     }
 
     /** 发光窗（demo:L133-137·前面 z+·发光窗 quad 0.56 宽×0.55 高·间距 0.9·贴 z 面 +0.011）。 */

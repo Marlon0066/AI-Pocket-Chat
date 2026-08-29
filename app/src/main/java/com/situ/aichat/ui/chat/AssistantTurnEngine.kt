@@ -65,7 +65,6 @@ import com.situ.aichat.tts.TtsService
 import com.situ.aichat.tts.TtsVoiceProfile
 import com.situ.aichat.tts.provider.MiniMaxVoiceTagsCapability
 import com.situ.aichat.tts.provider.MiniMaxVoiceTagsSettings
-import com.situ.aichat.util.AudioStore
 import com.situ.aichat.prompt.PromptScene
 import com.situ.aichat.prompt.PromptStrings
 import com.situ.aichat.prompt.memory.InSceneRecapCoordinator
@@ -87,6 +86,7 @@ import kotlinx.coroutines.withContext
  * 节拍状态触发经 [incrementSceneProgress] 回调回 VM（其带 android Log 与 in-memory 状态，留 VM 最干净）。
  */
 internal const val HISTORY_FETCH_LIMIT = 500
+
 
 internal class AssistantTurnEngine(
     private val scope: CoroutineScope,
@@ -174,15 +174,15 @@ internal class AssistantTurnEngine(
         val promptStrings = PromptStrings(appContext)
         val history = messageRepo.recentChronological(conversationUuid, HISTORY_FETCH_LIMIT)
 
-        // P13.4b 多模态：预读窗口内「用户语音消息」的音频字节（仅 user 语音；助手 TTS 语音不喂回模型，
-        // 1:1 iOS preEncodedMedia 只 pre-encode role==.user）。配置不支持音频输入则空 → 语音消息走转写纯文本。
-        val audioAttachments: Map<String, ByteArray> = if (config.audioInputEnabled) {
-            history.filter { it.roleRaw == "user" && it.isVoiceMessage && it.audioRelativePath != null }
-                .mapNotNull { msg -> AudioStore.load(msg.audioRelativePath)?.let { msg.messageUUID to it } }
-                .toMap()
-        } else {
-            emptyMap()
-        }
+        // 多模态附件预取（音频 P13.4b / 图片一期）：读盘 + base64 全在 Default 线程，细节见 TurnMediaAttachments。
+        val audioAttachments = TurnMediaAttachments.audio(history, config)
+        val imageAttachments = TurnMediaAttachments.images(
+            history = history,
+            config = config,
+            // 候选集与提示词窗口同口径（见面消息在线上模式整片不进窗口，不该占用图片名额）。
+            inOfflineMode = convo.isInOfflineMode,
+            currentOfflineSessionId = convo.currentOfflineSessionId,
+        )
 
         // M05 向量检索 query = 最新一条【真实】用户消息（批3 3-6）：跳过系统耳语（SYSTEM_HINT 的 roleRaw='user'，
         // 爽约旁白会被当检索词）与结构化卡（礼物回合最新 user 消息是 GIFT_CARD 原始 JSON→该轮召回失效）；
@@ -304,7 +304,8 @@ internal class AssistantTurnEngine(
         // 同一上下文按 toolCallingEnabled 装配两版消息：tool 路用 useToolCalling 版；降级时用 false 版（纯文本标记）。
         fun assembleMessages(
             toolCallingEnabled: Boolean,
-            withAudio: Boolean = true,
+            /** 媒体降级重试时置 false：音频与图片一并不挂，改按纯文本/语义占位装配。 */
+            withMedia: Boolean = true,
             // 批 D 上下文日志：仅主装配传非 null 收一次分段（fallback 重装配不再收，1:1 iOS 一次性 buildResult.segments）。
             segmentSink: MutableList<ContextSegment>? = null,
         ): List<ChatMessageDto> = PromptBuilder.buildMessages(
@@ -340,9 +341,12 @@ internal class AssistantTurnEngine(
             miniMaxVoiceTagsCapability = voicePlan.capability,
             toolCallingEnabled = toolCallingEnabled,
             unsummarizedRoundsOutsideBaseWindow = unsummarizedRounds,
-            // P13.4b：withAudio=false（媒体降级重试）时强制按纯文本（转写）装配。
-            audioInputEnabled = config.audioInputEnabled && withAudio,
-            audioAttachments = if (withAudio) audioAttachments else emptyMap(),
+            // P13.4b：withMedia=false（媒体降级重试）时强制按纯文本（转写）装配。
+            audioInputEnabled = config.audioInputEnabled && withMedia,
+            audioAttachments = if (withMedia) audioAttachments else emptyMap(),
+            // 图片同构：降级重试时不挂 image 段，图片消息退语义占位（正文照旧可读）。
+            visionEnabled = config.visionEnabled && withMedia,
+            imageAttachments = if (withMedia) imageAttachments else emptyMap(),
             nextMeetingAppointment = nextMeetingAppointment,
             calendarFailure = calendarFailureNudge,
             worldInfo = worldInfo,
@@ -363,8 +367,12 @@ internal class AssistantTurnEngine(
         var chatMessages = assembleMessages(useToolCalling, segmentSink = chatSegments)
         // P13.4b 媒体降级重试状态：本轮是否真的挂了音频段 + 是否已去媒体降级过（最多降级一次）+ 是否发生过降级（供成功后提示）。
         val hasAttachedAudio = config.audioInputEnabled && audioAttachments.isNotEmpty()
+        val hasAttachedImage = config.visionEnabled && imageAttachments.isNotEmpty()
+        val hasAttachedMedia = hasAttachedAudio || hasAttachedImage
         var mediaStripped = false
         var mediaFellBackToText = false
+        // 本轮合并等待窗覆盖的用户消息：降级提示据此判断「剥掉的图是不是这一轮发的」（谓词体在 TurnMediaAttachments）。
+        val turnUserMessageUuids = TurnMediaAttachments.turnUserMessageUuids(history)
 
         val dotsAppearMillis = System.currentTimeMillis()
         replyDeliverer.openTypingSlot() // B1：打字点亮起即预分配首段 uuid + 发布渲染占位槽（dots 在流式生成期就显示）
@@ -393,7 +401,7 @@ internal class AssistantTurnEngine(
                 result = try {
                     // 去媒体降级后强制不发工具（1:1 iOS buildFallbackMessages：toolCallingEnabled=false，纯文本回合）。
                     streamOneTurn(chatMessages, config, useToolCalling && !mediaStripped, canInitiateOffline, settings.calendarIntegrationEnabled, settings.calendarActionConfirmation, sb, settings.sanitizedLlmTemperature, onUsage = { turnUsage = it }) {
-                        assembleMessages(false, withAudio = !mediaStripped)
+                        assembleMessages(false, withMedia = !mediaStripped)
                     }
                 } catch (e: CancellationException) {
                     throw e
@@ -402,10 +410,10 @@ internal class AssistantTurnEngine(
                     contextLog.recordError(LogSource.CHAT, character.name, config.modelName, chatMessages, e, chatSegments)
                     // P13.4b 媒体降级重试（1:1 iOS retryStreamWithoutMedia）：本轮挂了音频段且流式失败 → 去音频 + 去工具
                     // 改纯文本（端侧转写当用户轮）重试一次；不消耗空响应重试额度。仍失败/无音频 → 上抛原异常。
-                    if (hasAttachedAudio && !mediaStripped) {
+                    if (hasAttachedMedia && !mediaStripped) {
                         mediaStripped = true
                         mediaFellBackToText = true
-                        chatMessages = assembleMessages(false, withAudio = false)
+                        chatMessages = assembleMessages(false, withMedia = false)
                         attempt--
                         continue
                     }
@@ -444,7 +452,18 @@ internal class AssistantTurnEngine(
                 delivered = true
                 // P13.4b：媒体降级重试成功投递 → 提示用户语音已转文字发送（1:1 iOS showToast(.audioInputFallback)，仅成功路径）。
                 if (mediaFellBackToText) {
-                    infoToastFlow.value = appContext.getString(R.string.voice_audio_input_fallback)
+                    // 只在**这一轮真的挂过**对应媒体时才那样说。图片名额恒取最近 3 张 → hasAttachedImage 近乎常真，
+                    // 若不加这层判断，任何网络抖动导致的降级都会弹「对方没能看到这张图」，而真实原因与图无关。
+                    // 判据取「本轮**真的挂上去**的那几张图里，有没有属于这一轮的」。
+                    // 不能用「窗口里有图」（名额恒取最近 3 张 → 近乎恒真，任何网络抖动都会误报图片）；
+                    // 也不能只看「最后一条 user 消息带图」——合并等待窗会把「先发图、再补一句话」并成一轮，
+                    // 那时最后一条是文字，明明剥掉的是图却会弹语音的文案（R2 🔵-6）。
+                    val strippedImage = imageAttachments.keys.any { uuid ->
+                        turnUserMessageUuids.contains(uuid)
+                    }
+                    infoToastFlow.value = appContext.getString(
+                        if (strippedImage) R.string.chat_image_input_fallback else R.string.voice_audio_input_fallback,
+                    )
                 }
                 // M05：为本轮消息生成嵌入（后台，不阻塞输入与下一轮）
                 embedTurnInBackground(userMessageForEmbed, turn.messages)

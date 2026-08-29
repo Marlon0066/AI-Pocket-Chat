@@ -1,5 +1,6 @@
 package com.situ.aichat.diagnostics
 
+import com.situ.aichat.data.remote.llm.ChatContentPart
 import com.situ.aichat.data.remote.llm.ChatMessageDto
 
 /**
@@ -22,9 +23,37 @@ object LogContextFormat {
      */
     const val STORED_TEXT_HARD_LIMIT = 200_000
 
-    /** 估算用纯文本：各消息正文拼接（不含装饰），喂 [TokenEstimator]。多模态无 text 部分按空算。 */
+    /**
+     * 估算用纯文本：各消息正文拼接（不含装饰），喂 [TokenEstimator]。
+     * **多模态消息取 contentParts 的可读表示**——带图/带音频的消息 `content` 恒为 null，
+     * 早先直接 `content.orEmpty()` 会让整条按 0 token 算（图片轮的估算严重偏低）。
+     */
     fun plainText(messages: List<ChatMessageDto>): String =
-        messages.joinToString(separator = "\n") { it.content.orEmpty() }
+        messages.joinToString(separator = "\n") { readableBody(it) }
+
+    /**
+     * 一条消息的可读正文：普通消息取 `content`；**多模态消息把 contentParts 摊开**——
+     * text 段原样、媒体段渲染成**替身**（`[图片 · 约 N KB]`），绝不把 base64 落进诊断库
+     * （REDLINES §3「内容类日志用替身」）。此前 contentParts 整个不看，带图回合的日志正文是空白的、
+     * 「图片理解」那条更是只剩 system 段，排障时看不出图到底挂没挂。
+     */
+    internal fun readableBody(msg: ChatMessageDto): String {
+        msg.content?.takeIf { it.isNotEmpty() }?.let { return it }
+        val parts = msg.contentParts ?: return msg.content.orEmpty()
+        return parts.joinToString(separator = "\n") { part ->
+            when (part) {
+                is ChatContentPart.Text -> part.text
+                is ChatContentPart.ImageUrl -> "[图片 · 约 ${approxKb(part.url)} KB]"
+                is ChatContentPart.InputAudio -> "[语音 · 约 ${approxKb(part.base64)} KB]"
+            }
+        }
+    }
+
+    /** base64 / data URI 的近似原始体积（KB）——只给量级，不落原文。 */
+    private fun approxKb(encoded: String): Int {
+        val payload = encoded.substringAfterLast(',', encoded)
+        return (payload.length.toLong() * 3 / 4 / 1024).toInt().coerceAtLeast(1)
+    }
 
     /** 完整渲染（不截断；1:1 iOS formatContextForDisplay 的排版骨架）。 */
     fun render(messages: List<ChatMessageDto>): String {
@@ -36,7 +65,7 @@ object LogContextFormat {
         for ((index, msg) in messages.withIndex()) {
             val (icon, label) = roleIconLabel(msg.role)
             lines += "───── $icon $label [${index + 1}/${messages.size}] ─────"
-            lines += msg.content.orEmpty()
+            lines += readableBody(msg)
             lines += ""
         }
         lines += SEP

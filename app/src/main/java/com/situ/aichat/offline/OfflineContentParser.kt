@@ -255,8 +255,12 @@ object OfflineContentParser {
     /**
      * 解析用户沉浸模式消息中的标签（1:1 iOS `parseUserBlocks`）。缺失标签跳过（支持只填部分字段）；
      * 返回空 = 非沉浸消息（兼容普通文本）。
+     *
+     * 卷一 E2：先把表情包标签换成 `[表情包]`（AI 侧 [parse] 早有同款前置清洗）——见面中用户发的表情包
+     * 原先会在剧场里露出 `[sticker:xxx]` 字面量。
      */
-    fun parseUserBlocks(content: String): List<OfflineContentBlock> {
+    fun parseUserBlocks(rawContent: String): List<OfflineContentBlock> {
+        val content = StickerTagParser.replaceStickerTagsForDisplay(rawContent)
         val blocks = ArrayList<OfflineContentBlock>()
         for ((tag, builder) in userTagMapping) {
             val openTag = "[$tag]"

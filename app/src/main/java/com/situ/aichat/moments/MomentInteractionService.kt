@@ -3,6 +3,7 @@ package com.situ.aichat.moments
 import android.content.Context
 import android.util.Log
 import com.situ.aichat.R
+import com.situ.aichat.data.local.dao.ConversationDao
 import com.situ.aichat.data.local.dao.MessageDao
 import com.situ.aichat.data.local.dao.ScheduleDao
 import com.situ.aichat.data.local.dao.UserProfileDao
@@ -16,6 +17,7 @@ import com.situ.aichat.data.model.dynamicInterests
 import com.situ.aichat.data.model.imagePaths
 import com.situ.aichat.data.model.relationshipQuality
 import com.situ.aichat.data.remote.llm.ApiConfigValues
+import com.situ.aichat.data.remote.llm.ChatContentPart
 import com.situ.aichat.data.remote.llm.ChatMessageDto
 import com.situ.aichat.data.repository.ApiConfigRepository
 import com.situ.aichat.data.repository.CharacterRepository
@@ -25,10 +27,12 @@ import com.situ.aichat.diagnostics.ContextLogService
 import com.situ.aichat.diagnostics.LogSource
 import com.situ.aichat.notification.NotificationScheduleRules
 import com.situ.aichat.notification.Notifier
+import com.situ.aichat.offline.OfflineMeetingGate
 import com.situ.aichat.prompt.GeneratedContentValidator
 import com.situ.aichat.prompt.PromptStrings
 import com.situ.aichat.prompt.memory.MemoryService
 import com.situ.aichat.prompt.schedule.CharacterSleepChecker
+import com.situ.aichat.util.ContentImageStore
 import com.situ.aichat.util.DateFormatters
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
@@ -66,6 +70,7 @@ class MomentInteractionService @Inject constructor(
     private val llmSlot: MomentLlmSlot,
     private val userProfileDao: UserProfileDao,
     private val scheduleDao: ScheduleDao,
+    private val conversationDao: ConversationDao,
 ) {
 
     /**
@@ -98,10 +103,14 @@ class MomentInteractionService @Inject constructor(
         }
         if (candidates.isEmpty()) return
 
+        // 见面门（卷一 B1·置于睡眠分流前，日程开/关两分支都覆盖）：见面中的角色本轮不互动、不入待互动队列。
+        val availableCandidates = candidates.filterNot { OfflineMeetingGate.characterInMeeting(conversationDao, it.uuid) }
+        if (availableCandidates.isEmpty()) return
+
         // 睡着的角色入待互动队列（仅日程系统开启时），醒后由前台恢复补处理（7.2.5）。
         val awakeCandidates: List<CharacterEntity> = if (settings.scheduleSystemEnabled) {
             val awake = mutableListOf<CharacterEntity>()
-            for (candidate in candidates) {
+            for (candidate in availableCandidates) {
                 if (sleepChecker.isSleeping(candidate.uuid, scheduleSystemEnabled = true, nowMillis, zone)) {
                     MomentPendingInteractionStore.add(
                         context = context,
@@ -117,7 +126,7 @@ class MomentInteractionService @Inject constructor(
             }
             awake
         } else {
-            candidates
+            availableCandidates
         }
         if (awakeCandidates.isEmpty()) return
 
@@ -380,6 +389,11 @@ class MomentInteractionService @Inject constructor(
                 remaining.add(item)
                 continue
             }
+            // 见面中 → 同样保留待下次（卷一 B1·不消费）。
+            if (OfflineMeetingGate.characterInMeeting(conversationDao, item.characterUuid)) {
+                remaining.add(item)
+                continue
+            }
             val post = momentRepo.getPost(item.postUuid) ?: continue
             if (post.isSoftDeleted) continue
             val character = characterRepo.get(item.characterUuid) ?: continue
@@ -502,6 +516,13 @@ class MomentInteractionService @Inject constructor(
                     content = c.content,
                 )
             }
+        // 首图编码放在装配之前：编码失败（文件没了）就退回盲图分支，避免「文案说看得到、报文里却没图」。
+        val firstPhotoDataUri = if (config.visionEnabled && post.imagePaths.isNotEmpty()) {
+            ContentImageStore.loadAsDataUri(post.imagePaths.first())
+        } else {
+            null
+        }
+        val canSeePhotos = firstPhotoDataUri != null
         val systemPrompt = MomentCommentPromptBuilder.build(
             strings = strings,
             character = character,
@@ -512,14 +533,27 @@ class MomentInteractionService @Inject constructor(
             nowContext = MomentPromptContext.buildNowContext(MomentPromptContext.NowScenario.COMMENT, nowMillis, zone),
             scheduleContext = buildCommentScheduleLine(character, strings, scheduleSystemEnabled, nowMillis, zone),
             photoCount = post.imagePaths.size,
-            visionEnabled = false, // 安卓 LLM 客户端当前纯文本（多模态后续）→ 走盲图分支。
+            // 图片多模态一期（拍板④）：视觉能力真值上线——配置支持看图且这条动态真有图，就挂首图并走
+            // photosVision 文案（文案原话「You can see the first one attached below」= 只挂第一张，
+            // 与下面 contentParts 的构造严格对齐）；否则照旧走「有 N 张图但你看不到」的盲图分支。
+            visionEnabled = canSeePhotos,
             existingComments = existingComments,
             replyTarget = replyTarget,
         )
 
         val messages = listOf(
             ChatMessageDto(role = "system", content = systemPrompt),
-            ChatMessageDto(role = "user", content = strings.userMessage),
+            if (firstPhotoDataUri != null) {
+                ChatMessageDto(
+                    role = "user",
+                    contentParts = listOf(
+                        ChatContentPart.Text(strings.userMessage),
+                        ChatContentPart.ImageUrl(firstPhotoDataUri),
+                    ),
+                )
+            } else {
+                ChatMessageDto(role = "user", content = strings.userMessage)
+            },
         )
         val buffer = contextLog.completion(
             source = LogSource.MOMENT_COMMENT,
@@ -650,6 +684,13 @@ class MomentInteractionService @Inject constructor(
         post: MomentPostEntity,
         contentPreview: String,
     ) {
+        // 前台判定（卷一 C1）：App 前台（含见面剧场里）不弹横幅——App 内红点即提示（2-5b 拍板同源·
+        // 对照 ChatReplyDeliverer.notifyIfNotViewing）。ProcessLifecycleOwner 纯 JVM 缺席 → runCatching 兜底。
+        val appForeground = runCatching {
+            androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.currentState
+                .isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)
+        }.getOrDefault(false)
+        if (appForeground) return
         val name = characterRepo.get(characterUuid)?.name ?: context.getString(R.string.moment_author_ai)
         val titleRes = when (type) {
             MomentNotificationType.COMMENT_ON_USER_POST -> R.string.moment_notif_title_comment

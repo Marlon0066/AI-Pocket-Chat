@@ -109,6 +109,27 @@ class OfflineContentParserTest {
         assertEquals(emptyList<OfflineContentBlock>(), OfflineContentParser.parseUserBlocks("普通一句话")) // non-immersive
     }
 
+    // ── 卷一 E2：用户侧贴纸标签绝不在剧场里露字面量（AI 侧 parse 早有同款前置清洗）──
+
+    @Test fun parse_user_blocks_replaces_sticker_tags_with_display_text() {
+        val blocks = OfflineContentParser.parseUserBlocks("[对话]你看这个[sticker:abc123][/对话]")
+        assertEquals(listOf(OfflineContentBlock.UserAction("你看这个[表情包]")), blocks)
+    }
+
+    @Test fun parse_user_blocks_sticker_only_message_still_renders() {
+        val blocks = OfflineContentParser.parseUserBlocks("[动作][sticker:abc123][/动作]")
+        assertEquals(listOf(OfflineContentBlock.Action("[表情包]")), blocks)
+        // 反向证据：结果里绝不含 sticker 字面量。
+        assertEquals(false, blocks.any { it.toString().contains("[sticker:") })
+    }
+
+    @Test fun parse_user_blocks_without_sticker_unchanged() {
+        assertEquals(
+            listOf(OfflineContentBlock.UserAction("就这样吧")),
+            OfflineContentParser.parseUserBlocks("[对话]就这样吧[/对话]"),
+        )
+    }
+
     @Test fun strip_all_tags_removes_markup_and_collapses_blank_runs() {
         assertEquals("他说你好然后笑了", OfflineContentParser.stripAllTags("他说[对话]你好[/对话]然后[动作]笑了[/动作]"))
         assertEquals("a\n\nb", OfflineContentParser.stripAllTags("a\n\n\nb"))

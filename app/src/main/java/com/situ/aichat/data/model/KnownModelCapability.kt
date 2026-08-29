@@ -88,6 +88,14 @@ object KnownModelCapabilityTable {
     private fun buildSortedEntries(): List<Entry> {
         val raw: List<Pair<String, KnownModelCapability>> = listOf(
             // ── Anthropic Claude ──
+            // Claude 5 家族（Fable / Mythos / Opus / Sonnet）与 haiku-4-5：表里原本最新只到 *-4，
+            // `claude-opus-5` 这类新名一条都不匹配 → lookup 返 null → 视觉预填缺席，只能等探针。
+            // 发图按钮改为按视觉能力显隐后（拍板②修订），这类「查不到」会直接表现为「按钮不出现」。
+            "claude-fable-5" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = false),
+            "claude-mythos-5" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = false),
+            "claude-opus-5" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = false),
+            "claude-sonnet-5" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = false),
+            "claude-haiku-4-5" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = false),
             "claude-opus-4" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = false),
             "claude-sonnet-4" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = false),
             "claude-3-7-sonnet" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = false),
@@ -99,6 +107,8 @@ object KnownModelCapabilityTable {
 
             // ── OpenAI GPT ──
             "gpt-5" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = true),
+            // ⚠️ 4.1 系有视觉，但会被 `gpt-4`(hasVision=false) 吞掉 → 必须显式列出（前缀更长自动优先）。
+            "gpt-4.1" to KnownModelCapability(isThinking = false, hasVision = true, hasToolCalling = true, hasAudioInput = false),
             "gpt-4.5" to KnownModelCapability(isThinking = false, hasVision = true, hasToolCalling = true, hasAudioInput = true),
             "gpt-4o-audio" to KnownModelCapability(isThinking = false, hasVision = true, hasToolCalling = true, hasAudioInput = true),
             "gpt-4o-mini-audio" to KnownModelCapability(isThinking = false, hasVision = true, hasToolCalling = true, hasAudioInput = true),
@@ -129,6 +139,12 @@ object KnownModelCapabilityTable {
             // ── DeepSeek ──
             // V4 series: 1M context, 384K max output; flash/pro both support a thinking toggle
             // (hybrid mode, controlled by reasoning_effort).
+            // ⚠️ 视觉款必须排在 `deepseek-v4-flash` 之前（靠前缀更长自动优先）：否则
+            // `deepseek-v4-flash-vision-exp` 会被 `deepseek-v4-flash`(hasVision=false) 吞掉，
+            // 表会**主动断言「不支持视觉」**——这比查不到更糟（查不到还会退给探针裁决）。
+            "deepseek-v4-flash-vision-exp" to KnownModelCapability(
+                isThinking = false, hasVision = true, hasToolCalling = true, hasAudioInput = false,
+            ),
             "deepseek-v4-flash" to KnownModelCapability(
                 isThinking = true, hasVision = false, hasToolCalling = true, hasAudioInput = false,
                 contextWindow = 1_000_000, maxOutputTokens = 384_000,
@@ -153,6 +169,8 @@ object KnownModelCapabilityTable {
             "deepseek-v2.5" to KnownModelCapability(isThinking = false, hasVision = false, hasToolCalling = true, hasAudioInput = false),
 
             // ── MiniMax ──
+            // M3 起支持图片与视频输入（官方文档核实 2026-08-28）；M2.x 系不支持。
+            "minimax-m3" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = false),
             "minimax-m2.7" to KnownModelCapability(isThinking = true, hasVision = false, hasToolCalling = true, hasAudioInput = false),
             "minimax-m2.5" to KnownModelCapability(isThinking = true, hasVision = false, hasToolCalling = true, hasAudioInput = false),
             "minimax-m2.1" to KnownModelCapability(isThinking = false, hasVision = false, hasToolCalling = true, hasAudioInput = false),
@@ -167,6 +185,9 @@ object KnownModelCapabilityTable {
             "llama-3" to KnownModelCapability(isThinking = false, hasVision = false, hasToolCalling = true, hasAudioInput = false),
 
             // ── Alibaba Qwen ──
+            // ⚠️ 同上：`qwen3-vl` / `qwen-3-vl` 必须在 `qwen3` 之前，否则被断言成无视觉。
+            "qwen3-vl" to KnownModelCapability(isThinking = false, hasVision = true, hasToolCalling = true, hasAudioInput = false),
+            "qwen-3-vl" to KnownModelCapability(isThinking = false, hasVision = true, hasToolCalling = true, hasAudioInput = false),
             "qwen3" to KnownModelCapability(isThinking = true, hasVision = false, hasToolCalling = true, hasAudioInput = false),
             "qwen-3" to KnownModelCapability(isThinking = true, hasVision = false, hasToolCalling = true, hasAudioInput = false),
             "qwq" to KnownModelCapability(isThinking = true, hasVision = false, hasToolCalling = true, hasAudioInput = false),

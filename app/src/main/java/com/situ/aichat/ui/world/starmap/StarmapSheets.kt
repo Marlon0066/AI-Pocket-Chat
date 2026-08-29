@@ -53,11 +53,11 @@ import com.situ.aichat.ui.components.CharacterAvatar
 import com.situ.aichat.ui.components.clickableScale
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.world.WorldSceneColors
+import com.situ.aichat.ui.world.WorldSceneColors.ActEnd
+import com.situ.aichat.ui.world.WorldSceneColors.ActStart
 
 /** 站点卡入/出场缓动（§4.7·带过冲 1.2·与 WorldSiteSheet.kt:48 同值重申明）。 */
 private val StarSheetEasing = CubicBezierEasing(0.3f, 1.2f, 0.4f, 1f)
-private val ActStart = Color(0xFFC99A86)
-private val ActEnd = Color(0xFFBE8A76)
 
 private enum class TagKind { Base, Warm, Cool, Tense }
 

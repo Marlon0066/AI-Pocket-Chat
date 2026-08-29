@@ -11,6 +11,7 @@ import com.situ.aichat.data.local.entity.NotificationDeliveryState
 import com.situ.aichat.data.repository.CharacterRepository
 import com.situ.aichat.data.repository.ConversationRepository
 import com.situ.aichat.data.repository.MessageRepository
+import com.situ.aichat.offline.OfflineMeetingGate
 import com.situ.aichat.prompt.MessageKindInference
 import com.situ.aichat.util.DateFormatters
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -98,6 +99,12 @@ class StreakNotificationBridgeService @Inject constructor(
             val conversation = resolveConversation(record)
             if (conversation == null) {
                 Log.w(TAG, "通知物化跳过：角色已删除 (characterId=${record.characterId})")
+                continue
+            }
+            // 见面闸（卷一 A6·J8）：会话正在线下见面 → 本轮**顺延**不物化（pending 不丢，下轮排干时再落）。
+            // 物化会以「线上标 + deliveredAt 时间戳」插一条角色消息，见面期落进去 = 剧场外的幽灵消息。
+            if (OfflineMeetingGate.inMeeting(conversation)) {
+                Log.d(TAG, "通知物化顺延：会话见面中 (conv=${conversation.uuid})")
                 continue
             }
             val message = MessageEntity(

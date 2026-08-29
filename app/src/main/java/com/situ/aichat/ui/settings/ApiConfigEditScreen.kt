@@ -64,9 +64,7 @@ fun ApiConfigEditScreen(
     viewModel: ApiConfigViewModel = hiltViewModel(),
 ) {
     val configs by viewModel.configs.collectAsStateWithLifecycle()
-    val availableModels by viewModel.availableModels.collectAsStateWithLifecycle()
-    val modelsLoading by viewModel.modelsLoading.collectAsStateWithLifecycle()
-    val modelsError by viewModel.modelsError.collectAsStateWithLifecycle()
+    val modelCatalogState by viewModel.modelCatalogState.collectAsStateWithLifecycle()
     val detecting by viewModel.detecting.collectAsStateWithLifecycle()
     val config = configs.firstOrNull { it.uuid == uuid }
 
@@ -76,7 +74,17 @@ fun ApiConfigEditScreen(
     }
     var baseUrl by remember(config?.uuid) { mutableStateOf(config?.baseURL ?: "") }
     var model by remember(config?.uuid) { mutableStateOf(config?.modelName ?: "") }
+    // key 预填：进屏后把加密库里已存的 key 读出填入（默认打码·点眼睛可见），「拉取模型列表」因此能拿到真 key。
+    // storedKey 同时留作保存时的比对基准——没真改就传 null 保持不变，避免误触发重写密钥库 + 重跑能力检测。
     var apiKey by remember(config?.uuid) { mutableStateOf("") }
+    var storedKey by remember(config?.uuid) { mutableStateOf("") }
+    LaunchedEffect(config?.uuid) {
+        if (config != null) {
+            val loaded = viewModel.storedApiKey(uuid)
+            storedKey = loaded
+            if (apiKey.isEmpty()) apiKey = loaded
+        }
+    }
     var thinkingMode by remember(config?.uuid) {
         mutableStateOf(config?.let { ThinkingModelMode.fromRaw(it.thinkingModelModeRaw) } ?: ThinkingModelMode.AUTO)
     }
@@ -163,7 +171,10 @@ fun ApiConfigEditScreen(
             val urlInsecure = baseUrl.isNotBlank() && !isHttpsBaseUrl(baseUrl)
             AppTextField(
                 value = baseUrl,
-                onValueChange = { baseUrl = it },
+                onValueChange = {
+                    baseUrl = it
+                    viewModel.clearModels() // 换了端点，旧列表即刻作废
+                },
                 label = "Base URL",
                 isError = urlInsecure,
                 supportingText = if (urlInsecure) stringResource(R.string.api_url_https_required) else null,
@@ -173,16 +184,17 @@ fun ApiConfigEditScreen(
             ModelDropdownField(
                 model = model,
                 onModelChange = { model = it },
-                availableModels = availableModels,
-                loading = modelsLoading,
-                error = modelsError,
+                state = modelCatalogState,
                 onFetch = { viewModel.fetchModels(provider, baseUrl, apiKey) },
             )
             KnownCapabilityHint(model)
 
             ApiKeyField(
                 value = apiKey,
-                onValueChange = { apiKey = it },
+                onValueChange = {
+                    apiKey = it
+                    viewModel.clearModels() // 换了 Key，旧列表即刻作废
+                },
                 supportingText = stringResource(R.string.api_key_keep),
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -284,7 +296,7 @@ fun ApiConfigEditScreen(
                         provider = provider,
                         baseUrl = baseUrl,
                         model = model,
-                        newApiKey = apiKey.ifBlank { null },
+                        newApiKey = resolveNewApiKey(apiKey, storedKey),
                         thinkingModelMode = thinkingMode,
                         toolCallingMode = toolMode,
                         visionMode = visionMode,
@@ -304,6 +316,15 @@ fun ApiConfigEditScreen(
         }
     }
 }
+
+/**
+ * 编辑保存时把输入框的 key 归一成 [ApiConfigViewModel.updateConfig] 的 newApiKey 参数：
+ * 空 / 与已存 key 相同（trim 后）→ null（保持不变），真改了 → trim 后的新值。
+ * 仓库层把「非空 newApiKey」一律视为 key 变更并重置重跑能力检测，预填后必须先在此比对，
+ * 否则每次保存都会白跑一轮联网检测。纯函数设 internal 便于单测。
+ */
+internal fun resolveNewApiKey(input: String, storedKey: String): String? =
+    input.trim().takeIf { it.isNotEmpty() && it != storedKey }
 
 /** Shared auto/enabled/disabled option labels, mapped to a provider-specific mode enum. */
 @Composable

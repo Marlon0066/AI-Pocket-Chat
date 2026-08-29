@@ -315,7 +315,14 @@ class ComposeDiaryViewModel @Inject constructor(
             try {
                 val picked = _state.value
                 val moodHint = picked.moodEmoji?.let { e -> listOfNotNull(e, picked.moodText).joinToString(" ") }
-                val draft = generationCoordinator.generateDraftForComposer(System.currentTimeMillis(), moodHint, guide)
+                // §B8：把用户**已经贴好**的照片张数一并告诉 AI——先贴 9 张海边照再点「AI 帮我写」时，
+                // 至少让它知道有照片，而不是只复述当天聊天记录、写出与照片脱节的正文。
+                val draft = generationCoordinator.generateDraftForComposer(
+                    dateMillis = System.currentTimeMillis(),
+                    moodHint = moodHint,
+                    guide = guide,
+                    photoCount = picked.images.size,
+                )
                 if (draft != null) {
                     val current = _state.value
                     val fillMood = current.moodEmoji == null && draft.moodEmoji != null

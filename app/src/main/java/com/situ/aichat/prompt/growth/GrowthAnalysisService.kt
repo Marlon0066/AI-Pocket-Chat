@@ -14,6 +14,7 @@ import com.situ.aichat.data.remote.llm.ChatMessageDto
 import com.situ.aichat.data.remote.llm.ResponseFormatDto
 import com.situ.aichat.diagnostics.ContextLogService
 import com.situ.aichat.diagnostics.LogSource
+import com.situ.aichat.offline.OfflineContentParser
 import com.situ.aichat.prompt.memory.MemoryService
 import com.situ.aichat.util.JSONExtractor
 import kotlinx.coroutines.delay
@@ -62,12 +63,20 @@ class GrowthAnalysisService @Inject constructor(
 
     // MARK: - 消息收集（最近 200 条；规范所有者）
 
-    /** 收集角色跨所有会话的最近 [maxMessages] 条非空非 system 消息，按时间升序。 */
+    /**
+     * 收集角色跨所有会话的最近 [maxMessages] 条非空非 system 消息，按时间升序。
+     *
+     * **线下见面行剥标签（卷一 B4）**：analysis 查询含见面期消息（`recentForAnalysis` 不滤 isOfflineMode，
+     * 且这是永久性的——见面后再跑分析同样读得到），正文带 `[叙述]/[对话]/[场景：…]` 沉浸标签，原样喂给
+     * 成长/结构化记忆分析会把「标签本身」当成语言习惯学走。照向量记忆先例只对线下行剥标签（内存副本，
+     * 不落库不进注入）；线上行字节不变，条数/顺序不变（**见面轮次照常计入成长**=拍板零碰）。
+     */
     suspend fun collectMessagesForAnalysis(characterUuid: String, maxMessages: Int = MAX_MESSAGES): List<MessageEntity> {
         val conversations = conversationDao.getByCharacter(characterUuid)
         val all = conversations.flatMap { messageDao.recentForAnalysis(it.uuid, maxMessages) }
         val sorted = all.sortedBy { it.timestamp }
-        return if (sorted.size > maxMessages) sorted.takeLast(maxMessages) else sorted
+        val trimmed = if (sorted.size > maxMessages) sorted.takeLast(maxMessages) else sorted
+        return trimmed.map { if (it.isOfflineMode) it.copy(content = OfflineContentParser.stripAllTags(it.content)) else it }
     }
 
     // MARK: - 主入口

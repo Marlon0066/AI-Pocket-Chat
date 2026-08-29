@@ -35,6 +35,14 @@ class MomentNewPostNotifier @Inject constructor(
         zone: ZoneId = ZoneId.systemDefault(),
     ) {
         if (createdPosts.isEmpty()) return
+        // 前台判定（卷一 C1）：App 真在前台（含线下见面剧场里）不弹「X 发了新动态」横幅——圈子页红点即提示
+        // （2-5b 拍板同源·对照 ChatReplyDeliverer.notifyIfNotViewing）。**先于节流台账**：不弹就不该消耗
+        // 「每角色每天≤1」的名额。ProcessLifecycleOwner 在纯 JVM 单测缺席 → runCatching 兜底（等效不弹）。
+        val appForeground = runCatching {
+            androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.currentState
+                .isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)
+        }.getOrDefault(false)
+        if (appForeground) return
         val alreadyNotified = createdPosts
             .mapNotNull { it.characterUuid }
             .distinct()

@@ -178,7 +178,8 @@ class OfflineSummaryRetryCoordinator @Inject constructor(
             runCatching {
                 promiseLedgerService.registerFromMeeting(character.uuid, conversationUuid, sessionId, draft.promises, now)
             }.onFailure { Log.w(TAG, "见面约定注册失败（不影响摘要）count=${draft.promises.size}") }
-            // 成功清理：清 pending + 从 fallback 列表移除本 session（read A·自愈升级同路径）。Repository 已刷 blob 缓存。
+            // 成功清理：清 pending + 从 fallback 列表移除本 session（read A·自愈升级同路径）。摘要以**行存**为单源
+            // （blob 冻结只读·只在懒播种时读一次），Repository 落行即生效。
             conversationRepo.clearPendingOfflineSummary(conversationUuid)
             conversationRepo.removeFallbackSessionId(conversationUuid, sessionId)
             Log.d(TAG, "见面摘要 v2 提取成功 session=$sessionId")
@@ -294,7 +295,7 @@ class OfflineSummaryRetryCoordinator @Inject constructor(
 
         if (!alreadyFallback) {
             // 兜底行：硬事实 + buildFallbackBody（无标题行·durationText 含「约」直接用）。upsert 按 sessionId 幂等
-            // （E6·Repository 内刷 blob 缓存）；软上限压缩改由注入端 [OfflineMeetingMemoryRenderer] 承担（不再手动 blob 合并）。
+            // （E6·Repository 落**行**·行存单源，blob 冻结只读）；软上限压缩改由注入端 [OfflineMeetingMemoryRenderer] 承担（不再手动 blob 合并）。
             val meta = sessionExtractor.extractFallbackMetadata(conversationUuid, sessionId, now)
             val allSessionMessages = messageRepo.offlineSessionMessages(conversationUuid, sessionId)
             val body = OfflineSummaryRegenerator.buildFallbackBody(
@@ -317,6 +318,50 @@ class OfflineSummaryRetryCoordinator @Inject constructor(
         }
 
         conversationRepo.clearPendingOfflineSummary(conversationUuid)
+    }
+
+    /**
+     * 即时要点（卷二 G1·契约 §1-G1）：见面结束瞬间先落一行「简版」记忆（复用 [applyFallback] 的骨架配方·
+     * `source=`[SOURCE_INSTANT]），顶住「LLM 摘要未落前线上完全失忆」的空窗；[retryOne] 成功后 upsertMeeting 按
+     * sessionId 原位覆盖为 "llm" 行（=「替换」，见 [OfflineMeetingMemoryRepository.upsertMeeting] E6 幂等）。
+     *
+     * **绝不碰 pending / fallback 列表**——重试链语义原样（[retryOne] 只认 pendingOfflineSummarySessionId，
+     * 5 败仍走 [applyFallback] 覆写本行 + 登记列表 + 进 24h 自愈）。行已存在（重入 / 旧会话）→ 零写早退。
+     */
+    suspend fun applyInstantGist(
+        conversationUuid: String,
+        sessionId: String,
+        now: Long = System.currentTimeMillis(),
+    ) {
+        val convo = conversationRepo.get(conversationUuid) ?: return
+        if (offlineMeetingMemoryRepo.bySessionId(sessionId) != null) return // 已有行（llm/fallback/instant/manual）→ 不覆盖
+        val meta = sessionExtractor.extractFallbackMetadata(conversationUuid, sessionId, now)
+        val msgs = messageRepo.offlineSessionMessages(conversationUuid, sessionId)
+        // 复核 R1·D-1 裁决：「共 N 轮对话」的 N 与 applyFallback 同源（retryOne 同款谓词剔 marker/空消息）——
+        // 即时行就是「提前的兜底行」，同一句骨架在两种来源下必须同一个 N。endMillis 仍取全量末条（离场 marker=真实结束时刻）。
+        val llmMessages = msgs.filter {
+            it.messageKindRaw != MessageKind.OFFLINE_MARKER_START.raw &&
+                it.messageKindRaw != MessageKind.OFFLINE_MARKER_END.raw &&
+                it.content.isNotEmpty()
+        }
+        if (llmMessages.isEmpty()) return // 材料尽失（照 retryOne 同判据；此处不动 pending）：没有材料就不造行
+        val endMillis = msgs.lastOrNull()?.timestamp ?: meta.startMillis
+        val body = OfflineSummaryRegenerator.buildFallbackBody(
+            durationText = OfflineMeetingService.durationText(meta.startMillis, endMillis),
+            activity = meta.activity,
+            messageCount = llmMessages.size,
+            finalMood = meta.finalMood,
+            initiatedByUser = meta.initiatedByUser,
+        )
+        offlineMeetingMemoryRepo.upsertMeeting(
+            buildMeetingRow(
+                characterUuid = convo.characterUuid, conversationUuid = conversationUuid, sessionId = sessionId,
+                meta = meta, endMillis = endMillis, messageCount = llmMessages.size, summary = body,
+                mood = meta.finalMood.orEmpty(), highlights = emptyList(), promises = emptyList(),
+                source = SOURCE_INSTANT, now = now,
+            ),
+        )
+        Log.d(TAG, "见面即时要点已落行 session=$sessionId")
     }
 
     /** 自愈队列的选择决策结果（1:1 iOS HealPickResult）。 */
@@ -432,6 +477,20 @@ class OfflineSummaryRetryCoordinator @Inject constructor(
 
     companion object {
         private const val TAG = "OfflineSummaryRetry"
+
+        /**
+         * 即时要点行的 `sourceRaw` 值（卷二 M1·**锁定字面量**）——全工程唯一定义点：余温守卫④ / 朋友圈呼应守卫⑥ /
+         * 「简版」徽章两站一律引它，绝不再各写一遍字符串。
+         */
+        internal const val SOURCE_INSTANT = "instant"
+
+        /**
+         * 「摘要还没熟」统一谓词（卷二 J3·余温与朋友圈呼应**共用勿复制**·单源防漂移）：
+         * 无行 或 行还是即时要点骨架 → 还得等；`fallback`/`manual`/`llm` 均算「熟」
+         * （fallback 出现即重试链已尽力，再等它无意义）。
+         */
+        internal fun summaryStillPending(row: OfflineMeetingMemoryEntity?): Boolean =
+            row == null || row.sourceRaw == SOURCE_INSTANT
 
         /** 低频自愈最小间隔（24h，1:1 iOS healMinInterval）。 */
         internal const val HEAL_MIN_INTERVAL_MS = 24L * 3600L * 1000L

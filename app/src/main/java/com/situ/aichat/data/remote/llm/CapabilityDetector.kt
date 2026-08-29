@@ -151,10 +151,13 @@ class CapabilityDetector(
 
     /**
      * Sends a 1x1 PNG (image_url part) and checks the status: 200 with content → 1,
-     * 400/422 → 0, else → -1. DeepSeek / MiniMax skip the probe (not stable vision providers).
+     * 400/422 → 0, else → -1。
+     *
+     * **不再对 DeepSeek / MiniMax 硬编码「不支持」**：DeepSeek 已有视觉模型
+     * （`deepseek-v4-flash-vision-exp`）、MiniMax-M3 亦支持图片输入；且这两档常被用户拿来接中转站，
+     * 硬编码会把真正支持视觉的端点强标成不支持。统一按真实探测结果说话。
      */
     suspend fun detectVisionSupport(config: ApiConfigValues): Int {
-        if (config.providerType == ApiProviderType.DEEPSEEK || config.providerType == ApiProviderType.MINIMAX) return 0
         val body = buildJsonObject {
             put("model", config.modelName)
             putJsonArray("messages") {
@@ -167,13 +170,13 @@ class CapabilityDetector(
                         }
                         addJsonObject {
                             put("type", "image_url")
-                            putJsonObject("image_url") { put("url", "data:image/jpeg;base64,$TINY_PNG_BASE64") }
+                            putJsonObject("image_url") { put("url", TINY_PNG_DATA_URL) }
                         }
                     }
                 }
             }
             put("stream", false)
-            put("max_tokens", 1)
+            put("max_tokens", PROBE_MAX_TOKENS)
         }
         return probeMultimodal(config, body)
     }
@@ -207,7 +210,7 @@ class CapabilityDetector(
                 }
             }
             put("stream", false)
-            put("max_tokens", 1)
+            put("max_tokens", PROBE_MAX_TOKENS)
         }
         return probeMultimodal(config, body)
     }
@@ -299,8 +302,11 @@ class CapabilityDetector(
         const val TAG = "CapabilityDetector"
         val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
         const val THINKING_PROMPT = "请先思考，再用一句话回答：13 和 17 的乘积是多少？"
-        // 1x1 transparent PNG (sent with a jpeg data-URL prefix, matching iOS imagePart).
-        const val TINY_PNG_BASE64 =
-            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        // 1x1 transparent PNG。**data URL 前缀必须与真实字节一致**（原先照抄 iOS 挂的是
+        // image/jpeg，MIME 与内容不符，严格校验的服务商直接 400 → 被误判成「不支持视觉」）。
+        const val TINY_PNG_DATA_URL =
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        /** 探针输出上限：给 1 会让很多模型返回空串/length 截断 → 落「未判定」，给 16 足够判成功。 */
+        const val PROBE_MAX_TOKENS = 16
     }
 }

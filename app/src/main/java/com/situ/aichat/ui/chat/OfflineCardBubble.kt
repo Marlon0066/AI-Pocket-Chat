@@ -1,5 +1,7 @@
 package com.situ.aichat.ui.chat
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,17 +19,28 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.situ.aichat.data.model.OfflineInviteData
+import com.situ.aichat.ui.components.AppMotion
+import com.situ.aichat.ui.components.rememberReduceMotion
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.offline.OfflineTheater
+import com.situ.aichat.ui.offline.offlineSceneTransitionEntry
+import kotlinx.coroutines.delay
 
 /**
  * 线下见面邀约卡气泡（10.2c-3c，1:1 iOS OfflineInviteCardView）：☕活动 + 📍地点 + 「邀约台词」+ ✨暗示 +
@@ -133,12 +146,46 @@ fun OfflineEndCardBubble(
 }
 
 /**
+ * 落成两阶段揭示态（卷三 V3·图纸 §4.1-C 的时序单源）：[animate]=true 时 500ms 揭线体、再 240ms 揭「字后到」；
+ * =false（历史回看 / 系统「移除动画」）时两态初值即 true、零延迟零动画。抽成可组合 helper = 时序可被
+ * `OfflineEndDividerEntryTest` 用 compose mainClock 逐毫秒实证（UI 层 alpha 不进语义树、无法直接断言）。
+ */
+internal data class OfflineDividerReveal(val lineRevealed: Boolean, val captionRevealed: Boolean)
+
+@Composable
+internal fun rememberOfflineDividerReveal(animate: Boolean): OfflineDividerReveal {
+    var lineRevealed by remember { mutableStateOf(!animate) }
+    var captionRevealed by remember { mutableStateOf(!animate) }
+    LaunchedEffect(animate) {
+        if (!animate) return@LaunchedEffect
+        delay(500)
+        lineRevealed = true
+        delay(240)
+        captionRevealed = true
+    }
+    return OfflineDividerReveal(lineRevealed, captionRevealed)
+}
+
+/**
  * 线下见面离场标记 → 居中灰字分隔「— 线下见面结束 · 约X分钟 —」（10.2c-3c；沉浸视图样式见 10.2e）。
  * offline-1：[onClick] 非空（= 有 sessionId）时整条可点进见面回顾，并补「点击查看见面详情」引导
  * （对齐 iOS OfflineMarkerCard 退场分支 onTapGesture + book.pages 提示，themeColor 0.5 透明）。
+ *
+ * 卷三 V3「落成」（图纸 §4.1-C·契约 FABLE5_MEETING_SEAM_PROPOSAL §5①）：[entryAnimation]=true（该行**新到达**
+ * 那一刻·历史回看恒 false）时——500ms 后**分隔线**（= 本条破折号包裹的居中细字，即这条分隔线的视觉本体）走场景
+ * 过渡线单源 [offlineSceneTransitionEntry] 中心展开，再 240ms 后详情行 200ms 淡入「字后到」，940ms 收束。
+ * 文案行**恒组合**（未落成时 alpha 0 占位）：结构全程恒在，反转列表不跳动、点进回顾全过程可用。
+ * [entryAnimation]=false 或系统「移除动画」→ 两态初值即 true、零动画（渲染与改造前逐字一致）。
  */
 @Composable
-fun OfflineEndDivider(durationText: String, onClick: (() -> Unit)? = null) {
+fun OfflineEndDivider(durationText: String, onClick: (() -> Unit)? = null, entryAnimation: Boolean = false) {
+    val animate = entryAnimation && !rememberReduceMotion()
+    val (lineRevealed, captionRevealed) = rememberOfflineDividerReveal(animate)
+    val captionAlpha by animateFloatAsState(
+        targetValue = if (captionRevealed) 1f else 0f,
+        animationSpec = tween(200, easing = AppMotion.EaseOut),
+        label = "offlineEndDividerCaption",
+    )
     Column(
         Modifier
             .fillMaxWidth()
@@ -151,11 +198,17 @@ fun OfflineEndDivider(durationText: String, onClick: (() -> Unit)? = null) {
             "— 线下见面结束 · $durationText —",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            modifier = when {
+                !animate -> Modifier
+                lineRevealed -> Modifier.offlineSceneTransitionEntry(reduceMotion = false)
+                else -> Modifier.alpha(0f)
+            },
         )
         if (onClick != null) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
+                modifier = if (animate) Modifier.graphicsLayer { alpha = captionAlpha } else Modifier,
             ) {
                 Icon(
                     Icons.AutoMirrored.Outlined.MenuBook,

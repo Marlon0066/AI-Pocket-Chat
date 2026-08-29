@@ -56,6 +56,9 @@ import com.situ.aichat.ui.world.quickchat.WorldQuickChatSheet
 import com.situ.aichat.ui.world.planet.MarkerProjection
 import com.situ.aichat.ui.world.planet.PlanetGLView
 import com.situ.aichat.ui.world.planet.PlanetMath
+import com.situ.aichat.ui.world.web.ContinentWebSceneView
+import com.situ.aichat.ui.world.web.PlanetWebSceneView
+import com.situ.aichat.ui.world.web.TownWebSceneView
 import kotlin.math.roundToInt
 
 /**
@@ -97,6 +100,14 @@ fun WorldScreen(
     val nestCandidates by nestVm.candidates.collectAsStateWithLifecycle()
     var nestPactOpen by remember { mutableStateOf(false) }
     LaunchedEffect(ui.scene) { if (ui.scene !is WorldScene.Interior) nestPactOpen = false } // 离室内即收「孵蛋之约」
+
+    // 网页小镇（一期绞杀第一刀·J1）：默认 web 渲染；web 起不来/跑挂/8s 无首帧 → 置位后本会话回落 GL 小镇整链
+    // （瞬时态·不入库不持久·下次进世界屏重新试 web）。
+    var webTownFailed by remember { mutableStateOf(false) }
+
+    // 网页星球 / 网页大陆（二期绞杀第二刀·J1）：同上，两态各自独立——失败只降本场景，另一场景照跑 web。
+    var webPlanetFailed by remember { mutableStateOf(false) }
+    var webContinentFailed by remember { mutableStateOf(false) }
 
     // W15 顶栏方案 A：大区切换器展开态 hoist（场景/大区变更即收起·进程死亡即收起可接受）。
     var switcherExpanded by remember { mutableStateOf(false) }
@@ -198,14 +209,36 @@ fun WorldScreen(
     Box(Modifier.fillMaxSize().background(WorldSceneColors.background)) {
         if (ui.ready && !transitions.glFailed) {
             when (val s = ui.scene) {
-                WorldScene.Planet -> PlanetSceneHost(
+                WorldScene.Planet -> if (!webPlanetFailed) PlanetWebSceneView(
+                    ui = ui, reduceMotion = reduceMotion,
+                    interactive = transitions.phase == WorldTransition.None,
+                    initialPose = viewModel.savedPlanetCamera,
+                    onFirstFrame = transitions::onPlanetFirstFrame,
+                    // J8：家标记 / 雪佛龙整层归页面——点家与捏到底都是俯冲；点雪佛龙由页面自己转球，原生只回触觉。
+                    onDive = { transitions.startDiveToContinent(reduceMotion, ui.homeX, ui.homeY) { haptics.light() } },
+                    onSpinHome = { haptics.light() },
+                    onWebFailed = { webPlanetFailed = true },
+                    onViewReady = { transitions.planetWeb = it; transitions.planetView = null },
+                ) else PlanetSceneHost(
                     ui = ui, reduceMotion = reduceMotion, initialPose = viewModel.savedPlanetCamera,
                     onGlError = transitions::onSceneGlError, onFirstFrame = transitions::onPlanetFirstFrame,
                     onDive = { transitions.startDiveToContinent(reduceMotion, ui.homeX, ui.homeY) { haptics.light() } },
                     onSpinHome = { transitions.spinHomeToFront(reduceMotion, ui.homeX, ui.homeY) { haptics.light() } },
-                    onViewReady = { transitions.planetView = it },
+                    onViewReady = { transitions.planetView = it; transitions.planetWeb = null },
                 )
-                is WorldScene.Continent -> ContinentSceneView(
+                is WorldScene.Continent -> if (!webContinentFailed) ContinentWebSceneView(
+                    regionId = s.regionId, reduceMotion = reduceMotion, staticMode = ui.staticMode,
+                    interactive = transitions.phase == WorldTransition.None,
+                    continentOf = viewModel::continentOf,
+                    onFirstFrame = transitions::onContinentFirstFrame,
+                    onReturnToPlanet = { transitions.startReturnToPlanet(reduceMotion) },
+                    onEnterTown = { transitions.startDiveToTown(it, reduceMotion) { haptics.light() } },
+                    onWebFailed = { webContinentFailed = true },
+                    onViewReady = { transitions.continentWeb = it; transitions.continentView = null },
+                    initialRestore = viewModel.savedContinentCamera,
+                    userPresenceCityId = presence?.cityId, userTraveling = presence?.traveling ?: false, userHomeCityId = com.situ.aichat.world.WorldIds.HOME_CITY_ID,
+                    onDepartToCity = { viewModel.openTravel(it) },
+                ) else ContinentSceneView(
                     regionId = s.regionId, worldSeed = ui.seed, reduceMotion = reduceMotion, staticMode = ui.staticMode,
                     interactive = transitions.phase == WorldTransition.None,
                     continentOf = viewModel::continentOf,
@@ -215,9 +248,28 @@ fun WorldScreen(
                     initialRestore = viewModel.savedContinentCamera,
                     userPresenceCityId = presence?.cityId, userTraveling = presence?.traveling ?: false, userHomeCityId = com.situ.aichat.world.WorldIds.HOME_CITY_ID,
                     onDepartToCity = { viewModel.openTravel(it) },
-                    onViewReady = { transitions.continentView = it },
+                    onViewReady = { transitions.continentView = it; transitions.continentWeb = null },
                 )
-                is WorldScene.Town -> TownSceneView(
+                is WorldScene.Town -> if (!webTownFailed) TownWebSceneView(
+                    cityId = s.cityId, reduceMotion = reduceMotion, staticMode = ui.staticMode,
+                    interactive = transitions.phase == WorldTransition.None,
+                    townOf = viewModel::townOf,
+                    onFirstFrame = transitions::onTownFirstFrame,
+                    onReturnToContinent = { transitions.startReturnToContinent(reduceMotion) },
+                    onWebFailed = { webTownFailed = true },
+                    onViewReady = { transitions.townWeb = it; transitions.townView = null },
+                    cast = cast?.takeIf { it.cityId == s.cityId },
+                    userPresent = presence?.let { it.cityId == s.cityId && !it.traveling } ?: false,
+                    userTraveling = presence?.traveling ?: false,
+                    homePlaceId = "yunye_home",
+                    initialCamera = viewModel.savedTownCamera,
+                    onEnterInterior = { transitions.startDiveToInterior(s.cityId, it, reduceMotion) { haptics.light() } },
+                    onTravelToCity = { viewModel.openTravel(s.cityId) },
+                    onOpenChat = { uuid, name -> viewModel.openChat(uuid, name) },
+                    onOpenPet = onOpenPet,
+                    onMeetNative = { viewModel.onMeetNative(it) },
+                    onDismissResident = { nid, name -> viewModel.requestDismissResident(nid, name) },
+                ) else TownSceneView(
                     cityId = s.cityId, worldSeed = ui.seed, reduceMotion = reduceMotion, staticMode = ui.staticMode,
                     interactive = transitions.phase == WorldTransition.None,
                     townOf = viewModel::townOf,
@@ -234,7 +286,7 @@ fun WorldScreen(
                     onOpenPet = onOpenPet,
                     onMeetNative = { viewModel.onMeetNative(it) },
                     onDismissResident = { nid, name -> viewModel.requestDismissResident(nid, name) }, // 战役 B（O6）：送 TA 离开 → 确认弹窗
-                    onViewReady = { transitions.townView = it },
+                    onViewReady = { transitions.townView = it; transitions.townWeb = null },
                 )
                 is WorldScene.Interior -> InteriorSceneView(
                     placeId = s.placeId,

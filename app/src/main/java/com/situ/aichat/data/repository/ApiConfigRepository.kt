@@ -6,6 +6,7 @@ import com.situ.aichat.data.local.entity.audioInputMode
 import com.situ.aichat.data.local.entity.effectiveIsThinkingModel
 import com.situ.aichat.data.local.entity.effectiveAudioInputEnabled
 import com.situ.aichat.data.local.entity.effectiveToolCallingEnabled
+import com.situ.aichat.data.local.entity.effectiveVisionEnabled
 import com.situ.aichat.data.local.entity.prefilledFromKnownCapabilities
 import com.situ.aichat.data.local.entity.resettingCapabilityDetectionResults
 import com.situ.aichat.data.local.entity.thinkingModelMode
@@ -170,6 +171,12 @@ class ApiConfigRepository @Inject constructor(
         keyStore.put(entity.apiKeyId, apiKey)
     }
 
+    /** 编辑屏预填：读出某配置已存的明文 key（配置不存在 / 未存过 key → 空串）。 */
+    suspend fun storedApiKey(uuid: String): String {
+        val entity = dao.getByUuid(uuid) ?: return ""
+        return keyStore.get(entity.apiKeyId).orEmpty()
+    }
+
     suspend fun delete(entity: ApiConfigEntity) {
         keyStore.delete(entity.apiKeyId)
         functionRouter.clearAssignmentsForConfig(entity.uuid)
@@ -215,10 +222,20 @@ class ApiConfigRepository @Inject constructor(
 
     // MARK: - Capability detection (P3.1) — mirrors iOS prefillFromKnownCapabilities + runCapabilityDetections
 
-    /** Prefill thinking/vision/audio from the static known-model table (auto + undetected only). */
-    suspend fun prefillFromKnownCapabilities(uuid: String): ApiConfigEntity? {
+    /**
+     * Prefill thinking/vision/audio from the static known-model table (auto + undetected only).
+     *
+     * [catalogVision] = 拉取模型列表时服务商**官方给出的**视觉能力（OpenRouter `architecture.input_modalities`
+     * / Anthropic `capabilities.image_input.supported`——各家 models 接口里只有这两家给）。它比名字表可靠，
+     * 故**优先于名字表**；null = 该服务商没给这项信息，回落名字表。
+     */
+    suspend fun prefillFromKnownCapabilities(uuid: String, catalogVision: Boolean? = null): ApiConfigEntity? {
         val entity = dao.getByUuid(uuid) ?: return null
-        val prefilled = entity.prefilledFromKnownCapabilities()
+        var prefilled = entity.prefilledFromKnownCapabilities()
+        if (catalogVision != null && prefilled.visionMode == VisionMode.AUTO) {
+            // 官方元数据是权威：名字表若已填过（可能填错，如把 `*-vision-exp` 当成基础款）也照样覆盖。
+            prefilled = prefilled.copy(detectedVisionSupport = if (catalogVision) 1 else 0)
+        }
         if (prefilled != entity) dao.update(prefilled)
         return prefilled
     }
@@ -233,8 +250,8 @@ class ApiConfigRepository @Inject constructor(
      * settings-api-6：返回 anyUndetermined = 最后一个执行的 auto 探针（thinking/vision/audio 中，**不含 tool**）
      * 是否返回 -1（对齐 iOS detectionHint「最近探针胜出、确定结果清除」语义）。供列表卡显示「检测无法判定」提示。
      */
-    suspend fun runCapabilityDetections(uuid: String): Boolean {
-        val entity = prefillFromKnownCapabilities(uuid) ?: return false
+    suspend fun runCapabilityDetections(uuid: String, catalogVision: Boolean? = null): Boolean {
+        val entity = prefillFromKnownCapabilities(uuid, catalogVision) ?: return false
         var thinkingProbe: Int? = null
         var visionProbe: Int? = null
         var audioProbe: Int? = null
@@ -276,7 +293,9 @@ class ApiConfigRepository @Inject constructor(
             )
         }
 
-        if (entity.visionMode == VisionMode.AUTO) {
+        // 官方元数据在场时**不跑视觉探针**：它比探针可靠（探针把任何 400 都读成「不支持」，而中转站
+        // 为参数不认 / 限流返 400 很常见），跑了还会反过来覆盖权威值——这正是契约 A8 说的「免跑探针」。
+        if (entity.visionMode == VisionMode.AUTO && catalogVision == null) {
             val result = capabilityDetector.detectVisionSupport(probe)
             visionProbe = result
             if (result != -1 || entity.detectedVisionSupport == -1) {
@@ -296,9 +315,9 @@ class ApiConfigRepository @Inject constructor(
     }
 
     /** Clear all detection results then re-run detection (the "重新检测" action). 返回 anyUndetermined（settings-api-6）。 */
-    suspend fun redetectCapabilities(uuid: String): Boolean {
+    suspend fun redetectCapabilities(uuid: String, catalogVision: Boolean? = null): Boolean {
         dao.resetDetection(uuid)
-        return runCapabilityDetections(uuid)
+        return runCapabilityDetections(uuid, catalogVision)
     }
 
     /** Query the account balance for a config (resolves its key); null if no key stored (skip). */
@@ -349,5 +368,6 @@ class ApiConfigRepository @Inject constructor(
             maxOutputLength = MaxOutputLength.fromRaw(maxOutputLengthRaw),
             toolCallingEnabled = effectiveToolCallingEnabled(),
             audioInputEnabled = effectiveAudioInputEnabled(),
+            visionEnabled = effectiveVisionEnabled(),
         )
 }

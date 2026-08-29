@@ -82,6 +82,22 @@ fun resolvedConfigOrNull(
     active: ApiConfigEntity?,
 ): ApiConfigEntity? = assignedUuid?.let { uuid -> all.firstOrNull { it.uuid == uuid } } ?: active
 
+/**
+ * 某个功能当前解析到的配置**是否看得懂图**（回退语义同 [resolvedConfigIsThinking]，共用 [resolvedConfigOrNull]）。
+ *
+ * 承重用途：聊天「+」面板的「照片」入口据此显隐——`ApiFunction.CHAT` 解析到的模型没有视觉能力时
+ * 根本不给发图按钮，免得用户发出去却只换来一句读不懂图的回复。
+ *
+ * 「不确定」(detectedVisionSupport == -1) 一律按 **false** 处理（[effectiveVisionEnabled] 的 AUTO 语义）：
+ * 宁可少给一个按钮，也不让人发了图才发现对方看不见。用户确知模型支持时，可在该配置的
+ * 「图片理解」里手动选「开启」强制打开。
+ */
+fun resolvedConfigHasVision(
+    assignedUuid: String?,
+    all: List<ApiConfigEntity>,
+    active: ApiConfigEntity?,
+): Boolean = resolvedConfigOrNull(assignedUuid, all, active)?.effectiveVisionEnabled() ?: false
+
 fun ApiConfigEntity.effectiveVisionEnabled(): Boolean = when (visionMode) {
     VisionMode.ENABLED -> true
     VisionMode.DISABLED -> false

@@ -11,10 +11,10 @@ package com.situ.aichat.data.model
 enum class ApiFunction(val raw: String, val displayName: String, val subtitle: String) {
     // 副标题「思考/普通模型」建议口径（2026-07-11 拍板）：实时链路建议普通模型（思考开口慢）；
     // 简单小活普通模型即可（思考多花钱无感知提升）；后台重推理思考更佳、普通也够用。
-    CHAT("chat", "聊天对话", "与 AI 文字聊天时使用；思考模型回复更好但更慢，普通模型更秒回"),
+    CHAT("chat", "聊天对话", "与 AI 文字聊天时使用；思考模型回复更好但更慢，普通模型更秒回。选带视觉能力的模型，聊天「+」里才会出现「照片」"),
     VOICE_CALL("voiceCall", "语音通话", "实时语音通话时使用，建议普通模型（思考模型开口慢）"),
     MEMORY_SUMMARY("memorySummary", "记忆总结", "后台自动总结对话记忆；思考模型更准，普通模型也够用"),
-    IMAGE_UNDERSTANDING("imageUnderstanding", "图片理解", "识别和描述用户发送的图片，需带视觉能力，建议普通模型（更快）"),
+    IMAGE_UNDERSTANDING("imageUnderstanding", "图片理解", "给你发的照片生成一句文字描述，存进记忆、也让不看图的模型知道你发了什么；需带视觉能力，建议普通模型（更快）"),
     DIARY_GENERATION("diaryGeneration", "日记生成", "自动生成日记和日记评论；后台慢慢写，思考/普通均可"),
     MOMENT_GENERATION("momentGeneration", "朋友圈", "角色自动发朋友圈动态和评论；思考/普通均可"),
     SCHEDULE_GENERATION("scheduleGeneration", "日程生成", "生成角色每日日程并按天气调整；思考模型排得更合理"),

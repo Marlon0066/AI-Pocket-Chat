@@ -38,6 +38,7 @@ import com.situ.aichat.data.repository.ConversationRepository
 import com.situ.aichat.data.repository.SettingsRepository
 import com.situ.aichat.data.local.dao.ScheduleDao
 import com.situ.aichat.notification.Notifier
+import com.situ.aichat.offline.OfflineMeetingGate
 import com.situ.aichat.ui.chat.ChatListScheduleStatus
 import com.situ.aichat.util.DateFormatters
 import dagger.hilt.EntryPoint
@@ -98,7 +99,8 @@ class CharacterStatusGlanceWidget : GlanceAppWidget() {
             conversationUuid = conv.uuid,
             characterName = name,
             avatarPath = character?.avatarPath,
-            statusLine = computeStatus(deps, conv.characterUuid, now),
+            // 卷一 F5：会话正在线下见面 → 状态行隐藏（既不泄见面地点，也不显早已过时的线上日程）。
+            statusLine = if (OfflineMeetingGate.inMeeting(conv)) null else computeStatus(deps, conv.characterUuid, now),
         )
     }
 

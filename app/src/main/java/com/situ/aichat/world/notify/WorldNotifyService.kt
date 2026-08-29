@@ -6,6 +6,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.situ.aichat.R
 import com.situ.aichat.data.local.dao.CharacterDao
+import com.situ.aichat.data.local.dao.ConversationDao
 import com.situ.aichat.data.local.dao.WorldDao
 import com.situ.aichat.data.local.entity.CharacterEntity
 import com.situ.aichat.data.local.entity.WorldStateEntity
@@ -14,6 +15,7 @@ import com.situ.aichat.notification.NotificationAlarmScheduler
 import com.situ.aichat.notification.NotificationPayload
 import com.situ.aichat.notification.NotificationPostLedger
 import com.situ.aichat.notification.NotifierWorld
+import com.situ.aichat.offline.OfflineMeetingGate
 import com.situ.aichat.world.WorldClock
 import com.situ.aichat.world.WorldIds
 import com.situ.aichat.world.atlas.WorldAtlas
@@ -44,6 +46,7 @@ class WorldNotifyService @Inject constructor(
     private val budget: WorldLlmBudget,
     private val settingsRepository: SettingsRepository,
     private val stateStore: WorldNotifyStateStore,
+    private val conversationDao: ConversationDao,
 ) {
 
     /**
@@ -125,6 +128,11 @@ class WorldNotifyService @Inject constructor(
         if (!isUserLeg && worldDao.getEvent(eventUuid!!)?.seenAt != null) return skip("门5 小报已讲过")
         // 门 6 前台（人在 app 里·世界卡红点归 W11）。
         if (foregroundCheck()) return skip("门6 前台")
+        // 门 9 见面（卷一 C4·新增）：到达角色正在与用户线下见面 → 静默吞（人就在对面，「我到啦」当场穿帮）。
+        // 位置在门 7/8 之前：那两道有副作用（顺延排闹钟 / 扣每日额度），先判见面才不会白扣一格。用户腿无角色 → 不判。
+        if (!isUserLeg && OfflineMeetingGate.characterInMeeting(conversationDao, characterUuid!!)) {
+            return skip("门9 见面进行中")
+        }
 
         val text = arrivalText(isUserLeg, character?.name, cityNameOf(state, row.toCityId))
         // 门 7 统一排队（世界永远让路·不消费额度·顺延同 key 闹钟 now+120s·连环顺延由门 4 过期兜底）。

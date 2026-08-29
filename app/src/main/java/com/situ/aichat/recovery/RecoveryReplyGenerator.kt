@@ -196,10 +196,14 @@ class RecoveryReplyGenerator @Inject constructor(
             config = config,
             messages = messages,
         )
-        // 与正常回复同序：parseMood → sanitize → 表情包归一（线下/语音标签均不保留，后台恢复纯文字）。
-        val mood = ReplyParser.parseMood(rawReply, preserveOfflineTags = false, preserveMiniMaxVoiceTags = false)
+        // 与正常回复同序：parseMood → sanitize → 表情包归一（语音标签一律不保留，后台恢复纯文字）。
+        // 卷一 A2c：**见面中**须保留线下叙事标签（[叙述]/[对话]/[场景：…]）——本管线也服务「见面期间的
+        // 列表快捷回复 / 通知直接回复」，剥掉标签会让这条回复在沉浸剧场里缺席渲染结构（与主路径
+        // ChatReplyDeliverer 的 preserveOfflineTags = isOffline 同源）。非见面照旧全剥。
+        val inMeeting = convo.isInOfflineMode
+        val mood = ReplyParser.parseMood(rawReply, preserveOfflineTags = inMeeting, preserveMiniMaxVoiceTags = false)
         val sanitized = ReplyParser.sanitizeAssistantResponse(
-            mood.cleanText, characterName = character.name, preserveOfflineTags = false, preserveMiniMaxVoiceTags = false,
+            mood.cleanText, characterName = character.name, preserveOfflineTags = inMeeting, preserveMiniMaxVoiceTags = false,
         )
         // 14.3c 用户自定义内容过滤：sanitize 后、表情包归一前净化（与主聊天/忙碌回复同接）。iOS 的未答恢复经
         // 共享聊天流水线 processAndDeliverFullResponse 会过滤，本无头重实现须显式补上，否则开启过滤规则后
@@ -238,7 +242,11 @@ class RecoveryReplyGenerator @Inject constructor(
         // 分段（<50 字不拆，对齐忙碌/正常回复阈值）→ 立即落库（不暂扣），时间戳严格递增。
         // 批4 4-2：与前台/忙碌路同口径吃用户「回复分条」设置。
         val segmentRange = settings.sanitizedReplySegmentRange
-        val segments = if (stickerNormalized.length < 50) {
+        val segments = if (inMeeting) {
+            // 卷一 A2c：见面期 = 单段投递（整条叙事不拆句），与主路径 ChatReplyDeliverer.deliverTextReply 同源——
+            // 剧场按内容块渲染，拆句会把一段叙事切成互不相干的碎片。
+            listOf(stickerNormalized)
+        } else if (stickerNormalized.length < 50) {
             listOf(stickerNormalized)
         } else {
             MessageSplitter.split(stickerNormalized, maxSegments = segmentRange.last, minSegments = segmentRange.first)

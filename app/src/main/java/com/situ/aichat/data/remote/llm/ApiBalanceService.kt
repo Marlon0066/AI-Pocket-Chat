@@ -132,9 +132,11 @@ class ApiBalanceService(
     private suspend fun get(url: String, headers: Map<String, String>): Pair<Int, String?> =
         withContext(Dispatchers.IO) {
             val timed = client.newBuilder().callTimeout(15, TimeUnit.SECONDS).build()
-            val builder = Request.Builder().url(url).get()
-            for ((k, v) in headers) builder.addHeader(k, v)
+            // 请求构造也在 runCatching 内：key 混入非 ASCII 字符（如粘贴带进中文/全角）时 addHeader 抛
+            // IllegalArgumentException，此前在 catch 外 = 未捕获闪退（调用链 refreshBalances 无兜底）。
             runCatching {
+                val builder = Request.Builder().url(url).get()
+                for ((k, v) in headers) builder.addHeader(k, v)
                 timed.newCall(builder.build()).execute().use { it.code to it.body.string() }
             }.getOrElse { -1 to null }
         }

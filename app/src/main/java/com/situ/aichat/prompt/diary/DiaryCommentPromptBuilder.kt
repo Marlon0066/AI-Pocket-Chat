@@ -30,12 +30,15 @@ data class DiaryCommentPromptStrings(
     val exchangeYouWrote: String,
     val exchangeUserCommented: String,
     val exchangeReplyWrite: String,
+    /** 「这篇日记附了 N 张照片，你看不到」——照朋友圈 photosBlind 同构（图片多模态一期 §B8）。 */
+    val photosBlind: String,
 ) {
     companion object {
         fun from(strings: PromptStrings): DiaryCommentPromptStrings = DiaryCommentPromptStrings(
             intro = strings.s(R.string.diary_comment_intro),
             setup = strings.s(R.string.diary_comment_setup),
             friendWrote = strings.s(R.string.diary_comment_friend_wrote),
+            photosBlind = strings.s(R.string.diary_comment_photos_blind),
             entryQuote = strings.s(R.string.diary_comment_entry_quote),
             write = strings.s(R.string.diary_comment_write),
             reqHeader = strings.s(R.string.diary_comment_req_header),
@@ -69,6 +72,12 @@ object DiaryCommentPromptBuilder {
         systemPrompt: String,
         userName: String,
         entryContent: String,
+        /**
+         * 日记附图张数（图片多模态一期 §B8）。>0 时注入盲图提示——从前日记链路对图片**完全无感知**：
+         * 用户写「今天去看海」配 9 张海景照，角色评论时连「有图」都不知道，很容易写出与照片脱节的话。
+         * 这里只补「知道有图、但看不到」，真看图属日记二期（本卷不做）。
+         */
+        photoCount: Int = 0,
     ): String {
         val parts = mutableListOf<String>()
         parts.add(strings.intro.format(characterName, personality))
@@ -76,6 +85,7 @@ object DiaryCommentPromptBuilder {
         parts.add("")
         parts.add(strings.friendWrote.format(userName))
         parts.add(strings.entryQuote.format(entryContent))
+        if (photoCount > 0) parts.add(strings.photosBlind.format(photoCount))
         parts.add("")
         parts.add(strings.write)
         parts.add("")
@@ -104,6 +114,8 @@ object DiaryCommentPromptBuilder {
         entryContent: String,
         rootComment: String,
         userReply: String,
+        /** 同 [build]：>0 时注入盲图提示——回复线程里也该知道日记附了照片（首条评论知道、回复却失忆很割裂）。 */
+        photoCount: Int = 0,
     ): String {
         val parts = mutableListOf<String>()
         parts.add(strings.intro.format(characterName, personality))
@@ -111,6 +123,7 @@ object DiaryCommentPromptBuilder {
         parts.add("")
         parts.add(strings.friendWrote.format(userName))
         parts.add(strings.entryQuote.format(entryContent))
+        if (photoCount > 0) parts.add(strings.photosBlind.format(photoCount))
         parts.add("")
         parts.add(strings.replyPrevComment.format(rootComment))
         parts.add(strings.replyUserReplied.format(userName, userReply))
@@ -140,6 +153,8 @@ object DiaryCommentPromptBuilder {
         userName: String,
         entryContent: String,
         userComment: String,
+        /** 同 [build]：>0 时注入盲图提示——回复线程里也该知道日记附了照片（首条评论知道、回复却失忆很割裂）。 */
+        photoCount: Int = 0,
     ): String {
         val parts = mutableListOf<String>()
         parts.add(strings.intro.format(characterName, personality))
@@ -147,6 +162,7 @@ object DiaryCommentPromptBuilder {
         parts.add("")
         parts.add(strings.exchangeYouWrote)
         parts.add(strings.entryQuote.format(entryContent))
+        if (photoCount > 0) parts.add(strings.photosBlind.format(photoCount))
         parts.add("")
         parts.add(strings.exchangeUserCommented.format(userName, userComment))
         parts.add("")

@@ -1,5 +1,6 @@
 package com.situ.aichat.ui.world
 
+import android.graphics.BitmapFactory
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
@@ -23,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
@@ -42,8 +44,10 @@ import com.situ.aichat.ui.world.town.TownData
 import com.situ.aichat.ui.world.town.TownGLView
 import com.situ.aichat.ui.world.town.TownGeometry
 import com.situ.aichat.ui.world.town.TownMath
+import com.situ.aichat.ui.world.town.TownOverlayGeometry
 import com.situ.aichat.ui.world.town.TownPlace
 import com.situ.aichat.ui.world.town.TownSkyParams
+import com.situ.aichat.ui.world.town.TownTextures
 import com.situ.aichat.ui.world.interior.InteriorSceneData
 import com.situ.aichat.world.stage.WorldTownCast
 import kotlinx.coroutines.Dispatchers
@@ -85,6 +89,7 @@ internal fun BoxScope.TownSceneView(
     onDismissResident: (String, String) -> Unit = { _, _ -> }, // 战役 B（O6·§4.3）：自建未招募居民「送 TA 离开」→ 暖纸确认
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
+    val context = LocalContext.current
     val density = LocalDensity.current
     var glView by remember { mutableStateOf<TownGLView?>(null) }
     var sceneSize by remember { mutableStateOf(IntSize.Zero) }
@@ -177,6 +182,10 @@ internal fun BoxScope.TownSceneView(
         update = { it.setRenderFlags(reduceMotion, staticMode) },
     )
 
+    // ── 画层天空已入 GL（R2 修订·用户 2026-08-28 观感打回幕布方案）：水彩天空由渲染器画在一切几何**之前**、
+    // 经深度被屋顶/山影自然遮挡——「房子抠出来显示在天空前面」的正确图层序；Compose 侧不再叠画层与幕布，
+    // 只在下方装载效应里做 IO 解码注入。时段选择与 2.5s 渐显由渲染器逐帧驱动（reduceMotion 冻结即直切）。──
+
     DisposableEffect(lifecycleOwner, glView) {
         val v = glView
         if (v != null && lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) v.resumeWorld()
@@ -196,12 +205,24 @@ internal fun BoxScope.TownSceneView(
         val v = glView ?: return@LaunchedEffect
         val data = townOf(cityId)
         val geom = withContext(Dispatchers.Default) { TownGeometry.buildTown(data.layout) }
-        v.submitTown(geom, TownSkyParams.of(data.sky, data.glowA))
+        val overlay = withContext(Dispatchers.Default) { TownOverlayGeometry.build(data.layout) }
+        v.submitTown(geom, overlay, TownSkyParams.of(data.sky, data.glowA))
         places = data.places
         fillers = data.layout.fillers.map { it.cx.toFloat() to it.cz.toFloat() }
         cityName = data.cityName
         curated = data.curated
         selected = null
+    }
+
+    // 材质贴图 + 画层天空装载（§3.5/R2·IO 线程解码 → 交 GL 线程懒上传）：缺图/解码失败自动回落程序化路径。
+    LaunchedEffect(glView) {
+        val v = glView ?: return@LaunchedEffect
+        v.submitDetailTextures(withContext(Dispatchers.IO) { TownTextures.decodeAll(context) })
+        val skies = withContext(Dispatchers.IO) {
+            runCatching { BitmapFactory.decodeResource(context.resources, R.drawable.world_town_sky_dusk) }.getOrNull() to
+                runCatching { BitmapFactory.decodeResource(context.resources, R.drawable.world_town_sky_night) }.getOrNull()
+        }
+        v.submitPaintedSkies(skies.first, skies.second)
     }
 
     // 投影循环（每帧读快照复算 mvp·offset 在布局阶段读 → 不触发重组）。placement 变化（cast 刷新）重启循环。

@@ -9,6 +9,7 @@ import com.situ.aichat.data.local.entity.UserProfileEntity
 import com.situ.aichat.data.model.FutureMeetingChangeJson
 import com.situ.aichat.data.model.FutureMeetingProposalJson
 import com.situ.aichat.data.model.GiftCardJson
+import com.situ.aichat.data.model.MessageContentSentinels
 import com.situ.aichat.data.model.MessageKind
 import com.situ.aichat.data.model.RedPacketJson
 import com.situ.aichat.data.model.SystemEventJson
@@ -18,6 +19,7 @@ import com.situ.aichat.data.model.systemEventTargetIsAssistant
 import com.situ.aichat.data.remote.llm.ChatContentPart
 import com.situ.aichat.data.remote.llm.ChatMessageDto
 import com.situ.aichat.gift.FestivalCalendar
+import com.situ.aichat.prompt.memory.MemoryService
 import com.situ.aichat.sticker.StickerService
 import java.time.Instant
 import java.time.ZoneId
@@ -31,6 +33,19 @@ import java.time.ZoneId
  * ROLE_USER/ROLE_ASSISTANT/ROLE_SYSTEM / buildAudioPrompt / AUDIO_FORMAT_WAV / encodeWavBase64 经 `PromptBuilder.` 限定。
  */
 
+/**
+ * 带图消息挂 image 段时的 text 段：有配文用配文；纯图片（正文=[MessageContentSentinels.IMAGE_PLACEHOLDER]）
+ * 则用与「不带图语义占位」同一句措辞，避免把 `[图片]` 这个内部哨兵直接喂给模型。
+ */
+private fun imageMessageCaption(normalizedContent: String): String {
+    val caption = normalizedContent.trim()
+    return if (caption.isEmpty() || caption == MessageContentSentinels.IMAGE_PLACEHOLDER) {
+        MemoryService.renderImageSemantics(caption, "")
+    } else {
+        caption
+    }
+}
+
 internal fun appendConversationMessages(
     recentMessages: List<MessageEntity>,
     chatMessages: MutableList<ChatMessageDto>,
@@ -43,7 +58,16 @@ internal fun appendConversationMessages(
     customStickers: List<CustomStickerEntity> = emptyList(),
     allowStickers: Boolean = true,
     audioInputEnabled: Boolean = false,
-    audioAttachments: Map<String, ByteArray> = emptyMap(),
+    /** messageUUID → 已预编码的裸 base64 WAV（编码在调用方的 IO 线程完成，不压主线程）。 */
+    audioAttachments: Map<String, String> = emptyMap(),
+    /** 路由配置是否支持视觉；false → 图片消息一律走语义占位文本（用户仍可正常发图·拍板②）。 */
+    visionEnabled: Boolean = false,
+    /**
+     * messageUUID → 图片 data URI（`data:image/jpeg;base64,…`），调用方 IO 线程预读编码。
+     * **只含最近若干张**（拍板①）——不在表里的历史图自动退化为「发送了一张图片：{摘要}」语义占位，
+     * 语义不断链而 token 不随聊天时长线性膨胀。
+     */
+    imageAttachments: Map<String, String> = emptyMap(),
     /** 当前真实时间（用于历史时间分割线）；null=沉浸 / 线下模式不插分割线（由调用方门控）。 */
     now: Instant? = null,
     /** 记忆改造二期·部件④ 见面时间线注记（图纸 §3.1）：该角色全部见面档案行（注记端自筛跨度 + 上限 5）；
@@ -235,8 +259,10 @@ internal fun appendConversationMessages(
             // P13.4b 多模态：用户语音消息 + 路由配置支持音频输入 + 有音频字节 → 独立多模态消息
             //（文字段 = buildAudioPrompt 包装的转写参考 + input_audio 段），1:1 iOS PromptBuilder gate-1（:642-648）。
             // 否则（音频能力关 / 非语音 / 无字节）→ 纯文本累积（含 iOS gate-2「音频关 → 转写文字降级」）。
-            val audioBytes = audioAttachments[message.messageUUID]
-            if (audioInputEnabled && message.isVoiceMessage && audioBytes != null) {
+            val audioBase64 = audioAttachments[message.messageUUID]
+            val imageDataUri = imageAttachments[message.messageUUID]
+            val hasImage = message.imageRelativePath != null
+            if (audioInputEnabled && message.isVoiceMessage && audioBase64 != null) {
                 flushUser() // 多模态消息独立成条（不与前面纯文本合并），对齐 iOS flushPendingUser 后再 append。
                 val audioPrompt = PromptBuilder.buildAudioPrompt(
                     transcript = normalizedContent,
@@ -248,13 +274,32 @@ internal fun appendConversationMessages(
                         role = PromptBuilder.ROLE_USER,
                         contentParts = listOf(
                             ChatContentPart.Text(audioPrompt),
-                            ChatContentPart.InputAudio(base64 = PromptBuilder.encodeWavBase64(audioBytes), format = PromptBuilder.AUDIO_FORMAT_WAV),
+                            ChatContentPart.InputAudio(base64 = audioBase64, format = PromptBuilder.AUDIO_FORMAT_WAV),
+                        ),
+                    ),
+                )
+            } else if (visionEnabled && hasImage && imageDataUri != null) {
+                // 图片多模态：与音频同构——独立成条，text 段在前、image 段在后（OpenAI 兼容口径）。
+                // text 用用户配文；纯图片（正文=占位）则用与不带图时**同一句**语义文案，模型两种情况下读到的措辞一致。
+                flushUser()
+                chatMessages.add(
+                    ChatMessageDto(
+                        role = PromptBuilder.ROLE_USER,
+                        contentParts = listOf(
+                            ChatContentPart.Text(imageMessageCaption(normalizedContent)),
+                            ChatContentPart.ImageUrl(imageDataUri),
                         ),
                     ),
                 )
             } else {
+                // 不挂图的三种情形（视觉关 / 超出最近 N 张窗口 / 文件读不到）→ 语义占位，绝不留裸 `[图片]`。
+                val text = if (hasImage) {
+                    MemoryService.renderImageSemantics(normalizedContent, message.mediaMemorySummary)
+                } else {
+                    normalizedContent
+                }
                 // 批3 3-10：解析失败置空的结构化卡整条跳过（user 侧礼物/红包卡），不给桶里塞空串。
-                if (normalizedContent.isNotEmpty()) pendingUser.add(normalizedContent)
+                if (text.isNotEmpty()) pendingUser.add(text)
             }
         }
     }

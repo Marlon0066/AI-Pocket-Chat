@@ -9,7 +9,9 @@ import com.situ.aichat.data.local.dao.ScheduleDao
 import com.situ.aichat.data.model.ApiFunction
 import com.situ.aichat.data.repository.ApiConfigRepository
 import com.situ.aichat.data.repository.CharacterRepository
+import com.situ.aichat.data.repository.ConversationRepository
 import com.situ.aichat.data.repository.SettingsRepository
+import com.situ.aichat.offline.OfflineMeetingGate
 import com.situ.aichat.prompt.notification.ProactiveMessageComposer
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +33,8 @@ data class ProactiveDeliveryInput(
 enum class ProactiveDropReason {
     CHARACTER_GONE, NOTIFICATIONS_OFF, CHARACTER_NOTIFICATIONS_OFF, STALE, QUIET_HOURS, SLEEPING,
     HOT, AFTERGLOW, UNANSWERED_STREAK, BACKOFF_WINDOW, DUPLICATE_BODY, EMPTY_BODY, RACE_NEW_MESSAGE,
+    /** 目标会话正在线下见面中（卷一 B2）：人就在对面，绝不再从「手机那头」发消息。 */
+    IN_MEETING,
 }
 
 /** 到点决策结果。投递动作留在 worker 壳，本管线只产决策与文案。 */
@@ -65,6 +69,7 @@ class ProactiveDeliveryPipeline @Inject constructor(
     private val apiConfigRepository: ApiConfigRepository,
     private val templateDao: NotificationTemplateDao,
     private val deliveryDao: NotificationDeliveryDao,
+    private val conversationRepository: ConversationRepository,
 ) {
 
     /**
@@ -93,6 +98,13 @@ class ProactiveDeliveryPipeline @Inject constructor(
         // b. 保质期：由头过期就作废，绝不补发（真人不会早上补发昨晚没说的话）。先于联网动作。
         if (now - input.scheduledAt > FRESHNESS_WINDOW_MS) {
             return ProactiveVerdict.Drop(ProactiveDropReason.STALE)
+        }
+
+        // b2. 见面闸（卷一 B2·统一闸门三翼之「行为闸」）：目标会话正在线下见面 = 人就坐在对面，
+        // 主动消息从「手机那头」冒出来当场穿帮。按会话判定（并发见面允许·拍板⑩），脏态视同见面
+        // （fail-closed）。放在保质期之后、一切联网动作之前——不发就不必现做文案。
+        conversationRepository.recentActiveConversationFor(input.characterId)?.let {
+            if (OfflineMeetingGate.inMeeting(it)) return ProactiveVerdict.Drop(ProactiveDropReason.IN_MEETING)
         }
 
         // c. 免打扰（App 级，日程系统关也生效）

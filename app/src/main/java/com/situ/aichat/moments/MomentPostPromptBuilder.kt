@@ -5,7 +5,33 @@ import com.situ.aichat.data.model.DynamicInterest
 import com.situ.aichat.data.model.PersonalitySpectrum
 
 /** A user's recent moment post, pre-formatted for the prompt's "friend has been posting" section. */
-data class RecentUserPost(val timeDescription: String, val content: String)
+data class RecentUserPost(
+    val timeDescription: String,
+    val content: String,
+    /**
+     * 该动态是否配了图（契约 §B8）。渲染时补「（附带图片）」——对齐 `MomentChatContextService` 与
+     * `MemoryDigestMaterialService` 两处既有口径。不带这个标注时，用户发的**纯图无文案**动态会渲染成
+     * 一条空行（`- [昨天] `），角色连「用户昨天发过东西」都读不出来。
+     */
+    val hasImages: Boolean = false,
+)
+
+/**
+ * 一条「用户近期动态」的正文渲染：纯图无文案时也要让角色知道「发了张图」，否则那一行是空的。
+ *
+ * 措辞口径（R3 🔵-5 订正原先「三处逐字一致」的说法）：
+ * - **正文非空**时后缀「（附带图片）」——与 `MomentChatContextService` / `MemoryDigestMaterialService` 逐字一致；
+ * - **正文为空**时另有一句「（一条只有图片的动态）」——这是本处独有的第四种措辞，有意为之：
+ *   另两处对空正文会渲染成 `…发了动态（附带图片）：""` 那样带个空引号的怪句子，这里直接说清是什么。
+ */
+internal fun renderUserPostLine(post: RecentUserPost): String {
+    val body = post.content.trim()
+    return when {
+        !post.hasImages -> body
+        body.isEmpty() -> "（一条只有图片的动态）"
+        else -> "$body（附带图片）"
+    }
+}
 
 /**
  * 1:1 port of iOS `MomentGenerationActor.generatePostContent`'s system-prompt assembly
@@ -91,7 +117,7 @@ object MomentPostPromptBuilder {
 
         if (recentUserPosts.isNotEmpty()) {
             parts.add(strings.userPostsHeader)
-            for (post in recentUserPosts) parts.add("- [${post.timeDescription}] ${post.content}")
+            for (post in recentUserPosts) parts.add("- [${post.timeDescription}] " + renderUserPostLine(post))
             // 背景声明（2026-07-07 加固）：明确这段只是参考背景，防弱模型被带成「回复」口吻
             // 输出聊天腔短句而非动态（当日假模型「嗯嗯，刚看到消息。」入库教训）。
             parts.add(strings.userPostsFooter)

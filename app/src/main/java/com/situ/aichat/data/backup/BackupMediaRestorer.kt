@@ -108,10 +108,27 @@ class BackupMediaRestorer @Inject constructor(
         key.startsWith("${BackupArchive.MEDIA_PREFIX}wallpapers/") -> WallpaperStore.saveBytes(appContext, bytes)
         key.startsWith("${BackupArchive.MEDIA_PREFIX}audio/") -> AudioStore.saveBytes(appContext, bytes, fileExt(key, "wav"))
         key.startsWith("${BackupArchive.MEDIA_PREFIX}stickers/") -> StickerImageStore.save(appContext, bytes, key.endsWith(".gif"))
-        else -> ContentImageStore.saveBytes(appContext, bytes) // images / moment / diary / gift
+        // 内容图四家（聊天 / 朋友圈 / 日记 / DIY 礼物）共用这一条出口，档位由 [maxEdgeForKey] **单源**裁定。
+        // ⚠️ 绝不在这里再写一份 `when`：上一版正是「产线一份分支 + 单测另测一份纯函数」，
+        // 把产线那支整条删掉（= 精确复现 R2 🔴-1「还原把聊天图砍到 1024」）测试依旧全绿（R3 🔴-1 金丝雀实证）。
+        else -> ContentImageStore.saveBytes(appContext, bytes, maxEdgeForKey(key))
     }
 
-    private companion object {
+    internal companion object {
         const val TAG = "BackupImport"
+
+        /** 聊天消息图片（含 `*_thumb.jpg` 缩略图）在归档里的独占前缀，见 BackupExportMappers。 */
+        const val CHAT_IMAGE_PREFIX = "${BackupArchive.MEDIA_PREFIX}images/"
+
+        /**
+         * 一条归档 key 该按多大的长边重存（纯函数·**[resaveMedia] 的 else 支直接调它**，产线与单测走同一份判断）。
+         * 聊天图片 1568、其余 1024——与落盘侧口径一一对应。
+         *
+         * 为什么必须共用而不是「各写一份、口径一致就行」：口径会漂。R2 抓到的 🔴「还原把聊天图砍到 1024」
+         * 是漏了第四个调用方；R3 抓到的是「补了分支但测试测的是另一份实现」——**改坏产线测试照绿**。
+         * 现在唯一的判断点在这里，[BackupMediaRestoreRoutingTest] 再从落盘像素端到端把它钉住。
+         */
+        fun maxEdgeForKey(key: String): Int =
+            if (key.startsWith(CHAT_IMAGE_PREFIX)) ContentImageStore.CHAT_MAX_EDGE else ContentImageStore.MOMENT_DIARY_MAX_EDGE
     }
 }

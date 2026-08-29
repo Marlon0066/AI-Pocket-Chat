@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>小镇 · 数据驱动渲染</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  /* 契约：页面背景 #0D1220，加载瞬间与 App 同底不闪白 */
+  html,body { width:100%; height:100%; overflow:hidden; background:#0D1220; touch-action:none;
+    font-family:"PingFang SC","Noto Sans SC",-apple-system,sans-serif;
+    -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; }
+  /* D-9 真机实锤修复（2026-08-29·小米14 三屏黑）：「恰好铺满视口」的 WebGL 画布在部分
+     Android WebView 上既不被合成上屏、也收不到触摸（模拟器 20 行裸页最小复现同病同解）。
+     四边内缩 4px 打破精确等于视口的触发条件；backing 尺寸不动（JS 零改·three 内联样式被
+     !important 压住），视觉整体缩 0.4% 不可感、4px 底色边与深夜底同色。勿删勿改回铺满。 */
+  canvas#gl { display:block; position:fixed !important; left:4px !important; top:4px !important;
+    width:calc(100% - 8px) !important; height:calc(100% - 8px) !important; }
+  /* 纸感颗粒 + 暗角（不挡交互） */
+  #vig   { position:fixed; inset:0; pointer-events:none; z-index:6;
+           background:radial-gradient(ellipse at 50% 42%, transparent 55%, rgba(8,10,20,.26) 100%); }
+  #grain { position:fixed; inset:0; pointer-events:none; opacity:.06; z-index:7; }
+  #veil  { position:fixed; inset:0; background:#0D1220; z-index:40; pointer-events:none;
+           transition:opacity .7s ease; }
+  /* 地点名签：动森式奶油木牌，锚在 (x, top+0.6, z) 投影处，底尖对齐 */
+  .place-tag { position:fixed; left:0; top:0; z-index:10; transform:translate(-50%,-100%);
+    pointer-events:auto; cursor:pointer;
+    background:linear-gradient(rgba(255,252,244,.97), rgba(249,240,222,.95)); color:#54402A;
+    border:2px solid rgba(122,92,58,.55); border-radius:12px; padding:5px 12px 6px;
+    font-size:12px; font-weight:600; letter-spacing:.06em; white-space:nowrap;
+    box-shadow:0 3px 10px rgba(20,12,4,.38), 0 1px 0 rgba(255,255,255,.85) inset; }
+  .place-tag:hover { border-color:rgba(160,84,40,.8); }
+  .place-tag::after { content:""; position:absolute; left:50%; bottom:-6px; width:9px; height:9px;
+    background:rgba(249,240,222,.96); border-right:2px solid rgba(122,92,58,.55); border-bottom:2px solid rgba(122,92,58,.55);
+    transform:translateX(-50%) rotate(45deg); border-radius:0 0 3px 0; }
+  /* 居民卡：奶油头像章 + 对话气泡名条，锚在 (x,y,z) 投影处，底边对齐 */
+  .cast-card { position:fixed; left:0; top:0; z-index:12; transform:translate(-50%,-100%);
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    pointer-events:auto; cursor:pointer; }
+  .cast-av { width:37px; height:37px; border-radius:50%; background:#F7EEDC;
+    border:3px solid #FFF8EA;
+    box-shadow:0 3px 9px rgba(15,10,6,.42), 0 0 0 1.5px rgba(122,92,58,.45);
+    display:flex; align-items:center; justify-content:center;
+    font-size:16px; color:#6B543A; font-weight:700; overflow:hidden; }
+  .cast-av img { width:100%; height:100%; border-radius:50%; object-fit:cover; display:block; }
+  .cast-card.mystery .cast-av { background:rgba(24,32,54,.55); border-color:rgba(250,240,215,.7);
+    color:#F5EAD0; box-shadow:0 3px 9px rgba(15,10,6,.42), 0 0 0 1.5px rgba(250,240,215,.4); }
+  .cast-name { background:rgba(253,247,234,.96); color:#54402A; font-size:10px; font-weight:600; line-height:1;
+    padding:4px 9px 5px; border-radius:9px; white-space:nowrap;
+    border:1.5px solid rgba(122,92,58,.5); box-shadow:0 2px 6px rgba(15,10,6,.3); }
+  .cast-card.absent { opacity:.4; filter:grayscale(.8); }
+  /* W-1 状态下标位（睡着了(月牙)/在家·暖纸小签与名签同族·月牙样式采 GLM 稿） */
+  .cast-state { margin-top:1px; background:rgba(253,247,234,.95); color:#8A6A4A; font-size:9px; font-weight:600; line-height:1;
+    padding:3px 8px 4px; border-radius:8px; white-space:nowrap; display:inline-flex; align-items:center; gap:4px;
+    border:1px solid rgba(122,92,58,.38); box-shadow:0 2px 5px rgba(15,10,6,.28); }
+  .cast-state.asleep { color:#6E6E90; background:rgba(233,232,242,.95); border-color:rgba(96,96,130,.4); }
+  .cast-state .moon { width:9px; height:9px; border-radius:50%; box-shadow:2.5px 1px 0 0 #7A76A8; transform:rotate(-24deg); }
+  .cast-card.pet .cast-av { width:29px; height:29px; font-size:13px; }
+  .cast-over { position:fixed; left:0; top:0; z-index:11; transform:translate(-50%,-50%);
+    pointer-events:none; width:23px; height:23px; border-radius:50%;
+    background:#C96F42; color:#FFF8EA; border:2px solid rgba(255,248,234,.9);
+    font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 2px 7px rgba(15,10,6,.42), 0 0 0 1px rgba(122,92,58,.4); }
+  /* 三期卷一：走动居民头顶标识（精简卡·与居民卡同族小一号·退场淡出 ≤600ms） */
+  .walk-card { position:fixed; left:0; top:0; z-index:12; transform:translate(-50%,-100%);
+    display:flex; align-items:center; gap:5px;
+    pointer-events:auto; cursor:pointer; transition:opacity .45s ease; }
+  .walk-card .cast-av { width:30px; height:30px; font-size:13px; border-width:2.5px; }
+  .walk-card .cast-name { font-size:9px; padding:3px 7px 4px; }
+  .walk-card.mystery .cast-av { background:rgba(24,32,54,.55); border-color:rgba(250,240,215,.7);
+    color:#F5EAD0; box-shadow:0 3px 9px rgba(15,10,6,.42), 0 0 0 1.5px rgba(250,240,215,.4); }
+  .walk-card.pet .cast-av { width:24px; height:24px; font-size:11px; }
+  .walk-card.absent { opacity:.4; filter:grayscale(.8); }
+  .walk-card.leave { opacity:0 !important; }
+  /* fps 角标：?fps=1 才显示 */
+  #fps { position:fixed; top:calc(env(safe-area-inset-top, 8px) + 8px); left:10px; z-index:15;
+    font-size:11px; color:#B8C4DE; background:rgba(13,18,32,.55); padding:3px 8px; border-radius:8px;
+    display:none; font-variant-numeric:tabular-nums; }
+  /* mock 自测面板（仅 ?mock=1） */
+  #mockUI { position:fixed; left:0; right:0; bottom:calc(env(safe-area-inset-bottom, 8px) + 10px); z-index:30;
+    display:none; flex-direction:column; align-items:center; gap:8px; pointer-events:none; }
+  .mrow { display:flex; gap:8px; pointer-events:auto; flex-wrap:wrap; justify-content:center; }
+  .mbtn { background:rgba(252,246,234,.88); color:#6B543A; border:1px solid rgba(120,86,52,.3);
+    border-radius:999px; padding:7px 16px; font-size:12px; cursor:pointer;
+    box-shadow:0 2px 8px rgba(8,6,4,.3); font-family:inherit; }
+  .mbtn.on { background:#C96F42; color:#FFF8EC; border-color:#C96F42; }
+</style>
+</head>
+<body>
+<div id="vig"></div>
+<div id="grain"></div>
+<div id="fps">— fps</div>
+<div id="veil"></div>
+<div id="mockUI">
+  <div class="mrow" id="mockCities"></div>
+  <div class="mrow" id="mockPhases"></div>
+</div>
+<script src="three.min.js"></script>
+<script src="town.js"></script>
+</body>
+</html>

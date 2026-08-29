@@ -74,28 +74,26 @@ import com.situ.aichat.ui.components.LocalAppHaptics
 import com.situ.aichat.ui.components.clickableScale
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.world.WorldSceneColors
+import com.situ.aichat.ui.world.WorldSceneColors.QcBody
+import com.situ.aichat.ui.world.WorldSceneColors.QcBusyEnd
+import com.situ.aichat.ui.world.WorldSceneColors.QcBusyStart
+import com.situ.aichat.ui.world.WorldSceneColors.QcBusyText
+import com.situ.aichat.ui.world.WorldSceneColors.QcClose
+import com.situ.aichat.ui.world.WorldSceneColors.QcHandle
+import com.situ.aichat.ui.world.WorldSceneColors.QcHairline
+import com.situ.aichat.ui.world.WorldSceneColors.QcHeadBg
+import com.situ.aichat.ui.world.WorldSceneColors.QcInputBg
+import com.situ.aichat.ui.world.WorldSceneColors.QcInputBorder
+import com.situ.aichat.ui.world.WorldSceneColors.QcInputFocus
+import com.situ.aichat.ui.world.WorldSceneColors.QcPill
+import com.situ.aichat.ui.world.WorldSceneColors.QcPlaceholder
+import com.situ.aichat.ui.world.WorldSceneColors.QcRetryBg
+import com.situ.aichat.ui.world.WorldSceneColors.QcSendIcon
+import com.situ.aichat.ui.world.WorldSceneColors.QcStatus
+import com.situ.aichat.ui.world.WorldSceneColors.QcTypingDot
+import com.situ.aichat.ui.world.WorldSceneColors.QcUserEnd
+import com.situ.aichat.ui.world.WorldSceneColors.QcUserStart
 import com.situ.aichat.util.DateFormatters
-
-// 弹窗专属色（§4.2–4.5 demo 精确值·局部 val·同 WorldSiteSheet 惯例；复用 WorldSceneColors 家族凡匹配处）。
-private val QcHeadBg = Color(0xA9121828) // rgba(18,24,40,.66)
-private val QcHandle = Color(0x47F5EFEA) // rgba(245,239,234,.28)
-private val QcStatus = Color(0xC7F5EFEA) // rgba(245,239,234,.78)
-private val QcClose = Color(0xA6F5EFEA) // rgba(245,239,234,.65)
-private val QcBusyStart = Color(0x33D69E5A) // rgba(214,158,90,.20)
-private val QcBusyEnd = Color(0x14D69E5A) // rgba(214,158,90,.08)
-private val QcBusyText = Color(0xFF9A6B33)
-private val QcBody = Color(0xF5FAF7F2) // rgba(250,247,242,.96)
-private val QcPill = Color(0x0E2E2925) // rgba(46,41,37,.055)
-private val QcUserStart = Color(0xFFC99A86)
-private val QcUserEnd = Color(0xFFBE8A76)
-private val QcTypingDot = Color(0xFFB4A798)
-private val QcRetryBg = Color(0x122E2925) // rgba(46,41,37,.07)
-private val QcInputBorder = Color(0x1F2E2925) // rgba(46,41,37,.12)
-private val QcInputBg = Color(0xFFFFFDF9)
-private val QcPlaceholder = Color(0xFFB4AA9E)
-private val QcInputFocus = Color(0x8CBE8A76) // rgba(190,138,118,.55)
-private val QcSendIcon = Color(0xFFFFF8F2)
-private val QcHairline = Color(0x122E2925)
 
 private val SheetEnterEasing = CubicBezierEasing(0.3f, 1.2f, 0.4f, 1f)
 private val BubbleEnterEasing = CubicBezierEasing(0.3f, 1.3f, 0.4f, 1f)

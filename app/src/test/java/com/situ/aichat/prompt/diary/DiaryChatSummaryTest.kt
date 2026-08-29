@@ -41,6 +41,7 @@ class DiaryChatSummaryTest {
         chatLine = "[%1\$s] %2\$s：%3\$s",
         calendarLine = "%1\$s-%2\$s %3\$s",
         eventUntitled = "无标题", userFallback = "我",
+        photosBlind = "photos<%1\$d>",
     )
 
     private fun msg(

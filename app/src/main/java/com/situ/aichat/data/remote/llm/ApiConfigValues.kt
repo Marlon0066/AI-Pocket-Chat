@@ -28,4 +28,11 @@ data class ApiConfigValues(
      * false → 语音消息走端侧 STT 转写当纯文本发（见 PromptBuilder 音频段挂载 gate）。
      */
     val audioInputEnabled: Boolean = false,
+    /**
+     * 该配置是否应把图片直发给模型（多模态 image_url；模式 + 能力检测综合结果，在 resolve 时从
+     * `ApiConfigEntity.effectiveVisionEnabled()` 快照而来，与 [audioInputEnabled] 完全同构）。
+     * false → 图片消息只走语义占位文本（`renderMemoryContent` 的「发送了一张图片：{摘要}」），
+     * 用户仍可正常发图（拍板②：入口常开），AI 靠摘要回应。
+     */
+    val visionEnabled: Boolean = false,
 )
