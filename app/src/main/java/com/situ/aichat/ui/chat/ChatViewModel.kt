@@ -163,6 +163,8 @@ class ChatViewModel @Inject constructor(
     private val meetingProposalCoordinator: MeetingProposalCoordinator,
     private val meetingAppointmentDao: MeetingAppointmentDao,
     private val meetingAppointmentStore: MeetingAppointmentStore,
+    // 图纸 2026-08-31 C2：任意入口进见面即核销到期约定（ChatOfflineController 消费·VM 仅接线）。
+    private val meetingFulfillmentService: com.situ.aichat.meeting.MeetingFulfillmentService,
     private val meetupNotificationService: MeetupNotificationService,
     // 卷一 A4b：见面结束后补跑主动送礼维护线（见面期被闸掉的礼物/红包补送）。
     private val proactiveGiftMaintenanceService: com.situ.aichat.gift.ProactiveGiftMaintenanceService,
@@ -530,6 +532,7 @@ class ChatViewModel @Inject constructor(
         offlineMeetingService = offlineMeetingService,
         offlineSummaryRetryCoordinator = offlineSummaryRetryCoordinator,
         meetingAppointmentStore = meetingAppointmentStore,
+        meetingFulfillmentService = meetingFulfillmentService,
         runAssistantTurn = ::runAssistantTurnForCurrentConversation,
         serialize = ::launchSerializedTurn,
         cancelActiveTurn = ::cancelActiveTurn,

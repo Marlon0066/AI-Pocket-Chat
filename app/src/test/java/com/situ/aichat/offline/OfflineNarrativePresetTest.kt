@@ -38,7 +38,7 @@ class OfflineNarrativePresetTest {
         assertEquals("说人话就行", p.extraStyleRules)
         assertEquals(listOf("指令1", "指令2"), p.narrativeTechniquePool)
         assertEquals(listOf("底色A"), p.emotionalRegisterPool)
-        // rule8 / seedConstraint fall back to normal.
+        // rule8 falls back to normal.
         assertEquals(OfflineNarrativePreset.NORMAL.rule8, p.rule8)
     }
 
@@ -67,8 +67,58 @@ class OfflineNarrativePresetTest {
         assertTrue(p.contains("11. 每次回复第一个内容块永远不是 [对话]"))
         // iOS `\` continuation: rule 8 is immediately followed by "9." with no line break.
         assertTrue(p.contains("${OfflineNarrativePreset.PLAIN.rule8}9. 每次回复 4-6 个内容块"))
-        // plain has rule17="" so extraStyleRules numbers as 17.
+        // extraStyleRules follows rule 16 and numbers as 17.
         assertTrue(p.contains("17. 写作风格：用最日常的语气写"))
+    }
+
+    // ── 2026-08-31 人设优先、机器退位（微图纸 §4-A/§6）──
+
+    @Test fun build_prompt_rule16_is_persona_first_no_forced_hooks() {
+        // 三档统一：新规则 16 逐字（从微图纸规格反推，非照抄实现）。
+        val expected = "16. 节奏由角色人设和当下情境决定：有话直说的角色可以把话说完，慢热的角色可以欲言又止；" +
+            "不需要刻意制造悬念或在每轮留下钩子，允许什么都没发生、纯粹放松的相处。" +
+            "当 allow_end 为 true 时允许场景自然收束走向告别"
+        for (preset in listOf(OfflineNarrativePreset.PLAIN, OfflineNarrativePreset.NORMAL, OfflineNarrativePreset.DETAILED)) {
+            val p = OfflineNarrativePreset.buildPrompt(
+                currentTimeText = "x",
+                characterCity = null, characterWeather = null, userCity = null, userWeather = null,
+                tensionSeed = null, sceneProgress = null, perTurnDirective = null,
+                preset = preset,
+            )
+            assertTrue(p.contains(expected))
+            // 旧规则 16「强制欲言又止」与旧规则 17「微小的可是/意外」独有句不再出现（全库独有句已 grep 核）。
+            assertFalse(p.contains("必须留下至少一个"))
+            assertFalse(p.contains("每轮都强行制造波折"))
+            assertFalse(p.contains("生活的毛边感"))
+        }
+    }
+
+    @Test fun build_prompt_normal_style_rule_renumbered_to_17() {
+        // §4-E：规则 17 撤除后 NORMAL 风格规则编号 18→17（正文逐字不动），紧跟规则 16 无断号（R1 🔵-2 补锁）。
+        val p = OfflineNarrativePreset.buildPrompt(
+            currentTimeText = "x",
+            characterCity = null, characterWeather = null, userCity = null, userWeather = null,
+            tensionSeed = null, sceneProgress = null, perTurnDirective = null,
+            preset = OfflineNarrativePreset.NORMAL,
+        )
+        assertTrue(p.contains("\n17. 写作风格：像朋友在讲今天发生了什么"))
+        assertFalse(p.contains("\n18. "))
+    }
+
+    @Test fun builtin_pools_persona_directives_retired() {
+        // NORMAL：行为类导演指令池整池退役；情绪底色池本就为空。
+        assertTrue(OfflineNarrativePreset.NORMAL.narrativeTechniquePool.isEmpty())
+        assertTrue(OfflineNarrativePreset.NORMAL.emotionalRegisterPool.isEmpty())
+        // DETAILED：情绪底色池退役；技法池砍 4 留 6（只剩纯写作技法）。
+        assertTrue(OfflineNarrativePreset.DETAILED.emotionalRegisterPool.isEmpty())
+        val techniques = OfflineNarrativePreset.DETAILED.narrativeTechniquePool
+        assertEquals(6, techniques.size)
+        for (kept in listOf("焦距切换", "感官替换", "节奏变速", "细节锚点", "五感递进", "动作隐喻")) {
+            assertTrue(techniques.any { it.startsWith(kept) })
+        }
+        for (removed in listOf("留白叙事", "对话潜台词", "反转收束", "沉默叙事", "底色")) {
+            assertFalse(techniques.any { it.startsWith(removed) })
+        }
     }
 
     @Test fun build_prompt_always_carries_real_time_line() {
@@ -79,7 +129,12 @@ class OfflineNarrativePresetTest {
 
     @Test fun build_prompt_appends_seed_directive_sceneprogress_in_order() {
         val p = prompt(seed = "她今天有心事", progress = "allow_end: false", directive = "【本轮叙事指令】\n· 补一个情绪")
-        assertTrue(p.contains("【今日场景种子】\n她今天有心事\n${OfflineNarrativePreset.PLAIN.seedConstraint}"))
+        // 种子约束 = 三档统一常量（微图纸 §4-B 逐字；「前 3 轮不说破」定节奏版已废弃）。
+        assertTrue(
+            p.contains(
+                "【今日场景种子】\n她今天有心事\n这件事不需要立刻摊开说——如果对话自然聊到了就可以提起，没聊到也不用硬塞。让它像真实的心事一样，在合适的时候自然浮出来。",
+            ),
+        )
         assertTrue(p.contains("【本轮叙事指令】\n· 补一个情绪"))
         // sceneProgress is appended LAST.
         assertTrue(p.endsWith("【节拍状态】\nallow_end: false"))

@@ -1,7 +1,9 @@
 package com.situ.aichat.offline
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -96,6 +98,24 @@ class OfflineMarkerPayloadTest {
         assertNull(OfflineMarkerEndPayload.parse("【线下见面结束 | 时长：约30分钟 | 时间：16:00】\n你们道别了")) // 无结束句
         assertNull(OfflineMarkerEndPayload.parse("【线下见面结束 | 时长：约30分钟】")) // 不足 3 段
         assertNull(OfflineMarkerEndPayload.parse("【线下见面开始 | 地点：X】")) // 错前缀
+    }
+
+    // ── end: llmRepresentation（留痕改造 2026-08-31·图纸 §7 T1-2）──
+
+    @Test fun end_llm_representation_exact_text() {
+        // 图纸 §3.2 锁定措辞（逐字反推·只露时长）。
+        assertEquals(
+            "[系统记录：线下见面结束（约40分钟），你们回到了线上聊天]",
+            OfflineMarkerEndPayload("约40分钟", "16:00", "你们自然地结束了这次见面").llmRepresentation(),
+        )
+    }
+
+    @Test fun end_llm_representation_drops_important_directive_and_reason() {
+        // 【重要】指令段只服务见面刚结束那一轮，不该永驻历史；结束原因也不进普通聊天窗口。
+        val line = OfflineMarkerEndPayload("约40分钟", "16:00", "用户主动结束了这次见面").llmRepresentation()
+        assertFalse("留痕行不应带【重要】指令段，实际：$line", line.contains("【重要】"))
+        assertFalse(line.contains("用户主动结束了这次见面"))
+        assertTrue("留痕行须以 [系统记录： 开头且含「线下见面结束」（供复读折叠）", line.startsWith("[系统记录：") && line.contains("线下见面结束"))
     }
 
     // ── stripOfflineMarkerLabel ──

@@ -13,6 +13,7 @@ import com.situ.aichat.data.repository.SettingsRepository
 import com.situ.aichat.gift.ProactiveGiftMaintenanceService
 import com.situ.aichat.meeting.MeetingAppointmentStore
 import com.situ.aichat.meeting.MeetingArrivalPolicy
+import com.situ.aichat.meeting.MeetingFulfillmentService
 import com.situ.aichat.offline.OfflineChatVisibility
 import com.situ.aichat.offline.OfflineMarkerStartPayload
 import com.situ.aichat.offline.OfflineMeetingGate
@@ -49,6 +50,8 @@ internal class ChatOfflineController(
     private val offlineMeetingService: OfflineMeetingService,
     private val offlineSummaryRetryCoordinator: OfflineSummaryRetryCoordinator,
     private val meetingAppointmentStore: MeetingAppointmentStore,
+    // 图纸 2026-08-31 C2：任意入口进见面即核销本会话到期的已确认约定（不再只认赴约按钮/通知两路）。
+    private val meetingFulfillmentService: MeetingFulfillmentService,
     private val runAssistantTurn: suspend () -> Unit,
     private val serialize: (suspend () -> Unit) -> Unit,
     private val cancelActiveTurn: suspend () -> Unit,
@@ -120,7 +123,10 @@ internal class ChatOfflineController(
             offlineMeetingService.markInviteResponded(messageUuid, "accepted")
             // 卷一 D2：把被点的那张卡的 uuid 传下去——往回翻点旧卡时不能被「扫最近一张」带进另一场约。
             val sessionId = offlineMeetingService.acceptOfflineInvite(conversationUuid, messageUuid)
-            if (sessionId != null) runAssistantTurn()
+            if (sessionId != null) {
+                honorDueAppointmentsSafely(sessionId) // C2：邀约卡进的同一场约也算赴约
+                runAssistantTurn()
+            }
         }
     }
 
@@ -133,7 +139,10 @@ internal class ChatOfflineController(
     fun startManualOfflineMeeting(location: String, activity: String) {
         serialize {
             val sessionId = offlineMeetingService.startManualOfflineMeeting(conversationUuid, location, activity)
-            if (sessionId != null) runAssistantTurn()
+            if (sessionId != null) {
+                honorDueAppointmentsSafely(sessionId) // C2：手动发起的同一场约也算赴约
+                runAssistantTurn()
+            }
         }
     }
 
@@ -162,6 +171,7 @@ internal class ChatOfflineController(
                 offlineMeetingService.startFromAppointment(conversationUuid, appt.location, appt.activity, appt.hiddenTensionSeed)
             if (sessionId != null) {
                 meetingAppointmentStore.markHonored(appointmentUuid, sessionId)
+                honorDueAppointmentsSafely(sessionId) // C2：同窗口的重复/幽灵约定顺手一并核销（幂等）
                 serialize { runAssistantTurn() } // 已打断·isSending 已清 → 开场回合不会被丢
             } else {
                 // 卷一 D1a（拍板⑪）：进不去的唯一常见原因 = **已经在见面中**（enterOfflineMode 幂等返 null）——
@@ -170,9 +180,20 @@ internal class ChatOfflineController(
                 val convo = conversationRepo.get(conversationUuid)
                 if (OfflineMeetingGate.inMeeting(convo)) {
                     meetingAppointmentStore.markHonored(appointmentUuid, convo?.currentOfflineSessionId.orEmpty())
+                    honorDueAppointmentsSafely(convo?.currentOfflineSessionId.orEmpty()) // C2：同上
                 }
             }
         }
+    }
+
+    /**
+     * 图纸 2026-08-31 C2：进见面成功后核销本会话到期的已确认约定 + 撤其到点通知
+     * （[MeetingFulfillmentService.honorDueAppointmentsOnMeetingStart]·幂等）。失败只记日志，
+     * 绝不拖垮见面开场——核销漏掉还有爽约扫描的真见面闸兜底（C1）。
+     */
+    private suspend fun honorDueAppointmentsSafely(sessionId: String) {
+        runCatching { meetingFulfillmentService.honorDueAppointmentsOnMeetingStart(conversationUuid, sessionId) }
+            .onFailure { Log.w(TAG_INSTANT_GIST, "进见面核销约定失败（不影响见面）：${it.message}") }
     }
 
     /**

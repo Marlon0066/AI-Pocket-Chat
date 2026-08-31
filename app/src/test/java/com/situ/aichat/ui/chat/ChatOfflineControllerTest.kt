@@ -6,6 +6,7 @@ import com.situ.aichat.data.local.entity.MeetingAppointmentEntity
 import com.situ.aichat.data.model.AppSettings
 import com.situ.aichat.data.repository.SettingsRepository
 import com.situ.aichat.meeting.MeetingAppointmentStore
+import com.situ.aichat.meeting.MeetingFulfillmentService
 import com.situ.aichat.offline.OfflineMeetingService
 import com.situ.aichat.offline.OfflineSummaryRetryCoordinator
 import io.mockk.coEvery
@@ -38,6 +39,7 @@ class ChatOfflineControllerTest {
     private lateinit var settingsRepo: SettingsRepository
     private lateinit var offlineSummaryRetryCoordinator: OfflineSummaryRetryCoordinator
     private lateinit var meetingAppointmentStore: MeetingAppointmentStore
+    private lateinit var meetingFulfillmentService: MeetingFulfillmentService
     private lateinit var proactiveGiftMaintenance: com.situ.aichat.gift.ProactiveGiftMaintenanceService
     private lateinit var conversationRepo: com.situ.aichat.data.repository.ConversationRepository
     private lateinit var appContext: Context
@@ -56,6 +58,7 @@ class ChatOfflineControllerTest {
         settingsRepo = mockk(relaxed = true)
         offlineSummaryRetryCoordinator = mockk(relaxed = true)
         meetingAppointmentStore = mockk(relaxed = true)
+        meetingFulfillmentService = mockk(relaxed = true)
         proactiveGiftMaintenance = mockk(relaxed = true)
         conversationRepo = mockk(relaxed = true)
         appContext = mockk(relaxed = true)
@@ -80,6 +83,7 @@ class ChatOfflineControllerTest {
             offlineMeetingService = offlineMeetingService,
             offlineSummaryRetryCoordinator = offlineSummaryRetryCoordinator,
             meetingAppointmentStore = meetingAppointmentStore,
+            meetingFulfillmentService = meetingFulfillmentService,
             runAssistantTurn = { runAssistantTurnCount++ },
             serialize = { block -> scope.launch { block() } }, // 真跑 block（= launchSerializedTurn 在 VM 里 launch 的等价）
             cancelActiveTurn = { cancelActiveTurnCount++ },
@@ -142,6 +146,46 @@ class ChatOfflineControllerTest {
         controller.declineOfflineInvite("msg-1")
         coVerify { offlineMeetingService.markInviteResponded("msg-1", "declined") }
         assertEquals(0, runAssistantTurnCount)
+    }
+
+    // ---- 图纸 2026-08-31 C2：任意入口进见面即核销到期约定 ----
+
+    @Test
+    fun 接受邀约_有session_核销到期约定() {
+        coEvery { offlineMeetingService.acceptOfflineInvite("conv-1", "msg-1") } returns "session-1"
+        controller.acceptOfflineInvite("msg-1")
+        coVerify(exactly = 1) {
+            meetingFulfillmentService.honorDueAppointmentsOnMeetingStart("conv-1", "session-1", any(), any())
+        }
+    }
+
+    @Test
+    fun 接受邀约_无session_不核销() {
+        coEvery { offlineMeetingService.acceptOfflineInvite("conv-1", "msg-1") } returns null
+        controller.acceptOfflineInvite("msg-1")
+        coVerify(exactly = 0) {
+            meetingFulfillmentService.honorDueAppointmentsOnMeetingStart(any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun 主动发起_有session_核销到期约定() {
+        coEvery { offlineMeetingService.startManualOfflineMeeting("conv-1", "咖啡馆", "喝咖啡") } returns "session-1"
+        controller.startManualOfflineMeeting("咖啡馆", "喝咖啡")
+        coVerify(exactly = 1) {
+            meetingFulfillmentService.honorDueAppointmentsOnMeetingStart("conv-1", "session-1", any(), any())
+        }
+    }
+
+    /** 核销失败绝不拖垮见面开场（runCatching 吞掉 + 只记日志）。 */
+    @Test
+    fun 主动发起_核销抛异常_开场照常() {
+        coEvery { offlineMeetingService.startManualOfflineMeeting(any(), any(), any()) } returns "session-1"
+        coEvery {
+            meetingFulfillmentService.honorDueAppointmentsOnMeetingStart(any(), any(), any(), any())
+        } throws IllegalStateException("boom")
+        controller.startManualOfflineMeeting("咖啡馆", "喝咖啡")
+        assertEquals(1, runAssistantTurnCount)
     }
 
     // ---- 主动发起 / 改成邀约 / 取消提示 / 续场 ----
@@ -262,6 +306,10 @@ class ChatOfflineControllerTest {
         assertEquals(1, cancelActiveTurnCount) // 复核 MED：进沉浸前先打断在投递回合(防赴约被 serialize 丢弃)
         coVerify { offlineMeetingService.startFromAppointment("conv-1", "咖啡馆", "喝咖啡", "有点紧张") }
         coVerify { meetingAppointmentStore.markHonored("appt-1", "session-1", any()) }
+        // C2：同窗口的重复/幽灵约定顺手一并核销（幂等·失败不拖垮开场）
+        coVerify(exactly = 1) {
+            meetingFulfillmentService.honorDueAppointmentsOnMeetingStart("conv-1", "session-1", any(), any())
+        }
         assertEquals(1, runAssistantTurnCount)
     }
 

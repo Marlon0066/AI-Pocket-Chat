@@ -3,9 +3,11 @@ package com.situ.aichat.offline
 import kotlin.math.roundToInt
 
 /**
- * 线下模式叙事预设（1:1 iOS `OfflineNarrativePreset`）。封装各档位差异化配置（规则文本 + 指令池），
- * 并提供完整系统提示词构建 [buildPrompt]。提示词为硬编码中文（iOS 用 Swift 字面量，非 localized），
- * 1:1 照搬（含 iOS 模板里 rule8 与 rule9 之间靠 `\` 续行 = 无换行直接相接的行为）。
+ * 线下模式叙事预设（源自 iOS `OfflineNarrativePreset`；2026-08-31「人设优先、机器退位」微图纸起
+ * 与 iOS 分道：情绪底色池 / 行为类导演指令 / 强制欲言又止（旧规则 16）/「微小意外」条款（旧规则 17）
+ * 已拆除，节奏交回角色人设——见 docs/handoff/2026-08-31-线下见面人设优先机器退位-微图纸.md）。
+ * 封装各档位差异化配置（规则文本 + 指令池），并提供完整系统提示词构建 [buildPrompt]。提示词为硬编码
+ * 中文（含 iOS 模板里 rule8 与 rule9 之间靠 `\` 续行 = 无换行直接相接的行为）。
  *
  * 导演指令引擎（analyze/generate/select）在 10.2b-2；本文件只提供预设数据 + prompt 装配。
  */
@@ -16,11 +18,8 @@ data class OfflineNarrativePreset(
     val rule8: String,
     val rule12: String,
     val rule13: String,
-    /** 规则 17（“微小意外”条款）；空串=不含此规则（此时 extraStyleRules 编号顶上来变 17，见 plain）。 */
-    val rule17: String,
-    /** rule17 之后追加的风格规则，编号自含（normal=“18.”，plain=“17.”）。 */
+    /** 规则 16 之后追加的风格规则，编号自含（= “17.”）；空串 = 无追加。 */
     val extraStyleRules: String,
-    val seedConstraint: String,
     // — 指令池（空 = 不使用该池） —
     val blockEmphasisPool: List<BlockEmphasisDirective>,
     val narrativeTechniquePool: List<String>,
@@ -44,9 +43,7 @@ data class OfflineNarrativePreset(
             rule8 = "8. 每轮结尾呈\"等待用户反应的姿态\"——说完就停，留空间给用户。不要单方面结束场景",
             rule12 = "12. 以对话为主，动作和环境简短穿插即可",
             rule13 = "13. [环境] 简单写一下周围的情况就行",
-            rule17 = "", // 平淡档不含“微小意外”条款，所以风格规则编号从 17 开始
             extraStyleRules = "17. 写作风格：用最日常的语气写，不要文学修辞，角色说人话",
-            seedConstraint = "这件事不需要立刻摊开说——如果对话自然聊到了就可以提起，没聊到也不用硬塞。让它像真实的心事一样，在合适的时候自然浮出来。",
             blockEmphasisPool = listOf(
                 BlockEmphasisDirective(setOf(BlockType.EMOTION), "本轮补一个 [情绪]"),
                 BlockEmphasisDirective(setOf(BlockType.INNER_MONOLOGUE), "本轮补一个 [内心]"),
@@ -65,9 +62,7 @@ data class OfflineNarrativePreset(
             rule8 = "8. 每一轮回复的结尾呈\"等待用户反应的姿态\"——自然地把对话空间留给用户。可以是一句话说完了、一个动作做完了、或者一个自然的停顿。不需要刻意制造悬念。反面示例：✗\"他们道别，各自离开\"（这是单方面结束场景）",
             rule12 = "12. 对话是主体——大部分内容应该是角色在说话；动作、环境、内心是点缀，穿插在对话之间让画面更生动，但不要喧宾夺主。避免连续两段纯内心独白",
             rule13 = "13. [环境] 写此刻场景里真实存在的感官细节——听到什么、闻到什么、温度如何，选最自然的那一个写就行，不用每种感官都覆盖。把【双方位置和天气】的天气融进环境描写里，但不要直接说“因为天气所以……”",
-            rule17 = "17. 在 allow_end 为 false 或未注入节拍状态时，不需要每轮都一帆风顺——偶尔出现一个小意外是自然的，但不要每轮都强行制造波折。当 allow_end 为 true 时让场景自然走向告别",
-            extraStyleRules = "18. 写作风格：像朋友在讲今天发生了什么，不像在写小说。不用华丽的比喻和修辞，不用文学腔，角色说话用口语而不是书面语。如果一句话在现实生活中没有人会这样说，就换一种说法",
-            seedConstraint = "这件事不需要立刻摊开说——如果对话自然聊到了就可以提起，没聊到也不用硬塞。让它像真实的心事一样，在合适的时候自然浮出来。",
+            extraStyleRules = "17. 写作风格：像朋友在讲今天发生了什么，不像在写小说。不用华丽的比喻和修辞，不用文学腔，角色说话用口语而不是书面语。如果一句话在现实生活中没有人会这样说，就换一种说法",
             blockEmphasisPool = listOf(
                 BlockEmphasisDirective(setOf(BlockType.EMOTION), "本轮记得写一个 [情绪]——角色此刻的真实感受，用日常的方式表达就好"),
                 BlockEmphasisDirective(setOf(BlockType.EMOTION), "本轮加一个 [情绪]——可以是很小的情绪变化，不需要夸张"),
@@ -82,31 +77,19 @@ data class OfflineNarrativePreset(
                 BlockEmphasisDirective(setOf(BlockType.TIME_SKIP), "本轮可以用 [时间] 让时间自然地往前走一点"),
                 BlockEmphasisDirective(setOf(BlockType.ACTION), "本轮 [动作] 写角色一个自然的小动作——不需要特别有含义"),
             ),
-            narrativeTechniquePool = listOf(
-                "这轮让角色主动问用户一个问题——出于真正的好奇，不是为了推进剧情",
-                "这轮让角色提起一件自己最近的小事——可以是今天看到的、吃到的、想到的",
-                "这轮让角色对用户刚才说的话有一个具体的反应——同意、惊讶、好笑、或者不太认同都行",
-                "这轮让角色和用户之间有一个自然的沉默——不尴尬的那种，就是暂时没话说",
-                "这轮让角色注意到周围的某个东西并且提起它——路过的人、远处的声音、菜单上的某样东西",
-                "这轮让角色做一个日常的事——看手机、喝水、整理东西——然后自然地接上对话",
-                "这轮让角色因为某件小事笑出来或者叹气——真实的情绪反应，不需要铺垫",
-                "这轮让对话里出现一个小分歧——不是吵架，是两个人想法不完全一样的瞬间",
-                "这轮让角色突然想起什么事——可以分享给用户，也可以只是自己想了一下就过了",
-                "这轮让角色的状态有一点变化——比如从活跃变安静，或者从走神变专注——不需要解释原因",
-            ),
+            // 2026-08-31 人设优先：行为类导演指令池（让角色提问/笑/沉默…替角色做主）整池退役。
+            narrativeTechniquePool = emptyList(),
             emotionalRegisterPool = emptyList(),
         )
 
-        // MARK: - 细腻档（保留全部文学创作风格，一字不改）
+        // MARK: - 细腻档（2026-08-31 人设优先：技法池只留纯写作技法，情绪底色池退役）
         val DETAILED = OfflineNarrativePreset(
             level = DetailLevel.DETAILED,
             environmentTagDesc = "感官细节：温度、气味、声音方向、“差一点发生”的触感、视觉[/环境]",
             rule8 = "8. 每一轮回复的最后一个内容块必须呈\"等待用户反应的姿态\"——把话筒交给用户，不是推进剧情也不是结束场景。合法形式：一个停在半空的动作（他的指尖差一点碰到你的手）、一句未得到回答的话（\"你是不是……\"）、一个停下的脚步、一个望向你的眼神。反面示例（不要这样收束）：✗\"他们道别，各自离开\"（这是结束场景）；✗\"她点头坐下，点了一杯拿铁\"（这只是交代完动作）",
             rule12 = "12. 整轮文字整体配比参考：对话 ≈40%、角色动作+身体语言 ≈30%、环境+感官 ≈20%、内心独白 ≈10%；避免连续两段纯对话或连续两段纯内心独白",
             rule13 = "13. 使用 [环境] 时优先写非视觉通道——温度差、嗅觉、“差一点发生”的触感、声音的方向感；视觉细节建议每轮最多 1 处，把感官带宽留给其他通道；把【双方位置和天气】的真实天气作为隐性氛围（雨天偏内向、晴天偏开放、夜晚偏感性），让它渗进环境描写里，但不要直白地说“因为今天下雨所以……”，让氛围是“泡”出来的不是“说”出来的",
-            rule17 = "17. 在 allow_end 为 false 或未注入节拍状态时，场景顺利推进时附带一个微小的“可是”——点的咖啡上错了但意外好喝、终于找到话题但手机突然响了、气氛刚好但天开始下小雨。不是制造麻烦，是让生活的毛边感渗进来。当 allow_end 为 true 时不再添加新的“可是”，让场景自然走向告别",
             extraStyleRules = "",
-            seedConstraint = "这件事不要在前 3 轮直接说破，让它在对话里慢慢浮现，但也不要让它在第一轮就被完全解开。",
             blockEmphasisPool = listOf(
                 BlockEmphasisDirective(setOf(BlockType.EMOTION), "本轮用 [情绪] 描写角色情绪的身体版本——不是「她有点紧张」，而是「她无意识地把手机翻过来又翻回去」"),
                 BlockEmphasisDirective(setOf(BlockType.EMOTION), "本轮 [情绪] 写成一个隐喻——不是「她觉得很温暖」，而是「像是冬天里忽然找到口袋里上次放进去的暖手宝」"),
@@ -121,30 +104,17 @@ data class OfflineNarrativePreset(
                 BlockEmphasisDirective(setOf(BlockType.TIME_SKIP), "本轮用 [时间] 让时间感跳一下——「不知道过了多久」或「你们不知不觉走了两条街」，让读者感受到时间不只是匀速流动的"),
                 BlockEmphasisDirective(setOf(BlockType.ACTION), "本轮 [动作] 描写一个犹豫——伸手又缩回、想说又咽下、看了一眼又移开——比完成的动作更有张力"),
             ),
+            // 2026-08-31 人设优先砍 4 留 6：只留纯管文笔的技法（镜头/感官/节奏/物件/动作），
+            // 替角色做主的（留白叙事/对话潜台词/反转收束/沉默叙事）与整个情绪底色池退役。
             narrativeTechniquePool = listOf(
                 "焦距切换：从大画面（整个场景的氛围）切到极小特写（指尖、睫毛），再拉回中景",
-                "留白叙事：写一个差一点就发生的瞬间——快要脱口而出的话、快要触碰到的手、快要变成拥抱的靠近",
                 "感官替换：环境描写优先用嗅觉和触觉——空气的温度、衣料的质感、食物的气味、皮肤上的风",
-                "对话潜台词：角色真正想说的事不直说——用聊别的事来间接表达",
                 "节奏变速：前半段放慢（用环境和感官堆出时间凝滞感），后半段一句话打破沉默",
                 "细节锚点：选一个场景里的小物件，让它在这轮出现两次，第二次承载不同的情绪含义",
-                "反转收束：最后一个内容块和前面的氛围形成轻微反转——温馨时闪过一丝不安，尴尬时忽然自然地笑了",
                 "五感递进：依次调动不同感官——先听到、再闻到、然后触碰到、最后看到表情——像慢慢转动对焦环",
-                "沉默叙事：写一段都没说话的时刻——不是尴尬的沉默，而是只有熟悉的人之间才有的、不需要填满的安静",
                 "动作隐喻：角色一个日常小动作（整理头发、转笔、撕纸巾边角）暗示心理状态，不解释",
             ),
-            emotionalRegisterPool = listOf(
-                "底色：安全感里的小不确定——整体舒适，但角色心里有个还没想明白的念头，像茶杯底若有若无的茶渍",
-                "底色：说不出口的感谢——角色因某个瞬间被触动，但不好意思直说，只能用行动回应",
-                "底色：怀旧的温柔——某个细节让角色想起过去的一个瞬间，不是伤感，是「原来这些都还在」的感慨",
-                "底色：轻微的紧张感——不是害怕，是在意——角色很在乎此刻，怕自己说错什么或错过什么",
-                "底色：偷到一段时间——有种逃课般的快乐，日常的事暂时不存在，只有此刻的两个人",
-                "底色：想靠近又怕太近——角色想更亲密一点，但在估量对方的反应，整轮保持微妙的推拉感",
-                "底色：平静下面的暗流——表面聊很日常的话题，但角色内心有个没说出口的事在发酵",
-                "底色：被理解的惊喜——用户做了或说了某件小事，让角色觉得「原来你注意到了」，但不会直说",
-                "底色：离别前的珍惜——不一定真要走了，但角色忽然意识到这段时光的有限性，变得更专注当下",
-                "底色：好奇心——角色对用户的某个反应产生了真正的好奇，想再多了解一点，主动发问",
-            ),
+            emotionalRegisterPool = emptyList(),
         )
 
         /** 从用户自定义文本构建预设，以 normal 档为 fallback（1:1 iOS `custom`）。 */
@@ -160,9 +130,7 @@ data class OfflineNarrativePreset(
                 // 用户有自定义风格 → 清空内置风格规则，由自定义文本接管
                 rule12 = if (hasCustomStyle) "" else base.rule12,
                 rule13 = if (hasCustomStyle) "" else base.rule13,
-                rule17 = "",
                 extraStyleRules = if (hasCustomStyle) style.trim() else base.extraStyleRules,
-                seedConstraint = base.seedConstraint,
                 blockEmphasisPool = emptyList(), // 自定义不做块类型定向分析，由用户文本直接轮换
                 narrativeTechniquePool = directiveEntries,
                 emotionalRegisterPool = emotionEntries,
@@ -182,7 +150,7 @@ data class OfflineNarrativePreset(
          * 构建线下见面模式完整系统提示词（1:1 iOS `buildPrompt`）。
          *
          * @param currentTimeText 已格式化的当前真实时间。
-         * @param tensionSeed 心事种子（非空时拼【今日场景种子】块 + seedConstraint）。
+         * @param tensionSeed 心事种子（非空时拼【今日场景种子】块 + [SEED_CONSTRAINT]）。
          * @param sceneProgress 节拍状态 Markdown（非空时拼【节拍状态】块）。
          * @param perTurnDirective 本轮叙事指令（10.2b-2 引擎生成；非空时拼入）。
          */
@@ -203,8 +171,7 @@ data class OfflineNarrativePreset(
             val timeLine = "当前真实时间：$currentTimeText\n"
             val rule14 = "14. 结合当前的真实时间来推进线下场景"
 
-            val seedBlock = if (!tensionSeed.isNullOrEmpty()) "\n\n【今日场景种子】\n$tensionSeed\n${preset.seedConstraint}" else ""
-            val rule17Line = if (preset.rule17.isEmpty()) "" else "\n${preset.rule17}"
+            val seedBlock = if (!tensionSeed.isNullOrEmpty()) "\n\n【今日场景种子】\n$tensionSeed\n$SEED_CONSTRAINT" else ""
             val extraLine = if (preset.extraStyleRules.isEmpty()) "" else "\n${preset.extraStyleRules}"
 
             // base 用 flush-left """ 避免 trimIndent 与插值换行冲突；rule8 与 "9." 直接相接 = iOS `\` 续行行为。
@@ -238,7 +205,7 @@ ${preset.rule12}
 ${preset.rule13}
 $rule14
 15. 当见面场景走到告别时，先完整输出告别段落（至少 1 个 [场景] 或 [环境] + 1 个 [动作] + 1 个 [对话]），然后调用 end_offline_meeting 工具。判断是否应结束以本 prompt 末尾【节拍状态】的 allow_end 字段为准（若未注入则遵循场景自然推进）。如果你的模型不支持工具调用，请在回复末尾附上 [offline_end] 标记
-16. 在 allow_end 为 false 或未注入节拍状态时，每一轮必须留下至少一个"未完成"带入下一轮——一句被打断的话（"其实我……"然后被路过的服务员中断）、一个没来得及回答的问题、一个还没解释的反常举动。反面示例：✗ 角色心事在同一轮里被问出来并且释然了；✗ 误会在同一轮里产生又消除。当 allow_end 为 true 时此规则不再强制，允许场景自然收束走向告别$rule17Line$extraLine"""
+16. 节奏由角色人设和当下情境决定：有话直说的角色可以把话说完，慢热的角色可以欲言又止；不需要刻意制造悬念或在每轮留下钩子，允许什么都没发生、纯粹放松的相处。当 allow_end 为 true 时允许场景自然收束走向告别$extraLine"""
 
             val directiveBlock = if (!perTurnDirective.isNullOrEmpty()) "\n\n$perTurnDirective" else ""
             val progress = sceneProgress?.trim().orEmpty()
@@ -256,6 +223,13 @@ $rule14
                 "[情绪][内心][动作] 必须贴合角色人设与你们当前的关系阶段：外向自来熟的角色不会无端紧张，内向慢热的角色不会突然过分热络；「紧张」「害羞」这类情绪只有在人设或当下情境真正支撑时才出现，不要默认套用。" +
                 "\n\n【线上线下连续性】\n" +
                 "这次见面是你们平时线上聊天的自然延续。你记得系统提示里的共同记忆与过往见面回忆，对话中可以自然地提起（比如「上次你说…」「上回来这儿…」），但不要生硬堆砌回忆，更不要表现得像第一次认识。"
+
+        /**
+         * 心事种子约束（seedBlock 尾行·三档统一「自然带出」口径）。2026-08-31 人设优先微图纸 §4-B：
+         * 取原 PLAIN/NORMAL 文本逐字；DETAILED 原「前 3 轮不说破」定节奏版废弃。
+         */
+        private const val SEED_CONSTRAINT: String =
+            "这件事不需要立刻摊开说——如果对话自然聊到了就可以提起，没聊到也不用硬塞。让它像真实的心事一样，在合适的时候自然浮出来。"
 
         /** 位置天气块（1:1 iOS `buildLocationBlock`）；城市/天气任一为空均优雅省略。 */
         fun buildLocationBlock(

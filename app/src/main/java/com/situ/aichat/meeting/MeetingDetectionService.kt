@@ -164,6 +164,9 @@ object MeetingDetectionService {
         characterName: String,
         userName: String,
         nowText: String,
+        // 图纸 2026-08-31 C3：近期已赴约的约定（防幽灵——旧事重提不算新约定）。默认空 = 输出与既往**字节级一致**
+        // （可选尾参范式·回归钉测试锁定）。刻意不给 id：终态不可作 reschedule/cancel/confirm 的 target。
+        recentlyHonored: List<ExistingAppointmentBrief> = emptyList(),
     ): String {
         val charName = characterName.ifEmpty { "AI 角色" }
         val uName = userName.ifEmpty { "用户" }
@@ -171,6 +174,14 @@ object MeetingDetectionService {
             "（当前没有待定的约定）"
         } else {
             existing.joinToString("\n") { "- id=${it.uuid} | 时间：${it.whenText} | 活动：${it.activity}" }
+        }
+        // 非空时整块自带前导空行拼在待定块之后；空时为空串 → 模板输出零变化。
+        val honoredBlock = if (recentlyHonored.isEmpty()) {
+            ""
+        } else {
+            "\n\n【近期已赴约的见面】（下面这些约定**已经见过面、圆满结束**。最近对话里再聊到同一件事，" +
+                "是在回味旧事而不是新约定——不要为它们输出 new；除此以外没有新约定就输出 {\"intent\":\"none\"}）\n" +
+                recentlyHonored.joinToString("\n") { "- 时间：${it.whenText} | 活动：${it.activity}（已赴约）" }
         }
         return """
             你是一个严格的信息抽取器。判断 ${uName} 和 ${charName} 在最近这段对话里，是否**明确约定了未来某天**线下见面。
@@ -184,7 +195,7 @@ object MeetingDetectionService {
             - 也要识别对【已有待定约定】的：改期(reschedule)、取消(cancel)、确认(confirm)。
 
             【已有待定约定】
-            ${existingBlock}
+            ${existingBlock}${honoredBlock}
 
             【最近对话】
             ${conversationText}

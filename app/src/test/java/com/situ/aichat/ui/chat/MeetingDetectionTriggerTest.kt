@@ -7,6 +7,7 @@ import com.situ.aichat.data.local.entity.MessageEntity
 import com.situ.aichat.data.model.MeetingCandidate
 import com.situ.aichat.data.model.MeetingCandidateIntent
 import com.situ.aichat.data.remote.llm.ApiConfigValues
+import com.situ.aichat.data.remote.llm.ChatMessageDto
 import com.situ.aichat.data.repository.ConversationRepository
 import com.situ.aichat.data.repository.MessageRepository
 import com.situ.aichat.diagnostics.ContextLogService
@@ -16,8 +17,10 @@ import com.situ.aichat.meeting.MeetupNotificationService
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.ZoneId
 
@@ -106,6 +109,38 @@ class MeetingDetectionTriggerTest {
             .ingestFastPath(listOf(MeetingCandidate(intent = MeetingCandidateIntent.NEW, rawWhen = "周六", activity = "看展")), character)
 
         coVerify { meetup.rescheduleAll(any()) }
+    }
+
+    /**
+     * 图纸 2026-08-31 C3：扫描提示词 ①每条消息带说出时刻（治「昨天的『明天』被当今天说的」）
+     * ②近 7 天已赴约约定进【近期已赴约的见面】块（旧事重提不算新约）。
+     */
+    @Test fun scan_promptCarriesTimestampsAndRecentlyHonoredBlock() {
+        val conv = mockk<ConversationRepository>(relaxed = true)
+        val msg = mockk<MessageRepository>(relaxed = true)
+        val store = mockk<MeetingAppointmentStore>(relaxed = true)
+        val coord = mockk<MeetingProposalCoordinator>(relaxed = true)
+        val log = mockk<ContextLogService>()
+        val promptSlot = slot<List<ChatMessageDto>>()
+        coEvery { conv.get("conv1") } returns convo()
+        coEvery { msg.recentVisibleChronological("conv1", any()) } returns fourRounds()
+        coEvery { store.activeForCharacter("c1") } returns emptyList()
+        coEvery { store.recentlyHonoredForCharacter("c1", any(), any()) } returns listOf(
+            MeetingAppointmentEntity(
+                uuid = "h1", characterUuid = "c1", conversationUuid = "conv1", status = "honored",
+                scheduledAt = 1_000L, timeGranularity = "dayOnly", activity = "买裙子", outcomeAt = 2_000L,
+            ),
+        )
+        coEvery {
+            log.completion(any(), any(), any(), capture(promptSlot), any(), any(), any(), any(), any())
+        } returns """{"intent":"none"}"""
+
+        trigger(conv, msg, store, coord, log).checkAndTrigger(character, mockk(relaxed = true), "用户")
+
+        val system = promptSlot.captured.first { it.role == "system" }.content.orEmpty()
+        assertTrue("消息带时刻前缀", system.contains("] 用户：周六一起看展吧1"))
+        assertTrue("已赴约块在场", system.contains("【近期已赴约的见面】"))
+        assertTrue("已赴约条目带活动", system.contains("活动：买裙子（已赴约）"))
     }
 
     @Test fun scan_offlineMode_skips() {

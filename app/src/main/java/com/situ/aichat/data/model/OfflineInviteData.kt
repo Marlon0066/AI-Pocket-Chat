@@ -28,7 +28,35 @@ data class OfflineInviteData(
     val farewell: String? = null,
     val finalMood: String? = null,
     val responded: String? = null,
-)
+) {
+    /**
+     * 给 LLM 的脱敏表示（留痕改造 2026-08-31·仿 [FutureMeetingProposalData.llmRepresentation]）：
+     * 只露 地点/活动 + 实时 responded 状态；invitation 台词、tensionHint、hiddenTension、原始 JSON 一律不进 LLM。
+     * 非邀约型（offline_end）→ null（调用方整条跳过）。
+     *
+     * ⚠️ 措辞强耦合（三处互指·改任一侧必须同步 + 过锁测试）：
+     * ① 绝不含「邀约卡片」四字连写——[com.situ.aichat.offline.OfflineMeetingAction] sysRecordInviteRegex
+     *    会把含该字样的复读解析成新卡（毒循环）；
+     * ② 以「[系统记录：」开头且含「线下见面邀约」——[com.situ.aichat.prompt.DirtyMessageDetector]
+     *    matchesSystemRecordLabel 靠这两段识别 AI 复读并折叠。
+     *
+     * 状态字面量 accepted/declined 与 [com.situ.aichat.ui.chat.ChatOfflineController] 的写入侧同字面（现状散点·单源化未立项）。
+     */
+    fun llmRepresentation(userName: String = "用户"): String? {
+        if (type != OfflineInviteJson.TYPE_INVITE) return null
+        val parts = listOfNotNull(
+            location?.takeIf { it.isNotBlank() }?.let { "地点=$it" },
+            activity?.takeIf { it.isNotBlank() }?.let { "活动=$it" },
+        )
+        val detail = if (parts.isEmpty()) "" else " | " + parts.joinToString(" | ")
+        val status = when (responded) {
+            "accepted" -> "对方接受了，你们随后见了面"
+            "declined" -> "对方婉拒了，这次没见成"
+            else -> "对方还没回应" // null / "continued" / 未知值一律按未回应
+        }
+        return "[系统记录：你向${userName}发出了线下见面邀约$detail | 状态=$status]"
+    }
+}
 
 /** 线下邀约/结束卡 JSON 编解码（1:1 iOS `parseOfflineInvite`/`makeOfflineInviteContent`；encodeDefaults=false 省略 null）。 */
 object OfflineInviteJson {

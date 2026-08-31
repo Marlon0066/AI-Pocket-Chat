@@ -141,6 +141,31 @@ class OfflineMeetingActionTest {
         assertEquals(OfflineMeetingActionType.SUGGEST_MEETING, actions[0].action)
     }
 
+    // ── 留痕行复读三防线（留痕改造 2026-08-31·图纸 §7 T1-3·E8/E9/E10）──
+
+    @Test fun parse_stand_in_repeats_never_become_cards_and_are_stripped() {
+        // 邀约留痕行**永不含「邀约卡片」四字连写** → sysRecordInviteRegex 绝不命中（否则「复读→又生卡」毒循环）；
+        // 离场留痕行也不触发 endRegex（只有 [offline_end] 才触发）。措辞与两个 llmRepresentation 单源同步
+        //（此处重新逐字打出，不引用实现）。
+        val inviteStandIn = "[系统记录：你向小满发出了线下见面邀约 | 地点=咖啡馆 | 活动=喝咖啡 | 状态=对方婉拒了，这次没见成]"
+        val endStandIn = "[系统记录：线下见面结束（约40分钟），你们回到了线上聊天]"
+        val (cleanText, actions) = OfflineMeetingAction.parseFromResponse("好呀\n$inviteStandIn\n$endStandIn")
+
+        assertTrue("留痕行复读绝不能解析成新卡 / 结束动作，实际：$actions", actions.isEmpty())
+        assertFalse("残留标签应被 sysRecordAnyRegex 清出正文，实际：$cleanText", cleanText.contains("[系统记录"))
+        assertEquals("好呀", cleanText)
+    }
+
+    @Test fun parse_legacy_invite_card_wording_still_becomes_a_card() {
+        // 反面对照（钉住「为何留痕措辞必须避开『邀约卡片』连写」）：含该连写的老措辞复读**仍会**被解析成新卡。
+        val legacy = "[系统记录：小满的线下见面邀约卡片 | 地点=咖啡馆 | 活动=喝咖啡]"
+        val (_, actions) = OfflineMeetingAction.parseFromResponse(legacy)
+
+        assertEquals(1, actions.size)
+        assertEquals(OfflineMeetingActionType.SUGGEST_MEETING, actions[0].action)
+        assertEquals("咖啡馆", actions[0].location)
+    }
+
     @Test fun parse_plain_text_no_markers_returns_unchanged_no_actions() {
         val response = "就是普通聊天，没有任何线下标记。"
         val (cleanText, actions) = OfflineMeetingAction.parseFromResponse(response)

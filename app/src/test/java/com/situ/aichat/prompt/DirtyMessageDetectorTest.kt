@@ -61,6 +61,25 @@ class DirtyMessageDetectorTest {
     }
 
     @Test
+    fun offlineInviteStandInRepeat_detected() {
+        // 留痕改造 2026-08-31（图纸 §7 T1-4）：AI 复读邀约留痕行 → 新 marker「线下见面邀约」命中。
+        // 措辞与 [com.situ.aichat.data.model.OfflineInviteData.llmRepresentation] 单源同步（此处重新逐字打出）。
+        assertEquals(
+            DirtyMessageDetector.Reason.SYSTEM_RECORD_LABEL,
+            detect("[系统记录：你向小满发出了线下见面邀约 | 地点=咖啡馆 | 活动=喝咖啡 | 状态=对方婉拒了，这次没见成]"),
+        )
+    }
+
+    @Test
+    fun offlineMarkerEndStandInRepeat_detected() {
+        // 离场留痕行复读 → 吃既有 marker「线下见面结束」。
+        assertEquals(
+            DirtyMessageDetector.Reason.SYSTEM_RECORD_LABEL,
+            detect("[系统记录：线下见面结束（约40分钟），你们回到了线上聊天]"),
+        )
+    }
+
+    @Test
     fun markerTextRepeat_detected() {
         assertEquals(
             DirtyMessageDetector.Reason.MARKER_TEXT_REPEAT,
@@ -185,6 +204,12 @@ class DirtyMessageDetectorTest {
     @Test
     fun systemRecordPrefixWithoutMarker_notDirty() {
         assertNull(detect("[系统记录] 今天天气晴"))
+    }
+
+    @Test
+    fun naturalSentenceMentioningInviteWithoutSystemRecordPrefix_notDirty() {
+        // 防误杀（新 marker「线下见面邀约」只在 [系统记录 前缀下生效）：角色自然说起邀约不是脏消息。
+        assertNull(detect("我刚才在想要不要给你发个线下见面邀约，又怕你在忙"))
     }
 
     @Test

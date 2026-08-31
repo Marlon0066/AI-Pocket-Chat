@@ -7,6 +7,7 @@ import com.situ.aichat.meeting.MeetingDetectionService.ExistingAppointmentBrief
 import com.situ.aichat.meeting.MeetingDetectionService.ScanTriggerDecision
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -167,6 +168,37 @@ class MeetingDetectionServiceTest {
         assertTrue(p.contains("（当前没有待定的约定）"))
         assertTrue(p.contains("AI 角色"))
         assertTrue(p.contains("用户"))
+    }
+
+    /** C3 回归钉（图纸 §3）：recentlyHonored 缺省/传空 → 提示词与旧签名输出**字节级一致**。 */
+    @Test fun prompt_emptyRecentlyHonored_byteIdenticalToLegacy() {
+        val legacy = MeetingDetectionService.buildScanPrompt(
+            conversationText = "用户：周六一起看电影吧",
+            existing = listOf(ExistingAppointmentBrief("a1", "周六下午", "看电影")),
+            characterName = "小樱", userName = "阿明", nowText = "2026-06-24 周三 15:30",
+        )
+        val explicitEmpty = MeetingDetectionService.buildScanPrompt(
+            conversationText = "用户：周六一起看电影吧",
+            existing = listOf(ExistingAppointmentBrief("a1", "周六下午", "看电影")),
+            characterName = "小樱", userName = "阿明", nowText = "2026-06-24 周三 15:30",
+            recentlyHonored = emptyList(),
+        )
+        assertEquals(legacy, explicitEmpty)
+        assertFalse(legacy.contains("近期已赴约"))
+    }
+
+    /** C3：已赴约块渲染——带时间/活动/「（已赴约）」标注 + 旧事重提禁令；**不给 id**（终态不可作 target）。 */
+    @Test fun prompt_includesRecentlyHonoredBlock_withoutIds() {
+        val p = MeetingDetectionService.buildScanPrompt(
+            conversationText = "用户：昨天买裙子好开心",
+            existing = emptyList(),
+            characterName = "小樱", userName = "阿明", nowText = "2026-08-31 周一 10:00",
+            recentlyHonored = listOf(ExistingAppointmentBrief("h1", "8月30日 周日", "买裙子")),
+        )
+        assertTrue(p.contains("【近期已赴约的见面】"))
+        assertTrue(p.contains("- 时间：8月30日 周日 | 活动：买裙子（已赴约）"))
+        assertTrue(p.contains("不要为它们输出 new"))
+        assertFalse("终态不暴露 id 防被当 target", p.contains("id=h1"))
     }
 
     // ── scanForCandidates（注入 fake completionFn） ──

@@ -74,6 +74,12 @@ class MeetingMissedReactionServiceTest {
         return repo
     }
 
+    /** 兑现服务默认桩：查无兑现见面（既有用例行为不变）——relaxed 对可空 data class 返回链式 mock 而非 null，必须显式打桩。 */
+    private fun fulfillment(found: MeetingFulfillmentService.FulfillingMeeting? = null): MeetingFulfillmentService =
+        mockk<MeetingFulfillmentService>(relaxed = true) {
+            coEvery { findFulfillingMeeting(any(), any()) } returns found
+        }
+
     private fun service(
         dao: MeetingAppointmentDao,
         store: MeetingAppointmentStore,
@@ -81,7 +87,8 @@ class MeetingMissedReactionServiceTest {
         msgRepo: MessageRepository = mockk(relaxed = true),
         gen: RecoveryReplyGenerator = mockk(relaxed = true),
         userProfileDao: UserProfileDao = mockk(relaxed = true), // get()→null → 兜底「用户」
-    ) = MeetingMissedReactionService(db(), dao, store, convRepo, msgRepo, gen, RecoveryClaimTracker(), userProfileDao)
+        fulfillmentService: MeetingFulfillmentService = fulfillment(),
+    ) = MeetingMissedReactionService(db(), dao, store, convRepo, msgRepo, gen, RecoveryClaimTracker(), userProfileDao, fulfillmentService)
 
     @Test fun missedConfirmed_marksMissed_insertsHiddenHint_generatesReaction() = runBlocking {
         val dao = mockk<MeetingAppointmentDao>()
@@ -190,6 +197,40 @@ class MeetingMissedReactionServiceTest {
 
         coVerify(exactly = 2) { msgRepo.upsert(any()) } // 每条爽约一条旁白
         coVerify(exactly = 1) { gen.generateAndPersist("conv1") } // 同会话反应去重一次
+    }
+
+    /**
+     * 图纸 2026-08-31 C1 真见面闸：过宽限但时窗内确实见过面（任意入口进的）→ 判 honored 链实证 session，
+     * 绝不 markMissed、不插「你没来」旁白、不生成怪罪反应。
+     */
+    @Test fun fulfilledMeeting_gateMarksHonored_noMissedNoHintNoReaction() = runBlocking {
+        val dao = mockk<MeetingAppointmentDao>()
+        val store = mockk<MeetingAppointmentStore>(relaxed = true)
+        val msgRepo = mockk<MessageRepository>(relaxed = true)
+        val gen = mockk<RecoveryReplyGenerator>(relaxed = true)
+        val a = appt("u1", scheduledAt = now - 4 * 3600 * 1000)
+        coEvery { dao.getAllAppointments() } returns listOf(a)
+        coEvery { store.markHonored("u1", any(), any()) } returns a.copy(status = "honored")
+        val ff = fulfillment(MeetingFulfillmentService.FulfillingMeeting("sess-real", now - 4 * 3600 * 1000))
+
+        service(dao, store, msgRepo = msgRepo, gen = gen, fulfillmentService = ff).scanAndReact(now)
+
+        coVerify(exactly = 1) { store.markHonored("u1", "sess-real", any()) }
+        coVerify(exactly = 0) { store.markMissed(any(), any()) }
+        coVerify(exactly = 0) { msgRepo.upsert(any()) }
+        coVerify(exactly = 0) { gen.generateAndPersist(any()) }
+    }
+
+    /** 图纸 2026-08-31 C1：每次扫描先跑一遍存量自愈（幂等·失败不拖垮扫描本体）。 */
+    @Test fun scan_runsRepairFirst() = runBlocking {
+        val dao = mockk<MeetingAppointmentDao>()
+        val store = mockk<MeetingAppointmentStore>(relaxed = true)
+        coEvery { dao.getAllAppointments() } returns emptyList()
+        val ff = fulfillment()
+
+        service(dao, store, fulfillmentService = ff).scanAndReact(now)
+
+        coVerify(exactly = 1) { ff.repairMissedAppointments(now, any()) }
     }
 
     @Test fun markMissedGuardRejected_skipsHintAndReaction() = runBlocking {

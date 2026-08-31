@@ -18,9 +18,10 @@ import kotlinx.coroutines.launch
 /**
  * 线下节拍状态触发协作者（审计 S3·自 [ChatViewModel] 只搬不改抽出，模式同 [MemoryAnalysisTrigger] 家族）。
  *
- * 流结束后由引擎回调 [incrementRoundAndCheck]，仅线下生效（1:1 iOS incrementSceneProgressRoundAndCheck +
+ * 流结束后由引擎回调 [incrementRoundAndCheck]，仅线下生效（源自 iOS incrementSceneProgressRoundAndCheck +
  * checkAndTriggerSceneProgressUpdate + performSceneProgressUpdate）：从 DB 重数本 session user 消息差，
- * ≥15 且距上次 ≥3min → 异步 LLM 生成节拍状态 → 张力自愈 → 落库。失败设冷却不更新 triggerCount（冷却后重试这批）。
+ * ≥15 且距上次 ≥3min → 异步 LLM 生成节拍状态 → 落库（2026-08-31 人设优先微图纸：张力自愈已退役、
+ * 心事种子不再传入生成端）。失败设冷却不更新 triggerCount（冷却后重试这批）。
  * in-memory 触发状态随 VM 生命周期（scope=viewModelScope），对齐 iOS offlineUserTurnCount/lastSceneProgress*。
  */
 internal class SceneProgressTrigger(
@@ -67,7 +68,6 @@ internal class SceneProgressTrigger(
                     characterName = character?.name ?: "",
                     userName = userName,
                     locationHint = locationHint,
-                    tensionSeed = startPayload?.tensionSeed,
                     config = config,
                     contextLog = contextLog,
                 )
@@ -77,7 +77,7 @@ internal class SceneProgressTrigger(
                     Log.w(TAG, "节拍状态生成为空（剥净思考后），冷却后重试")
                     return@launch
                 }
-                conversationRepo.updateSceneProgress(conversationUuid, SceneProgressService.processTensionRenewal(raw))
+                conversationRepo.updateSceneProgress(conversationUuid, raw)
                 lastSceneProgressTriggerCount = userCount
                 lastSceneProgressUpdate = now
                 Log.d(TAG, "节拍状态已更新 userCount=$userCount")

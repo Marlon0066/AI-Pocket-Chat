@@ -11,6 +11,7 @@ import com.situ.aichat.data.model.FutureMeetingProposalJson
 import com.situ.aichat.data.model.GiftCardJson
 import com.situ.aichat.data.model.MessageContentSentinels
 import com.situ.aichat.data.model.MessageKind
+import com.situ.aichat.data.model.OfflineInviteJson
 import com.situ.aichat.data.model.RedPacketJson
 import com.situ.aichat.data.model.SystemEventJson
 import com.situ.aichat.data.model.SystemEventType
@@ -19,6 +20,7 @@ import com.situ.aichat.data.model.systemEventTargetIsAssistant
 import com.situ.aichat.data.remote.llm.ChatContentPart
 import com.situ.aichat.data.remote.llm.ChatMessageDto
 import com.situ.aichat.gift.FestivalCalendar
+import com.situ.aichat.offline.OfflineMarkerEndPayload
 import com.situ.aichat.prompt.memory.MemoryService
 import com.situ.aichat.sticker.StickerService
 import java.time.Instant
@@ -178,6 +180,16 @@ internal fun appendConversationMessages(
         // 绝不把原文 JSON（含 appointmentUuid/newScheduledAtMillis）喂 LLM。与 MessageLlmSafeText 同口径·两处同步。
         if (message.messageKindRaw == MessageKind.FUTURE_MEETING_CHANGE_CARD.raw) {
             normalizedContent = FutureMeetingChangeJson.parse(message.content)?.llmRepresentation(resolvedUserName) ?: ""
+        }
+        // 线下邀约卡（留痕改造 2026-08-31）：JSON → 带实时 responded 状态的系统记录行；invitation/tensionHint/
+        // hiddenTension/原始 JSON 绝不进 LLM（与 FUTURE_MEETING 两卡同「宁缺勿漏」口径：解析失败/非邀约型 → 整条跳过）。
+        if (message.messageKindRaw == MessageKind.OFFLINE_INVITE_CARD.raw) {
+            normalizedContent = OfflineInviteJson.parse(message.content)?.llmRepresentation(resolvedUserName) ?: ""
+        }
+        // 线下离场标记（留痕改造）：普通聊天窗口保留并改写为一行系统记录（时长+回到线上）；标记原文
+        //（含【重要】指令段）不进普通聊天 prompt。解析失败 → 整条跳过。
+        if (message.messageKindRaw == MessageKind.OFFLINE_MARKER_END.raw) {
+            normalizedContent = OfflineMarkerEndPayload.parse(message.content)?.llmRepresentation() ?: ""
         }
 
         // 引用消息：user 消息前注入引用上下文

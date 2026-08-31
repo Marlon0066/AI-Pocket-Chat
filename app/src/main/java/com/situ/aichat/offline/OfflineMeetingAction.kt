@@ -55,9 +55,10 @@ data class OfflineMeetingAction(
                     description = """
                         Suggest an in-person offline meeting with the user. Call this tool in ANY of these situations:
                         1. You (the character) want to invite the user to go somewhere together
-                        2. The user invites you to meet and you agree
+                        2. The user has JUST clearly said they want to meet right now, and you agree
                         3. Both of you naturally agree to meet up right now
                         IMPORTANT: Only use this for IMMEDIATE meetings (right now), NOT for future plans (e.g., "周末再约"). The user will see an invitation card and can accept or decline.
+                        Before calling, check the conversation for [系统记录：…线下见面邀约…] records of your own recent invitations: if the last one is still unanswered or was just declined, do not repeat it as if nothing happened — follow the chat rules about re-inviting.
                         You MUST also provide a hidden tension seed (small unspoken inner state of the character that will drive the emotional arc of the meeting) together with a short hint phrase for the user-facing card.
                     """.trimIndent(),
                     parameters = FunctionParametersDto(
@@ -129,6 +130,22 @@ data class OfflineMeetingAction(
         // 装配末尾「角色可主动发起线下见面」时按模式注入；暗号版的 [offline_invite|地点|活动|邀约台词] 格式与
         // 上面 [inviteRegex] 强耦合（§5），搬到同文件后改任一处即看见另一处。由 OfflineChatTool.stepFiveGuardPrompt 消费。
 
+        /**
+         * 知情邀约规则（留痕改造 2026-08-31·工具/暗号双模式共用·拼在两版守卫提示词末尾）。
+         *
+         * ⚠️ **必须声明在 [TOOL_CALLING_PROMPT] / [FALLBACK_PROMPT] 之前**——companion object 属性按声明序
+         * 初始化，后置引用会把空值拼进两个 prompt（静默失效）。
+         * 文中 `[系统记录：你向…发出了线下见面邀约…]` 与
+         * [com.situ.aichat.data.model.OfflineInviteData.llmRepresentation] 的措辞单源同步。
+         */
+        internal val INFORMED_INVITE_RULES: String = """
+            【邀约的分寸】
+            历史里的 [系统记录：你向…发出了线下见面邀约…] 是你自己发出过的邀约和它的结果，必须当作已经发生过的事实对待：
+            - 上一次邀约「对方还没回应」时，不要再发起新的邀约——先正常聊天，最多用一句话轻轻问问对方的意思。
+            - 你们刚结束一次见面、或对方刚婉拒了你的邀约，你依然可以再次发起（如果你此刻真的很想见对方），但邀约台词必须体现出你记得这件事（比如「我知道我们刚见过面」「我知道你刚说了下次」），绝不能当作无事发生地重发一遍一样的邀约。
+            - 对方连续两次婉拒之后，不要再发起邀约——改用文字自然地表达想念或一点点遗憾，等对方主动提起再约。
+        """.trimIndent()
+
         /** 工具模式：要求模型调 suggest_offline_meeting 工具、严禁正文「表演」工具调用（1:1 iOS）。 */
         val TOOL_CALLING_PROMPT: String = """
             【线下见面规则】
@@ -145,7 +162,7 @@ data class OfflineMeetingAction(
             要么**真正调用工具**，要么**完全不邀约**（继续正常聊天）。
 
             如果工具调用确实不可用，在回复末尾使用此文本标记：[offline_invite|地点|活动|邀约台词]
-        """.trimIndent()
+        """.trimIndent() + "\n\n" + INFORMED_INVITE_RULES
 
         /** 暗号降级模式：在回复末尾附 [offline_invite|…] 文本标记（与 [inviteRegex] 强耦合·1:1 iOS）。 */
         val FALLBACK_PROMPT: String = """
@@ -163,7 +180,7 @@ data class OfflineMeetingAction(
             - 必须是双方都明确同意见面了才使用
             - 单方面表达愿望（如"我想见你"）不使用，除非对方也同意了
             - 标记放在你正常回复文字的末尾，系统会自动解析并显示为邀约卡片
-        """.trimIndent()
+        """.trimIndent() + "\n\n" + INFORMED_INVITE_RULES
 
         // — 结构化 tool-call 参数解码（S2，1:1 iOS fromToolCallArguments / lenientParseToolCallArguments） —
 

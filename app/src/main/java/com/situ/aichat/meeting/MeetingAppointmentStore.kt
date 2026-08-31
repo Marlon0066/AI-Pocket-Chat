@@ -19,7 +19,9 @@ import javax.inject.Singleton
  * - DAO 交互走 suspend（Room 自管线程）。状态流转 = 读 → 纯函数算新行 → @Update（不可变 Room 行，与 RedPacketService 一致）。
  * - 状态机守卫 + 字段变化、查重判定抽成 companion **纯函数**（不碰 DB），便于复用与单测。
  * - 状态机：proposed →(确认)→ confirmed →(赴约)→ honored；confirmed →(过宽限)→ missed；
- *   proposed/confirmed →(取消)→ cancelled。终态不可再流转（纯函数返回 null = 守卫拒绝）。
+ *   proposed/confirmed →(取消)→ cancelled。终态不可再流转（纯函数返回 null = 守卫拒绝）——
+ *   **唯一例外** = [repairMissedToHonored]（missed→honored·爽约误判自愈·图纸 2026-08-31，仅
+ *   [MeetingFulfillmentService] 凭入场标记实证调用）。
  */
 @Singleton
 class MeetingAppointmentStore @Inject constructor(
@@ -102,6 +104,13 @@ class MeetingAppointmentStore @Inject constructor(
     suspend fun markMissed(uuid: String, nowMillis: Long = System.currentTimeMillis()): MeetingAppointmentEntity? =
         transition(uuid) { missed(it, nowMillis) }
 
+    /**
+     * 爽约误判自愈（状态机唯一终态例外·图纸 2026-08-31）：missed → honored，链上实证见面的 sessionId。
+     * 只由 [MeetingFulfillmentService.repairMissedAppointments] 凭入场标记实证调用；其余状态守卫拒绝。
+     */
+    suspend fun repairMissedToHonored(uuid: String, sessionId: String, nowMillis: Long = System.currentTimeMillis()): MeetingAppointmentEntity? =
+        transition(uuid) { repairedToHonored(it, sessionId, nowMillis) }
+
     private suspend fun transition(
         uuid: String,
         op: (MeetingAppointmentEntity) -> MeetingAppointmentEntity?,
@@ -129,6 +138,10 @@ class MeetingAppointmentStore @Inject constructor(
             MeetingStatus.fromRaw(it.status) == MeetingStatus.CONFIRMED && it.scheduledAt > nowMillis
         }
 
+    /** 全部已错过的约定（爽约误判自愈扫描用·表小，内存过滤）。 */
+    suspend fun allMissed(): List<MeetingAppointmentEntity> =
+        dao.getAllAppointments().filter { MeetingStatus.fromRaw(it.status) == MeetingStatus.MISSED }
+
     // ── 查重 ──
 
     /** 在某角色已有进行中约定里找与候选重复的那条（先取 activeForCharacter 再判，避免重复查库）。 */
@@ -139,6 +152,29 @@ class MeetingAppointmentStore @Inject constructor(
         zone: ZoneId,
     ): MeetingAppointmentEntity? =
         findDuplicate(resolvedDateMillis, activity, dao.activeForCharacter(characterUuid), zone)
+
+    /**
+     * 识别路查重（图纸 2026-08-31 C3·**范围含已赴约**）：治幽灵约定——见面后识别重扫旧消息时，刚核销的
+     * 约定已从 isActive 查重消失，同一件事被当新约重复立卡。HONORED 计入重复；MISSED/CANCELLED 仍放行
+     * （错过或取消后同日重约是正当新约定）。手动「约见面」表单仍走 [findDuplicateForCharacter]（用户显式意图不拦）。
+     */
+    suspend fun findDuplicateForCharacterIncludingHonored(
+        characterUuid: String,
+        resolvedDateMillis: Long,
+        activity: String,
+        zone: ZoneId,
+    ): MeetingAppointmentEntity? {
+        val candidates = dao.getAllAppointments().filter { it.characterUuid == characterUuid }
+        return findDuplicateIncludingHonored(resolvedDateMillis, activity, candidates, zone)
+    }
+
+    /** 近 [withinMillis] 内已赴约的约定（按 outcomeAt·识别提示词【近期已赴约的见面】块用·C3；表小内存过滤）。 */
+    suspend fun recentlyHonoredForCharacter(characterUuid: String, nowMillis: Long, withinMillis: Long): List<MeetingAppointmentEntity> =
+        dao.getAllAppointments().filter {
+            it.characterUuid == characterUuid &&
+                MeetingStatus.fromRaw(it.status) == MeetingStatus.HONORED &&
+                (it.outcomeAt ?: Long.MIN_VALUE) >= nowMillis - withinMillis
+        }
 
     // ── 删除（删角色 / 删会话清理）：§7 坑 = **先枚举 uuid 撤每条 meetup_<uuid> 到点通知、再删记录** ──
     // （删行后约定从真理源消失，[MeetupNotificationService.rescheduleAll] 全量对账再也够不着 → 已排的闹钟变孤儿、
@@ -199,6 +235,16 @@ class MeetingAppointmentStore @Inject constructor(
             return appt.copy(status = MeetingStatus.MISSED.raw, outcomeAt = nowMillis)
         }
 
+        /**
+         * 自愈修复（**状态机唯一终态例外**·图纸 2026-08-31）：missed → honored；其余状态一律 null 拒绝。
+         * 背景：真实赴过的见面因入口未核销/幽灵约定被判 missed（终态·常规流转无从更正），
+         * [MeetingFulfillmentService] 凭入场标记实证翻案。绝不给其他终态开口子。
+         */
+        internal fun repairedToHonored(appt: MeetingAppointmentEntity, sessionId: String, nowMillis: Long): MeetingAppointmentEntity? {
+            if (MeetingStatus.fromRaw(appt.status) != MeetingStatus.MISSED) return null
+            return appt.copy(status = MeetingStatus.HONORED.raw, honoredSessionId = sessionId, outcomeAt = nowMillis)
+        }
+
         // ── 查重纯函数 ──
 
         /** 同一天（按 zone 当地日历）+ 活动相近 → 视为重复。仅在进行中里找。 */
@@ -207,10 +253,28 @@ class MeetingAppointmentStore @Inject constructor(
             activity: String,
             existing: List<MeetingAppointmentEntity>,
             zone: ZoneId,
+        ): MeetingAppointmentEntity? =
+            findDuplicateCore(resolvedDateMillis, activity, existing, zone) { it.isActive }
+
+        /** 同 [findDuplicate]，但 HONORED 也计入重复（识别路防幽灵·C3）；MISSED/CANCELLED 仍不算。 */
+        internal fun findDuplicateIncludingHonored(
+            resolvedDateMillis: Long,
+            activity: String,
+            existing: List<MeetingAppointmentEntity>,
+            zone: ZoneId,
+        ): MeetingAppointmentEntity? =
+            findDuplicateCore(resolvedDateMillis, activity, existing, zone) { it.isActive || it == MeetingStatus.HONORED }
+
+        private fun findDuplicateCore(
+            resolvedDateMillis: Long,
+            activity: String,
+            existing: List<MeetingAppointmentEntity>,
+            zone: ZoneId,
+            statusCounts: (MeetingStatus) -> Boolean,
         ): MeetingAppointmentEntity? {
             val day = Instant.ofEpochMilli(resolvedDateMillis).atZone(zone).toLocalDate()
             return existing.firstOrNull { appt ->
-                if (!MeetingStatus.fromRaw(appt.status).isActive) return@firstOrNull false
+                if (!statusCounts(MeetingStatus.fromRaw(appt.status))) return@firstOrNull false
                 val apptDay = Instant.ofEpochMilli(appt.scheduledAt).atZone(zone).toLocalDate()
                 apptDay == day && activitySimilar(appt.activity, activity)
             }

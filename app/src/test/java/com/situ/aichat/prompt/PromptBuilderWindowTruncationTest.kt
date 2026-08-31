@@ -2,6 +2,7 @@ package com.situ.aichat.prompt
 
 import com.situ.aichat.data.local.entity.MessageEntity
 import com.situ.aichat.data.model.AppSettings
+import com.situ.aichat.data.model.MessageKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -25,6 +26,8 @@ class PromptBuilderWindowTruncationTest {
         offline: Boolean = false,
         session: String? = null,
         timestamp: Long = ++ts,
+        /** 留痕改造 2026-08-31 新增（默认 plain_text = 既有例行为逐字不变）。 */
+        kind: MessageKind = MessageKind.PLAIN_TEXT,
     ) = MessageEntity(
         messageUUID = id,
         conversationUuid = "c1",
@@ -34,6 +37,7 @@ class PromptBuilderWindowTruncationTest {
         isPartOfVoiceCall = call,
         isOfflineMode = offline,
         offlineSessionId = session,
+        messageKindRaw = kind.raw,
     )
 
     private fun ids(list: List<MessageEntity>) = list.map { it.messageUUID }
@@ -162,6 +166,50 @@ class PromptBuilderWindowTruncationTest {
         )
         val keptIds = ids(filtered)
         assertFalse("sessionId null：见面原文一律出窗", "off1" in keptIds)
+        assertTrue("普通聊天仍保留", "u1" in keptIds)
+    }
+
+    @Test
+    fun `留痕改造_普通聊天保留邀约卡与离场标记_无kind见面原文仍出窗（T2-1）`() {
+        // 有意行为变化①：邀约卡（非 offline 消息）与离场标记（isOfflineMode=true + kind）放行进窗口，
+        // 由历史装配改写成 [系统记录：…] 留痕行；见面对话原文（无 kind）照旧一律出窗——语义收窄，非退回原文通道。
+        val invite = msg("assistant", "invite", kind = MessageKind.OFFLINE_INVITE_CARD)
+        val meetingRaw = msg("assistant", "raw", offline = true, session = "s1")
+        val markerEnd = msg("assistant", "end", offline = true, session = "s1", kind = MessageKind.OFFLINE_MARKER_END)
+        val chat = msg("user", "u1")
+        val (filtered, _, _) = prepareFilteredRecentMessages(
+            sortedMessages = listOf(invite, meetingRaw, markerEnd, chat).sortedBy { it.timestamp },
+            appSettings = AppSettings(),
+            isCurrentlyInOfflineMode = false,
+            currentOfflineSessionId = null,
+            unsummarizedRoundsOutsideBaseWindow = 0,
+            now = Instant.ofEpochMilli(0),
+        )
+        val keptIds = ids(filtered)
+        assertTrue("邀约卡应留在窗口（供改写成留痕行）", "invite" in keptIds)
+        assertTrue("离场标记应留在窗口（供改写成留痕行）", "end" in keptIds)
+        assertFalse("见面对话原文仍一律出窗", "raw" in keptIds)
+        assertTrue("普通聊天消息仍在", "u1" in keptIds)
+    }
+
+    @Test
+    fun `留痕改造_见面中旧场离场标记仍出窗（T2-1·E6）`() {
+        // 见面【中】分支零改：旧场消息（含离场标记）由 session 过滤挡在窗外，行为与现状一致；
+        // 本场离场标记本不该存在于进行中的见面，故此处只钉旧场。
+        val oldEnd = msg("assistant", "old-end", offline = true, session = "s0", kind = MessageKind.OFFLINE_MARKER_END)
+        val curRaw = msg("assistant", "cur", offline = true, session = "s1")
+        val chat = msg("user", "u1")
+        val (filtered, _, _) = prepareFilteredRecentMessages(
+            sortedMessages = listOf(oldEnd, curRaw, chat).sortedBy { it.timestamp },
+            appSettings = AppSettings(),
+            isCurrentlyInOfflineMode = true,
+            currentOfflineSessionId = "s1",
+            unsummarizedRoundsOutsideBaseWindow = 0,
+            now = Instant.ofEpochMilli(0),
+        )
+        val keptIds = ids(filtered)
+        assertFalse("见面中：旧场离场标记不应进窗口", "old-end" in keptIds)
+        assertTrue("本场见面原文仍保留", "cur" in keptIds)
         assertTrue("普通聊天仍保留", "u1" in keptIds)
     }
 }

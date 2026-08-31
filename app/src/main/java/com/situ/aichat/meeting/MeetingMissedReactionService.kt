@@ -48,6 +48,8 @@ class MeetingMissedReactionService @Inject constructor(
     private val replyGenerator: RecoveryReplyGenerator,
     private val claimTracker: RecoveryClaimTracker,
     private val userProfileDao: UserProfileDao,
+    // 图纸 2026-08-31：真见面闸 + 存量自愈的兑现判定单源。
+    private val fulfillmentService: MeetingFulfillmentService,
 ) {
 
     private val running = AtomicBoolean(false)
@@ -57,6 +59,10 @@ class MeetingMissedReactionService @Inject constructor(
         if (!running.compareAndSet(false, true)) return
         try {
             val zone = ZoneId.systemDefault()
+            // 图纸 2026-08-31 C1：存量自愈先行——被误判 missed 而入场标记实证「真见过面」的约定翻回 honored
+            // + 删「你没来」旁白。幂等（翻案后不再命中）；失败静默不拖垮爽约扫描本体。
+            runCatching { fulfillmentService.repairMissedAppointments(now, zone) }
+                .onFailure { Log.w(TAG, "爽约误判自愈失败（不影响扫描）：${it.message}") }
             val missed = dao.getAllAppointments().filter { isMissedConfirmed(it, now, zone) }
             if (missed.isEmpty()) return
             val toReact = LinkedHashSet<String>() // 去重会话（同会话多条爽约只反应一次）
@@ -72,6 +78,15 @@ class MeetingMissedReactionService @Inject constructor(
                     val convo = conversationRepo.get(appt.conversationUuid)
                     if (convo != null && convo.isInOfflineMode) {
                         store.markHonored(appt.uuid, convo.currentOfflineSessionId.orEmpty(), now)
+                        return@withTransaction false
+                    }
+                    // 图纸 2026-08-31 C1：真见面闸——这条约定的时窗内会话确实发生过线下见面（任意入口进的）
+                    // → 判 honored 不判 missed。根因：核销此前只接「出发赴约」按钮/到点通知两路，手动发起、
+                    // 邀约卡进的同一场约会被冤成「你没来」；幽灵约定（识别重复立的旧事重提）由 tier2 匹配兜住。
+                    // 守卫拒绝（并发已流转）→ 照旧跳过，不插旁白。
+                    val fulfilling = fulfillmentService.findFulfillingMeeting(appt, zone)
+                    if (fulfilling != null) {
+                        store.markHonored(appt.uuid, fulfilling.sessionId, now)
                         return@withTransaction false
                     }
                     if (store.markMissed(appt.uuid, now) == null) return@withTransaction false // 守卫拒绝（并发已流转）
@@ -124,6 +139,13 @@ class MeetingMissedReactionService @Inject constructor(
         private const val TAG = "MeetingMissedReaction"
         private const val REACTION_TIMEOUT_MS = 5L * 60 * 1000 // 5 分钟（对齐未答恢复 deadline）
 
+        /**
+         * 爽约旁白的稳定签名段（**单源**·图纸 2026-08-31）：[missedHint] 模板引用本常量拼接，
+         * [MeetingFulfillmentService] 自愈按它定位要删的旁白——改旁白文案必须两处一体（模板+这里），
+         * 否则自愈找不到旁白、毒留在上下文。
+         */
+        internal const val MISSED_HINT_SIGNATURE = "始终没有出现，这次见面就这样错过了"
+
         /** confirmed 且已过宽限期未赴约 = 爽约。纯函数便于单测。 */
         internal fun isMissedConfirmed(appt: MeetingAppointmentEntity, now: Long, zone: ZoneId): Boolean =
             MeetingStatus.fromRaw(appt.status) == MeetingStatus.CONFIRMED &&
@@ -142,7 +164,8 @@ class MeetingMissedReactionService @Inject constructor(
                 if (where.isNotEmpty()) append("（在").append(where).append("）")
             }
             val plan = if (detail.isBlank()) "你和${userName}约好的那次见面" else "你和${userName}约好了 $detail 见面"
-            return "（$plan，但约定的时间已经过去，${userName}始终没有出现，这次见面就这样错过了。" +
+            // MISSED_HINT_SIGNATURE 单源拼接：产出字节与旧字面量逐字一致（测试钉），自愈按签名定位删除。
+            return "（$plan，但约定的时间已经过去，${userName}${MISSED_HINT_SIGNATURE}。" +
                 "请你以符合自己性格、契合你们当前关系的方式，真切地表达此刻的心情——不要套用模板。）"
         }
     }

@@ -86,9 +86,15 @@ object DirtyMessageDetector {
         return signatures.any { s.contains(it) }
     }
 
+    /**
+     * `[系统记录：…]` 标签复读（强耦合·改任一侧必须同步）：markers 与各留痕行的产出方单源对齐——
+     * 「线下见面邀约」← [com.situ.aichat.data.model.OfflineInviteData.llmRepresentation]（留痕改造 2026-08-31 新增，
+     * 该行**永不含「邀约卡片」连写**，故必须单列此 marker）；「线下见面结束」← 既有离场留痕
+     * [com.situ.aichat.offline.OfflineMarkerEndPayload.llmRepresentation] 与老措辞共用。
+     */
     private fun matchesSystemRecordLabel(s: String): Boolean {
         if (!s.startsWith("[系统记录")) return false
-        val markers = listOf("线下见面邀约卡片", "结束见面确认卡片", "线下见面结束", "线下见面 |")
+        val markers = listOf("线下见面邀约卡片", "线下见面邀约", "结束见面确认卡片", "线下见面结束", "线下见面 |")
         return markers.any { s.contains(it) }
     }
 

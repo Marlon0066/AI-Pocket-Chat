@@ -7,8 +7,9 @@ import org.junit.Test
 
 /**
  * `SceneProgressService` tests (P10.2c-2): the beat-state system prompt (structure / exact colons /
- * `\`-continuation joins / seed branch) and `processTensionRenewal` (张力自愈), reverse-derived from iOS
- * `SceneProgressService` + `SceneProgressCoordinator.processTensionRenewal`.
+ * `\`-continuation joins), `shouldTriggerUpdate`, and `forceFieldValue`. 2026-08-31 人设优先微图纸起：
+ * 卡片只做场记——「可以发生的事」「建议新张力」字段、张力自愈与心事种子锁 allow_end 已退役（见
+ * prompt_scribe_only_no_plot_machinery）。
  */
 class SceneProgressServiceTest {
 
@@ -17,8 +18,7 @@ class SceneProgressServiceTest {
         characterName: String = "小琳",
         userName: String = "阿哲",
         locationHint: String = "江边咖啡馆",
-        tensionSeed: String? = null,
-    ) = SceneProgressService.buildSystemPrompt(chatLog, characterName, userName, locationHint, tensionSeed)
+    ) = SceneProgressService.buildSystemPrompt(chatLog, characterName, userName, locationHint)
 
     // ── buildSystemPrompt: 结构 + 精确冒号 + 续行合并 ──
 
@@ -38,7 +38,6 @@ class SceneProgressServiceTest {
         assertTrue(p.contains("\n已发生的关键节点:\n"))
         assertTrue(p.contains("\n当前情绪基调: <一句话>\n"))
         assertTrue(p.contains("\n未解决的张力: <一句话，若无则填\"无\">\n"))
-        assertTrue(p.contains("\n建议新张力: <如果\"未解决的张力\"是\"无\"，从对话中自然生长一条新的微妙张力；否则填\"无\">\n"))
     }
 
     @Test fun prompt_section_labels_use_full_width_colons() {
@@ -49,15 +48,21 @@ class SceneProgressServiceTest {
         assertTrue(p.contains("初始地点提示：江边咖啡馆"))
     }
 
-    @Test fun prompt_rules_1_4_5_are_continuation_joined_single_lines() {
+    @Test fun prompt_rules_renumbered_1_to_3_and_rule1_continuation_joined() {
         val p = prompt()
-        // rule 1: 进入 immediately followed by 可自然收束 (no line break at iOS `\`)
-        assertTrue(p.contains("已经进入可自然收束的阶段（说到告别、天晚了、准备离开）时才允许 true。"))
-        // rule 4: 自然长出来的 + 新张力, and 场景里 + 某个细节 (two `\` joins on one logical line)
-        assertTrue(p.contains("给出从对话中自然长出来的新张力——角色某句话背后没说出口的意思"))
-        assertTrue(p.contains("场景里某个细节可以引出新的情绪线。不要凭空编造不相关的事件。"))
-        // rule 5
-        assertTrue(p.contains("而非收束当前情节——\"路过一个有意义的地方\"而非\"把心事说清楚\"。"))
+        // rule 1: 进入 immediately followed by 可自然收束 (no line break at iOS `\`)，尾随即换行（无 seed 尾巴）。
+        assertTrue(p.contains("已经进入可自然收束的阶段（说到告别、天晚了、准备离开）时才允许 true。\n2. 已发生的关键节点"))
+        // rule 3 收尾后直接空行接初始地点提示（旧规则 4/5 已退役）。
+        assertTrue(p.contains("3. 整段输出不超过 500 字。\n\n初始地点提示：江边咖啡馆"))
+    }
+
+    @Test fun prompt_scribe_only_no_plot_machinery() {
+        // 2026-08-31 人设优先微图纸 §4-C/D：卡片只做场记——机器递剧情/张力永动/心事种子锁 三件全退役。
+        val p = prompt()
+        assertFalse(p.contains("可以发生的事"))
+        assertFalse(p.contains("建议新张力"))
+        assertFalse(p.contains("隐藏心事种子"))
+        assertFalse(p.contains("隐藏心事如果还没浮出水面"))
     }
 
     @Test fun prompt_chatlog_appended_after_record_header() {
@@ -68,64 +73,6 @@ class SceneProgressServiceTest {
 
     @Test fun prompt_empty_user_name_falls_back_to_default() {
         assertTrue(prompt(userName = "").contains("\n用户名：用户\n"))
-    }
-
-    // ── buildSystemPrompt: seed 双分支 ──
-
-    @Test fun prompt_without_seed_omits_seed_line_and_rule_tail() {
-        val p = prompt(tensionSeed = null)
-        assertFalse(p.contains("隐藏心事种子："))
-        assertFalse(p.contains("隐藏心事如果还没浮出水面"))
-        // rule 1 ends right at 才允许 true。 then newline (no seed tail)
-        assertTrue(p.contains("时才允许 true。\n2. 已发生的关键节点"))
-        // 初始地点提示 line has no seed prefix
-        assertTrue(p.contains("\n初始地点提示：江边咖啡馆\n"))
-    }
-
-    @Test fun prompt_with_seed_adds_seed_line_and_rule_tail() {
-        val p = prompt(tensionSeed = "她偷偷带了礼物")
-        // seed tail appended directly after rule 1
-        assertTrue(p.contains("时才允许 true。隐藏心事如果还没浮出水面，一律 false。\n"))
-        // seed line sits on its own line right before 初始地点提示
-        assertTrue(p.contains("\n隐藏心事种子：她偷偷带了礼物\n初始地点提示：江边咖啡馆\n"))
-    }
-
-    // ── processTensionRenewal ──
-
-    @Test fun renewal_replaces_unresolved_tension_with_suggestion_and_drops_suggested_line() {
-        val input = "allow_end: false\n未解决的张力: 无\n建议新张力: 她其实想多留一会儿"
-        val out = SceneProgressService.processTensionRenewal(input)
-        assertEquals("allow_end: false\n未解决的张力: 她其实想多留一会儿", out)
-    }
-
-    @Test fun renewal_keeps_present_tension_but_still_drops_suggested_line() {
-        val input = "未解决的张力: 她在意你昨天没回消息\n建议新张力: 无"
-        val out = SceneProgressService.processTensionRenewal(input)
-        assertEquals("未解决的张力: 她在意你昨天没回消息", out)
-    }
-
-    @Test fun renewal_no_replacement_when_suggestion_is_none_but_drops_line() {
-        val input = "未解决的张力: 无\n建议新张力: 无"
-        val out = SceneProgressService.processTensionRenewal(input)
-        assertEquals("未解决的张力: 无", out)
-    }
-
-    @Test fun renewal_handles_full_width_colons() {
-        val input = "未解决的张力： 无\n建议新张力： 路过老地方勾起回忆"
-        val out = SceneProgressService.processTensionRenewal(input)
-        assertEquals("未解决的张力： 路过老地方勾起回忆", out)
-    }
-
-    @Test fun renewal_preserves_leading_whitespace_prefix() {
-        val input = "  未解决的张力: 无\n建议新张力: 新的微妙张力"
-        val out = SceneProgressService.processTensionRenewal(input)
-        assertEquals("  未解决的张力: 新的微妙张力", out)
-    }
-
-    @Test fun renewal_no_suggested_line_leaves_text_unchanged() {
-        val input = "allow_end: true\n未解决的张力: 无"
-        val out = SceneProgressService.processTensionRenewal(input)
-        assertEquals(input, out)
     }
 
     // ── shouldTriggerUpdate（≥15 user 差 + 3min 防抖） ──

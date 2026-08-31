@@ -83,7 +83,8 @@ class MeetingProposalCoordinator @Inject constructor(
         MeetingCandidateIntent.NEW -> {
             val resolution = resolve(candidate, nowMillis, zone)
             // 查重：同角色 + 同天 + 活动相近 → 不重复建卡（漏判由下轮扫描补，误判由确认卡拦）。
-            if (store.findDuplicateForCharacter(characterUuid, resolution.scheduledAtMillis, candidate.activity, zone) != null) {
+            // 图纸 2026-08-31 C3：识别路范围**含已赴约**——刚见完的约不许被旧消息重扫成幽灵新约。
+            if (store.findDuplicateForCharacterIncludingHonored(characterUuid, resolution.scheduledAtMillis, candidate.activity, zone) != null) {
                 null
             } else {
                 val appt = store.createProposed(candidate, resolution, characterUuid, conversationUuid, nowMillis)

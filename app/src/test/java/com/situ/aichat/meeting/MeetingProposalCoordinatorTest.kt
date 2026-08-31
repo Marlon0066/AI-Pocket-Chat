@@ -34,7 +34,8 @@ class MeetingProposalCoordinatorTest {
     @Test fun ingest_new_passesGate_insertsProposalCard() = runBlocking {
         val store = mockk<MeetingAppointmentStore>()
         val repo = mockk<MessageRepository>(relaxed = true)
-        coEvery { store.findDuplicateForCharacter(any(), any(), any(), any()) } returns null
+        // C3：识别路查重换含已赴约版（手动路仍旧版·见 startManual 测试）。
+        coEvery { store.findDuplicateForCharacterIncludingHonored(any(), any(), any(), any()) } returns null
         coEvery { store.createProposed(any(), any(), "c1", "conv1", any()) } returns appt("a1")
         val coord = MeetingProposalCoordinator(store, repo)
 
@@ -62,7 +63,7 @@ class MeetingProposalCoordinatorTest {
     @Test fun ingest_new_duplicate_noCardNoCreate() = runBlocking {
         val store = mockk<MeetingAppointmentStore>()
         val repo = mockk<MessageRepository>(relaxed = true)
-        coEvery { store.findDuplicateForCharacter(any(), any(), any(), any()) } returns appt("dup")
+        coEvery { store.findDuplicateForCharacterIncludingHonored(any(), any(), any(), any()) } returns appt("dup")
         val coord = MeetingProposalCoordinator(store, repo)
 
         val result = coord.ingestCandidate(

@@ -80,6 +80,17 @@ class MeetingAppointmentStoreTest {
         assertEquals(9L, MeetingAppointmentStore.missed(appt(status = "confirmed"), 9L)!!.outcomeAt)
     }
 
+    /** 图纸 2026-08-31：自愈修复 = 状态机唯一终态例外，仅 missed→honored；其余四状态一律拒绝。 */
+    @Test fun repairedToHonored_onlyFromMissed() {
+        val r = MeetingAppointmentStore.repairedToHonored(appt(status = "missed"), "sess-real", 800L)!!
+        assertEquals("honored", r.status)
+        assertEquals("sess-real", r.honoredSessionId)
+        assertEquals(800L, r.outcomeAt)
+        listOf("proposed", "confirmed", "honored", "cancelled").forEach { other ->
+            assertNull(MeetingAppointmentStore.repairedToHonored(appt(status = other), "s", 1L))
+        }
+    }
+
     @Test fun rescheduled_updatesTimeAndClearsReminder() {
         val a = appt(status = "confirmed", lastReminderScheduledAt = 999L)
         val res = MeetingTimeResolver.Resolution(12_345L, MeetingTimeGranularity.EXACT)
@@ -116,7 +127,49 @@ class MeetingAppointmentStoreTest {
         assertNull(MeetingAppointmentStore.findDuplicate(millis(2026, 6, 27, 19, 0), "看电影", existing, zone))
     }
 
+    /** C3 识别路查重（图纸 2026-08-31）：HONORED 计入重复（防幽灵）；MISSED/CANCELLED 仍放行（重约正当）。 */
+    @Test fun findDuplicateIncludingHonored_honoredCounts_missedCancelledStillPass() {
+        fun one(status: String) = listOf(appt(uuid = "a", status = status, scheduledAt = millis(2026, 6, 27, 15, 0), activity = "买裙子"))
+        assertEquals("a", MeetingAppointmentStore.findDuplicateIncludingHonored(millis(2026, 6, 27, 19, 0), "买裙子", one("honored"), zone)?.uuid)
+        assertEquals("a", MeetingAppointmentStore.findDuplicateIncludingHonored(millis(2026, 6, 27, 19, 0), "买裙子", one("confirmed"), zone)?.uuid)
+        assertNull(MeetingAppointmentStore.findDuplicateIncludingHonored(millis(2026, 6, 27, 19, 0), "买裙子", one("missed"), zone))
+        assertNull(MeetingAppointmentStore.findDuplicateIncludingHonored(millis(2026, 6, 27, 19, 0), "买裙子", one("cancelled"), zone))
+        // 不同天的 honored 不拦
+        assertNull(MeetingAppointmentStore.findDuplicateIncludingHonored(millis(2026, 6, 28, 19, 0), "买裙子", one("honored"), zone))
+    }
+
     // ── DAO 编排：MockK 行为测 ──
+
+    /** C3：近 N 内已赴约（按 outcomeAt 过滤·别的角色/别的状态/过老的不进）。 */
+    @Test fun recentlyHonored_filtersByCharacterStatusAndOutcome() = runBlocking {
+        val dao = mockk<MeetingAppointmentDao>(relaxed = true)
+        fun row(uuid: String, char: String, status: String, outcomeAt: Long?) =
+            MeetingAppointmentEntity(uuid = uuid, characterUuid = char, status = status, outcomeAt = outcomeAt)
+        coEvery { dao.getAllAppointments() } returns listOf(
+            row("keep", "c1", "honored", 9_000L),
+            row("tooOld", "c1", "honored", 1_000L),
+            row("otherChar", "c2", "honored", 9_000L),
+            row("missed", "c1", "missed", 9_000L),
+            row("nullOutcome", "c1", "honored", null),
+        )
+        val r = MeetingAppointmentStore(dao, mockk(relaxed = true))
+            .recentlyHonoredForCharacter("c1", nowMillis = 10_000L, withinMillis = 5_000L)
+        assertEquals(listOf("keep"), r.map { it.uuid })
+    }
+
+    /** 图纸 2026-08-31：repairMissedToHonored 编排——missed 才写库；其他状态守卫拒绝零写。 */
+    @Test fun repairMissedToHonored_writesOnlyFromMissed() = runBlocking {
+        val dao = mockk<MeetingAppointmentDao>(relaxed = true)
+        coEvery { dao.getByUuid("u1") } returns appt(status = "missed")
+        val r = MeetingAppointmentStore(dao, mockk(relaxed = true)).repairMissedToHonored("u1", "sess-1", 900L)
+        assertEquals("honored", r?.status)
+        coVerify { dao.update(match { it.status == "honored" && it.honoredSessionId == "sess-1" }) }
+
+        val dao2 = mockk<MeetingAppointmentDao>(relaxed = true)
+        coEvery { dao2.getByUuid("u2") } returns appt(status = "confirmed")
+        assertNull(MeetingAppointmentStore(dao2, mockk(relaxed = true)).repairMissedToHonored("u2", "s", 1L))
+        coVerify(exactly = 0) { dao2.update(any()) }
+    }
 
     @Test fun confirm_readsThenUpdates() = runBlocking {
         val dao = mockk<MeetingAppointmentDao>(relaxed = true)

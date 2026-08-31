@@ -59,6 +59,37 @@ class OfflineToolDefinitionsTest {
         assertEquals(2, OfflineMeetingAction.toolDefinitions(canInitiate = true).size)
     }
 
+    // ── 知情邀约规则（留痕改造 2026-08-31·图纸 §7 T1-5）──
+
+    @Test fun both_guard_prompts_end_with_informed_invite_rules_and_keep_existing_content() {
+        // 双模式共用同一段规则，且**拼在末尾**（声明序错位会静默拼进空值 → endsWith 直接红）。
+        assertTrue(OfflineMeetingAction.TOOL_CALLING_PROMPT.endsWith(OfflineMeetingAction.INFORMED_INVITE_RULES))
+        assertTrue(OfflineMeetingAction.FALLBACK_PROMPT.endsWith(OfflineMeetingAction.INFORMED_INVITE_RULES))
+        // 规则本体逐字（双保险 pin：字面 + 与实现常量的包含关系）。
+        assertTrue(OfflineMeetingAction.INFORMED_INVITE_RULES.startsWith("【邀约的分寸】"))
+        for (rule in listOf(
+            "上一次邀约「对方还没回应」时，不要再发起新的邀约",
+            "但邀约台词必须体现出你记得这件事",
+            "对方连续两次婉拒之后，不要再发起邀约",
+        )) {
+            assertTrue("规则缺失：$rule", OfflineMeetingAction.INFORMED_INVITE_RULES.contains(rule))
+        }
+        // 既有段落原样健在（各抽一独有句）——追加不得吃掉原文。
+        assertTrue(OfflineMeetingAction.TOOL_CALLING_PROMPT.contains("必须调用 suggest_offline_meeting 工具"))
+        assertTrue(OfflineMeetingAction.FALLBACK_PROMPT.contains("[offline_invite|附近的咖啡店|喝咖啡聊天|走吧，我知道一家不错的咖啡厅~]"))
+    }
+
+    @Test fun suggest_description_narrows_situation_two_and_points_at_stand_in_records() {
+        val suggest = tool(OfflineMeetingAction.toolDefinitions, "suggest_offline_meeting")
+        val description = suggest.function.description
+        // 情形 2 收窄为「用户刚刚明确说要现在见」（原「用户邀请你见面而你同意」过宽）。
+        assertTrue("实际：$description", description.contains("JUST clearly said"))
+        assertFalse(description.contains("The user invites you to meet and you agree"))
+        // 调工具前先看自己的留痕记录（与聊天规则互指）。
+        assertTrue("实际：$description", description.contains("still unanswered or was just declined"))
+        assertTrue(description.contains("线下见面邀约"))
+    }
+
     // ── CalendarAction.toolDefinitions ──
 
     @Test fun calendar_exposes_single_action_tool_with_full_enum() {

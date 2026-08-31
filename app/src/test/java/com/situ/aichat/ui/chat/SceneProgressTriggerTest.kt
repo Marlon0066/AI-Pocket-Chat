@@ -30,7 +30,7 @@ import org.junit.Test
 /**
  * [SceneProgressTrigger] 行为测试（审计 S3 抽协作者标配 T2）——验证线下节拍状态触发「真的按规格触发/不触发」：
  * 非线下不动、阈值不足不生成、达标生成落库并推进计数（同批不重复生成）、失败设冷却不推进计数（冷却期不重试）。
- * 手法：MockK 假仓库；[SceneProgressService.shouldTriggerUpdate]/processTensionRenewal 纯函数放真跑（断言从规格反推），
+ * 手法：MockK 假仓库；[SceneProgressService.shouldTriggerUpdate] 纯函数放真跑（断言从规格反推），
  * 仅 mockkObject 掉走 LLM 的 generateProgress；scope 用 Unconfined（launch 体同步跑完，确定性断言）。
  */
 class SceneProgressTriggerTest {
@@ -93,7 +93,7 @@ class SceneProgressTriggerTest {
     fun 阈值不足_不生成不落库() = runBlocking {
         coEvery { messageRepo.offlineSessionMessages("conv-1", "sess-1") } returns userMessages(14) // <15（真阈值逻辑）
         trigger.incrementRoundAndCheck()
-        coVerify(exactly = 0) { SceneProgressService.generateProgress(any(), any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { SceneProgressService.generateProgress(any(), any(), any(), any(), any(), any()) }
         coVerify(exactly = 0) { conversationRepo.updateSceneProgress(any(), any()) }
     }
 
@@ -101,16 +101,14 @@ class SceneProgressTriggerTest {
     fun 达标_生成落库_计数推进后同批不重复生成() = runBlocking {
         coEvery { messageRepo.offlineSessionMessages("conv-1", "sess-1") } returns userMessages(15)
         coEvery {
-            SceneProgressService.generateProgress(any(), any(), any(), any(), any(), any(), any())
+            SceneProgressService.generateProgress(any(), any(), any(), any(), any(), any())
         } returns "节拍原文"
-        // 期望值在 verify 块外先算好（mockkObject 环境下块内调用会被当匹配器录制）；processTensionRenewal 真跑。
-        val expected = SceneProgressService.processTensionRenewal("节拍原文")
         trigger.incrementRoundAndCheck()
-        // 张力自愈后的结果落库（无张力行时原样透传）。
-        coVerify(exactly = 1) { conversationRepo.updateSceneProgress("conv-1", expected) }
+        // 生成结果原样落库（2026-08-31 人设优先微图纸：张力自愈已退役，卡片纯场记）。
+        coVerify(exactly = 1) { conversationRepo.updateSceneProgress("conv-1", "节拍原文") }
         // 计数已推进到 15 → 同批（仍 15 条）再触发不足差值，不重复生成。
         trigger.incrementRoundAndCheck()
-        coVerify(exactly = 1) { SceneProgressService.generateProgress(any(), any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 1) { SceneProgressService.generateProgress(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -118,24 +116,24 @@ class SceneProgressTriggerTest {
         // 纯思考响应剥净后为空：绝不把空串写库覆盖旧节拍状态，走失败冷却语义（不推进计数、冷却期不重试）。
         coEvery { messageRepo.offlineSessionMessages("conv-1", "sess-1") } returns userMessages(15)
         coEvery {
-            SceneProgressService.generateProgress(any(), any(), any(), any(), any(), any(), any())
+            SceneProgressService.generateProgress(any(), any(), any(), any(), any(), any())
         } returns ""
         trigger.incrementRoundAndCheck()
         coVerify(exactly = 0) { conversationRepo.updateSceneProgress(any(), any()) }
         trigger.incrementRoundAndCheck()
-        coVerify(exactly = 1) { SceneProgressService.generateProgress(any(), any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 1) { SceneProgressService.generateProgress(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
     fun 生成失败_设冷却不推进计数_冷却期内不重试() = runBlocking {
         coEvery { messageRepo.offlineSessionMessages("conv-1", "sess-1") } returns userMessages(15)
         coEvery {
-            SceneProgressService.generateProgress(any(), any(), any(), any(), any(), any(), any())
+            SceneProgressService.generateProgress(any(), any(), any(), any(), any(), any())
         } throws RuntimeException("网络失败")
         trigger.incrementRoundAndCheck()
         coVerify(exactly = 0) { conversationRepo.updateSceneProgress(any(), any()) }
         // 冷却已设（lastUpdate=now）→ 立刻再触发被 3min 冷却挡住，不重试（规格：失败不更新 triggerCount、冷却后才重试）。
         trigger.incrementRoundAndCheck()
-        coVerify(exactly = 1) { SceneProgressService.generateProgress(any(), any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 1) { SceneProgressService.generateProgress(any(), any(), any(), any(), any(), any()) }
     }
 }

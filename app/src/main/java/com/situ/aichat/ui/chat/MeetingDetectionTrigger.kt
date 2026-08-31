@@ -48,6 +48,11 @@ internal class MeetingDetectionTrigger(
     /** 扫描取最近消息条数（=参数表「30 条·排除确认卡」）。 */
     private val recentWindow = 30
 
+    private companion object {
+        /** C3：识别提示词携带「近 7 天已赴约」约定的回看窗（防旧事重提被立成幽灵新约）。 */
+        const val HONORED_LOOKBACK_MS = 7L * 24 * 3600 * 1000
+    }
+
     /**
      * AI 回复完成后：判定是否到点扫描 → 扫 → 入库候选 → 记成功/失败冷却。
      * [config] = 本回合解析的 LLM 配置（识别无独立 ApiFunction，复用当前激活）。
@@ -93,15 +98,26 @@ internal class MeetingDetectionTrigger(
                 )
                 if (decision !is MeetingDetectionService.ScanTriggerDecision.Trigger) return@launch
 
+                // 图纸 2026-08-31 C3：每条消息带说出时刻（与「当前时间」同格式）——治幽灵约定根因①：
+                // 无时间戳时，昨天说的「明天买裙子」在见面后重扫会被当成今天说的、重新立约。
                 val convText = recent
                     .filter { !MessageKind.fromRaw(it.messageKindRaw).isStructuredCard && it.content.isNotBlank() }
                     .joinToString("\n") { m ->
                         val who = if (m.roleRaw == "user") userName.ifEmpty { "用户" } else character.name.ifEmpty { "AI" }
-                        "$who：${m.content}"
+                        "[${MeetingDisplayFormatter.nowText(m.timestamp, zone)}] $who：${m.content}"
                     }
                 if (convText.isBlank()) return@launch
 
                 val existing = meetingStore.activeForCharacter(character.uuid).map {
+                    MeetingDetectionService.ExistingAppointmentBrief(
+                        uuid = it.uuid,
+                        whenText = MeetingDisplayFormatter.whenDisplay(it.scheduledAt, MeetingTimeGranularity.fromRaw(it.timeGranularity), zone),
+                        activity = it.activity,
+                    )
+                }
+                // C3：近 7 天已赴约的约定喂进提示词（旧事重提不算新约）——治幽灵约定根因②：
+                // 核销后约定从 activeForCharacter 消失，识别 LLM 不知道这事已经办完了。
+                val recentlyHonored = meetingStore.recentlyHonoredForCharacter(character.uuid, now, HONORED_LOOKBACK_MS).map {
                     MeetingDetectionService.ExistingAppointmentBrief(
                         uuid = it.uuid,
                         whenText = MeetingDisplayFormatter.whenDisplay(it.scheduledAt, MeetingTimeGranularity.fromRaw(it.timeGranularity), zone),
@@ -115,6 +131,7 @@ internal class MeetingDetectionTrigger(
                     characterName = character.name,
                     userName = userName,
                     nowText = MeetingDisplayFormatter.nowText(now, zone),
+                    recentlyHonored = recentlyHonored,
                 )
 
                 val candidates = MeetingDetectionService.scanForCandidates(prompt) { messages, temperature ->

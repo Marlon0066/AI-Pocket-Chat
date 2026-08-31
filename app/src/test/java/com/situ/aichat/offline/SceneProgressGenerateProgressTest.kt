@@ -37,7 +37,6 @@ class SceneProgressGenerateProgressTest {
             characterName = "小琳",
             userName = "阿哲",
             locationHint = "江边咖啡馆",
-            tensionSeed = null,
             config = mockk<ApiConfigValues>(relaxed = true),
             contextLog = contextLog,
         )

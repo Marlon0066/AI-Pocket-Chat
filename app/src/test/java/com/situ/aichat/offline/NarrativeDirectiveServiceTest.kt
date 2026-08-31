@@ -160,20 +160,22 @@ class NarrativeDirectiveServiceTest {
         assertTrue(bullets[0] in OfflineNarrativePreset.PLAIN.blockEmphasisPool.map { it.text })
     }
 
-    @Test fun generate_detailed_has_three_bullets_one_per_pool() {
+    @Test fun generate_detailed_has_two_bullets_block_and_technique() {
+        // 2026-08-31 人设优先：DETAILED 情绪底色池退役 → 只剩 块偏向 + 纯写作技法 两条。
         val d = OfflineNarrativePreset.DETAILED
         val result = NarrativeDirectiveService.generateDirective(anyProfile(), d)!!
         val bullets = bulletLines(result)
-        assertEquals(3, bullets.size) // DETAILED: all three pools non-empty
+        assertEquals(2, bullets.size)
         assertTrue(bullets[0] in d.blockEmphasisPool.map { it.text })
         assertTrue(bullets[1] in d.narrativeTechniquePool)
-        assertTrue(bullets[2] in d.emotionalRegisterPool)
     }
 
-    @Test fun generate_normal_has_two_bullets() {
-        // NORMAL: blockEmphasis + narrativeTechnique non-empty, emotionalRegister empty → 2 bullets.
+    @Test fun generate_normal_has_single_block_emphasis_bullet() {
+        // 2026-08-31 人设优先：NORMAL 行为指令池退役 → 只剩块偏向（纯形式补缺）一条。
         val result = NarrativeDirectiveService.generateDirective(anyProfile(), OfflineNarrativePreset.NORMAL)!!
-        assertEquals(2, bulletLines(result).size)
+        val bullets = bulletLines(result)
+        assertEquals(1, bullets.size)
+        assertTrue(bullets[0] in OfflineNarrativePreset.NORMAL.blockEmphasisPool.map { it.text })
     }
 
     /** Lines after the header, each stripped of the "· " prefix. */

@@ -38,9 +38,14 @@ internal fun prepareFilteredRecentMessages(
         }
         recentMeetingMessages = emptyList()
     } else {
-        chatOnlyMessages = sortedMessages.filter { !it.isOfflineMode }
         // §3.6 原文通道退役（梦剧场 B 部）：普通聊天只注入见面【总结】（{{见面记忆}} 宏·来自结构化行渲染），
         // 不再把见面原文消息塞进窗口（旧 meetingRetentionDays 保留期通道作废）。见面【中】分支一行不动（上）。
+        // 留痕改造 2026-08-31：**离场标记例外放行**——它是「这场见面结束了」的事务级真相，改写成一行系统记录进
+        // 普通聊天窗口（渲染在 [appendConversationMessages]），根治「见面刚结束角色失忆式重发邀约」。见面【中】
+        // 分支不放行：那里的 session 过滤天然挡住旧场离场标记（旧见面知识由【见面 · 】档案卡承担）。
+        chatOnlyMessages = sortedMessages.filter {
+            !it.isOfflineMode || it.kind() == MessageKind.OFFLINE_MARKER_END
+        }
         recentMeetingMessages = emptyList()
     }
     val recentChatMessages = truncateToRecentRounds(
@@ -56,11 +61,13 @@ internal fun prepareFilteredRecentMessages(
         (recentChatMessages + recentMeetingMessages).sortedBy { it.timestamp }
     }
 
-    // 邀约事件流剥离 + 脏消息过滤（1:1 iOS）
+    // 邀约事件流剥离 + 脏消息过滤（1:1 iOS）。留痕改造 2026-08-31：邀约卡与离场标记不再整条剥离——
+    // 两者转由 [appendConversationMessages] 改写成脱敏的 `[系统记录：…]` 留痕行（原文 JSON / 标记文本仍绝不进
+    // prompt）；此处只剩结束确认卡整条剥离（其 finalMood 已由离场标记与见面摘要承载）。
     val filteredMessages = recentMessages.filter { msg ->
         if (DirtyMessageDetector.isDirty(msg.content, msg.kind())) return@filter false
         when (msg.kind()) {
-            MessageKind.OFFLINE_INVITE_CARD, MessageKind.OFFLINE_END_CARD, MessageKind.OFFLINE_MARKER_END -> false
+            MessageKind.OFFLINE_END_CARD -> false
             // 入场标记：仅当前在线下模式 + 本次 session 匹配才保留（供提场景种子 + 上下文；其他 session 标记不误匹配）。
             MessageKind.OFFLINE_MARKER_START ->
                 PromptBuilder.shouldKeepOfflineMarkerStart(isCurrentlyInOfflineMode, currentOfflineSessionId, msg.offlineSessionId)
