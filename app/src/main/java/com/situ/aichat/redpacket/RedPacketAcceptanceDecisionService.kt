@@ -17,6 +17,7 @@ import com.situ.aichat.data.repository.CharacterRepository
 import com.situ.aichat.data.repository.ConversationRepository
 import com.situ.aichat.data.repository.MessageRepository
 import com.situ.aichat.gift.FestivalCalendar
+import com.situ.aichat.prompt.AssistantOutputGate
 import com.situ.aichat.prompt.memory.MemoryService
 import com.situ.aichat.util.JSONExtractor
 import java.util.UUID
@@ -160,6 +161,9 @@ class RedPacketAcceptanceDecisionService @Inject constructor(
 
     /** 延迟 1.5s 插一条 .plainText assistant 消息承载角色口头反应（真人感）。失败静默记日志，不阻塞主路径。 */
     private suspend fun insertCharacterChatReplyWithDelay(conversationUuid: String, replyText: String) {
+        // 落库前置闸（图纸 2026-09-01 件①）：本函数是纯聊天口头反应路，落库 kind 恒 PLAIN_TEXT，判脏即整条不插。
+        // 金额 / 台账 / 状态机 / 反伪造闸全在本函数之外，零碰。
+        if (AssistantOutputGate.shouldDiscard(replyText, MessageKind.PLAIN_TEXT, source = "redPacket")) return
         if (CHAT_REPLY_INSERTION_DELAY_MS > 0) delay(CHAT_REPLY_INSERTION_DELAY_MS)
         val conversation = conversationRepo.get(conversationUuid)
         if (conversation == null) {

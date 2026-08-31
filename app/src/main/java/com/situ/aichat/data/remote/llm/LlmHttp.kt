@@ -11,32 +11,59 @@ import java.net.URI
  */
 object LlmHttp {
 
+    /** 版本段：v1 / v2 / v1beta / v1alpha…（大小写不敏感）。与模型拉取路同根单源
+     *（[com.situ.aichat.data.remote.llm.modelcatalog.ModelCatalogUrl] 引用本值，别再写第二份）。 */
+    internal val VERSION_SEGMENT = Regex("^v\\d+(?:alpha|beta)?$", RegexOption.IGNORE_CASE)
+
     /**
-     * ⚠️ **与模型拉取路的规则目前不一致**（2026-08-29 登记）：`ModelCatalogUrl` 已升级为「识别任意版本段
-     * `/v\d+(alpha|beta)?` + 末尾 `#` 逃生口 + 保留 query」，而本函数仍是旧三分支——`https://host/api/v3`
-     * 这类中转在那边能打到 `/api/v3/models`，在这里却拼成 `/api/v3/v1/chat/completions` 而 404。
-     * 跨四路归一须单独立项（本函数是全部 LLM 往返的唯一出口，改它要配 T5 + 存量地址穷举）。
+     * 把 baseUrl 归一成完整的 chat/completions 端点 —— **全部 LLM 往返（聊天 / 能力探针 / 工具探测）
+     * 的唯一出口**。
      *
-     * Normalize a base URL into a full chat/completions endpoint. Accepts:
-     * 1) https://host  2) https://host/v1  3) https://host/.../chat/completions
-     * Non-local http hosts are auto-upgraded to https (avoids leaking the Bearer key).
+     * 规则（与模型拉取路 [com.situ.aichat.data.remote.llm.modelcatalog.ModelCatalogUrl] **同根规则**·
+     * 2026-08-31 归一，图纸 docs/handoff/2026-08-31-跨四路LLM-URL归一.md）：
+     * 1. 末尾 `#` → **剥掉后照常规则拼**（`#` 是拉取路的「地址已完整」逃生口，对聊天路无此语义：
+     *    同一份 baseUrl 不可能同时原样充当 models 端点与 chat 端点）。
+     * 2. 末两段已是 `chat/completions` → 原样使用。
+     * 3. 否则先剥「另一路端点」的末段尾巴（`models` / `messages` / `responses`，只剥末段、只剥一次），
+     *    让误填的完整地址自愈回基座。
+     * 4. 末段是版本段（[VERSION_SEGMENT]：`v1` / `v2` / `v1beta`…）或 Gemini 兼容层惯例段 `openai`
+     *    （`…/v1beta/openai`）→ 追加 `chat/completions`；否则追加 `v1/chat/completions`。
+     * 5. query 归位到路径之后并保留、fragment 丢弃（HTTP 本就不发送 fragment）；非内网 http 主机
+     *    升 https（Bearer key 绝不明文发往公网）。
      */
     fun buildChatCompletionsUrl(baseUrl: String): String {
         var s = baseUrl.trim()
         if (s.isEmpty()) throw LlmError.InvalidUrl
+        // 末尾 '#' 是模型拉取路的「地址已完整」逃生口；聊天路的语义 = 剥掉后照常规则拼——
+        // 同一份 baseUrl 不可能同时原样充当 models 端点与 chat 端点。
+        s = s.trimEnd('#').trim()
+        if (s.isEmpty()) throw LlmError.InvalidUrl
         val uri = runCatching { URI(s) }.getOrNull() ?: throw LlmError.InvalidUrl
-        val scheme = uri.scheme?.lowercase() ?: throw LlmError.InvalidUrl
-        if (scheme != "http" && scheme != "https") throw LlmError.InvalidUrl
-        if (scheme == "http" && shouldUpgradeInsecureHost(uri.host)) {
-            s = "https://" + s.substringAfter("://")
+        val rawScheme = uri.scheme?.lowercase() ?: throw LlmError.InvalidUrl
+        if (rawScheme != "http" && rawScheme != "https") throw LlmError.InvalidUrl
+        val authority = uri.authority ?: throw LlmError.InvalidUrl
+        val scheme = if (rawScheme == "http" && shouldUpgradeInsecureHost(uri.host)) "https" else rawScheme
+
+        val segs = uri.path.orEmpty().split('/').filter { it.isNotEmpty() }.toMutableList()
+        val lastTwoAreChat = segs.size >= 2 &&
+            segs[segs.lastIndex - 1].equals("chat", ignoreCase = true) &&
+            segs.last().equals("completions", ignoreCase = true)
+        if (!lastTwoAreChat) {
+            // 对称自愈：把「另一路端点的完整地址」剥回基座（只剥末段、只剥一次）。
+            when (segs.lastOrNull()?.lowercase()) {
+                "models", "messages", "responses" -> segs.removeAt(segs.lastIndex)
+            }
+            val last = segs.lastOrNull()?.lowercase()
+            when {
+                last != null && VERSION_SEGMENT.matches(last) -> segs.addAll(listOf("chat", "completions"))
+                // Gemini 兼容层惯例段（…/v1beta/openai）：末段非版本段但已是端点基座。
+                last == "openai" -> segs.addAll(listOf("chat", "completions"))
+                else -> segs.addAll(listOf("v1", "chat", "completions"))
+            }
         }
-        val trimmed = s.trimEnd('/')
-        val pathLower = (runCatching { URI(trimmed).path }.getOrNull() ?: "").lowercase()
-        return when {
-            pathLower.endsWith("/chat/completions") -> trimmed
-            pathLower.endsWith("/v1") -> "$trimmed/chat/completions"
-            else -> "$trimmed/v1/chat/completions"
-        }
+        // query 归位到路径之后（旧实现把后缀拼进 query/fragment 尾巴是畸形）；fragment 本就不上线，丢弃。
+        val q = uri.query?.takeIf { it.isNotEmpty() }?.let { "?$it" }.orEmpty()
+        return "$scheme://$authority/${segs.joinToString("/")}$q"
     }
 
     /** Bearer auth + OpenRouter's X-Title (mirrors iOS requestHeaders). */

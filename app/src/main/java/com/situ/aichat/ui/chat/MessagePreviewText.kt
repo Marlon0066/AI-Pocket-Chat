@@ -11,6 +11,7 @@ import com.situ.aichat.data.model.SystemEventJson
 import com.situ.aichat.offline.OfflineContentParser
 import com.situ.aichat.offline.OfflineMarkerEndPayload
 import com.situ.aichat.prompt.CalendarItemParser
+import com.situ.aichat.prompt.DirtyMessageDetector
 import com.situ.aichat.sticker.StickerTagParser
 
 /**
@@ -62,7 +63,10 @@ object MessagePreviewText {
         // 系统耳语 / 入场标记：已被 getRecentVisible SQL 过滤（理论到不了这里）；兜底空串，绝不露内部文本。
         MessageKind.SYSTEM_HINT, MessageKind.OFFLINE_MARKER_START -> ""
         // 日程卡 = 带 [#E1] 标签的纯文本 / 普通文本：剥日历标签 + 贴纸标签后当文本（与气泡复制/朗读同口径）。
-        MessageKind.SCHEDULE_CARD, MessageKind.PLAIN_TEXT -> cleaned(content)
+        // 脏文本（模型复读的段标题/schema）出空串（图纸 2026-09-01 件①）——通知路的 isBlank() 守卫据此不弹，
+        // 绝不让一段脏内容从通知栏漏出去。SCHEDULE_CARD 经检测器恒 false，实际只作用于 PLAIN_TEXT。
+        MessageKind.SCHEDULE_CARD, MessageKind.PLAIN_TEXT ->
+            if (DirtyMessageDetector.isDirty(content, kind)) "" else cleaned(content)
     }
 
     /**

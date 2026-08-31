@@ -45,14 +45,14 @@ class ScheduleGenerationWorker @AssistedInject constructor(
 
     /**
      * 长任务前台信息（图纸 C2·逐字仿 [ProactiveNotificationWorker.getForegroundInfo]）：复用故事生成的
-     * 安静常驻渠道 + 既有双语标题 + VISIBILITY_SECRET（锁屏不暴露），dataSync 类型（网络拉 LLM）。
+     * 安静常驻渠道 + 分场景专属标题 + VISIBILITY_SECRET（锁屏不暴露），dataSync 类型（网络拉 LLM）。
      * 通知 id 用 [FGS_NOTIFICATION_ID]（避开 0x57081 故事 / 0x57082 proactive / 0x57083 world·notifreply）。
      */
     override suspend fun getForegroundInfo(): ForegroundInfo {
         NotificationChannels.ensureCreated(applicationContext)
         val notification = NotificationCompat.Builder(applicationContext, NotificationChannels.STORY_GENERATING)
             .setSmallIcon(R.drawable.ic_notif_schedule)
-            .setContentTitle(applicationContext.getString(R.string.llm_foreground_notification_title))
+            .setContentTitle(applicationContext.getString(R.string.notif_fg_schedule_title))
             .setOngoing(true)
             .setVisibility(NotificationCompat.VISIBILITY_SECRET)
             .build()

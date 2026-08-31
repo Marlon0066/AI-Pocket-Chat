@@ -5,12 +5,14 @@ import com.situ.aichat.data.local.AppDatabase
 import com.situ.aichat.data.local.dao.WorldDao
 import com.situ.aichat.data.local.entity.MessageEntity
 import com.situ.aichat.data.model.ApiFunction
+import com.situ.aichat.data.model.MessageKind
 import com.situ.aichat.data.remote.llm.ChatMessageDto
 import com.situ.aichat.data.repository.ApiConfigRepository
 import com.situ.aichat.data.repository.ConversationRepository
 import com.situ.aichat.data.repository.MessageRepository
 import com.situ.aichat.diagnostics.ContextLogService
 import com.situ.aichat.diagnostics.LogSource
+import com.situ.aichat.prompt.AssistantOutputGate
 import com.situ.aichat.prompt.memory.MemoryService
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -73,10 +75,13 @@ class WorldFirstMeetService @Inject constructor(
      */
     suspend fun confirmMeet(nativeId: String, name: String, nowMs: Long): MeetConfirm? = mutex.withLock {
         val buf = buffers[nativeId] ?: return null
+        // 落库前置闸（图纸 2026-09-01 件①）：assistant 行判脏即不落库（user 行照落，落库 kind 恒 PLAIN_TEXT）。
+        // 全被丢空 → 跳过 flush 与会话末条，但**仍成局**（已认识这件事与那几句话是否落库无关）。
+        val clean = buf.filterNot { it.role == "assistant" && AssistantOutputGate.shouldDiscard(it.text, MessageKind.PLAIN_TEXT, source = "worldMeet") }
         val result = db.withTransaction {
             val charUuid = recruitService.recruit(nativeId, nowMs) ?: return@withTransaction null // 事务内复核愿意
             val convUuid = conversationRepo.getOrCreateForCharacter(charUuid, name)
-            buf.forEachIndexed { i, t ->
+            clean.forEachIndexed { i, t ->
                 messageRepo.upsert(
                     MessageEntity(
                         messageUUID = UUID.nameUUIDFromBytes("world:meet:$charUuid:$i".toByteArray()).toString(),
@@ -84,8 +89,9 @@ class WorldFirstMeetService @Inject constructor(
                     ),
                 )
             }
-            val last = buf.last()
-            conversationRepo.recordLastMessage(convUuid, last.text, last.role, nowMs + buf.size)
+            clean.lastOrNull()?.let { last ->
+                conversationRepo.recordLastMessage(convUuid, last.text, last.role, nowMs + clean.size)
+            }
             MeetConfirm(charUuid, convUuid)
         }
         if (result != null) { buffers.remove(nativeId); openingCache.remove(nativeId) }

@@ -87,7 +87,7 @@ data class OfflineMarkerEndPayload(
      * （那段只服务见面刚结束那一轮，不该永驻历史）。措辞强耦合：以「[系统记录：」开头且含「线下见面结束」
      * ——AI 复读由 [com.situ.aichat.prompt.DirtyMessageDetector] matchesSystemRecordLabel 既有 marker 折叠。
      */
-    fun llmRepresentation(): String = "[系统记录：线下见面结束（$durationText），你们回到了线上聊天]"
+    fun llmRepresentation(): String = "[系统记录：线下见面结束（$durationText），两人回到了线上聊天]"
 
     companion object {
         /** 反解析离场标记文本 → payload；格式异常返回 null（1:1 iOS parse）。 */

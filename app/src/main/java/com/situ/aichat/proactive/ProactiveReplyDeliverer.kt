@@ -14,6 +14,7 @@ import com.situ.aichat.data.repository.MessageRepository
 import com.situ.aichat.notification.NotificationPayload
 import com.situ.aichat.notification.Notifier
 import com.situ.aichat.offline.OfflineMeetingGate
+import com.situ.aichat.prompt.AssistantOutputGate
 import com.situ.aichat.prompt.MessageKindInference
 import com.situ.aichat.prompt.MessageSplitter
 import com.situ.aichat.prompt.memory.VectorMemoryService
@@ -58,8 +59,15 @@ class ProactiveReplyDeliverer @Inject constructor(
             return
         }
         val range = settings.sanitizedReplySegmentRange
-        val segments = MessageSplitter.split(text, maxSegments = range.last, minSegments = range.first)
+        val split = MessageSplitter.split(text, maxSegments = range.last, minSegments = range.first)
             .ifEmpty { listOf(text) }
+        // 落库前置闸（图纸 2026-09-01 件①）：判脏的段丢弃不落库；kind 与下方 entities 同口径。
+        // 主动消息无重试链（无用户在等），整条判脏即放弃投递——宁可这次不出声，也不让脏内容进库污染后续提示词。
+        val segments = AssistantOutputGate.filterSegments(split, isOfflineMode = false, source = logTag)
+        if (segments.isEmpty()) {
+            Log.i(logTag, "主动消息整条判脏，放弃投递")
+            return
+        }
         val baseTs = System.currentTimeMillis()
         val entities = segments.mapIndexed { index, segment ->
             MessageEntity(

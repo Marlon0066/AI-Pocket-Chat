@@ -152,23 +152,12 @@ class ConversationRepository @Inject constructor(
     /**
      * 记录一次记忆总结的结果（双轨判定用，对齐 iOS performMemorySummary）。
      * 成功：写成功时间轨 + 清空失败时间戳；失败：写失败短冷却起点。两者都更新 attempt（老字段，仅历史）。
+     * 定向列 UPDATE（图纸件⑥·PITFALLS §1b）：原「getByUuid→整行 copy→upsert」会把并发列打回旧值；
+     * 「会话不存在则静默返回」的语义由 UPDATE 零命中天然等价。
      */
     suspend fun recordMemorySummaryResult(conversationUuid: String, success: Boolean, now: Long) {
-        val c = dao.getByUuid(conversationUuid) ?: return
-        dao.upsert(
-            if (success) {
-                c.copy(
-                    lastMemorySummarySuccessDate = now,
-                    lastMemorySummaryAttemptDate = now,
-                    lastMemorySummaryFailureDate = null,
-                )
-            } else {
-                c.copy(
-                    lastMemorySummaryFailureDate = now,
-                    lastMemorySummaryAttemptDate = now,
-                )
-            },
-        )
+        if (success) dao.recordMemorySummarySuccess(conversationUuid, now)
+        else dao.recordMemorySummaryFailure(conversationUuid, now)
     }
 
     /** 记忆整理遇阻计数流（记忆护栏第二层 MG-U1）：>0 = 资料页共同记忆卡显示遇阻状态条。 */

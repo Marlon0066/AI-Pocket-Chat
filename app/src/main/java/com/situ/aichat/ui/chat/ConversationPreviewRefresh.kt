@@ -1,8 +1,10 @@
 package com.situ.aichat.ui.chat
 
 import com.situ.aichat.data.local.entity.MessageEntity
+import com.situ.aichat.data.model.MessageKind
 import com.situ.aichat.data.repository.ConversationRepository
 import com.situ.aichat.data.repository.MessageRepository
+import com.situ.aichat.prompt.DirtyMessageDetector
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -30,7 +32,10 @@ internal suspend fun refreshConversationLastMessage(
     conversationRepo: ConversationRepository,
 ) {
     previewRefreshLocks.computeIfAbsent(conversationUuid) { Mutex() }.withLock {
-        val latest = messageRepo.latestVisibleMessage(conversationUuid)
+        // 图纸 2026-09-01 件①：最新几条里跳过库内历史脏行（脏行在聊天屏已彻底隐身，列表预览也不该露它）。
+        // 扫描窗 [PREVIEW_DIRTY_SCAN] 条：连续这么多条可见消息全脏的会话几乎不存在，真遇上就退化为清空预览。
+        val latest = messageRepo.latestVisibleMessages(conversationUuid, PREVIEW_DIRTY_SCAN)
+            .firstOrNull { !DirtyMessageDetector.isDirty(it.content, MessageKind.fromRaw(it.messageKindRaw)) }
         if (latest != null) {
             conversationRepo.recordLastMessage(
                 conversationUuid,
@@ -43,6 +48,9 @@ internal suspend fun refreshConversationLastMessage(
         }
     }
 }
+
+/** 预览重算的脏行扫描窗（图纸件①）：最新这么多条里挑第一条非脏的；全脏则清空快照。 */
+private const val PREVIEW_DIRTY_SCAN = 10
 
 /** per-会话重算锁（进程级单例）：键=conversationUuid，条目数 ≤ 用户删过消息的会话数，不清理。 */
 private val previewRefreshLocks = ConcurrentHashMap<String, Mutex>()

@@ -12,6 +12,7 @@ import com.situ.aichat.data.repository.CharacterRepository
 import com.situ.aichat.data.repository.ConversationRepository
 import com.situ.aichat.data.repository.MessageRepository
 import com.situ.aichat.offline.OfflineMeetingGate
+import com.situ.aichat.prompt.AssistantOutputGate
 import com.situ.aichat.prompt.MessageKindInference
 import com.situ.aichat.util.DateFormatters
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -105,6 +106,17 @@ class StreakNotificationBridgeService @Inject constructor(
             // 物化会以「线上标 + deliveredAt 时间戳」插一条角色消息，见面期落进去 = 剧场外的幽灵消息。
             if (OfflineMeetingGate.inMeeting(conversation)) {
                 Log.d(TAG, "通知物化顺延：会话见面中 (conv=${conversation.uuid})")
+                continue
+            }
+            // 落库前置闸（图纸 2026-09-01 件①）：判脏的通知文案不建消息，但**仍记账**（materializedAt 写上）——
+            // 否则这条 pending 每轮重取、永远复活重试。kind 与下方 MessageEntity 同口径。
+            if (AssistantOutputGate.shouldDiscard(
+                    record.notificationBody,
+                    MessageKindInference.forAssistantText(record.notificationBody, isOfflineMode = false),
+                    source = "notifMaterialize",
+                )
+            ) {
+                deliveryDao.update(record.copy(conversationUuid = conversation.uuid, materializedAt = deliveredAt))
                 continue
             }
             val message = MessageEntity(

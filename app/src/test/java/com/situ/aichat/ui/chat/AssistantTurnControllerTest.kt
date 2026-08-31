@@ -459,7 +459,8 @@ class AssistantTurnControllerTest {
         gate.complete(Unit) // 放行首个删除 → NonCancellable 体内继续跑完
 
         coVerify(exactly = 1) { messageRepo.deleteByUuid("a2") } // 尾段删净（无 R1 修复时此处永不执行）
-        coVerify(exactly = 1) { messageRepo.latestVisibleMessage("conv-1") } // 快照重算真的跑了
+        // 快照重算真的跑了（图纸 2026-09-01 件①起改走扫描窗取数，跳过库内历史脏行）。
+        coVerify(exactly = 1) { messageRepo.latestVisibleMessages("conv-1", any()) }
         coVerify(exactly = 0) { assistantTurnEngine.runAssistantTurn(any(), any(), any(), any(), any()) }
     }
 

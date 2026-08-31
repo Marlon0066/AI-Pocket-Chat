@@ -42,7 +42,7 @@ internal object LlmForegroundNotification {
             null -> builder
                 .setSmallIcon(R.drawable.ic_notif_story)
                 .setContentTitle(context.getString(R.string.llm_foreground_notification_title))
-                .setVisibility(NotificationCompat.VISIBILITY_SECRET) // 不在锁屏暴露「正在后台处理」
+                .setVisibility(NotificationCompat.VISIBILITY_SECRET) // 不在锁屏暴露「正在悄悄忙着」
                 .setContentIntent(launchAppIntent(context))
                 .build()
 

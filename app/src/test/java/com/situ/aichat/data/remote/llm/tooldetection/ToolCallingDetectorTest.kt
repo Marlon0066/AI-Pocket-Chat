@@ -1,8 +1,13 @@
 package com.situ.aichat.data.remote.llm.tooldetection
 
 import com.situ.aichat.data.model.ApiProviderType
+import com.situ.aichat.data.remote.llm.ProbeMaxTokensDialect
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
@@ -13,6 +18,9 @@ import java.io.IOException
  * - #8 探针对齐运行时：运行时只发 OpenAI 形状到 /v1/chat/completions，故原生 Anthropic/Gemini 探针退役，
  *   ANTHROPIC/GEMINI 改走 `OpenAiCompatibleToolDetector`（DeepSeek 保留专属探针）。
  * - #2 瞬时失败重试：`requestWithRetry` 对 429/5xx/网络异常退避重试，2xx 及其它 4xx 立即返回不浪费重试。
+ * - 参数方言（2026-08-31）：工具探针两发都经 `ProbeMaxTokensDialect`——OpenAI 推理系拒收 `max_tokens`
+ *   的 400 若不认，`statusCode != 200` 会把整族读成「基础工具请求被拒绝」。两套重试互不认识：方言管
+ *   参数名（点名才动·恰一次），`requestWithRetry` 管瞬时网络（退避）。
  */
 class ToolCallingDetectorTest {
 
@@ -76,6 +84,24 @@ class ToolCallingDetectorTest {
         }
         assertEquals(500, r.statusCode)
         assertEquals(2, calls)
+    }
+
+    // ── 参数方言（点名才重试）──
+
+    @Test fun param_dialect_rejection_recognized_for_tool_probe() {
+        // OpenAI 官方原话（重新打字为字面量，不引实现常量）
+        val rejection = """{"error":{"message":"Unsupported parameter: 'max_tokens' is not supported with """ +
+            """this model. Use 'max_completion_tokens' instead.","param":"max_tokens"}}"""
+        assertTrue(ProbeMaxTokensDialect.isParamRejection(400, rejection))
+        // 工具探针体的 64（§9② 锁定值）换名后必须**同值**搬过去，不许趁机改上限
+        val swapped = ProbeMaxTokensDialect.swapParam(
+            buildJsonObject {
+                put("model", "gpt-5")
+                put("max_tokens", 64)
+            },
+        )
+        assertNull(swapped["max_tokens"])
+        assertEquals(JsonPrimitive(64), swapped["max_completion_tokens"])
     }
 
     @Test fun ioexception_retried_then_rethrown_after_exhaustion() = runBlocking {

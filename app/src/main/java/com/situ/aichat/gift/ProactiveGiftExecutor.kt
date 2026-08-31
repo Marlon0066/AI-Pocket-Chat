@@ -30,6 +30,7 @@ import com.situ.aichat.data.local.entity.RedPacketRecordEntity
 import com.situ.aichat.economy.CurrencyService
 import com.situ.aichat.offline.OfflineMeetingGate
 import com.situ.aichat.offline.outgoingOfflineSessionId
+import com.situ.aichat.prompt.AssistantOutputGate
 import com.situ.aichat.redpacket.RedPacketError
 import com.situ.aichat.redpacket.RedPacketExpirationScanService
 import com.situ.aichat.redpacket.RedPacketService
@@ -226,25 +227,33 @@ class ProactiveGiftExecutor @Inject constructor(
             )
             val textTimestamp = now + TEXT_MESSAGE_DELAY_MS
             val textMessageUuid = UUID.randomUUID().toString()
-            messageRepo.upsert(
-                MessageEntity(
-                    messageUUID = textMessageUuid,
-                    conversationUuid = conversation.uuid,
-                    roleRaw = "assistant",
-                    content = chatMessage,
-                    timestamp = textTimestamp,
-                    messageKindRaw = MessageKind.PLAIN_TEXT.raw,
-                    isOfflineMode = offlineSessionId != null,
-                    offlineSessionId = offlineSessionId,
-                ),
-            )
+            // 落库前置闸（图纸 2026-09-01 件①）：判脏只砍这条陪送文字，礼物卡照发（卡是结构化 kind，天然免检）。
+            // 判脏结果存变量供下方预览复用——闸恰调一次（既省第二条拦截日志，也杜绝两次判定不一致）。
+            val textDelivered = !AssistantOutputGate.shouldDiscard(chatMessage, MessageKind.PLAIN_TEXT, source = "gift")
+            if (textDelivered) {
+                messageRepo.upsert(
+                    MessageEntity(
+                        messageUUID = textMessageUuid,
+                        conversationUuid = conversation.uuid,
+                        roleRaw = "assistant",
+                        content = chatMessage,
+                        timestamp = textTimestamp,
+                        messageKindRaw = MessageKind.PLAIN_TEXT.raw,
+                        isOfflineMode = offlineSessionId != null,
+                        offlineSessionId = offlineSessionId,
+                    ),
+                )
+            }
 
             // 9. 更新 Conversation 冗余字段（preview = chatMessage 前 60 字，role=assistant，时间=陪送文案时间）。
+            // 陪送文字被前置闸丢弃时，预览退回礼物卡口径 `[礼物]<名>`（同 GiftSendService.conversationPreview /
+            // MessagePreviewText.GIFT_CARD 分支）——脏文本一个字都不许露到会话列表（复核 R1 · 🟡-1）。
             // 见面期：与 finalizeDelivery 同源——AI 正文绝不写进会话列表预览（方案 A·OfflineChatVisibility）；仅刷新活动时间保鲜排序。
             if (offlineSessionId != null) {
                 conversationRepo.touchLastMessageDate(conversation.uuid, textTimestamp)
             } else {
-                conversationRepo.recordLastMessage(conversation.uuid, chatMessage.take(60), "assistant", textTimestamp)
+                val preview = if (textDelivered) chatMessage.take(60) else "[礼物]${giftItem.name}"
+                conversationRepo.recordLastMessage(conversation.uuid, preview, "assistant", textTimestamp)
             }
 
             // 10. affinityToUser += calculateAffinityGain（无 luxury 折扣）+ lastProactiveGiftDate=now（钱包内 fresh 读，不覆盖余额）

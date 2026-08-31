@@ -25,11 +25,12 @@ import com.situ.aichat.data.model.MessageKind
  * 邀约卡 [MessageKind.OFFLINE_INVITE_CARD] 发生在「进入见面之前」、本就 isOfflineMode=false → 不被隐藏，作为正常聊天消息保留。
  *
  * **同源约束**：本谓词 = 人类可读规格 + 日常聊天渲染层兜底（[com.situ.aichat.ui.chat] MessageRow）。真实过滤发生在 DAO
- * 三条「可见消息」查询的 SQL 里，**条条都与本谓词同源（改一处必须同步全部）**：排除系统耳语
+ * 四条「可见消息」查询的 SQL 里，**条条都与本谓词同源（改一处必须同步全部）**：排除系统耳语
  * `messageKindRaw != 'system_hint'`（第①条）+ 排除见面细节 `(isOfflineMode = 0 OR messageKindRaw = 'offline_marker_end')`（第②条）
  * + 排除通话转写 `isPartOfVoiceCall = 0`（第③条）：
  *  - [com.situ.aichat.data.local.dao.MessageDao.observeVisibleWindowed]（日常聊天列表·窗口化）
- *  - [com.situ.aichat.data.local.dao.MessageDao.latestVisibleMessage]（删消息后会话预览重算）
+ *  - [com.situ.aichat.data.local.dao.MessageDao.latestVisibleMessage]（见面余温的最新可见消息锚点·OfflineAfterglowService）
+ *  - [com.situ.aichat.data.local.dao.MessageDao.latestVisibleMessages]（删消息后会话预览重算·脏行扫描窗取最新 N 条·加固批件①）
  *  - [com.situ.aichat.data.local.dao.MessageDao.getRecentVisible]（通知栏回复线程 + 列表内联快捷回复预览）
  */
 object OfflineChatVisibility {

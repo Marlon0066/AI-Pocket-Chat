@@ -31,6 +31,10 @@ class MessageRepository @Inject constructor(
     suspend fun latestVisibleMessage(conversationUuid: String): MessageEntity? =
         dao.latestVisibleMessage(conversationUuid)
 
+    /** 最新 [limit] 条可见消息（同上口径放宽 LIMIT）：预览重算跳过库内历史脏行用（图纸 2026-09-01 件①）。 */
+    suspend fun latestVisibleMessages(conversationUuid: String, limit: Int): List<MessageEntity> =
+        dao.latestVisibleMessages(conversationUuid, limit)
+
     /** 某会话当前仍暂扣待投递的消息（按计划投递时间升序）。 */
     suspend fun heldForConversation(conversationUuid: String): List<MessageEntity> =
         dao.heldForConversation(conversationUuid)

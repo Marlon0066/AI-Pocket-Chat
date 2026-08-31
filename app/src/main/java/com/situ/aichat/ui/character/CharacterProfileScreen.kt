@@ -55,6 +55,8 @@ fun CharacterProfileScreen(
     onOpenSchedule: (String) -> Unit,
     onOpenPromises: (String) -> Unit,
     onOpenStarfield: (String) -> Unit,
+    /** 记忆手动编辑页（图纸 2026-09-01 件③）。 */
+    onEditMemory: (String) -> Unit,
     viewModel: CharacterProfileViewModel = hiltViewModel(),
 ) {
     val character by viewModel.character.collectAsStateWithLifecycle()
@@ -225,6 +227,8 @@ fun CharacterProfileScreen(
                             guardBlocked = memoryGuardBlocked,
                             organizing = organizingMemory,
                             onOrganizeNow = viewModel::organizeMemoryNow,
+                            onEditMemory = { onEditMemory(c.uuid) },
+                            editInProgressBlocked = organizingMemory,
                         )
                     }
 

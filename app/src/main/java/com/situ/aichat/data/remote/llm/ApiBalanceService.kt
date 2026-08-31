@@ -121,11 +121,12 @@ class ApiBalanceService(
 
     // MARK: - Helpers
 
-    /** scheme + authority only (drops path/query): "https://api.deepseek.com/v1" → "https://api.deepseek.com". */
-    private fun extractOrigin(baseUrl: String): String? {
+    /** scheme + authority only (drops path/query)；公网 http 升 https（Bearer key 纪律，与聊天路同源白名单）。 */
+    internal fun extractOrigin(baseUrl: String): String? {
         val uri = runCatching { URI(baseUrl.trim()) }.getOrNull() ?: return null
-        val scheme = uri.scheme ?: return null
+        val rawScheme = uri.scheme?.lowercase() ?: return null
         val authority = uri.authority ?: return null
+        val scheme = if (rawScheme == "http" && LlmHttp.shouldUpgradeInsecureHost(uri.host)) "https" else rawScheme
         return "$scheme://$authority"
     }
 

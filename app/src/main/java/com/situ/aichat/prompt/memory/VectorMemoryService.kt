@@ -118,8 +118,11 @@ class VectorMemoryService @Inject constructor(
      *
      * - 先 [MessageDao.hasMissingEmbedding] 秒探测：无缺失直接返回，绝不加载 24MB 模型。
      * - 嵌入器不可用（缺模型 / 16KB 设备）→ 返回 0、不写 sentinel，留待将来设备/版本恢复后再补。
-     * - 列级 [MessageDao.updateEmbedding] 写；不可嵌入（过短 / 无实义 token）→ 空 [SENTINEL]：NOT NULL 故下次
+     * - 列级 [MessageDao.updateEmbedding] 写；**永久**不可嵌入（过短 / 无实义 token）→ 空 [SENTINEL]：NOT NULL 故下次
      *   不再探测（对齐 iOS sentinel 空 Data），检索时 deserialize 得 null 被跳过。
+     * - **瞬态**失败（嵌入器未加载 / 推理异常·[TextEmbedder.EmbedOutcome.Failed]）→ 留 NULL 不写值，下轮再试
+     *   （图纸 2026-09-01 件④：二者混写同一哨兵时，一次网抖式的推理失败会让那条消息永久检索不到）。
+     *   终止性：批内零写入即 break（防同批死循环）；有写入则缺失集单调缩小。
      * - 每批后 [BACKFILL_YIELD_MS] 让片给前台发消息当轮嵌入；批查询自推进（已写行离开缺失集），无需游标。
      * @return 本次处理的消息条数。
      */
@@ -133,6 +136,8 @@ class VectorMemoryService @Inject constructor(
         while (true) {
             val batch = messageDao.messagesMissingEmbedding(BACKFILL_BATCH)
             if (batch.isEmpty()) break
+            var wroteThisBatch = 0
+            var transientSkips = 0
             for (m in batch) {
                 // 结构化卡整条不嵌入（同 embedMessageIfNeeded·堵原文 JSON 含金额 / 逐字稿进向量库）。DAO
                 // messagesMissingEmbedding 谓词已把卡排除在批外，正常永不命中此 continue；保留为「与活路径同口径」的防御位
@@ -141,14 +146,50 @@ class VectorMemoryService @Inject constructor(
                 val renderable = MemoryService.renderMemoryContent(
                     m.content, m.mediaMemorySummary, m.imageRelativePath != null,
                 )
-                val vector = generateEmbedding(renderable)
-                messageDao.updateEmbedding(m.messageUUID, vector?.let { serializeEmbedding(it) } ?: SENTINEL)
-                total++
+                val cleaned = renderable.trim()
+                if (cleaned.length < MIN_CONTENT_LENGTH) { // 永久不合格：照旧写哨兵
+                    messageDao.updateEmbedding(m.messageUUID, SENTINEL)
+                    total++
+                    wroteThisBatch++
+                    continue
+                }
+                when (val outcome = withContext(Dispatchers.Default) { embedder.embedDetailed(cleaned) }) {
+                    is TextEmbedder.EmbedOutcome.Ok -> {
+                        messageDao.updateEmbedding(m.messageUUID, serializeEmbedding(outcome.vector))
+                        total++
+                        wroteThisBatch++
+                    }
+                    TextEmbedder.EmbedOutcome.NoContent -> {
+                        messageDao.updateEmbedding(m.messageUUID, SENTINEL)
+                        total++
+                        wroteThisBatch++
+                    }
+                    // 瞬态失败留 NULL 待下轮自愈——写哨兵会把「这次没嵌上」永久钉成「永远不该嵌」。
+                    TextEmbedder.EmbedOutcome.Failed -> transientSkips++
+                }
+            }
+            if (wroteThisBatch == 0) { // 全批瞬态失败=嵌入器本轮病了；break 防同批死循环，下次触发再试
+                Log.w(TAG, "嵌入回填本批零写入（瞬态失败 $transientSkips 条），提前收工待下轮")
+                break
             }
             delay(BACKFILL_YIELD_MS)
         }
         Log.i(TAG, "嵌入回填完成: 处理=$total 条")
         return total
+    }
+
+    /**
+     * 一次性洗白历史被冤枉的哨兵（瞬态失败被永久化·图纸 2026-09-01 件④）：重置全部空 blob 哨兵→NULL，
+     * 随后回填按「永久才写哨兵」新规则复评——真不合格的行复评后重新落哨兵，被冤枉的行拿到真向量。
+     * 幂等（旗标先写后洗的崩溃窗口=重洗一遍，无害）；只做一次而非每轮重洗，避免正当哨兵每轮被白烧复评。
+     * @return 本次重置的行数。
+     */
+    suspend fun washWronglySentineledOnce(context: Context): Int {
+        if (EmbeddingModelSignatureStore.sentinelWashDone(context)) return 0
+        val washed = messageDao.resetSentinelEmbeddings()
+        EmbeddingModelSignatureStore.markSentinelWashDone(context)
+        Log.i(TAG, "哨兵洗白一次性迁移：重置 $washed 条待回填复评")
+        return washed
     }
 
     // MARK: - 启动自愈：模型签名变更检测 → 全量清空待重嵌（14.5a；1:1 iOS detectAndHandleModelChangeIfNeeded）

@@ -52,6 +52,20 @@ interface MessageDao {
     )
     suspend fun latestVisibleMessage(conversationUuid: String): MessageEntity?
 
+    /**
+     * 某会话最新的 [limit] 条可见消息（WHERE / ORDER 与 [latestVisibleMessage] 逐字节同口径，只把 LIMIT 1 放宽）。
+     * 会话列表预览重算用（图纸 2026-09-01 件①）：最新一条恰是库内历史脏行时，往下找第一条非脏的当预览，
+     * 免得列表上明晃晃挂着一段模型复读的 schema。
+     */
+    @Query(
+        "SELECT * FROM messages WHERE conversationUuid = :conversationUuid AND isHeldForDelivery = 0 " +
+            "AND messageKindRaw != 'system_hint' " +
+            "AND (isOfflineMode = 0 OR messageKindRaw = 'offline_marker_end') " +
+            "AND isPartOfVoiceCall = 0 " +
+            "ORDER BY timestamp DESC, messageUUID DESC LIMIT :limit",
+    )
+    suspend fun latestVisibleMessages(conversationUuid: String, limit: Int): List<MessageEntity>
+
     /** 某会话暂扣待投递的消息（按计划投递时间升序）。P6.2 BusyReplyService 投递定时器用。 */
     @Query("SELECT * FROM messages WHERE conversationUuid = :conversationUuid AND isHeldForDelivery = 1 ORDER BY scheduledDeliveryDate ASC")
     suspend fun heldForConversation(conversationUuid: String): List<MessageEntity>
@@ -242,6 +256,15 @@ interface MessageDao {
     suspend fun updateEmbedding(uuid: String, embedding: ByteArray)
 
     /**
+     * 哨兵洗白（图纸 2026-09-01 件④·一次性迁移用）：把空 blob 哨兵重置为 NULL 回到待回填集，
+     * 由回填按「只有永久不可嵌才写哨兵」的新规则复评——历史上被瞬态推理失败冤枉的行由此拿回真向量。
+     * 只碰 length=0 的行，真向量（512 维 = 2048 字节）分毫不动。
+     * @return 重置的行数。
+     */
+    @Query("UPDATE messages SET embedding = NULL WHERE embedding IS NOT NULL AND length(embedding) = 0")
+    suspend fun resetSentinelEmbeddings(): Int
+
+    /**
      * 图片理解摘要回填（[com.situ.aichat.chat.image.ImageMemorySummaryService]）。
      * 单列 UPDATE 而非整行 @Update：摘要是**异步**生成的，期间同一条消息可能已被别处改过
      *（送达回执 / 嵌入回填），整行 copy 回写会用陈旧快照覆盖它们（钱路审计的老教训）。
@@ -286,9 +309,13 @@ interface MessageDao {
      * `isOfflineMode = 0`: offline-meeting narrative is compressed by its dedicated pipeline
      * (OfflineSummaryRetryCoordinator → offlineMeetingMemorySummary) and must not double-enter the general
      * rolling summary (narration tone pollutes the texting-style memory).
+     *
+     * `isHeldForDelivery = 0`（图纸 2026-09-01 件⑦）：暂扣行尚未投递给用户，口径对齐其余可见性谓词——
+     * 未上屏的内容不该先进长期记忆（忙碌延迟功能虽已删，老库仍可能有残留暂扣行）。
      */
     @Query(
         "SELECT * FROM messages WHERE conversationUuid = :conversationUuid AND content != '' AND roleRaw != 'system' " +
+            "AND isHeldForDelivery = 0 " +
             "AND isOfflineMode = 0 AND (:cursor IS NULL OR timestamp > :cursor) ORDER BY timestamp ASC LIMIT :limit",
     )
     suspend fun summarizableMessages(conversationUuid: String, cursor: Long?, limit: Int): List<MessageEntity>

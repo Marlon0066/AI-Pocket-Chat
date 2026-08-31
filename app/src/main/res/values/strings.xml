@@ -48,8 +48,14 @@
     <string name="notif_channel_story_generating_desc">Live status for ongoing tasks like story writing and AI replies</string>
     <string name="notif_typing_body">Typing…</string>
     <string name="notif_typing_short">Typing</string>
-    <!-- Generic background LLM/long-generation foreground-service ongoing title (13.7b; shared by story generation + chat streaming) -->
-    <string name="llm_foreground_notification_title">Working in the background…</string>
+    <!-- Generic background LLM/long-generation foreground-service ongoing title (13.7b; silent keep-alive state = story chase / backup / fallback).
+         2026-08-31 per-scene copy approved: this one keeps the generic keep-alive; the four workers each get their own title (notif_fg_*_title). -->
+    <string name="llm_foreground_notification_title">Quietly busy…</string>
+    <!-- Per-worker foreground ongoing notification titles (per-scene copy approved 2026-08-31; all silent + SECRET) -->
+    <string name="notif_fg_schedule_title">Planning out their day…</string>
+    <string name="notif_fg_proactive_title">Thinking of what to say…</string>
+    <string name="notif_fg_notif_reply_title">Writing back to you…</string>
+    <string name="notif_fg_world_title">News from the little world…</string>
 
     <!-- Voice-call foreground-service ongoing notification (P10.1g, replaces iOS Live Activity). -->
     <string name="voice_call_notif_channel_name">Voice call</string>
@@ -2484,6 +2490,25 @@
 	<string name="profile_memory_guard_busy_action">Tidying</string>
 	<string name="profile_memory_guard_toast_success">Folded into long-term memory</string>
 	<string name="profile_memory_guard_toast_fail">Still no luck — try raising the length limit in Settings → Memory, or switch to a stronger model</string>
+	<!-- Manual memory editing (blueprint 2026-09-01 item 3) -->
+	<string name="profile_memory_edit_action">Edit</string>
+	<string name="memory_edit_title">Edit memory</string>
+	<string name="memory_edit_save">Save</string>
+	<string name="memory_edit_hint">This is what they remember. Changes take effect right away — every reply from now on will follow this memory.</string>
+	<string name="memory_edit_section_locked">Fixed heading</string>
+	<string name="memory_edit_recent_tip">Tip: date each entry like [YYYY-MM-DD]</string>
+	<string name="memory_edit_fallback_notice">This memory has no standard sections — editing it as one block</string>
+	<string name="memory_edit_count">%1$d / %2$d</string>
+	<string name="memory_edit_count_unlimited">%1$d chars</string>
+	<string name="memory_edit_discard_title">Discard changes?</string>
+	<string name="memory_edit_discard_body">Your edits haven\'t been saved and will be lost if you leave.</string>
+	<string name="memory_edit_discard_confirm">Discard</string>
+	<string name="memory_edit_discard_cancel">Keep editing</string>
+	<string name="memory_edit_conflict_title">They just organized their memory</string>
+	<string name="memory_edit_conflict_body">While you were editing, an automatic organize wrote a new version. \"Save anyway\" overwrites it with your edits; \"Load new version\" reloads it and discards your edits.</string>
+	<string name="memory_edit_conflict_save">Save anyway</string>
+	<string name="memory_edit_conflict_reload">Load new version</string>
+	<string name="memory_edit_saved_toast">Memory updated</string>
 	<string name="profile_memory_longterm_header">Long-term facts</string>
 	<string name="profile_memory_recent_header">Recent happenings</string>
 	<string name="profile_memory_first_meet">First met</string>

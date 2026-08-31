@@ -87,7 +87,7 @@ class PromptBuilderOfflineInviteStandInTest {
      *
      * ⚠️ 不能用「整篇 prompt 含『发出了线下见面邀约』」当探针：知情邀约规则
      * [com.situ.aichat.offline.OfflineMeetingAction.INFORMED_INVITE_RULES] 自己就引用了这句措辞
-     *（「历史里的 [系统记录：你向…发出了线下见面邀约…] 是…」）→ 恒真。留痕行的独有特征 = **行首**就是
+     *（「历史里的 [系统记录：…发出了线下见面邀约…] 这类记录，是…」）→ 恒真。留痕行的独有特征 = **行首**就是
      * `[系统记录：`（规则那行以「历史里的」开头）。
      */
     private fun standInLines(prompt: String): List<String> =
@@ -98,10 +98,20 @@ class PromptBuilderOfflineInviteStandInTest {
         val prompt = promptWith(inviteJson("declined"), withMarkerEnd = true)
         // 称呼词随用户名解析（此处 userProfile=null → pb_user_fallback），故断言用**名字无关**的稳定子串。
         assertEquals("应恰有一条邀约留痕行，实际：$prompt", 1, standInLines(prompt).size)
-        assertTrue("应含实时婉拒状态，实际：$prompt", prompt.contains("状态=对方婉拒了，这次没见成"))
+        // ⚠️ 状态断言一律**行级**：2026-08-31 追订后「还没回应」也出现在知情邀约规则 bullet 里，
+        // 整篇 prompt 级的 contains 已是恒真坏探针（规则 bullet 2/3 同理含「对方」）。
+        val standInLine = standInLines(prompt).single()
+        assertTrue("应含实时婉拒状态，实际：$standInLine", standInLine.contains("婉拒了，这次没见成"))
+        assertFalse("留痕行不得含通用代号「对方」，实际：$standInLine", standInLine.contains("对方"))
+        // 双名第三人称（2026-08-31 终拍板）：角色名侧**可精确钉**——charName 由本测试构造（"小雨"），
+        // 不像用户名回退那样随 locale 资源变；「你向」制式一旦回潮这条即红。
+        assertTrue("留痕行应以角色真名起头，实际：$standInLine", standInLine.contains("小雨向"))
+        assertFalse("留痕行不得回到「你向」制式，实际：$standInLine", standInLine.contains("你向"))
         assertTrue(prompt.contains("地点=咖啡馆"))
         assertTrue(prompt.contains("活动=喝咖啡"))
         assertTrue("应含离场留痕行，实际：$prompt", prompt.contains("线下见面结束（约40分钟）"))
+        // 离场留痕行的无视角措辞（该短语只出现在离场留痕行·非恒真探针）。
+        assertTrue("离场留痕行应用「两人」，实际：$prompt", prompt.contains("两人回到了线上聊天"))
     }
 
     @Test
@@ -136,14 +146,20 @@ class PromptBuilderOfflineInviteStandInTest {
     @Test
     fun `接受态渲染为过去式已见面`() {
         val prompt = promptWith(inviteJson("accepted"))
-        assertTrue("实际：$prompt", prompt.contains("状态=对方接受了，你们随后见了面"))
-        assertFalse(prompt.contains("状态=对方还没回应"))
+        val standInLine = standInLines(prompt).single()
+        assertTrue("实际：$standInLine", standInLine.contains("接受了，两人随后见了面"))
+        assertFalse("实际：$standInLine", standInLine.contains("还没回应"))
+        assertFalse("留痕行不得含通用代号「对方」，实际：$standInLine", standInLine.contains("对方"))
+        assertFalse("留痕行不得回到「你向」制式，实际：$standInLine", standInLine.contains("你向"))
     }
 
     @Test
     fun `未回应态渲染为还没回应`() {
         val prompt = promptWith(inviteJson(null))
-        assertTrue("实际：$prompt", prompt.contains("状态=对方还没回应"))
-        assertFalse(prompt.contains("状态=对方婉拒了"))
+        val standInLine = standInLines(prompt).single()
+        assertTrue("实际：$standInLine", standInLine.contains("还没回应"))
+        assertFalse("实际：$standInLine", standInLine.contains("婉拒"))
+        assertFalse("留痕行不得含通用代号「对方」，实际：$standInLine", standInLine.contains("对方"))
+        assertFalse("留痕行不得回到「你向」制式，实际：$standInLine", standInLine.contains("你向"))
     }
 }

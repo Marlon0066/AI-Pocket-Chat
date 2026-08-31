@@ -30,19 +30,48 @@ internal object TurnMediaAttachments {
     const val MAX_ATTACHED_IMAGES = 3
 
     /**
-     * 窗口内「用户语音消息」的音频（messageUUID → 裸 base64 WAV）。
+     * 一次请求最多随音频重发的**用户语音条数**（2026-08-31 用户拍板 N=3 对齐图片）。更早的语音
+     * 落回既有转写降级路（PromptBuilderHistory gate-2：转写文字进桶），语义不断链——语音消息的
+     * content 本就是端侧 sherpa-onnx 转写。理由与 [MAX_ATTACHED_IMAGES] 同款：把每轮音频开销
+     * 钉死在常数上（一条 WAV 几十 KB×全窗口全量重发 = 白烧流量与 token）。
+     */
+    const val MAX_ATTACHED_AUDIO = 3
+
+    /**
+     * **最近 [MAX_ATTACHED_AUDIO] 条**「用户语音消息」的音频（messageUUID → 裸 base64 WAV）。
      * 仅 user 语音；助手 TTS 语音不喂回模型（1:1 iOS preEncodedMedia 只 pre-encode role==.user）。
      * 配置不支持音频输入 → 空表，语音消息走端侧转写的纯文本。
+     *
+     * 上限与窗口口径纪律同图片侧（2026-08-31 图纸 C）：候选与提示词窗口同口径 [promptEligible]、
+     * 从新到旧、读不到的文件不占名额（三条理由逐条见 [images] 的 KDoc）。
      */
-    suspend fun audio(history: List<MessageEntity>, config: ApiConfigValues): Map<String, String> {
+    suspend fun audio(
+        history: List<MessageEntity>,
+        config: ApiConfigValues,
+        inOfflineMode: Boolean,
+        currentOfflineSessionId: String?,
+    ): Map<String, String> {
         if (!config.audioInputEnabled) return emptyMap()
         return withContext(Dispatchers.Default) {
-            history.filter { it.roleRaw == "user" && it.isVoiceMessage && it.audioRelativePath != null }
-                .mapNotNull { msg ->
-                    AudioStore.load(msg.audioRelativePath)?.let { msg.messageUUID to PromptBuilder.encodeWavBase64(it) }
-                }
-                .toMap()
+            val picked = LinkedHashMap<String, String>()
+            for (msg in selectAudioCandidates(history, inOfflineMode, currentOfflineSessionId)) {
+                if (picked.size >= MAX_ATTACHED_AUDIO) break
+                AudioStore.load(msg.audioRelativePath)?.let { picked[msg.messageUUID] = PromptBuilder.encodeWavBase64(it) }
+            }
+            picked
         }
+    }
+
+    /** 候选语音消息，**从新到旧**（纯函数·与图片侧 [selectImageCandidates] 同构同纪律）。 */
+    internal fun selectAudioCandidates(
+        history: List<MessageEntity>,
+        inOfflineMode: Boolean,
+        currentOfflineSessionId: String?,
+    ): List<MessageEntity> = history.asReversed().filter { msg ->
+        msg.roleRaw == "user" &&
+            msg.isVoiceMessage &&
+            msg.audioRelativePath != null &&
+            promptEligible(msg, inOfflineMode, currentOfflineSessionId)
     }
 
     /**

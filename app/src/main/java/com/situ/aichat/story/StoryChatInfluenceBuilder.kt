@@ -14,6 +14,7 @@ import com.situ.aichat.data.model.StructuredMemory
 import com.situ.aichat.prompt.DirtyMessageDetector
 import com.situ.aichat.prompt.messageLlmSafeText
 import com.situ.aichat.sticker.StickerTagParser
+import com.situ.aichat.util.takeCodePoints
 import java.text.Collator
 import java.util.Locale
 import javax.inject.Inject
@@ -150,10 +151,10 @@ class StoryChatInfluenceBuilder @Inject constructor(
 
     /** 纯格式化/裁剪助手（无 DB，1:1 iOS 各 summary，便于单测）。 */
     internal object Helpers {
-        /** 裁剪到 limit 字（超出加「…」），1:1 iOS `clipped`。 */
+        /** 裁剪到 limit 字（超出加「…」），1:1 iOS `clipped`；截断按 codePoint 走，绝不切开代理对（图纸件⑧）。 */
         fun clipped(text: String, limit: Int): String {
             val trimmed = text.trim()
-            return if (trimmed.length > limit) trimmed.take(limit) + "…" else trimmed
+            return if (trimmed.codePointCount(0, trimmed.length) > limit) trimmed.takeCodePoints(limit) + "…" else trimmed
         }
 
         /** 最近情绪：空文本→未记录；无 emoji→纯文本；否则「emoji 文本」（1:1 iOS `currentMoodSummary`）。 */

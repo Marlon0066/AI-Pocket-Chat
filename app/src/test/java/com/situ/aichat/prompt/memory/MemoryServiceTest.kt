@@ -21,7 +21,7 @@ import org.robolectric.annotation.Config
  * MemoryService 消化素材接线 + 提取提示词哨兵（记忆改造一期·图纸 §3.6/§3.7 / T2-10）。
  * 断言从图纸独立反推：extraMaterial 拼进 {{聊天记录}}（空/非空两态）；DEFAULT_EXTRACTION_PROMPT 含规则 6 且仍含两标题；
  * generateMemorySummary 返回值剥净内联 <think>（非流式 completion 不剥标签，落库前必须在此收口）。
- * Robolectric：formatTimestamp 用 android.text.format.DateFormat（纯 JUnit 恒返 null）。
+ * Robolectric：MemoryService 内部若干安卓依赖（formatTimestamp 自 2026-09-01 件⑤起改 Locale.ROOT 纯 JVM，不再是保留 Robolectric 的理由）。
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])

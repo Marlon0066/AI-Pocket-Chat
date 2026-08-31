@@ -16,6 +16,7 @@ import android.content.Context
 object EmbeddingModelSignatureStore {
     private const val PREFS = "vector_memory_state"
     private const val KEY_SIGNATURE = "embedding_model_signature"
+    private const val KEY_SENTINEL_WASH = "sentinel_wash_v1_done"
 
     /** Last recorded signature, or "" if never written (first install). */
     fun saved(context: Context): String =
@@ -32,5 +33,17 @@ object EmbeddingModelSignatureStore {
     fun set(context: Context, signature: String) {
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putString(KEY_SIGNATURE, signature).commit()
+    }
+
+    /** 哨兵洗白一次性迁移是否已跑过（图纸 2026-09-01 件④·同为设备本地、不进备份）。 */
+    fun sentinelWashDone(context: Context): Boolean =
+        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY_SENTINEL_WASH, false)
+
+    /** 同步落盘（理由同 [set]：旗标必须在洗白函数返回前落盘，否则崩溃窗口内会重洗——幂等无损但白烧）。 */
+    @Suppress("ApplySharedPref")
+    fun markSentinelWashDone(context: Context) {
+        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putBoolean(KEY_SENTINEL_WASH, true).commit()
     }
 }

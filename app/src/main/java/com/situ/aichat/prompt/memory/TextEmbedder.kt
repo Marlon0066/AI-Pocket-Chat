@@ -59,14 +59,32 @@ class TextEmbedder @Inject constructor(
     val isAvailable: Boolean
         get() = ensureLoaded() != null
 
+    /** 嵌入结果三态（图纸件④）：永久不可嵌（[NoContent]）与瞬态失败（[Failed]）必须分开，前者才允许写哨兵。 */
+    sealed interface EmbedOutcome {
+        class Ok(val vector: FloatArray) : EmbedOutcome
+        /** ≤2 token 无实义内容——永久不可嵌，允许写哨兵。 */
+        data object NoContent : EmbedOutcome
+        /** 嵌入器未加载 / 推理异常——瞬态，绝不写哨兵。 */
+        data object Failed : EmbedOutcome
+    }
+
     /**
      * Embed [text] → 512-dim L2-normalized vector, or null if the model is unavailable.
      * Blocking ONNX inference — call from a background dispatcher.
+     *
+     * 只关心「有没有向量」的调用方用它；要区分**瞬态失败**与**永久不可嵌**（决定能不能写哨兵）的
+     * 走 [embedDetailed]（图纸 2026-09-01 件④）。
      */
-    fun embed(text: String): FloatArray? {
-        val l = ensureLoaded() ?: return null
+    fun embed(text: String): FloatArray? = (embedDetailed(text) as? EmbedOutcome.Ok)?.vector
+
+    /**
+     * 带失败归因的嵌入（图纸 2026-09-01 件④）：回填路必须据此决定「写永久哨兵」还是「留 NULL 待下轮」——
+     * 二者混为一谈时，一次瞬态推理失败会把那条消息永久钉成「不可嵌入」，向量检索对它永远哑巴。
+     */
+    fun embedDetailed(text: String): EmbedOutcome {
+        val l = ensureLoaded() ?: return EmbedOutcome.Failed
         val ids = l.tokenizer.encode(text, MAX_SEQUENCE_LENGTH)
-        if (ids.size <= 2) return null // 只有 [CLS][SEP]，无实义内容
+        if (ids.size <= 2) return EmbedOutcome.NoContent // 只有 [CLS][SEP]，无实义内容
 
         val n = ids.size
         val shape = longArrayOf(1, n.toLong())
@@ -90,11 +108,11 @@ class TextEmbedder @Inject constructor(
                 @Suppress("UNCHECKED_CAST")
                 val lastHidden = result[0].value as Array<Array<FloatArray>> // [1, seq, 512]
                 val cls = lastHidden[0][0]                                   // CLS pooling
-                l2Normalize(cls)
+                EmbedOutcome.Ok(l2Normalize(cls))
             }
         } catch (t: Throwable) {
             Log.e(TAG, "embed failed", t)
-            null
+            EmbedOutcome.Failed // 推理异常 = 瞬态，绝不据此写永久哨兵
         } finally {
             idTensor?.close()
             maskTensor?.close()

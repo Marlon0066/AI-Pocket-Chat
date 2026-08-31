@@ -1,6 +1,5 @@
 package com.situ.aichat.prompt.memory
 
-import android.text.format.DateFormat
 import com.situ.aichat.data.local.dao.ConversationDao
 import com.situ.aichat.data.local.dao.MessageDao
 import com.situ.aichat.data.local.entity.ConversationEntity
@@ -165,7 +164,10 @@ class MemoryService @Inject constructor(
         val result = ArrayList<MessageEntity>()
         for (conv in conversations) {
             val isCurrent = conv.uuid == currentConversationUuid
-            val messages = messageDao.summarizableMessages(conv.uuid, conv.lastSummarizedMessageDate, SUMMARY_FETCH_LIMIT)
+            val messages = dropTailTimestampTies(
+                messageDao.summarizableMessages(conv.uuid, conv.lastSummarizedMessageDate, SUMMARY_FETCH_LIMIT),
+                SUMMARY_FETCH_LIMIT,
+            )
             for (msg in messages) {
                 if (isCurrent) {
                     if (windowCutoff == null) continue
@@ -215,6 +217,18 @@ class MemoryService @Inject constructor(
     companion object {
         private const val SUMMARY_FETCH_LIMIT = 500
         private const val ROLE_USER = "user"
+
+        /**
+         * 批次尾裁同毫秒并列（图纸 2026-09-01 件⑦）：一批取满 [limit] 时，裁掉与批内最大时间戳相同的尾部消息留给下一轮——
+         * 否则 markSummarized 推进到该毫秒后，恰跨 LIMIT 边界的同毫秒余量被 `timestamp > cursor` 谓词永久跳过。
+         * 批未满 = 该会话已取尽，无边界问题，原样返回；全批同毫秒（病态）原样返回，接受理论风险。
+         */
+        fun dropTailTimestampTies(batch: List<MessageEntity>, limit: Int): List<MessageEntity> {
+            if (batch.size < limit) return batch
+            val maxTs = batch.last().timestamp
+            val trimmed = batch.dropLastWhile { it.timestamp == maxTs }
+            return if (trimmed.isEmpty()) batch else trimmed
+        }
 
         /** 字数：codePoint 计数，近似 Swift `String.count`（中文 BMP 两端一致，emoji/组合字符更准）。见 spec M05 §4#4。 */
         fun cjkLength(s: String): Int = s.codePointCount(0, s.length)
@@ -292,11 +306,9 @@ class MemoryService @Inject constructor(
             return StickerTagParser.replaceStickerTagsForDisplay(trimmedContent)
         }
 
-        /** 时间格式（对齐 iOS `DateFormatters.threadSafeDateYMDHM` 的 "yMdHm" 骨架）。 */
-        fun formatTimestamp(millis: Long): String {
-            val pattern = DateFormat.getBestDateTimePattern(Locale.getDefault(), "yMdHm")
-            return SimpleDateFormat(pattern, Locale.getDefault()).format(Date(millis))
-        }
+        /** 时间格式（面向 LLM·PITFALLS §1c：统一 Locale.ROOT 固定模板，绝不随系统语言漂移）。格式锁定 "yyyy-MM-dd HH:mm"。 */
+        fun formatTimestamp(millis: Long): String =
+            SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.ROOT).format(Date(millis))
 
         // MARK: - 触发判定（纯函数，对齐 iOS memorySummaryTriggerDecision）
 

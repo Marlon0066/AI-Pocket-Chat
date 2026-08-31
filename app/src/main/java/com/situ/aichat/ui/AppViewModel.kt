@@ -298,6 +298,14 @@ class AppViewModel @Inject constructor(
             requireNetwork = true,
             existingPolicy = ExistingWorkPolicy.KEEP,
         )
+        // 图纸 2026-09-01 件④：回前台补一发向量回填（原独缺此路——瞬态嵌入失败留 NULL 后，自愈延迟从「下次冷启动」缩到「下次打开」）。
+        // worker 先 EXISTS 秒探测，无缺失零成本；KEEP 防与冷启动/导入重入；纯本地 ONNX 不需网。
+        backgroundScheduler.scheduleOneShot(
+            uniqueName = EmbeddingBackfillWorker.UNIQUE_ENSURE,
+            workerClass = EmbeddingBackfillWorker::class.java,
+            requireNetwork = false,
+            existingPolicy = ExistingWorkPolicy.KEEP,
+        )
         // P7.2.5 朋友圈韧性：回前台补处理待互动队列 + 恢复被国产 ROM 杀后台冲掉的延迟互动（场景 A/B/C）。
         // 1:1 iOS 回前台 runPendingMomentInteractions → runMomentRecovery。守卫避免多次 ON_RESUME 叠跑；
         // 不随后台取消（在 viewModelScope 跑完，更稳）；恢复服务自带重入锁。

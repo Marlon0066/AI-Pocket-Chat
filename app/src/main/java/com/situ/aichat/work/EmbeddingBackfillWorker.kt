@@ -36,6 +36,8 @@ class EmbeddingBackfillWorker @AssistedInject constructor(
         return try {
             // 先做模型签名变更检测（换模型→清空旧向量），再回填，让回填用新模型重嵌（对齐 iOS runStartupTasks 次序）。
             vectorMemory.detectModelChangeAndClearIfNeeded(applicationContext)
+            // 图纸 2026-09-01 件④：一次性洗白历史被瞬态失败冤枉的哨兵，让紧随其后的回填按新规则复评。
+            vectorMemory.washWronglySentineledOnce(applicationContext)
             vectorMemory.backfillMissingEmbeddings()
             worldMemoryEmbedder.backfillMissing() // W5：世界记忆嵌入限流回填（同款分批让片·空批秒退）
             meetingArchiveVector.backfillMissing() // 记忆改造四期·部件⑥：见面档案向量回填（同款分批让片·空批秒退）

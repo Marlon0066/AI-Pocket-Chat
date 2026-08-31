@@ -175,7 +175,7 @@ internal class AssistantTurnEngine(
         val history = messageRepo.recentChronological(conversationUuid, HISTORY_FETCH_LIMIT)
 
         // 多模态附件预取（音频 P13.4b / 图片一期）：读盘 + base64 全在 Default 线程，细节见 TurnMediaAttachments。
-        val audioAttachments = TurnMediaAttachments.audio(history, config)
+        val audioAttachments = TurnMediaAttachments.audio(history, config, convo.isInOfflineMode, convo.currentOfflineSessionId)
         val imageAttachments = TurnMediaAttachments.images(
             history = history,
             config = config,

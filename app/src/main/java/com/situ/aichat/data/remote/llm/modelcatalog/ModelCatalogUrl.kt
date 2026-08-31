@@ -14,19 +14,16 @@ import java.net.URI
  * 4. 末段是版本段（`v1` / `v2` / `v1beta` / `v1alpha`…）→ 直接追加 `models`。
  * 5. 否则 → 追加 [defaultVersion] + `models`。
  *
- * ⚠️ **与聊天路的规则目前不一致**（2026-08-29 登记）：`LlmHttp.buildChatCompletionsUrl` 只认 `/v1`，
- * 其余一概再补 `/v1/chat/completions`。于是 `https://host/api/v3` 这类中转在这里能正确打到
- * `/api/v3/models`、聊天却拼成 `/api/v3/v1/chat/completions` 而 404——**模型列表拉得出来、一发消息就炸**。
- * 跨四路（chat / 拉取 / 余额 / 探针）归一须单独立项（`LlmHttp` 是全部 LLM 往返唯一出口，改它要配 T5 +
- * 存量地址穷举），别以为已经单源了。
+ * ✅ **聊天路已同规则**（2026-08-31 归一·图纸 docs/handoff/2026-08-31-跨四路LLM-URL归一.md）：
+ * [LlmHttp.buildChatCompletionsUrl] 现在同样识别任意版本段、剥末尾 `#`、保留 query——
+ * `https://host/api/v3` 这类中转两路都打得通（此前拉取路正常、聊天却 404）。
+ * **版本段正则单源落户 [LlmHttp.VERSION_SEGMENT]**，本文件引用它，别再写第二份；
+ * 两侧任一方改规则都必须先看另一侧。
  *
  * query / fragment 原样保留（旧实现整段丢弃，`https://host/v1?token=x` 这类中转会失效）；
  * 非内网 http 主机升 https（与聊天路径 [LlmHttp.buildChatCompletionsUrl] 同一纪律，旧拉取路径没有）。
  */
 internal object ModelCatalogUrl {
-
-    /** 版本段：v1 / v2 / v1beta / v1alpha（大小写不敏感）。 */
-    private val VERSION_SEGMENT = Regex("^v\\d+(?:alpha|beta)?$", RegexOption.IGNORE_CASE)
 
     fun modelsUrl(
         baseUrl: String,
@@ -56,7 +53,7 @@ internal object ModelCatalogUrl {
         if (hadModels) segs.removeAt(segs.lastIndex)
         while (segs.isNotEmpty() && segs.last().lowercase() in stripTail) segs.removeAt(segs.lastIndex)
 
-        val lastIsVersion = segs.lastOrNull()?.let { VERSION_SEGMENT.matches(it) } == true
+        val lastIsVersion = segs.lastOrNull()?.let { LlmHttp.VERSION_SEGMENT.matches(it) } == true
         if (!lastIsVersion && !hadModels) segs.addAll(defaultVersion)
         segs.add(MODELS)
 

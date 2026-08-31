@@ -33,6 +33,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.situ.aichat.R
+import com.situ.aichat.ui.character.MemoryEditScreen
 import com.situ.aichat.ui.designsystem.AppBottomNav
 import com.situ.aichat.ui.designsystem.AppBottomNavHeight
 import com.situ.aichat.ui.designsystem.AppBottomNavItem
@@ -973,7 +974,15 @@ fun AIChatApp(
                     onOpenSchedule = { uuid -> navController.navigate("scheduleFullDay/$uuid") },
                     onOpenPromises = { uuid -> navController.navigate("promises/$uuid") },
                     onOpenStarfield = { uuid -> navController.navigate("starfield/$uuid") },
+                    onEditMemory = { uuid -> navController.navigate("memoryEdit/$uuid") },
                 )
+            }
+            // 记忆手动编辑（资料页共同记忆卡入口·图纸 2026-09-01 件③）。
+            composable(
+                route = "memoryEdit/{characterUuid}",
+                arguments = listOf(navArgument("characterUuid") { type = NavType.StringType }),
+            ) {
+                MemoryEditScreen(onClose = { navController.popBackStack() })
             }
             // 记忆星空（资料页「故事」Tab 入口卡目标·全屏可漫游星空·转场走 NavHost 全局默认·J5）。
             composable(

@@ -10,6 +10,7 @@ import com.situ.aichat.data.repository.CharacterRepository
 import com.situ.aichat.data.repository.ConversationRepository
 import com.situ.aichat.data.repository.MessageRepository
 import com.situ.aichat.data.repository.SettingsRepository
+import com.situ.aichat.prompt.AssistantOutputGate
 import com.situ.aichat.prompt.ReplyParser
 import com.situ.aichat.prompt.memory.VectorMemoryService
 import com.situ.aichat.sticker.StickerTagParser
@@ -69,6 +70,9 @@ class VoiceCallPersistence @Inject constructor(
         val character = characterRepo.get(characterUuid)
         val normalized = ReplyParser.sanitizeAssistantResponse(text, characterName = character?.name)
         if (normalized.isEmpty()) return false
+        // 落库前置闸（图纸 2026-09-01 件①）：本路落库 kind 恒 PLAIN_TEXT，同口径判脏即丢弃
+        // （返 false 走调用方既有「空转写」分支，无新分支）。
+        if (AssistantOutputGate.shouldDiscard(normalized, MessageKind.PLAIN_TEXT, source = "voiceCall")) return false
 
         val now = System.currentTimeMillis()
         val message = MessageEntity(

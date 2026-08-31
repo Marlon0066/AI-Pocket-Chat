@@ -1,5 +1,6 @@
 package com.situ.aichat.data.repository
 
+import android.util.Log
 import com.situ.aichat.data.local.dao.ApiConfigDao
 import com.situ.aichat.data.local.entity.ApiConfigEntity
 import com.situ.aichat.data.local.entity.audioInputMode
@@ -16,10 +17,12 @@ import com.situ.aichat.data.model.ApiFunction
 import com.situ.aichat.data.model.ThinkingBudgetSupport
 import com.situ.aichat.data.model.ApiProviderType
 import com.situ.aichat.data.model.AudioInputMode
+import com.situ.aichat.data.model.KnownModelCapabilityTable
 import com.situ.aichat.data.model.MaxOutputLength
 import com.situ.aichat.data.model.ThinkingBudgetLevel
 import com.situ.aichat.data.model.ThinkingModelMode
 import com.situ.aichat.data.model.ToolCallingMode
+import com.situ.aichat.data.model.guardedProbeWriteback
 import com.situ.aichat.data.model.VisionMode
 import com.situ.aichat.data.remote.llm.ApiBalanceResult
 import com.situ.aichat.data.remote.llm.ApiBalanceService
@@ -247,6 +250,8 @@ class ApiConfigRepository @Inject constructor(
      * whether to probe thinking-model tool support. A `-1` (undetermined) never overwrites a
      * prefilled value.
      *
+     * 视觉 / 音频写回经 [guardedProbeWriteback]：探针 0 推不翻名字表的正断言（判据与理由在该函数 KDoc）。
+     *
      * settings-api-6：返回 anyUndetermined = 最后一个执行的 auto 探针（thinking/vision/audio 中，**不含 tool**）
      * 是否返回 -1（对齐 iOS detectionHint「最近探针胜出、确定结果清除」语义）。供列表卡显示「检测无法判定」提示。
      */
@@ -297,17 +302,21 @@ class ApiConfigRepository @Inject constructor(
         // 为参数不认 / 限流返 400 很常见），跑了还会反过来覆盖权威值——这正是契约 A8 说的「免跑探针」。
         if (entity.visionMode == VisionMode.AUTO && catalogVision == null) {
             val result = capabilityDetector.detectVisionSupport(probe)
-            visionProbe = result
-            if (result != -1 || entity.detectedVisionSupport == -1) {
-                dao.updateVisionDetection(uuid, result)
+            visionProbe = result  // anyUndetermined 判的是**护栏前**的原始探针值，语义不变
+            val guarded = guardedProbeWriteback(result, KnownModelCapabilityTable.lookup(entity.modelName)?.hasVision)
+            if (guarded != result) Log.i(TAG, "写回护栏·vision model=${entity.modelName} 探针=$result → 写回=$guarded")
+            if (guarded != -1 || entity.detectedVisionSupport == -1) {
+                dao.updateVisionDetection(uuid, guarded)
             }
         }
 
         if (entity.audioInputMode == AudioInputMode.AUTO) {
             val result = capabilityDetector.detectAudioInputSupport(probe)
             audioProbe = result
-            if (result != -1 || entity.detectedAudioInputSupport == -1) {
-                dao.updateAudioDetection(uuid, result)
+            val guarded = guardedProbeWriteback(result, KnownModelCapabilityTable.lookup(entity.modelName)?.hasAudioInput)
+            if (guarded != result) Log.i(TAG, "写回护栏·audio model=${entity.modelName} 探针=$result → 写回=$guarded")
+            if (guarded != -1 || entity.detectedAudioInputSupport == -1) {
+                dao.updateAudioDetection(uuid, guarded)
             }
         }
         // 最后执行的 auto 探针（audio→vision→thinking 优先级）== -1 → 不确定（tool 不计入，对齐 iOS）。
@@ -355,6 +364,10 @@ class ApiConfigRepository @Inject constructor(
         } ?: return null
         val key = keyStore.get(entity.apiKeyId).orEmpty()
         return entity.toConfigValues(key)
+    }
+
+    private companion object {
+        const val TAG = "ApiConfigRepository"
     }
 
     private fun ApiConfigEntity.toConfigValues(apiKey: String): ApiConfigValues =

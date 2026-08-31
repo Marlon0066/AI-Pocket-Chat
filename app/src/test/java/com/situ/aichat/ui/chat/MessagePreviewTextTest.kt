@@ -24,6 +24,28 @@ class MessagePreviewTextTest {
 
     private fun preview(kind: MessageKind, content: String) = MessagePreviewText.forKind(kind, content)
 
+    // ---------- 脏文本兜底（图纸 2026-09-01 件①·T1-3/E8）----------
+
+    /** 模型复读记忆段标题 = 典型脏输出（此处重新打字为字面量，不引检测器常量）。 */
+    private val dirtyMemoryEcho = "【长期事实】\n- 喜欢猫\n【近期经历】\n- [2026-06-10] 去了公园"
+
+    @Test
+    fun `脏文本预览出空串·通知路据此不弹`() {
+        // 通知路 notifyIfNotViewing 有 body.isBlank() 守卫 → 空串 = 这条通知不弹，脏内容不从通知栏漏出去。
+        assertEquals("", preview(MessageKind.PLAIN_TEXT, dirtyMemoryEcho))
+        assertEquals("", preview(MessageKind.PLAIN_TEXT, "[系统记录：线下见面结束（约40分钟），两人回到了线上聊天]"))
+    }
+
+    @Test
+    fun `正常文本与日程卡不受脏判影响`() {
+        // 正向证据：闸门没把正常文本一起吃掉；日程卡（含 [#E1]）经检测器恒非脏，照旧剥标签出人话。
+        assertEquals("今天下班早，一起吃饭？", preview(MessageKind.PLAIN_TEXT, "今天下班早，一起吃饭？"))
+        val scheduleText = "[#E1] 19:00 一起吃饭"
+        val out = preview(MessageKind.SCHEDULE_CARD, scheduleText)
+        assertTrue("日程卡预览不得为空：$out", out.isNotBlank())
+        assertFalse("日程标签须剥净：$out", out.contains("[#E1]"))
+    }
+
     @Test
     fun `红包永远只显示🧧红包·绝不露金额或JSON`() {
         val content = RedPacketJson.encode(

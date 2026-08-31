@@ -18,7 +18,7 @@ import org.robolectric.annotation.Config
  *
  * 注：不做「systemPrompt 完全不含『用户』」的粗断言——「用户名：」字段标签与「不要写「用户」」指令都合法保留该子串；
  * 故只精确断言「作为称呼的裸『用户』」（旧规则 9「因为用户说」）已消失。
- * Robolectric：formatMessages→formatTimestamp 需 android.text.format.DateFormat（纯 JUnit 恒返 null）。
+ * Robolectric：安卓依赖保留（formatTimestamp 自 2026-09-01 件⑤起改 Locale.ROOT 纯 JVM）。
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])

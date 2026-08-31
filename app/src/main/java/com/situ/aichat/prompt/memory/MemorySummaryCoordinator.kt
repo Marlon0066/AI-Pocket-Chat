@@ -26,6 +26,16 @@ sealed class MemorySummaryError(message: String) : Exception(message) {
     data object TooLong : MemorySummaryError("Memory summary exceeded the relief cap even after recompression and base slimming. Cursor not advanced.")
 }
 
+/** 手动编辑写回结果（图纸 2026-09-01 件③）。 */
+sealed interface ManualEditResult {
+    data object Saved : ManualEditResult
+
+    /** 编辑期间库内已被自动整理改写；[current] = 库内当前文本（供「查看新版」重载）。 */
+    data class Conflict(val current: String) : ManualEditResult
+
+    data object CharacterGone : ManualEditResult
+}
+
 /**
  * 1:1 port of iOS `MemorySummaryCoordinator`：统一「生成 → 校验 → 写回 → 标记」，降低调用方分叉。
  *
@@ -173,6 +183,25 @@ class MemorySummaryCoordinator @Inject constructor(
         markSummarized()
 
         return trimmed
+    }
+
+    /**
+     * 手动编辑写回（图纸 2026-09-01 件③）：与自动摘要**同一把 per-角色锁**——否则用户点保存的同时后台整理
+     * 正好写回，两份内容互相覆盖且谁也不知道。锁内重读库内现值与 [baseline] 比对（[force]=false 时），
+     * 不一致返 [ManualEditResult.Conflict] 绝不静默覆盖；写走既有定向两列 UPDATE（旧值入 previousMemorySummary）。
+     *
+     * **只写正文**——游标 / 冷却 / 触发判定 / 护栏解套链一概不碰（手动编辑不是一次「整理」）。
+     */
+    suspend fun applyManualEdit(
+        characterUuid: String,
+        baseline: String,
+        newMemory: String,
+        force: Boolean = false,
+    ): ManualEditResult = perCharacterLocks.getOrPut(characterUuid) { Mutex() }.withLock {
+        val current = characterDao.getByUuid(characterUuid)?.memorySummary ?: return@withLock ManualEditResult.CharacterGone
+        if (!force && current != baseline) return@withLock ManualEditResult.Conflict(current)
+        characterDao.updateMemorySummary(characterUuid, current, newMemory)
+        ManualEditResult.Saved
     }
 
     private companion object {

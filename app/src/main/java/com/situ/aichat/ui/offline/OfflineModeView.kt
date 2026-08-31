@@ -21,11 +21,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -205,13 +203,14 @@ private fun OfflineMessageContent(
 ) {
     val kind = remember(message.messageKindRaw) { MessageKind.fromRaw(message.messageKindRaw) }
     val isUser = message.roleRaw == "user"
-    // 脏消息优先折叠，避免 LLM 复读的 JSON/Markdown 被解析成乱码块（1:1 iOS P3-R16）。
+    // 脏消息彻底隐身（图纸 2026-09-01 件①·用户拍板取代原折叠占位）：LLM 复读的 JSON/Markdown 不占一格
+    // 舞台。新脏内容已在落库前被 AssistantOutputGate 丢弃；这里兜的是库内历史脏行。
     val dirtyReason = remember(message.messageUUID, message.content) {
         DirtyMessageDetector.detect(message.content, kind)
     }
 
     when {
-        dirtyReason != null -> OfflineDirtyFoldedBlock(isUser)
+        dirtyReason != null -> Unit
 
         // 卷三 E1：剧场内用户语音消息=可回听的舞台深玻璃药丸 + 楷体转写随行（原先只剩转写文字·播放机制全复用）。
         isUser && message.isVoiceMessage -> OfflineUserVoice(
@@ -349,27 +348,6 @@ private fun OfflineUserBlocks(
                 userAvatarPath = userAvatarPath,
                 themeColor = themeColor,
                 onPhotoBackdrop = onPhotoBackdrop,
-            )
-        }
-    }
-}
-
-/** 脏消息折叠占位（线下沉浸里不展开 LLM 复读的 schema 乱码）。 */
-@Composable
-private fun OfflineDirtyFoldedBlock(isUser: Boolean) {
-    Box(
-        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-        contentAlignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart,
-    ) {
-        Surface(
-            color = OfflineTheater.scrimPill,
-            shape = RoundedCornerShape(12.dp),
-        ) {
-            Text(
-                "（内容已折叠）",
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                style = AppTypography.secondary,
-                color = OfflineTheater.textDim,
             )
         }
     }

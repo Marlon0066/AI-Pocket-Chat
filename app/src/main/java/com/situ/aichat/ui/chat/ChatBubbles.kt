@@ -28,7 +28,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.animation.core.snap
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DoneAll
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -265,30 +264,6 @@ internal fun AssistantTextBubble(
                     TypingDots()
                 }
             }
-        }
-    }
-}
-
-@Composable
-internal fun DirtyFoldedBubble(shape: Shape, onClick: () -> Unit) {
-    val colors = AppTheme.colors
-    Surface(color = colors.surface.sunken, shape = shape, onClick = onClick) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Icon(
-                Icons.Filled.VisibilityOff,
-                contentDescription = null,
-                tint = colors.text.secondary,
-                modifier = Modifier.size(15.dp),
-            )
-            Text(
-                text = "已折叠的消息 · 点击展开",
-                style = AppTypography.secondary,
-                color = colors.text.secondary,
-            )
         }
     }
 }

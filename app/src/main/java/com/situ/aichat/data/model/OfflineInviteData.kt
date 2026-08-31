@@ -40,21 +40,25 @@ data class OfflineInviteData(
      * ② 以「[系统记录：」开头且含「线下见面邀约」——[com.situ.aichat.prompt.DirtyMessageDetector]
      *    matchesSystemRecordLabel 靠这两段识别 AI 复读并折叠。
      *
+     * 人称=**双名第三人称**（`{角色名}向{用户名}…`·空角色名兜底「角色」照 [GiftCardData.llmRepresentation] 先例）：
+     * 视角无依赖，不受「你」落进角色标签内被读串的影响（2026-08-31 用户终拍板·取代同日早前的「你+名」制式）。
+     *
      * 状态字面量 accepted/declined 与 [com.situ.aichat.ui.chat.ChatOfflineController] 的写入侧同字面（现状散点·单源化未立项）。
      */
-    fun llmRepresentation(userName: String = "用户"): String? {
+    fun llmRepresentation(characterName: String, userName: String = "用户"): String? {
         if (type != OfflineInviteJson.TYPE_INVITE) return null
+        val charDisplayName = characterName.ifEmpty { "角色" }
         val parts = listOfNotNull(
             location?.takeIf { it.isNotBlank() }?.let { "地点=$it" },
             activity?.takeIf { it.isNotBlank() }?.let { "活动=$it" },
         )
         val detail = if (parts.isEmpty()) "" else " | " + parts.joinToString(" | ")
         val status = when (responded) {
-            "accepted" -> "对方接受了，你们随后见了面"
-            "declined" -> "对方婉拒了，这次没见成"
-            else -> "对方还没回应" // null / "continued" / 未知值一律按未回应
+            "accepted" -> "${userName}接受了，两人随后见了面"
+            "declined" -> "${userName}婉拒了，这次没见成"
+            else -> "${userName}还没回应" // null / "continued" / 未知值一律按未回应
         }
-        return "[系统记录：你向${userName}发出了线下见面邀约$detail | 状态=$status]"
+        return "[系统记录：${charDisplayName}向${userName}发出了线下见面邀约$detail | 状态=$status]"
     }
 }
 

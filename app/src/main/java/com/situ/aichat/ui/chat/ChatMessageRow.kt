@@ -1,7 +1,5 @@
 package com.situ.aichat.ui.chat
 
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.snap
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -54,8 +52,6 @@ import com.situ.aichat.data.model.RedPacketStatus
 import com.situ.aichat.data.model.SystemEventJson
 import com.situ.aichat.prompt.CalendarItemParser
 import com.situ.aichat.prompt.DirtyMessageDetector
-import com.situ.aichat.ui.components.AppMotion
-import com.situ.aichat.ui.components.rememberReduceMotion
 import com.situ.aichat.prompt.memory.MemoryService
 import com.situ.aichat.sticker.StickerTagParser
 import com.situ.aichat.ui.components.LocalAppHaptics
@@ -209,16 +205,19 @@ internal fun MessageRow(
     val change = remember(message.content, kind) {
         if (kind == MessageKind.FUTURE_MEETING_CHANGE_CARD) FutureMeetingChangeJson.parse(message.content) else null
     }
+    // 脏消息彻底隐身（图纸 2026-09-01 件①·用户拍板）：整行不渲染、零高占位、长按/复制/朗读均不可达。
+    // 新脏消息已在落库前被 AssistantOutputGate 丢弃；这里兜的是**库内历史脏行**（有意不物理删除，
+    // 检测规则将来升级时历史行为自动跟进）。
     val isDirty = remember(message.messageUUID, message.content) {
         DirtyMessageDetector.isDirty(message.content, kind)
     }
+    if (isDirty) return
     // M17 表情包：纯贴纸（无气泡大图）/ 混合（文字进气泡、贴纸独立显示）。渲染优先级对齐 iOS（dirty 在前）。
     val isStickerOnly = remember(message.content) { StickerTagParser.isStickerOnly(message.content) }
     val hasStickerTags = remember(message.content) {
         !isStickerOnly && StickerTagParser.containsStickerTag(message.content)
     }
     // （复制文案清洗口径已单源到 messageCopyText()·ChatImmersiveMenu.kt——菜单与行级 customActions 共用。）
-    var dirtyExpanded by remember { mutableStateOf(false) }
     val clipboard = LocalClipboard.current
     val copyScope = rememberCoroutineScope()
     // C3-haptics 根因修（契约 §3.5）：长按触觉内联进 onLongClick 即时触发；medium=长按弹菜单（契约 §2），
@@ -231,7 +230,7 @@ internal fun MessageRow(
     // accessibilityDescription）——「{你|角色名}在{相对时间.detailed}说：{清洗正文}」/ 语音变体；只对
     // 无独立子控件的气泡（文字/混合贴纸/纯贴纸/语音）生效，红包/礼物/邀约/日程卡保留各自 Button 语义。
     // iOS role 用字面「角色」，安卓用角色名=多会话 TalkBack 可辨（有据超越）；用户消息回执态追加句尾。
-    val bubbleSentence: String? = if ((kind == MessageKind.PLAIN_TEXT && !isDirty) || message.isVoiceMessage) {
+    val bubbleSentence: String? = if (kind == MessageKind.PLAIN_TEXT || message.isVoiceMessage) {
         val relStrings = rememberRelativeTimeStrings()
         val roleName = if (isUser) stringResource(R.string.a11y_role_you) else characterName
         val timeText = DateFormatters.relativeTimeString(
@@ -261,7 +260,6 @@ internal fun MessageRow(
     // Fable-5 气泡形状（2026-06-19 拍板取代旧 D3）：四角统一 16dp·用户/AI 同·连发不再连成水滴串。
     val bubbleShape = AppShapes.bubble
     val bubbleMaxWidth = rememberBubbleMaxWidth()
-    val reduceMotion = rememberReduceMotion()
 
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = topPadding),
@@ -277,9 +275,8 @@ internal fun MessageRow(
         ) {
         // chat-ui-4：右滑引用（仅已显示的气泡可引用，1:1 iOS isContentRevealed；用户/AI 都适用）。
         SwipeToReplyBox(enabled = message.isContentRevealed, onTriggered = { actions.onQuote(message) }) {
-        // P4：仅脏消息「点击展开」时让气泡顺滑长高（gentle·RM 直出）；非脏路径不挂 animateContentSize，
-        // 绝不干扰 AssistantTextBubble 的打字变身（自带 AnimatedContent+SizeTransform）。展开后历史消息首帧即
-        // revealed=true 不自播 → 外层 animateContentSize 独占这次高度过渡。
+        // （原「脏消息点击展开」的 animateContentSize 随折叠条一并退役——脏行自 2026-09-01 起彻底不渲染。
+        // 常规路径本就不挂 animateContentSize，绝不干扰 AssistantTextBubble 的打字变身。）
         // M2 Y2 收编：常规气泡族（纯文本/纯贴纸·已有合并朗读句）行级 customActions——读屏不开视觉菜单即可
         // 触发动作，条件与沉浸菜单逐字同源（immersiveMenuActions）。语音（播放/转写子控件）与混合贴纸行
         // **有意不并**：mergeDescendants 会吞掉子控件语义（Y3 转写开关等），保持 Y2 onLongClickLabel 现状。
@@ -306,13 +303,7 @@ internal fun MessageRow(
             null
         }
         Box(
-            modifier = (
-                if (isDirty) {
-                    Modifier.animateContentSize(if (reduceMotion) snap() else AppMotion.gentleSpring())
-                } else {
-                    Modifier
-                }
-                )
+            modifier = Modifier
                 .onGloballyPositioned {
                     bubbleBounds = it.boundsInWindow()
                     // M3b ④：目标行每次布局上报（就位帧=清空+起飞同帧；飞行期=移动靶随列表位移逐帧更新）。
@@ -409,7 +400,6 @@ internal fun MessageRow(
                     a11yDescription = bubbleSentence,
                 )
                 isCard -> ScheduleCardBubble(content = message.content, onLongClick = openMenu)
-                isDirty && !dirtyExpanded -> DirtyFoldedBubble(shape = bubbleShape, onClick = { dirtyExpanded = true })
                 isStickerOnly -> StickerStack(
                     content = message.content,
                     customStickers = customStickers,

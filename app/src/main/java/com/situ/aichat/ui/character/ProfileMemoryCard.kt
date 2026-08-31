@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -90,6 +91,10 @@ internal fun SharedMemoryCard(
     guardBlocked: Boolean = false,
     organizing: Boolean = false,
     onOrganizeNow: () -> Unit = {},
+    /** 记忆手动编辑入口（图纸 2026-09-01 件③·D-1）：null（默认）= 不渲染入口，卡面与旧版逐像素一致。 */
+    onEditMemory: (() -> Unit)? = null,
+    /** 整理进行中 → 编辑入口暗且禁点（防编辑与自动整理同时开工）。 */
+    editInProgressBlocked: Boolean = false,
 ) {
     val chips = buildMemoryChips(stats, memory)
     // 记忆原文（V-1·图纸 §4.3/§4.4）：整段不拆·拆行 / 去行首项目符号 / 滤空·不再调用 MemorySummarySections.parse。
@@ -140,12 +145,35 @@ internal fun SharedMemoryCard(
                 androidx.compose.material3.HorizontalDivider()
                 Spacer(Modifier.size(12.dp))
             }
-            Text(
-                stringResource(R.string.profile_memory_raw_title),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.profile_memory_raw_title),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                // 编辑入口（D-1）：空记忆无入口（与记忆原文区同门槛）；整理进行中暗且禁点。
+                if (onEditMemory != null && display.isNotEmpty()) {
+                    AppButton(
+                        onClick = onEditMemory,
+                        style = AppButtonStyle.Text,
+                        enabled = !editInProgressBlocked,
+                        contentPadding = PaddingValues(vertical = 4.dp),
+                        modifier = Modifier.alpha(if (editInProgressBlocked) 0.45f else 1f),
+                    ) {
+                        Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(13.dp))
+                        Spacer(Modifier.size(4.dp))
+                        Text(
+                            stringResource(R.string.profile_memory_edit_action),
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                    }
+                }
+            }
             Spacer(Modifier.size(6.dp))
             // 折叠态出前 PREVIEW_LINES 行·展开态整段（随外层滚·无嵌套滚动·E3）；
             // 整行恰为【…】的行当小标题（D-D·显示层美化非分节），其余走圆点正文行。

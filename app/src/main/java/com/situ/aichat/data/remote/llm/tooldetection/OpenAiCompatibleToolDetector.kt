@@ -6,6 +6,7 @@ import com.situ.aichat.data.model.ToolProtocolFamily
 import com.situ.aichat.data.model.ToolSupportLevel
 import com.situ.aichat.data.remote.llm.ApiConfigValues
 import com.situ.aichat.data.remote.llm.LlmHttp
+import com.situ.aichat.data.remote.llm.ProbeMaxTokensDialect
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
@@ -46,7 +47,15 @@ class OpenAiCompatibleToolDetector : ToolCallingDetector {
                 putJsonArray("tools") { add(testToolDefinition) }
             }
 
-            val basic = ToolDetectionHttp.jsonRequest(client, url, headers = headers, body = basicBody, json = json)
+            // 两发都经 ProbeMaxTokensDialect：OpenAI 推理系拒收 `max_tokens` 的 400 会被 statusCode != 200
+            // 直接读成「基础工具请求被拒绝」→ 整族误判不支持工具调用。点名才换 `max_completion_tokens`
+            // 重发恰一次，其余情形（含退避重试）行为不变。
+            val basic = ProbeMaxTokensDialect.postWithFallback<ToolDetectionHttpResponse>(
+                body = basicBody,
+                statusOf = { it.statusCode },
+                bodyTextOf = { it.bodyText },
+                send = { sent -> ToolDetectionHttp.jsonRequest(client, url, headers = headers, body = sent, json = json) },
+            )
             if (basic.statusCode != 200) {
                 return ToolDetectionResult.unsupported(
                     protocolFamily = ToolProtocolFamily.OPENAI_COMPATIBLE,
@@ -85,7 +94,12 @@ class OpenAiCompatibleToolDetector : ToolCallingDetector {
                 put("max_tokens", 64)
             }
 
-            val followUp = ToolDetectionHttp.jsonRequest(client, url, headers = headers, body = followUpBody, json = json)
+            val followUp = ProbeMaxTokensDialect.postWithFallback<ToolDetectionHttpResponse>(
+                body = followUpBody,
+                statusOf = { it.statusCode },
+                bodyTextOf = { it.bodyText },
+                send = { sent -> ToolDetectionHttp.jsonRequest(client, url, headers = headers, body = sent, json = json) },
+            )
 
             val level = if (followUp.statusCode == 200) ToolSupportLevel.FULL else ToolSupportLevel.BASIC
             val streamingState =

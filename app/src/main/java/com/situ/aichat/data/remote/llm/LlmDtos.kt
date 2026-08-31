@@ -17,6 +17,8 @@ data class ChatRequestDto(
     val stream: Boolean,
     val temperature: Double? = null,
     @SerialName("max_tokens") val maxTokens: Int? = null,
+    /** 推理系方言（OpenAI gpt-5.x/o 系拒收 max_tokens 时的换名重发）：与 [maxTokens] 互斥，恒只发一个。 */
+    @SerialName("max_completion_tokens") val maxCompletionTokens: Int? = null,
     /** 结构化工具调用定义（1:1 iOS ChatRequest.tools）；null=不发工具（走文本标记）。 */
     val tools: List<ToolDefinitionDto>? = null,
     val reasoning: ReasoningParamDto? = null,

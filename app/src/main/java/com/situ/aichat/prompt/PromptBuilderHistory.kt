@@ -184,7 +184,7 @@ internal fun appendConversationMessages(
         // 线下邀约卡（留痕改造 2026-08-31）：JSON → 带实时 responded 状态的系统记录行；invitation/tensionHint/
         // hiddenTension/原始 JSON 绝不进 LLM（与 FUTURE_MEETING 两卡同「宁缺勿漏」口径：解析失败/非邀约型 → 整条跳过）。
         if (message.messageKindRaw == MessageKind.OFFLINE_INVITE_CARD.raw) {
-            normalizedContent = OfflineInviteJson.parse(message.content)?.llmRepresentation(resolvedUserName) ?: ""
+            normalizedContent = OfflineInviteJson.parse(message.content)?.llmRepresentation(character.name, resolvedUserName) ?: ""
         }
         // 线下离场标记（留痕改造）：普通聊天窗口保留并改写为一行系统记录（时长+回到线上）；标记原文
         //（含【重要】指令段）不进普通聊天 prompt。解析失败 → 整条跳过。

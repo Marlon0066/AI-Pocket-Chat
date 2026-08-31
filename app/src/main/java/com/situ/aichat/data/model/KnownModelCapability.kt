@@ -77,6 +77,10 @@ object KnownModelCapabilityTable {
         "x-ai/",
         "nvidia/",
         "01-ai/",
+        "moonshotai/",
+        "zhipuai/",
+        "z-ai/",
+        "zai-org/",
     )
 
     private data class Entry(val prefix: String, val capability: KnownModelCapability)
@@ -106,7 +110,9 @@ object KnownModelCapabilityTable {
             "claude-3-haiku" to KnownModelCapability(isThinking = false, hasVision = true, hasToolCalling = true, hasAudioInput = false),
 
             // ── OpenAI GPT ──
-            "gpt-5" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = true),
+            // gpt-5 系不收 input_audio（OpenAI 音频输入是 gpt-4o-audio / gpt-audio 族）——2026-08-31 纠错，
+            // 此前 true 被音频探针的 400→0 歪打正着压住，探针修方言后必须靠表值本身正确。
+            "gpt-5" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = false),
             // ⚠️ 4.1 系有视觉，但会被 `gpt-4`(hasVision=false) 吞掉 → 必须显式列出（前缀更长自动优先）。
             "gpt-4.1" to KnownModelCapability(isThinking = false, hasVision = true, hasToolCalling = true, hasAudioInput = false),
             "gpt-4.5" to KnownModelCapability(isThinking = false, hasVision = true, hasToolCalling = true, hasAudioInput = true),
@@ -196,6 +202,43 @@ object KnownModelCapabilityTable {
             "qwen2.5" to KnownModelCapability(isThinking = false, hasVision = false, hasToolCalling = true, hasAudioInput = false),
             "qwen-2.5" to KnownModelCapability(isThinking = false, hasVision = false, hasToolCalling = true, hasAudioInput = false),
 
+            // ── Alibaba Qwen 追加（2026-08-31）──
+            // ⚠️ Qwen3.5 全系原生多模态（2026-02 发布·early fusion）：不补条目会被 `qwen3`(hasVision=false)
+            // 吞掉一整代「主动说错」；Omni 系强制流式 → 非流式探针必 400，救不回来，只能靠表 + 写回护栏。
+            "qwen3.5-omni" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = true),
+            "qwen-3.5-omni" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = true),
+            "qwen3.5" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = false),
+            "qwen-3.5" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = false),
+            "qwen3-omni" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = true),
+            "qwen-3-omni" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = true),
+
+            // ── StepFun 阶跃星辰（2026-08-31 补录·出处：官方视觉理解文档 + Step3 开源发布）──
+            // `step-3` 前缀会同时覆盖 step-3.7-flash 等后继（阶跃旗舰线原生多模态·Step3=321B MoE 多模态推理）；
+            // 若未来出纯文本 step-3.x，照 gpt-4.1 先例加更长前缀纠偏。
+            "step-1o-turbo-vision" to KnownModelCapability(isThinking = false, hasVision = true, hasToolCalling = true, hasAudioInput = false),
+            "step-1o-vision" to KnownModelCapability(isThinking = false, hasVision = true, hasToolCalling = true, hasAudioInput = false),
+            "step-1v" to KnownModelCapability(isThinking = false, hasVision = true, hasToolCalling = true, hasAudioInput = false),
+            "step-3" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = false),
+
+            // ── Zhipu GLM（2026-08-31 补录：此前 GLM 全族缺席，视觉判定全靠探针）──
+            "glm-4.6v" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = false),
+            "glm-4.5v" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = false),
+            "glm-4v" to KnownModelCapability(isThinking = false, hasVision = true, hasToolCalling = false, hasAudioInput = false),
+
+            // ── Moonshot Kimi（2026-08-31 补录；kimi-latest 与 kimi-k2 系已官方退役，不录退役款）──
+            "kimi-k2.6" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = false),
+            "kimi-k2.5" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = false),
+            "kimi-k3" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = false),
+
+            // ── ByteDance Doubao·火山方舟（2026-08-31 补录；官方 ID 用连字符（doubao-seed-1-6-250615），
+            // 点号形态一并收录防中转改写；「推理接入点」ep-xxx ID 无法按名匹配，恒走探针）──
+            "doubao-seed-1.6" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = false),
+            "doubao-seed-1-6" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = false),
+            "doubao-1.5-thinking-vision" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = false),
+            "doubao-1-5-thinking-vision" to KnownModelCapability(isThinking = true, hasVision = true, hasToolCalling = true, hasAudioInput = false),
+            "doubao-1.5-vision" to KnownModelCapability(isThinking = false, hasVision = true, hasToolCalling = true, hasAudioInput = false),
+            "doubao-1-5-vision" to KnownModelCapability(isThinking = false, hasVision = true, hasToolCalling = true, hasAudioInput = false),
+
             // ── Mistral ──
             "mistral-large" to KnownModelCapability(isThinking = false, hasVision = false, hasToolCalling = true, hasAudioInput = false),
             "mistral-medium" to KnownModelCapability(isThinking = false, hasVision = false, hasToolCalling = true, hasAudioInput = false),
@@ -249,3 +292,11 @@ fun redirectDeprecatedModel(modelName: String, providerType: ApiProviderType): S
     if (!cap.isDeprecated || replacement.isNullOrEmpty()) return modelName
     return replacement
 }
+
+/**
+ * 探针写回护栏：探针 0（一次 400 成因太多——参数方言/强制流式/中转不认参数）不足以推翻
+ * 名字表人工核过的正断言；探针 1（真收下多模态输入并回话）是强证据、照旧可推翻表的 0。
+ * -1 原样透传（「未判定不覆盖已有值」语义在调用方，与本函数无关）。只用于 AUTO 档写回。
+ */
+fun guardedProbeWriteback(probeResult: Int, tableSaysSupported: Boolean?): Int =
+    if (probeResult == 0 && tableSaysSupported == true) 1 else probeResult

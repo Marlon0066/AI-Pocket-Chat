@@ -46,7 +46,7 @@ class ConversationPreviewRefreshTest {
 
     @Test
     fun `删后_快照重算为新的最新文本消息`() = runBlocking {
-        coEvery { messageRepo.latestVisibleMessage(conv) } returns message("m-user", "user", "那早点睡呀", 5_000L)
+        coEvery { messageRepo.latestVisibleMessages(conv, any()) } returns listOf(message("m-user", "user", "那早点睡呀", 5_000L))
 
         refreshConversationLastMessage(conv, messageRepo, conversationRepo)
 
@@ -56,8 +56,8 @@ class ConversationPreviewRefreshTest {
 
     @Test
     fun `新最新是红包卡_预览脱敏为人话而非原始JSON`() = runBlocking {
-        coEvery { messageRepo.latestVisibleMessage(conv) } returns
-            message("m-rp", "assistant", """{"amount":888,"blessing":"恭喜发财"}""", 6_000L, kindRaw = "red_packet")
+        coEvery { messageRepo.latestVisibleMessages(conv, any()) } returns
+            listOf(message("m-rp", "assistant", """{"amount":888,"blessing":"恭喜发财"}""", 6_000L, kindRaw = "red_packet"))
 
         refreshConversationLastMessage(conv, messageRepo, conversationRepo)
 
@@ -67,7 +67,38 @@ class ConversationPreviewRefreshTest {
 
     @Test
     fun `删空整会话_清空快照而非写预览`() = runBlocking {
-        coEvery { messageRepo.latestVisibleMessage(conv) } returns null
+        coEvery { messageRepo.latestVisibleMessages(conv, any()) } returns emptyList()
+
+        refreshConversationLastMessage(conv, messageRepo, conversationRepo)
+
+        coVerify(exactly = 1) { conversationRepo.clearLastMessage(conv) }
+        coVerify(exactly = 0) { conversationRepo.recordLastMessage(any(), any(), any(), any()) }
+    }
+
+    // ────────────── 图纸 2026-09-01 件①：脏行不进列表预览（T2-2·E7） ──────────────
+
+    /** 模型复读记忆段标题 = 典型脏输出（此处重新打字为字面量，不引检测器常量）。 */
+    private val dirtyEcho = "【长期事实】\n- 喜欢猫\n【近期经历】\n- [2026-06-10] 去了公园"
+
+    @Test
+    fun `最新一条是库内脏行_预览取下一条非脏消息`() = runBlocking {
+        coEvery { messageRepo.latestVisibleMessages(conv, any()) } returns listOf(
+            message("m-dirty", "assistant", dirtyEcho, 9_000L),
+            message("m-clean", "assistant", "那我七点到楼下等你", 8_500L),
+            message("m-older", "user", "好呀", 8_000L),
+        )
+
+        refreshConversationLastMessage(conv, messageRepo, conversationRepo)
+
+        // 快照取第一条非脏消息（含它自己的角色与时间戳），脏行绝不上列表。
+        coVerify(exactly = 1) { conversationRepo.recordLastMessage(conv, "那我七点到楼下等你", "assistant", 8_500L) }
+        coVerify(exactly = 0) { conversationRepo.clearLastMessage(any()) }
+    }
+
+    @Test
+    fun `扫描窗内全脏_清空快照而非露脏文`() = runBlocking {
+        coEvery { messageRepo.latestVisibleMessages(conv, any()) } returns
+            (1..10).map { message("m-d$it", "assistant", dirtyEcho, 9_000L - it) }
 
         refreshConversationLastMessage(conv, messageRepo, conversationRepo)
 
@@ -80,8 +111,8 @@ class ConversationPreviewRefreshTest {
     @Test
     fun `新最新是用户语音_预览带语音前缀并截断40字_对齐插入口径`() = runBlocking {
         val transcript = "今天路过那家店突然想到你说想吃的那个栗子蛋糕就排队买了一个想着周末给你带过去尝尝看" // >40 字
-        coEvery { messageRepo.latestVisibleMessage(conv) } returns
-            message("m-v", "user", transcript, 7_000L, isVoiceMessage = true)
+        coEvery { messageRepo.latestVisibleMessages(conv, any()) } returns
+            listOf(message("m-v", "user", transcript, 7_000L, isVoiceMessage = true))
 
         refreshConversationLastMessage(conv, messageRepo, conversationRepo)
 
@@ -94,7 +125,7 @@ class ConversationPreviewRefreshTest {
     @Test
     fun `新最新是assistant超长文本_截断50字_对齐插入口径`() = runBlocking {
         val longText = "长".repeat(80)
-        coEvery { messageRepo.latestVisibleMessage(conv) } returns message("m-a", "assistant", longText, 8_000L)
+        coEvery { messageRepo.latestVisibleMessages(conv, any()) } returns listOf(message("m-a", "assistant", longText, 8_000L))
 
         refreshConversationLastMessage(conv, messageRepo, conversationRepo)
 
@@ -110,12 +141,12 @@ class ConversationPreviewRefreshTest {
         // 无锁时第二次重算（删空→clear）会先完成、迟到的 recordLastMessage(旧) 最后落地 = 已删消息重新挂上列表。
         val gate = CompletableDeferred<Unit>()
         var reads = 0
-        coEvery { messageRepo.latestVisibleMessage(conv) } coAnswers {
+        coEvery { messageRepo.latestVisibleMessages(conv, any()) } coAnswers {
             if (++reads == 1) {
                 gate.await()
-                message("m-old", "user", "旧消息", 1_000L)
+                listOf(message("m-old", "user", "旧消息", 1_000L))
             } else {
-                null // 第二次删除后的重算：会话已删空
+                emptyList() // 第二次删除后的重算：会话已删空
             }
         }
 

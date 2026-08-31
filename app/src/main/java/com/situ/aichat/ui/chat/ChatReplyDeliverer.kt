@@ -19,6 +19,7 @@ import com.situ.aichat.notification.Notifier
 import com.situ.aichat.offline.OfflineMeetingAction
 import com.situ.aichat.offline.OfflineMeetingActionType
 import com.situ.aichat.offline.OfflineMeetingService
+import com.situ.aichat.prompt.AssistantOutputGate
 import com.situ.aichat.prompt.CalendarItemParser
 import com.situ.aichat.prompt.MessageKindInference
 import com.situ.aichat.prompt.MessageSplitter
@@ -257,7 +258,7 @@ internal class ChatReplyDeliverer(
         // 后门兜底：对每个 segment 无条件再剥一次 MiniMax 语气标签（对齐 iOS）。
         // 复核修（iOS 对照）：immediate=取消兜底不分段——整条合并单泡落库（=iOS PostProcess 取消分支单次
         // insertMessage；原先重分段会一次性掉出多个泡）。
-        val segments = if (offlineSessionId != null || immediate) {
+        val split = if (offlineSessionId != null || immediate) {
             listOfNotNull(ReplyParser.stripMiniMaxVoiceTags(stickerNormalized).trim().takeIf { it.isNotEmpty() })
         } else {
             val range = settings.sanitizedReplySegmentRange
@@ -265,6 +266,9 @@ internal class ChatReplyDeliverer(
                 .map { ReplyParser.stripMiniMaxVoiceTags(it).trim() }
                 .filter { it.isNotEmpty() }
         }
+        // 落库前置闸（图纸 2026-09-01 件①）：判脏的段直接丢弃不落库；kind 与下方 insertSegment 同口径。
+        // 全段皆脏 → 返回空表 = 空回合，接 AssistantTurnEngine 既有重试链（零新循环）。
+        val segments = AssistantOutputGate.filterSegments(split, isOfflineMode = offlineSessionId != null, source = "chat")
         if (segments.isEmpty()) return emptyList()
 
         val stored = mutableListOf<MessageEntity>()
@@ -348,7 +352,10 @@ internal class ChatReplyDeliverer(
         immediate: Boolean,
         dotsAppearMillis: Long,
     ): List<MessageEntity> {
-        val queue = ArrayDeque(VoiceResponseChunker.chunkForVoice(stickerNormalized))
+        // 落库前置闸（图纸件①）：语音路各 chunk 落库 kind 恒 PLAIN_TEXT，同口径判脏后丢弃。
+        val queue = ArrayDeque(
+            AssistantOutputGate.filterPlainChunks(VoiceResponseChunker.chunkForVoice(stickerNormalized), source = "chatVoice"),
+        )
         if (queue.isEmpty()) return emptyList()
 
         val stored = mutableListOf<MessageEntity>()

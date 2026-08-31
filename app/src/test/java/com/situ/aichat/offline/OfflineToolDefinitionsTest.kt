@@ -67,8 +67,18 @@ class OfflineToolDefinitionsTest {
         assertTrue(OfflineMeetingAction.FALLBACK_PROMPT.endsWith(OfflineMeetingAction.INFORMED_INVITE_RULES))
         // 规则本体逐字（双保险 pin：字面 + 与实现常量的包含关系）。
         assertTrue(OfflineMeetingAction.INFORMED_INVITE_RULES.startsWith("【邀约的分寸】"))
+        // 首段引用句 2026-08-31 随留痕行改双名第三人称同步（原「你向…」制式已出局）：规则必须告诉模型
+        // 「记录里一律用名字相称，你的名字指的就是你自己」，否则第三人称留痕行会被读成别人做的事。
+        assertTrue(
+            "首段引用句缺失，实际：${OfflineMeetingAction.INFORMED_INVITE_RULES}",
+            OfflineMeetingAction.INFORMED_INVITE_RULES.contains("记录里一律用名字相称，你的名字指的就是你自己"),
+        )
+        assertFalse(
+            "规则不得残留「你向…」制式引用句",
+            OfflineMeetingAction.INFORMED_INVITE_RULES.contains("[系统记录：你向"),
+        )
         for (rule in listOf(
-            "上一次邀约「对方还没回应」时，不要再发起新的邀约",
+            "上一次邀约的状态还是「还没回应」时，不要再发起新的邀约",
             "但邀约台词必须体现出你记得这件事",
             "对方连续两次婉拒之后，不要再发起邀约",
         )) {

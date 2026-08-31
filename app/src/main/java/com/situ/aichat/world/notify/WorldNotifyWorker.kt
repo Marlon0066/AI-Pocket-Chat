@@ -48,7 +48,7 @@ class WorldNotifyWorker @AssistedInject constructor(
         NotificationChannels.ensureCreated(applicationContext)
         val notification = NotificationCompat.Builder(applicationContext, NotificationChannels.STORY_GENERATING)
             .setSmallIcon(R.drawable.ic_notif_world)
-            .setContentTitle(applicationContext.getString(R.string.llm_foreground_notification_title))
+            .setContentTitle(applicationContext.getString(R.string.notif_fg_world_title))
             .setOngoing(true)
             .setVisibility(NotificationCompat.VISIBILITY_SECRET)
             .build()

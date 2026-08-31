@@ -6,6 +6,7 @@ import com.situ.aichat.data.model.dynamicInterests
 import com.situ.aichat.data.model.moodHistory
 import com.situ.aichat.data.model.relationshipQuality
 import com.situ.aichat.prompt.memory.MemorySummarySections
+import com.situ.aichat.util.takeCodePoints
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -91,7 +92,7 @@ internal object ScheduleLivenessPromptSections {
             picked.add(line)
             budget += line.length
         }
-        if (picked.isEmpty()) picked.add(facts.first().take(LONG_TERM_BUDGET_CHARS))
+        if (picked.isEmpty()) picked.add(facts.first().takeCodePoints(LONG_TERM_BUDGET_CHARS))
         return buildList {
             add("【TA的长期记忆】")
             addAll(picked)

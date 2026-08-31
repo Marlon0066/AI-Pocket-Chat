@@ -26,6 +26,7 @@ import com.situ.aichat.economy.CharacterEconomicStateService
 import com.situ.aichat.gift.GiftHistoryPromptService
 import com.situ.aichat.moments.MomentChatContextService
 import com.situ.aichat.offline.outgoingOfflineSessionId
+import com.situ.aichat.prompt.AssistantOutputGate
 import com.situ.aichat.prompt.MessageKindInference
 import com.situ.aichat.prompt.MessageSplitter
 import com.situ.aichat.prompt.PromptBuilder
@@ -242,7 +243,7 @@ class RecoveryReplyGenerator @Inject constructor(
         // 分段（<50 字不拆，对齐忙碌/正常回复阈值）→ 立即落库（不暂扣），时间戳严格递增。
         // 批4 4-2：与前台/忙碌路同口径吃用户「回复分条」设置。
         val segmentRange = settings.sanitizedReplySegmentRange
-        val segments = if (inMeeting) {
+        val split = if (inMeeting) {
             // 卷一 A2c：见面期 = 单段投递（整条叙事不拆句），与主路径 ChatReplyDeliverer.deliverTextReply 同源——
             // 剧场按内容块渲染，拆句会把一段叙事切成互不相干的碎片。
             listOf(stickerNormalized)
@@ -256,6 +257,13 @@ class RecoveryReplyGenerator @Inject constructor(
         // 见面期间触达（列表快捷回复 / 通知直接回复经本无头管线，目标会话正在见面中）须随会话打线下标记，与助手投递
         // deliverTextReply 同源——否则 AI 回复漏进普通聊天 + 缺席沉浸剧场。后台未答恢复扫描已过滤线下会话→此处恒 null·不受影响。
         val offlineSessionId = outgoingOfflineSessionId(convo.isInOfflineMode, convo.currentOfflineSessionId)
+        // 落库前置闸（图纸 2026-09-01 件①）：判脏的段丢弃不落库；kind 与下方事务内 upsert 同口径。
+        // 整轮全脏 → 放弃本次补回复（会话仍是待答态，下次扫描会重来一轮），绝不落半份脏内容。
+        val segments = AssistantOutputGate.filterSegments(split, isOfflineMode = offlineSessionId != null, source = "recovery")
+        if (segments.isEmpty()) {
+            Log.d(TAG, "未答恢复输出整轮判脏，放弃 conv=$conversationUuid")
+            return false
+        }
         // 批3 3-2：分段落库 + 快照翻转包进**同一事务**——旧实现逐段 upsert 后才翻 lastMessageRole，中途进程死亡
         // = 半截回复已在库但会话仍是待答态 → 下次扫描再生成一轮 → 半截旧回复+完整新回复叠加双答。无头路径本就
         // 无打字节奏需求，原子写无副作用。（遵 CurrencyService 契约：事务内仅 suspend DAO 调用、不切调度器。）

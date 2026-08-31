@@ -12,8 +12,7 @@ import org.robolectric.annotation.Config
 /**
  * 见面摘要「记录名字化」机制（图纸 2026-07-15-见面摘要总结提示词优化 §D-2 / T2-1）：喂进见面摘要的对话记录
  * 经 [MemoryService.formatMessages] 传真实名字标签后，说话人渲染成名字（阿泽：/夏晴子：），不再是通用「用户：/角色：」。
- * 断言从 D-2 规格独立反推。Robolectric：formatMessages 内 formatTimestamp 用 android.text.format.DateFormat
- * （纯 JUnit 恒返 null·同 MemoryServiceTest）。
+ * 断言从 D-2 规格独立反推。Robolectric：安卓依赖保留（formatTimestamp 自 2026-09-01 件⑤起改 Locale.ROOT 纯 JVM）。
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])

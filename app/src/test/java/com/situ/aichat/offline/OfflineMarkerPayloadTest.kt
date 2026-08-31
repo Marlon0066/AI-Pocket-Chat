@@ -105,7 +105,7 @@ class OfflineMarkerPayloadTest {
     @Test fun end_llm_representation_exact_text() {
         // 图纸 §3.2 锁定措辞（逐字反推·只露时长）。
         assertEquals(
-            "[系统记录：线下见面结束（约40分钟），你们回到了线上聊天]",
+            "[系统记录：线下见面结束（约40分钟），两人回到了线上聊天]",
             OfflineMarkerEndPayload("约40分钟", "16:00", "你们自然地结束了这次见面").llmRepresentation(),
         )
     }
@@ -115,6 +115,8 @@ class OfflineMarkerPayloadTest {
         val line = OfflineMarkerEndPayload("约40分钟", "16:00", "用户主动结束了这次见面").llmRepresentation()
         assertFalse("留痕行不应带【重要】指令段，实际：$line", line.contains("【重要】"))
         assertFalse(line.contains("用户主动结束了这次见面"))
+        // 2026-08-31 终拍板：离场行改无视角的「两人」，「你们」一旦回潮这条即红。
+        assertFalse("离场留痕行不得含视角依赖的「你们」，实际：$line", line.contains("你们"))
         assertTrue("留痕行须以 [系统记录： 开头且含「线下见面结束」（供复读折叠）", line.startsWith("[系统记录：") && line.contains("线下见面结束"))
     }
 

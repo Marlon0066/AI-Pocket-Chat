@@ -65,15 +65,29 @@ class LlmClient(
             .readTimeout(idleTimeoutSec, TimeUnit.SECONDS) // per-read idle guard
             .build()
 
-        // 首调撞服务商输出硬顶自愈（2026-07-27 超长章档捆绑）：我方 maxTokens 超硬顶（如 deepseek-chat 8192）时
-        // 服务商 400 拒收整个请求——报文点名 max_tokens 才降额（clamp SAFE_RETRY_MAX_TOKENS）重试恰一次，
-        // 其余 400（模型名错等）原样抛，行为与旧版一致。
+        // 首调 400 自愈（2026-07-27 超长章档捆绑 + 2026-08-31 推理系参数方言 + 2026-09-01 温度方言）：
+        // 分类见 [firstCall400RetryPlan]——换名（推理系拒收 max_tokens）> 降额（我方值超服务商硬顶，
+        // clamp SAFE_RETRY_MAX_TOKENS）> 去温度（方言不认 temperature）> 不重试。各类重试各恰一次
+        // （catch 只包首调，重试自身的异常自然上抛，故互不链式）；其余 400（模型名错等）原样抛。
         val response = try {
             connectWithRetry(client, config, bodyJson)
         } catch (e: LlmError.Http) {
-            if (!isMaxTokensRejection(e, maxTokens)) throw e
-            Log.w(TAG, "流式首调 maxTokens=$maxTokens 被 400 拒（超服务商硬顶），clamp $SAFE_RETRY_MAX_TOKENS 重试一次")
-            connectWithRetry(client, config, buildRequestJson(messages, config, stream = true, temperature, SAFE_RETRY_MAX_TOKENS, responseFormat, tools))
+            val sentTemperature = resolveEffectiveTemperature(temperature, config.providerType == ApiProviderType.MINIMAX, config.isThinkingModel)
+            when (firstCall400RetryPlan(e, maxTokens, sentTemperature)) {
+                FirstCall400RetryPlan.SWAP_PARAM_NAME -> {
+                    Log.w(TAG, "流式首调 max_tokens 参数名被拒（推理系方言），换 max_completion_tokens 同值重试一次")
+                    connectWithRetry(client, config, buildRequestJson(messages, config, stream = true, temperature, maxTokens, responseFormat, tools, useMaxCompletionTokens = true))
+                }
+                FirstCall400RetryPlan.CLAMP -> {
+                    Log.w(TAG, "流式首调 maxTokens=$maxTokens 被 400 拒（超服务商硬顶），clamp $SAFE_RETRY_MAX_TOKENS 重试一次")
+                    connectWithRetry(client, config, buildRequestJson(messages, config, stream = true, temperature, SAFE_RETRY_MAX_TOKENS, responseFormat, tools))
+                }
+                FirstCall400RetryPlan.DROP_TEMPERATURE -> {
+                    Log.w(TAG, "流式首调 temperature 被 400 拒（方言不认），去温度重试一次")
+                    connectWithRetry(client, config, buildRequestJson(messages, config, stream = true, temperature, maxTokens, responseFormat, tools, dropTemperature = true))
+                }
+                FirstCall400RetryPlan.NONE -> throw e
+            }
         }
         response.use { resp ->
             val source = resp.body.source()
@@ -165,23 +179,44 @@ class LlmClient(
         /** finish_reason 回调（记忆护栏 G2·可选尾参默认 null 零波及）："length" = 输出被掐断，调用方据此拒收半份结果。 */
         onFinishReason: ((String?) -> Unit)? = null,
     ): String = withContext(Dispatchers.IO) {
-        // 首调撞服务商输出硬顶自愈（与 streamChat 同款三条件）：clamp 后升额基数随之收窄为生效值——
-        // 否则下方升额重试乘回超顶原值，必然再 400 白烧一轮。
+        // 首调 400 自愈（与 streamChat 同款分类 [maxTokensRetryPlan]）：clamp 后升额基数随之收窄为生效值——
+        // 否则下方升额重试乘回超顶原值，必然再 400 白烧一轮；换名命中则 useNewName 贯穿本次调用的后续 attempt
+        // （升额仍用老参数名必然白烧一轮）。
         var effectiveMaxTokens = maxTokens
+        var useNewName = false
+        var dropTemp = false
         val first = try {
             completionAttempt(messages, config, temperature, maxTokens, responseFormat, onUsage)
         } catch (e: LlmError.Http) {
-            if (!isMaxTokensRejection(e, maxTokens)) throw e
-            Log.w(TAG, "非流式首调 maxTokens=$maxTokens 被 400 拒（超服务商硬顶），clamp $SAFE_RETRY_MAX_TOKENS 重试一次")
-            effectiveMaxTokens = SAFE_RETRY_MAX_TOKENS
-            completionAttempt(messages, config, temperature, SAFE_RETRY_MAX_TOKENS, responseFormat, onUsage)
+            val sentTemperature = resolveEffectiveTemperature(temperature, config.providerType == ApiProviderType.MINIMAX, config.isThinkingModel)
+            when (firstCall400RetryPlan(e, maxTokens, sentTemperature)) {
+                FirstCall400RetryPlan.SWAP_PARAM_NAME -> {
+                    Log.w(TAG, "非流式首调 max_tokens 参数名被拒（推理系方言），换 max_completion_tokens 同值重试一次")
+                    useNewName = true
+                    completionAttempt(messages, config, temperature, maxTokens, responseFormat, onUsage, useMaxCompletionTokens = true)
+                }
+                FirstCall400RetryPlan.CLAMP -> {
+                    Log.w(TAG, "非流式首调 maxTokens=$maxTokens 被 400 拒（超服务商硬顶），clamp $SAFE_RETRY_MAX_TOKENS 重试一次")
+                    effectiveMaxTokens = SAFE_RETRY_MAX_TOKENS
+                    completionAttempt(messages, config, temperature, SAFE_RETRY_MAX_TOKENS, responseFormat, onUsage)
+                }
+                FirstCall400RetryPlan.DROP_TEMPERATURE -> {
+                    Log.w(TAG, "非流式首调 temperature 被 400 拒（方言不认），去温度重试一次")
+                    dropTemp = true
+                    completionAttempt(messages, config, temperature, maxTokens, responseFormat, onUsage, dropTemperature = true)
+                }
+                FirstCall400RetryPlan.NONE -> throw e
+            }
         }
         val escalationBase = effectiveMaxTokens
         val outcome = if (escalationBase != null && isLengthTruncated(first.finishReason)) {
             // 仅记上限与信号，绝不记内容。
             Log.w(TAG, "非流式输出撞 maxTokens=$escalationBase（finish_reason=${first.finishReason}），升额 ×$LENGTH_ESCALATION_FACTOR 重试一次")
             try {
-                completionAttempt(messages, config, temperature, escalationBase * LENGTH_ESCALATION_FACTOR, responseFormat, onUsage)
+                completionAttempt(
+                    messages, config, temperature, escalationBase * LENGTH_ESCALATION_FACTOR, responseFormat, onUsage,
+                    useMaxCompletionTokens = useNewName, dropTemperature = dropTemp,
+                )
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -208,8 +243,13 @@ class LlmClient(
         maxTokens: Int?,
         responseFormat: ResponseFormatDto?,
         onUsage: ((UsageDto) -> Unit)?,
+        useMaxCompletionTokens: Boolean = false,
+        dropTemperature: Boolean = false,
     ): CompletionOutcome {
-        val bodyJson = buildRequestJson(messages, config, stream = false, temperature, maxTokens, responseFormat)
+        val bodyJson = buildRequestJson(
+            messages, config, stream = false, temperature, maxTokens, responseFormat,
+            useMaxCompletionTokens = useMaxCompletionTokens, dropTemperature = dropTemperature,
+        )
         val client = baseClient.newBuilder()
             .callTimeout(120, TimeUnit.SECONDS)
             .build()
@@ -321,13 +361,17 @@ class LlmClient(
         maxTokens: Int?,
         responseFormat: ResponseFormatDto?,
         tools: List<ToolDefinitionDto>? = null,
+        /** true = 走推理系方言：同值发 `max_completion_tokens`，不发 `max_tokens`（两者恒互斥）。 */
+        useMaxCompletionTokens: Boolean = false,
+        /** true = 本发彻底不带 temperature（图纸件②：服务商方言不认该参数的 400 自愈重试用）。 */
+        dropTemperature: Boolean = false,
     ): String {
         val payload = ReasoningPayloadMapper.payload(config)
         val effectiveResponseFormat = if (config.providerType.supportsResponseFormat) responseFormat else null
 
         // MiniMax: map temperature 0..2 -> (0, 1.0]; strip reasoning_content (DeepSeek-only field).
         val isMiniMax = config.providerType == ApiProviderType.MINIMAX
-        val effectiveTemperature = resolveEffectiveTemperature(temperature, isMiniMax, config.isThinkingModel)
+        val effectiveTemperature = if (dropTemperature) null else resolveEffectiveTemperature(temperature, isMiniMax, config.isThinkingModel)
         val effectiveMessages = if (isMiniMax) {
             messages.map { if (it.reasoningContent != null) it.copy(reasoningContent = null) else it }
         } else {
@@ -347,7 +391,8 @@ class LlmClient(
             messages = effectiveMessages,
             stream = stream,
             temperature = effectiveTemperature,
-            maxTokens = maxTokens,
+            maxTokens = if (useMaxCompletionTokens) null else maxTokens,
+            maxCompletionTokens = if (useMaxCompletionTokens) maxTokens else null,
             tools = tools,
             reasoning = payload.reasoning,
             reasoningEffort = payload.reasoningEffort,
@@ -446,6 +491,34 @@ class LlmClient(
                 error.bodySummary?.contains("max_tokens", ignoreCase = true) == true
 
         /**
+         * 首调 400 是否为「服务商不认 temperature」被拒（图纸 2026-09-01 件②）：400 ∧ 我方确实发了温度
+         * （[resolveEffectiveTemperature] 之后非 null）∧ 报文点名 temperature。吃「发出去的值」而非入参——
+         * 思考模型本就恒不发温度，撞上点名 temperature 的 400 时重试注定白烧。
+         */
+        internal fun isTemperatureRejection(error: LlmError.Http, sentTemperature: Double?): Boolean =
+            error.statusCode == 400 && sentTemperature != null &&
+                error.bodySummary?.contains("temperature", ignoreCase = true) == true
+
+        /**
+         * 首调 400 的重试分类。SWAP 优先于 CLAMP：参数名拒收（报文点名 unsupported /
+         * max_completion_tokens）的正解是换名保值——clamp 换值不换名注定二连 400。
+         * 去温度殿后：同一响应同时点名 max_tokens 与 temperature 时先救上限（更常见且更致命）。
+         * 各类自愈互不链式，每次调用每类至多救一次。
+         * 谓词复用 [ProbeMaxTokensDialect.isParamRejection]（单源·图纸 A），不写第二份。
+         */
+        internal fun firstCall400RetryPlan(
+            error: LlmError.Http,
+            requestedMaxTokens: Int?,
+            sentTemperature: Double?,
+        ): FirstCall400RetryPlan = when {
+            requestedMaxTokens != null &&
+                ProbeMaxTokensDialect.isParamRejection(error.statusCode, error.bodySummary) -> FirstCall400RetryPlan.SWAP_PARAM_NAME
+            isMaxTokensRejection(error, requestedMaxTokens) -> FirstCall400RetryPlan.CLAMP
+            isTemperatureRejection(error, sentTemperature) -> FirstCall400RetryPlan.DROP_TEMPERATURE
+            else -> FirstCall400RetryPlan.NONE
+        }
+
+        /**
          * 请求体温度决策（CREATIVITY_RELOCATION D-4）：思考模型不发 temperature（DeepSeek 思考模式本就忽略、
          * Anthropic 思考模式发非 1 值会报错——省略最安全），优先于 MiniMax 0..2→(0,1.0] 映射；
          * 非思考模型路径与旧行为字节级一致。
@@ -461,3 +534,6 @@ class LlmClient(
         }
     }
 }
+
+/** 首调 400 的重试分类：换名（推理系参数方言）> 降额（超服务商硬顶）> 去温度（方言不认 temperature）> 不重试。纯函数便于 T1 真值表。 */
+internal enum class FirstCall400RetryPlan { SWAP_PARAM_NAME, CLAMP, DROP_TEMPERATURE, NONE }

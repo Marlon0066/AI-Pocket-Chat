@@ -75,8 +75,14 @@
     <!-- 聊天「正在输入」药丸（灵动岛卷一 §3.8） -->
     <string name="notif_typing_body">正在输入…</string>
     <string name="notif_typing_short">输入中</string>
-    <!-- 通用后台 LLM/长生成前台服务常驻通知标题（13.7b；故事生成 + 聊天流式回复共用） -->
-    <string name="llm_foreground_notification_title">正在后台处理…</string>
+    <!-- 通用后台 LLM/长生成前台服务常驻通知标题（13.7b；前台服务静默保活态=故事追更/备份/兜底共用）。
+         2026-08-31 用户过审「分场景文案」：本条只留静默保活；四个 worker 各配专属标题（notif_fg_*_title）。 -->
+    <string name="llm_foreground_notification_title">正在悄悄忙着…</string>
+    <!-- 各后台 worker 的前台常驻通知专属标题（2026-08-31 分场景文案过审；均静默 SECRET，仅通知栏可见） -->
+    <string name="notif_fg_schedule_title">正在安排 TA 们的一天…</string>
+    <string name="notif_fg_proactive_title">正在酝酿想对你说的话…</string>
+    <string name="notif_fg_notif_reply_title">正在想怎么回你…</string>
+    <string name="notif_fg_world_title">小世界里有新动静…</string>
 
     <!-- 语音通话前台服务常驻通知（P10.1g，替代 iOS Live Activity/灵动岛）。状态文案 1:1 iOS VoiceCallLiveActivityPhase.statusText。 -->
     <string name="voice_call_notif_channel_name">语音通话</string>
@@ -1488,8 +1494,8 @@
 	<string name="moment_comment_friend_posted">你的朋友「%1$s」发了一条朋友圈：</string>
 	<string name="moment_comment_emotion_tone">First, identify the emotional tone of this post (positive / neutral / negative), then match your reply tone to it. Lead with empathy and care for negative posts (sadness, stress, venting), share the joy for positive ones, keep it light and casual for everyday sharing. Do not crack jokes or tease when the post carries real weight.</string>
 	<string name="moment_comment_ai_ai">You and the post author are both friends of the same person (the user). You know each other through the user, so your relationship is like friends of a friend — friendly and casual, but not overly intimate. Adjust your comment tone based on your own personality.</string>
-	<string name="moment_comment_photos_blind">(This post includes %1$d photo(s), but you cannot see them. Comment naturally without describing photos.)</string>
-	<string name="moment_comment_photos_vision">(This post includes %1$d photo(s). You can see the first one attached below.)</string>
+	<string name="moment_comment_photos_blind">（这条动态附了 %1$d 张照片，但你看不到它们，自然地评论就好，别去描述照片内容。）</string>
+	<string name="moment_comment_photos_vision">（这条动态附了 %1$d 张照片，你能看到下面附上的第一张。）</string>
 	<string name="moment_comment_others_header">Other friends have already commented:</string>
 	<string name="moment_comment_others_react">You may naturally react to or build on their comments if it feels organic — agreeing, teasing, adding a related angle, or continuing the thread — just don\'t simply echo or rephrase what they already said.</string>
 	<string name="moment_comment_said_to_you">「%1$s」对你说：「%2$s」</string>
@@ -2567,6 +2573,25 @@
 	<string name="profile_memory_guard_busy_action">整理中</string>
 	<string name="profile_memory_guard_toast_success">已并入长期记忆</string>
 	<string name="profile_memory_guard_toast_fail">还是没成功——试试到「设置 → 记忆」把字数上限调大一些，或换个更强的模型</string>
+	<!-- 记忆手动编辑（图纸 2026-09-01 件③·§4.4 逐字锁定） -->
+	<string name="profile_memory_edit_action">编辑</string>
+	<string name="memory_edit_title">编辑记忆</string>
+	<string name="memory_edit_save">保存</string>
+	<string name="memory_edit_hint">这里是 TA 记住的事。改动保存后立刻生效——TA 之后的每次回复都会以这份记忆为准。</string>
+	<string name="memory_edit_section_locked">标题固定</string>
+	<string name="memory_edit_recent_tip">近期经历建议每条带 [年-月-日]</string>
+	<string name="memory_edit_fallback_notice">这份记忆没有标准分节，本次为整段编辑</string>
+	<string name="memory_edit_count">%1$d / %2$d</string>
+	<string name="memory_edit_count_unlimited">%1$d 字</string>
+	<string name="memory_edit_discard_title">放弃这次修改？</string>
+	<string name="memory_edit_discard_body">刚才的编辑还没有保存，离开后会丢失。</string>
+	<string name="memory_edit_discard_confirm">放弃</string>
+	<string name="memory_edit_discard_cancel">继续编辑</string>
+	<string name="memory_edit_conflict_title">TA 刚整理了一次记忆</string>
+	<string name="memory_edit_conflict_body">你编辑期间，系统自动整理写入了新版本。选「仍然保存」会用你编辑的内容覆盖它；选「查看新版」会重新载入，你刚才的改动会丢失。</string>
+	<string name="memory_edit_conflict_save">仍然保存</string>
+	<string name="memory_edit_conflict_reload">查看新版</string>
+	<string name="memory_edit_saved_toast">已更新 TA 的记忆</string>
 	<string name="profile_memory_longterm_header">长期事实</string>
 	<string name="profile_memory_recent_header">近期经历</string>
 	<string name="profile_memory_first_meet">初次相识</string>

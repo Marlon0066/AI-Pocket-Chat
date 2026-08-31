@@ -114,6 +114,17 @@ interface ConversationDao {
     @Query("UPDATE conversations SET lastSummarizedMessageDate = :cursor WHERE uuid = :uuid")
     suspend fun updateSummaryCursor(uuid: String, cursor: Long)
 
+    /** 记忆整理成功记账（图纸件⑥·PITFALLS §1b 整行 upsert 反模式修正）：成功轨+attempt 同写、失败旗标清空。 */
+    @Query(
+        "UPDATE conversations SET lastMemorySummarySuccessDate = :now, lastMemorySummaryFailureDate = NULL, " +
+            "lastMemorySummaryAttemptDate = :now WHERE uuid = :uuid",
+    )
+    suspend fun recordMemorySummarySuccess(uuid: String, now: Long)
+
+    /** 记忆整理失败记账：失败短冷却起点+attempt，成功轨不动。 */
+    @Query("UPDATE conversations SET lastMemorySummaryFailureDate = :now, lastMemorySummaryAttemptDate = :now WHERE uuid = :uuid")
+    suspend fun recordMemorySummaryFailure(uuid: String, now: Long)
+
     /** 见面识别扫描成功（清失败短冷却）——定向单列更新，避免整行 copy 在回合尾覆写并发列（钱路审计教训）。 */
     @Query("UPDATE conversations SET lastMeetingScanSuccessDate = :now, lastMeetingScanFailureDate = NULL WHERE uuid = :uuid")
     suspend fun markMeetingScanSuccess(uuid: String, now: Long)

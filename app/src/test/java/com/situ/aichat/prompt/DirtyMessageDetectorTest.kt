@@ -66,7 +66,7 @@ class DirtyMessageDetectorTest {
         // 措辞与 [com.situ.aichat.data.model.OfflineInviteData.llmRepresentation] 单源同步（此处重新逐字打出）。
         assertEquals(
             DirtyMessageDetector.Reason.SYSTEM_RECORD_LABEL,
-            detect("[系统记录：你向小满发出了线下见面邀约 | 地点=咖啡馆 | 活动=喝咖啡 | 状态=对方婉拒了，这次没见成]"),
+            detect("[系统记录：小雨向小满发出了线下见面邀约 | 地点=咖啡馆 | 活动=喝咖啡 | 状态=小满婉拒了，这次没见成]"),
         )
     }
 
@@ -75,7 +75,7 @@ class DirtyMessageDetectorTest {
         // 离场留痕行复读 → 吃既有 marker「线下见面结束」。
         assertEquals(
             DirtyMessageDetector.Reason.SYSTEM_RECORD_LABEL,
-            detect("[系统记录：线下见面结束（约40分钟），你们回到了线上聊天]"),
+            detect("[系统记录：线下见面结束（约40分钟），两人回到了线上聊天]"),
         )
     }
 
