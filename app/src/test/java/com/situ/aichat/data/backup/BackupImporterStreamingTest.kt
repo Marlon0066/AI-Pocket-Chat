@@ -77,6 +77,7 @@ class BackupImporterStreamingTest {
             offlineMeetingMemoryDao = db.offlineMeetingMemoryDao(),
             promiseDao = db.promiseDao(),
             userStoryTemplateDao = db.userStoryTemplateDao(),
+            ourDayDao = db.ourDayDao(),
             settingsRepo = mockk(relaxed = true),
             mediaRestorer = BackupMediaRestorer(app),
             archetypeCalibrator = mockk(relaxed = true),
@@ -318,7 +319,7 @@ class BackupImporterStreamingTest {
     }
 
     @Test fun `canOpen 对活源为真_对打不开的源为假（E11 的判据）`() = runBlocking {
-        val service = BackupService(exporter = mockk(), importer = mockk())
+        val service = BackupService(exporter = mockk(), importer = mockk(), firstMessageDateBackfill = mockk(relaxed = true))
 
         assertTrue(service.canOpen(BackupByteSource.fromBytes(byteArrayOf(1, 2, 3))))
         assertFalse("文件被移走 / 授权失效 → UI 给「读取失败」", service.canOpen { null })

@@ -120,16 +120,24 @@ class CharacterRepository @Inject constructor(
     suspend fun updateRelationshipMessageCount(uuid: String, count: Int) =
         dao.updateRelationshipMessageCount(uuid, count)
 
+    /** 「我们的日子」一次性回填完成标记（卷一图纸 §2.2·列级盲写·不进 CharacterWriteLock·唯一调用方 OurDayCoordinator）。 */
+    suspend fun updateOurDaysBackfilledAt(uuid: String, millis: Long) =
+        dao.updateOurDaysBackfilledAt(uuid, millis)
+
     // MARK: - 列级定向写（P12.6 D1b 二期）：礼物/情感/恢复/聊天剩余整行写改列级。
     // 礼物的关系/成长是读-改-写，须在 [CharacterWriteLock] 内、锁内 fresh 读后调；其余为盲写/单写点列级即可。
 
-    /** 关系质感回写（仅 relationshipQualityJSON）。 */
-    suspend fun updateRelationshipQuality(uuid: String, relationshipQuality: String) =
-        dao.updateRelationshipQuality(uuid, relationshipQuality)
+    /** 关系质感回写（净额 + 压强两列恒同条 UPDATE·卷二 §3.2 J-2）。 */
+    suspend fun updateRelationshipQuality(uuid: String, relationshipQuality: String, relationshipPressure: String) =
+        dao.updateRelationshipQuality(uuid, relationshipQuality, relationshipPressure)
 
-    /** 关系质感 + 成长日志回写（两列）。 */
-    suspend fun updateRelationshipQualityAndGrowthLog(uuid: String, relationshipQuality: String, growthLog: String) =
-        dao.updateRelationshipQualityAndGrowthLog(uuid, relationshipQuality, growthLog)
+    /** 关系质感 + 成长日志回写（+ 压强列，卷二 §3.2 J-2）。 */
+    suspend fun updateRelationshipQualityAndGrowthLog(
+        uuid: String,
+        relationshipQuality: String,
+        growthLog: String,
+        relationshipPressure: String,
+    ) = dao.updateRelationshipQualityAndGrowthLog(uuid, relationshipQuality, growthLog, relationshipPressure)
 
     /** 成长日志回写（仅 growthLogJSON）。 */
     suspend fun updateGrowthLog(uuid: String, growthLog: String) =
@@ -179,6 +187,9 @@ class CharacterRepository @Inject constructor(
     suspend fun updateStreak(uuid: String, streakCount: Int, lastChatDate: Long) =
         dao.updateStreak(uuid, streakCount, lastChatDate)
 
+    /** 「第一次聊天时间」只往早改（相识天数图纸 §4.1·守卫在 SQL 里）；返回受影响行数（0 / 1）。 */
+    suspend fun markFirstMessageDate(uuid: String, ts: Long): Int = dao.markFirstMessageDate(uuid, ts)
+
     /**
      * 编辑保存：列级写回 20 个表单可编辑列（P12.6 D1c），不再整行覆盖成长/关系/心情/记忆列。
      * 与 [update]（建角色/备份导入的正当全字段写）区分：编辑表单只该改 profile 列。
@@ -214,9 +225,20 @@ class CharacterRepository @Inject constructor(
         chatWallpaperPath,
     )
 
-    /** 14.1e 编辑页保存 8+8 维成长光谱两 JSON 列（仅用户改了滑块时调，见 DAO 注释）。 */
-    suspend fun updateGrowthDimensions(uuid: String, personalitySpectrumJSON: String, relationshipQualityJSON: String) =
-        dao.updateGrowthDimensions(uuid, personalitySpectrumJSON, relationshipQualityJSON)
+    /** 14.1e 编辑页保存 8+8 维成长光谱两 JSON 列（+ 压强列，卷二 §3.2 J-2；仅用户改了滑块时调，见 DAO 注释）。 */
+    suspend fun updateGrowthDimensions(
+        uuid: String,
+        personalitySpectrumJSON: String,
+        relationshipQualityJSON: String,
+        relationshipPressureJSON: String,
+    ) = dao.updateGrowthDimensions(uuid, personalitySpectrumJSON, relationshipQualityJSON, relationshipPressureJSON)
+
+    /**
+     * 人设编译四列一次性列级写（活人感内核·卷一图纸 §3.5）。UI 层经此透传，不直碰 DAO。
+     * 未变的列**原样回传**——四新列只此一条写口，绝不另开语句（图纸 §9.4）。
+     */
+    suspend fun updatePersonaCompile(uuid: String, anchor: String, meta: String, gains: String, operators: String) =
+        dao.updatePersonaCompile(uuid, anchor, meta, gains, operators)
 
     // MARK: - Delete
 
@@ -245,6 +267,7 @@ class CharacterRepository @Inject constructor(
             db.offlineMeetingMemoryDao().deleteByCharacter(uuid) // 梦剧场 B 部：见面回忆表无 FK·手动清（图纸 §3.2·E15）
             db.openLoopDao().deleteByCharacter(uuid) // 活人感一期 P2：惦记的事表无 FK·手动清（图纸 §3.2·E11）
             db.promiseDao().deleteByCharacter(uuid) // 记忆改造一期：承诺账本无 FK·手动清（图纸 §3.1·E15）
+            db.ourDayDao().deleteByCharacter(uuid) // 我们的日子·卷一：our_days 无 FK·手动清（总图纸 §3.9）
             dao.deleteByUuid(uuid) // FK CASCADE 继续清会话/消息/里程碑（既有行为不变）
             ev
         }

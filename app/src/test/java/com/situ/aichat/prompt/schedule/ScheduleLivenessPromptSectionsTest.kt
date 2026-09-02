@@ -1,8 +1,12 @@
 package com.situ.aichat.prompt.schedule
 
 import com.situ.aichat.data.local.entity.CharacterEntity
+import com.situ.aichat.data.model.CharacterIntent
 import com.situ.aichat.data.model.DynamicInterest
 import com.situ.aichat.data.model.GrowthJson
+import com.situ.aichat.data.model.IntentKind
+import com.situ.aichat.data.model.IntentQueueState
+import com.situ.aichat.data.model.IntentState
 import com.situ.aichat.data.model.MoodHistoryEntry
 import com.situ.aichat.data.model.RelationshipQuality
 import org.junit.Assert.assertEquals
@@ -51,6 +55,31 @@ class ScheduleLivenessPromptSectionsTest {
     fun `B 无成长数据或JSON损坏_行缺席_E13`() {
         assertNull(ScheduleLivenessPromptSections.interestsLine(char()))
         assertNull(ScheduleLivenessPromptSections.interestsLine(char(dynamicInterestsJSON = "{broken")))
+    }
+
+    // ── I 意图块（卷四 T2-6 ③·图纸 §4.5）──
+
+    @Test
+    fun `I 意图块_标题_条目_尾行锁定文案_无live缺席`() {
+        val now = System.currentTimeMillis()
+        val queue = GrowthJson.encode(
+            IntentQueueState(
+                intents = listOf(
+                    CharacterIntent(id = "i", kind = IntentKind.WANT_APOLOGIZE, state = IntentState.ACTIVE, strength = 50, bornAt = now, lastChangeAt = now),
+                    CharacterIntent(id = "j", kind = IntentKind.WANT_SHARE, state = IntentState.FADED, strength = 5, bornAt = now, lastChangeAt = now, residue = true),
+                ),
+            ),
+        )
+        assertEquals(
+            listOf(
+                "【TA心里挂着的事】",
+                "- TA想向小明道歉",
+                "这些只能进 innerThought（比如「要不要找个机会跟小明说一声」），不要变成日程事件，也不必每条都用。",
+            ),
+            ScheduleLivenessPromptSections.intentSection(char().copy(intentQueueJSON = queue), "小明", now),
+        )
+        assertTrue(ScheduleLivenessPromptSections.intentSection(char(), "小明", now).isEmpty())
+        assertTrue(ScheduleLivenessPromptSections.intentSection(char().copy(intentQueueJSON = "{坏"), "小明", now).isEmpty())
     }
 
     // ── C 心情走向 ──

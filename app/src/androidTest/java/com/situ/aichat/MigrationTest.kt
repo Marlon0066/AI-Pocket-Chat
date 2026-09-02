@@ -30,6 +30,11 @@ import com.situ.aichat.data.local.MIGRATION_39_40
 import com.situ.aichat.data.local.MIGRATION_40_41
 import com.situ.aichat.data.local.MIGRATION_41_42
 import com.situ.aichat.data.local.MIGRATION_42_43
+import com.situ.aichat.data.local.MIGRATION_43_44
+import com.situ.aichat.data.local.MIGRATION_44_45
+import com.situ.aichat.data.local.MIGRATION_45_46
+import com.situ.aichat.data.local.MIGRATION_46_47
+import com.situ.aichat.data.local.MIGRATION_47_48
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -1167,6 +1172,263 @@ class MigrationTest {
         }
     }
 
+    /**
+     * 活人感统一内核·卷一《人设编译器》（图纸 §7.2 T2-7·E Y-E25）：v43 插一个旧角色 → 迁到 v44 →
+     * ①旧行一字不变、行不丢；②`characters` 四新列全部落 `''`（= 从未编译过：锚点走访问器兜底「本性 == 现在」，
+     * 其余三列解码回落默认值，**不清零不崩**）；③四新列真的可写（不是只在 schema 里挂个名）。
+     */
+    @Test
+    fun migration43To44AddsPersonaCompileColumns() {
+        helper.createDatabase(TEST_DB, 43).apply {
+            execSQL("PRAGMA foreign_keys=OFF")
+            execSQL(
+                "INSERT INTO characters (uuid, name, systemPrompt, personalityDescription, creationDate, gender, ageModeRaw, fixedAge, appearanceDescription, occupation, backstory, speakingStyle, catchphrases, exampleDialogues, initialInterests, memorySummary, previousMemorySummary, offlineMeetingMemorySummary, voiceIdentifier, remoteVoiceID, ttsEmotionRaw, ttsSpeed, ttsPitch, lastMoodEmoji, lastMoodText, lastMoodColorName, streakCount, personalitySpectrumJSON, relationshipQualityJSON, moodHistoryJSON, dynamicInterestsJSON, growthLogJSON, growthMetadataJSON, structuredMemoryJSON, structuredMemoryMetadataJSON, previousStructuredMemoryJSON, affinitySensePackageJSON, relationshipMessageCount, joinedWorld, worldHomeCityId, momentsDigestedUntilMillis) " +
+                    "VALUES ('char-1', '林晚', 'sys-sentinel', 'persona-sentinel', 100, 'female', 'growing', 0, " +
+                    "'', '', '', '', '', '', '', '', '', '', '', '', 'auto', 1.0, 0, '', '', 'green', 0, " +
+                    "'spectrum-sentinel', 'quality-sentinel', '', '', '', 'metadata-sentinel', '', '', '', '', 0, 0, " +
+                    "'city_yunye', 0)",
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 44, true, MIGRATION_43_44).use { db ->
+            db.query(
+                "SELECT name, personalityDescription, personalitySpectrumJSON, relationshipQualityJSON, " +
+                    "growthMetadataJSON, personalityAnchorJSON, personaCompileMetaJSON, personaGainsJSON, " +
+                    "personaOperatorsJSON FROM characters WHERE uuid = 'char-1'",
+            ).use { c ->
+                assertTrue("旧角色行必须还在", c.moveToFirst())
+                assertEquals("林晚", c.getString(0))
+                assertEquals("persona-sentinel", c.getString(1))
+                assertEquals("spectrum-sentinel", c.getString(2))       // 现值列一个字节不动
+                assertEquals("quality-sentinel", c.getString(3))
+                assertEquals("metadata-sentinel", c.getString(4))
+                assertEquals("新列 personalityAnchorJSON 回填空串", "", c.getString(5))
+                assertEquals("新列 personaCompileMetaJSON 回填空串", "", c.getString(6))
+                assertEquals("新列 personaGainsJSON 回填空串", "", c.getString(7))
+                assertEquals("新列 personaOperatorsJSON 回填空串", "", c.getString(8))
+            }
+
+            db.execSQL(
+                "UPDATE characters SET personalityAnchorJSON = '{\"warmth\":25}', " +
+                    "personaCompileMetaJSON = '{\"source\":\"compiled\"}', personaGainsJSON = '{\"system\":{}}', " +
+                    "personaOperatorsJSON = '[]' WHERE uuid = 'char-1'",
+            )
+            db.query(
+                "SELECT personalityAnchorJSON, personaCompileMetaJSON, personaGainsJSON, personaOperatorsJSON " +
+                    "FROM characters WHERE uuid = 'char-1'",
+            ).use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("{\"warmth\":25}", c.getString(0))
+                assertEquals("{\"source\":\"compiled\"}", c.getString(1))
+                assertEquals("{\"system\":{}}", c.getString(2))
+                assertEquals("[]", c.getString(3))
+            }
+        }
+    }
+
+    /**
+     * 活人感统一内核·卷二《正负双压》（图纸 §7.2 T3-1·P-E23）：v44 插一个旧角色 → 迁到 v45 →
+     * ①旧行一字不变、行不丢；②`relationshipPressureJSON` 落 `''`（= 还没分开记过：解码访问器按
+     * `RelationshipPressure.fromQuality` 播种 pos=净额/neg=0，**不清零不崩**）；③新列真的可写。
+     */
+    @Test
+    fun migration44To45AddsRelationshipPressureColumn() {
+        helper.createDatabase(TEST_DB, 44).apply {
+            execSQL("PRAGMA foreign_keys=OFF")
+            execSQL(
+                "INSERT INTO characters (uuid, name, systemPrompt, personalityDescription, creationDate, gender, ageModeRaw, fixedAge, appearanceDescription, occupation, backstory, speakingStyle, catchphrases, exampleDialogues, initialInterests, memorySummary, previousMemorySummary, offlineMeetingMemorySummary, voiceIdentifier, remoteVoiceID, ttsEmotionRaw, ttsSpeed, ttsPitch, lastMoodEmoji, lastMoodText, lastMoodColorName, streakCount, personalitySpectrumJSON, relationshipQualityJSON, moodHistoryJSON, dynamicInterestsJSON, growthLogJSON, growthMetadataJSON, structuredMemoryJSON, structuredMemoryMetadataJSON, previousStructuredMemoryJSON, affinitySensePackageJSON, relationshipMessageCount, joinedWorld, worldHomeCityId, momentsDigestedUntilMillis, personalityAnchorJSON, personaCompileMetaJSON, personaGainsJSON, personaOperatorsJSON) " +
+                    "VALUES ('char-1', '林晚', 'sys-sentinel', 'persona-sentinel', 100, 'female', 'growing', 0, " +
+                    "'', '', '', '', '', '', '', '', '', '', '', '', 'auto', 1.0, 0, '', '', 'green', 0, " +
+                    "'spectrum-sentinel', 'quality-sentinel', '', '', '', 'metadata-sentinel', '', '', '', '', 0, 0, " +
+                    "'city_yunye', 0, 'anchor-sentinel', '', '', '')",   // 卷三 R1 F-1：卷一三列 NOT NULL 无 DEFAULT，漏列在真设备必撞约束
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 45, true, MIGRATION_44_45).use { db ->
+            db.query(
+                "SELECT name, personalitySpectrumJSON, relationshipQualityJSON, personalityAnchorJSON, " +
+                    "relationshipPressureJSON FROM characters WHERE uuid = 'char-1'",
+            ).use { c ->
+                assertTrue("旧角色行必须还在", c.moveToFirst())
+                assertEquals("林晚", c.getString(0))
+                assertEquals("spectrum-sentinel", c.getString(1))
+                assertEquals("quality-sentinel", c.getString(2))   // 净额列一个字节不动（下游 7 类读者零改动）
+                assertEquals("anchor-sentinel", c.getString(3))    // 卷一四列一个字节不动
+                assertEquals("新列 relationshipPressureJSON 回填空串", "", c.getString(4))
+            }
+
+            db.execSQL(
+                "UPDATE characters SET relationshipPressureJSON = '{\"pos\":[80,0,0,0,0,0,0,0],\"neg\":[75,0,0,0,0,0,0,0]}' " +
+                    "WHERE uuid = 'char-1'",
+            )
+            db.query("SELECT relationshipPressureJSON FROM characters WHERE uuid = 'char-1'").use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("{\"pos\":[80,0,0,0,0,0,0,0],\"neg\":[75,0,0,0,0,0,0,0]}", c.getString(0))
+            }
+        }
+    }
+
+    /**
+     * 活人感统一内核·卷三《场内核与渲染收编》（图纸 §7.2 T3-1）：v45 插一个旧角色 → 迁到 v46 →
+     * ①旧行一字不变、行不丢（净额列 / 压强列 / 卷一锚点列全部原样）；②`affectFieldJSON` 落 `''`
+     * （= 还没写过场：解码访问器回默认 `AffectField()`，**不崩不清零、不扫库**）；③新列真的可写。
+     */
+    @Test
+    fun migration45To46AddsAffectFieldColumn() {
+        helper.createDatabase(TEST_DB, 45).apply {
+            execSQL("PRAGMA foreign_keys=OFF")
+            // 列清单 = 45.json 里「NOT NULL 且无 SQL DEFAULT」的全部列（机器推导·PITFALLS §1a「DDL 逐字取 schema json」）：
+            // 只列一部分列会撞 NOT NULL 约束（卷二 44→45 用例漏了卷一三列，已登记卷三 §11）。
+            execSQL(
+                "INSERT INTO characters (" +
+                    "uuid, name, systemPrompt, personalityDescription, creationDate, gender, ageModeRaw, fixedAge, " +
+                    "appearanceDescription, occupation, backstory, speakingStyle, catchphrases, exampleDialogues, initialInterests, memorySummary, " +
+                    "previousMemorySummary, offlineMeetingMemorySummary, voiceIdentifier, remoteVoiceID, ttsEmotionRaw, ttsSpeed, ttsPitch, lastMoodEmoji, " +
+                    "lastMoodText, lastMoodColorName, streakCount, personalitySpectrumJSON, relationshipQualityJSON, relationshipPressureJSON, moodHistoryJSON, dynamicInterestsJSON, " +
+                    "growthLogJSON, growthMetadataJSON, structuredMemoryJSON, structuredMemoryMetadataJSON, previousStructuredMemoryJSON, affinitySensePackageJSON, relationshipMessageCount, joinedWorld, " +
+                    "worldHomeCityId, momentsDigestedUntilMillis, personalityAnchorJSON, personaCompileMetaJSON, personaGainsJSON, personaOperatorsJSON) " +
+                    "VALUES (" +
+                    "'char-1', '林晚', 'sys-sentinel', 'persona-sentinel', 100, 'female', 'growing', 0, " +
+                    "'', '', '', '', '', '', '', '', " +
+                    "'', '', '', '', '', 1.0, 0, '', " +
+                    "'', 'green', 0, 'spectrum-sentinel', 'quality-sentinel', 'pressure-sentinel', '', '', " +
+                    "'', 'metadata-sentinel', '', '', '', '', 0, 0, " +
+                    "'city_yunye', 0, 'anchor-sentinel', '', '', '')",
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 46, true, MIGRATION_45_46).use { db ->
+            db.query(
+                "SELECT name, relationshipQualityJSON, relationshipPressureJSON, personalityAnchorJSON, " +
+                    "affectFieldJSON FROM characters WHERE uuid = 'char-1'",
+            ).use { c ->
+                assertTrue("旧角色行必须还在", c.moveToFirst())
+                assertEquals("林晚", c.getString(0))
+                assertEquals("quality-sentinel", c.getString(1))   // 净额列一个字节不动
+                assertEquals("pressure-sentinel", c.getString(2))  // 卷二压强列一个字节不动
+                assertEquals("anchor-sentinel", c.getString(3))    // 卷一锚点列一个字节不动
+                assertEquals("新列 affectFieldJSON 回填空串", "", c.getString(4))
+            }
+
+            db.execSQL(
+                "UPDATE characters SET affectFieldJSON = '{\"security\":62,\"valence\":-70,\"hits\":[\"g04\"]}' " +
+                    "WHERE uuid = 'char-1'",
+            )
+            db.query("SELECT affectFieldJSON FROM characters WHERE uuid = 'char-1'").use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("{\"security\":62,\"valence\":-70,\"hits\":[\"g04\"]}", c.getString(0))
+            }
+        }
+    }
+
+    /**
+     * 活人感统一内核·卷四《意图队列 + 性格复盘》（图纸 §7.2 T3-1 · §3.2）：v46 插一个旧角色 → 迁到 v47 →
+     * ①旧行一字不变、行不丢（净额列 / 压强列 / 卷三场列全部原样）；②`intentQueueJSON` 落 `''`
+     * （= 还没写过意图：解码访问器回默认 `IntentQueueState()`，**不崩不清零、不扫库**）；③新列真的可写。
+     */
+    @Test
+    fun migration46To47AddsIntentQueueColumn() {
+        helper.createDatabase(TEST_DB, 46).apply {
+            execSQL("PRAGMA foreign_keys=OFF")
+            // 列清单 = 46.json 里「NOT NULL 且无 SQL DEFAULT」的全部 47 列（施工前脚本机器推导·PITFALLS §1a）：
+            // 卷三 affectFieldJSON 在 46.json 里同样 NOT NULL 且无 defaultValue（Kotlin 默认值不进 SQL），必须列
+            // ——图纸 §3.2 原写「不必列」经脚本复核已更正（卷四图纸 §11 D-1）。
+            execSQL(
+                "INSERT INTO characters (" +
+                    "uuid, name, systemPrompt, personalityDescription, creationDate, gender, ageModeRaw, fixedAge, " +
+                    "appearanceDescription, occupation, backstory, speakingStyle, catchphrases, exampleDialogues, initialInterests, memorySummary, " +
+                    "previousMemorySummary, offlineMeetingMemorySummary, voiceIdentifier, remoteVoiceID, ttsEmotionRaw, ttsSpeed, ttsPitch, lastMoodEmoji, " +
+                    "lastMoodText, lastMoodColorName, streakCount, personalitySpectrumJSON, relationshipQualityJSON, relationshipPressureJSON, moodHistoryJSON, dynamicInterestsJSON, " +
+                    "growthLogJSON, growthMetadataJSON, structuredMemoryJSON, structuredMemoryMetadataJSON, previousStructuredMemoryJSON, affinitySensePackageJSON, relationshipMessageCount, joinedWorld, " +
+                    "worldHomeCityId, momentsDigestedUntilMillis, personalityAnchorJSON, personaCompileMetaJSON, personaGainsJSON, personaOperatorsJSON, affectFieldJSON) " +
+                    "VALUES (" +
+                    "'char-1', '林晚', 'sys-sentinel', 'persona-sentinel', 100, 'female', 'growing', 0, " +
+                    "'', '', '', '', '', '', '', '', " +
+                    "'', '', '', '', '', 1.0, 0, '', " +
+                    "'', 'green', 0, 'spectrum-sentinel', 'quality-sentinel', 'pressure-sentinel', '', '', " +
+                    "'', 'metadata-sentinel', '', '', '', '', 0, 0, " +
+                    "'city_yunye', 0, 'anchor-sentinel', '', '', '', 'affect-sentinel')",
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 47, true, MIGRATION_46_47).use { db ->
+            db.query(
+                "SELECT name, relationshipQualityJSON, relationshipPressureJSON, affectFieldJSON, " +
+                    "intentQueueJSON FROM characters WHERE uuid = 'char-1'",
+            ).use { c ->
+                assertTrue("旧角色行必须还在", c.moveToFirst())
+                assertEquals("林晚", c.getString(0))
+                assertEquals("quality-sentinel", c.getString(1))   // 净额列一个字节不动
+                assertEquals("pressure-sentinel", c.getString(2))  // 卷二压强列一个字节不动
+                assertEquals("affect-sentinel", c.getString(3))    // 卷三场列一个字节不动
+                assertEquals("新列 intentQueueJSON 回填空串", "", c.getString(4))
+            }
+
+            db.execSQL("UPDATE characters SET intentQueueJSON = '{\"intents\":[]}' WHERE uuid = 'char-1'")
+            db.query("SELECT intentQueueJSON FROM characters WHERE uuid = 'char-1'").use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("{\"intents\":[]}", c.getString(0))
+            }
+        }
+    }
+
+    /**
+     * 「我们的日子」卷一《沉淀》（图纸 §7.2 T3-1 · 总图纸 §3.1 / §3.2）：v47 插一个旧角色 → 迁到 v48 →
+     * ①旧行一字不变、行不丢；②`ourDaysBackfilledAt` 落 NULL（= 未回填·E14）且可写；③`our_days` 建成且为空。
+     * 种子 INSERT 列清单 = 47.json 里「NOT NULL 且无 SQL DEFAULT」的全部 48 列（脚本机器推导·PITFALLS §1a）。
+     */
+    @Test
+    fun migration47To48CreatesOurDaysAndAddsBackfillColumn() {
+        helper.createDatabase(TEST_DB, 47).apply {
+            execSQL("PRAGMA foreign_keys=OFF")
+            execSQL(
+                "INSERT INTO characters (" +
+                    "uuid, name, systemPrompt, personalityDescription, creationDate, gender, ageModeRaw, fixedAge, " +
+                    "appearanceDescription, occupation, backstory, speakingStyle, catchphrases, exampleDialogues, initialInterests, memorySummary, " +
+                    "previousMemorySummary, offlineMeetingMemorySummary, voiceIdentifier, remoteVoiceID, ttsEmotionRaw, ttsSpeed, ttsPitch, lastMoodEmoji, " +
+                    "lastMoodText, lastMoodColorName, streakCount, personalitySpectrumJSON, relationshipQualityJSON, relationshipPressureJSON, moodHistoryJSON, dynamicInterestsJSON, " +
+                    "growthLogJSON, growthMetadataJSON, structuredMemoryJSON, structuredMemoryMetadataJSON, previousStructuredMemoryJSON, affinitySensePackageJSON, relationshipMessageCount, joinedWorld, " +
+                    "worldHomeCityId, momentsDigestedUntilMillis, personalityAnchorJSON, personaCompileMetaJSON, personaGainsJSON, personaOperatorsJSON, affectFieldJSON, intentQueueJSON" +
+                    ") VALUES (" +
+                    "'char-1', '林晚', 'sys-sentinel', 'persona-sentinel', 100, 'female', 'growing', 0, " +
+                    "'', '', '', '', '', '', '', '', " +
+                    "'', '', '', '', 'auto', 1.0, 0, '', " +
+                    "'', 'green', 7, 'spectrum-sentinel', 'quality-sentinel', 'pressure-sentinel', '', '', " +
+                    "'', 'metadata-sentinel', '', '', '', '', 42, 0, " +
+                    "'city_yunye', 0, 'anchor-sentinel', '', '', '', 'affect-sentinel', 'intent-sentinel'" +
+                    ")",
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 48, true, MIGRATION_47_48).use { db ->
+            db.query(
+                "SELECT name, relationshipQualityJSON, affectFieldJSON, intentQueueJSON, ourDaysBackfilledAt IS NULL " +
+                    "FROM characters WHERE uuid = 'char-1'",
+            ).use { c ->
+                assertTrue("旧角色行必须还在", c.moveToFirst())
+                assertEquals("林晚", c.getString(0))
+                assertEquals("quality-sentinel", c.getString(1))
+                assertEquals("affect-sentinel", c.getString(2))
+                assertEquals("intent-sentinel", c.getString(3))
+                assertEquals("新列 ourDaysBackfilledAt 落 NULL", 1, c.getInt(4))
+            }
+            db.query("SELECT COUNT(*) FROM our_days").use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("our_days 建成且为空", 0, c.getInt(0))
+            }
+            db.execSQL("UPDATE characters SET ourDaysBackfilledAt = 1756800000000 WHERE uuid = 'char-1'")
+            db.query("SELECT ourDaysBackfilledAt FROM characters WHERE uuid = 'char-1'").use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals(1756800000000L, c.getLong(0))
+            }
+        }
+    }
+
     private companion object {
         const val TEST_DB = "migration-test.db"
 
@@ -1174,6 +1436,6 @@ class MigrationTest {
          * 逐版本循环校验的上界。**升 DB 版本时必须同步升此常量**，否则新步静默无覆盖
          * （2026-07-16 四小件：此值曾 stale 在 31、DB 已 37，v31→v37 六步循环零覆盖——本卷一并清账到 38）。
          */
-        const val LATEST_VERSION = 43
+        const val LATEST_VERSION = 48
     }
 }

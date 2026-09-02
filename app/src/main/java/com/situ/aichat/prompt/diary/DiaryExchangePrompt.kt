@@ -74,7 +74,7 @@ data class DiaryExchangePromptStrings(
 
 /**
  * 角色日记丰富化的注入素材（2026-07-13·以角色为中心·各空则整段省略）：③人设框定 + D用户bio +
- * B关系(阶段+里程碑·预拼) + A记忆(memorySummary) + C约定/惦记(渲染器产出·自带段标题)。
+ * B关系(阶段+里程碑·预拼) + A记忆(memorySummary) + C约定/惦记(渲染器产出·自带段标题) + E意图块(卷四·渲染器产出两行)。
  */
 data class DiaryExchangeEnrichment(
     val personaFrame: String = "",
@@ -83,6 +83,8 @@ data class DiaryExchangeEnrichment(
     val memory: String = "",
     val promiseBlock: String = "",
     val loopBlock: String = "",
+    /** 卷四 §4.5 ④：`IntentExitRenderer.diaryBlock` 产出（心里挂着的事 + 日记可以写得坦白些）；空 ⇒ 不插。 */
+    val intentBlock: String = "",
 )
 
 /**
@@ -138,6 +140,11 @@ object DiaryExchangePromptBuilder {
         }
         if (enrichment.loopBlock.isNotEmpty()) {
             parts.add(enrichment.loopBlock)
+            parts.add("")
+        }
+        // 卷四 §4.5 ④：意图块在惦记块之后、此刻心情之前；空则整段省略。
+        if (enrichment.intentBlock.isNotEmpty()) {
+            parts.add(enrichment.intentBlock)
             parts.add("")
         }
         if (moodLine.isNotEmpty()) {

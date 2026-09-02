@@ -27,6 +27,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.mockkStatic
+import io.mockk.slot
 import io.mockk.verify
 import io.mockk.unmockkObject
 import io.mockk.unmockkStatic
@@ -286,6 +287,23 @@ class AssistantTurnControllerTest {
         coVerify(exactly = 1) { db.withTransaction<Unit>(any()) }
         coVerify(exactly = 1) { messageRepo.upsert(match { it.content == "嗨" && it.roleRaw == "user" }) }
         coVerify(exactly = 1) { conversationRepo.recordLastMessage("conv-1", "嗨", "user", any()) }
+    }
+
+    /** 相识天数图纸 §5 E1/E4：字段空的角色发首条消息 → 用**该条消息的时间戳**落「第一次聊天时间」（非 now）。 */
+    @Test
+    fun `send_字段空时用消息时间戳落第一次聊天时间`() = runBlocking {
+        val stored = slot<MessageEntity>()
+        coEvery { messageRepo.upsert(capture(stored)) } returns Unit
+        controller.send("嗨")
+        coVerify(exactly = 1) { characterRepo.markFirstMessageDate("c1", stored.captured.timestamp) }
+    }
+
+    /** 相识天数图纸 §5 E5：字段已有值 → 预判短路，一条 SQL 都不发（真理仍是 SQL 守卫）。 */
+    @Test
+    fun `send_字段已有值时不再写第一次聊天时间`() = runBlocking {
+        coEvery { characterRepo.get("c1") } returns character.copy(firstMessageDate = 1L)
+        controller.send("嗨")
+        coVerify(exactly = 0) { characterRepo.markFirstMessageDate(any(), any()) }
     }
 
     /** 2-10：无头回合在飞（占坑失败）→ 窗回合让位重排，坑释放后下一窗接管作答——绝不并发双答。 */

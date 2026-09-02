@@ -6,7 +6,10 @@ import com.situ.aichat.data.local.dao.CharacterDao
 import com.situ.aichat.data.local.dao.MilestoneDao
 import com.situ.aichat.data.model.GrowthJson
 import com.situ.aichat.data.model.RelationshipQuality
+import com.situ.aichat.data.model.relationshipPressure
 import com.situ.aichat.data.model.relationshipQuality
+import com.situ.aichat.data.model.syncedTo
+import com.situ.aichat.data.model.toQuality
 import com.situ.aichat.data.repository.CharacterWriteLock
 import com.situ.aichat.maintenance.MaintenanceThrottleStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -87,7 +90,14 @@ class RelationshipArchetypeCalibrator internal constructor(
         val qualityChanged = newQuality != oldQuality
         val idChanged = character.relationshipArchetypeId != resolvedId
         when {
-            qualityChanged -> characterDao.updateArchetypeCalibration(uuid, resolvedId, GrowthJson.encode(newQuality))
+            // 卷二表1 ⑤：先压天花板后抬地板的**计算顺序不动**，只把算出来的目标净额经写口翻译成压强
+            // ——抬地板 ⇒ 加正压；压天花板 ⇒ 加负压。
+            qualityChanged -> {
+                val pressure = character.relationshipPressure.syncedTo(newQuality)
+                characterDao.updateArchetypeCalibration(
+                    uuid, resolvedId, GrowthJson.encode(pressure.toQuality()), GrowthJson.encode(pressure),
+                )
+            }
             idChanged -> characterDao.updateRelationshipArchetypeId(uuid, resolvedId)
             // 两者皆无变化 → 不写。
         }

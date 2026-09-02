@@ -25,9 +25,11 @@ import com.situ.aichat.notification.NotificationNavigator
 import com.situ.aichat.notification.StreakNotificationBridgeService
 import com.situ.aichat.economy.CharacterEconomyMaintenanceService
 import com.situ.aichat.gift.ProactiveGiftMaintenanceService
+import com.situ.aichat.maintenance.FirstMessageDateBackfill
 import com.situ.aichat.pet.PetMaintenanceService
 import com.situ.aichat.pet.PetReminderSync
 import com.situ.aichat.prompt.growth.GrowthAnalysisCoordinator
+import com.situ.aichat.prompt.growth.KernelPullback
 import com.situ.aichat.prompt.growth.RelationshipArchetypeCalibrator
 import com.situ.aichat.redpacket.RedPacketExpirationScanService
 import com.situ.aichat.story.StoryAutoSerializeService
@@ -38,6 +40,7 @@ import com.situ.aichat.work.MomentGenerationWorker
 import com.situ.aichat.work.NotificationRescheduleWorker
 import com.situ.aichat.work.NotificationTemplateWorker
 import com.situ.aichat.work.OfflineSummaryScanWorker
+import com.situ.aichat.work.OurDayCatchUpWorker
 import com.situ.aichat.work.PromiseBackfillWorker
 import com.situ.aichat.work.UnansweredMessageRecoveryWorker
 import com.situ.aichat.work.RedPacketExpirationWorker
@@ -75,6 +78,7 @@ class AppViewModel @Inject constructor(
     private val petMaintenanceService: PetMaintenanceService,
     private val growthAnalysisCoordinator: GrowthAnalysisCoordinator,
     private val archetypeCalibrator: RelationshipArchetypeCalibrator,
+    private val kernelPullback: KernelPullback,
     private val economyMaintenanceService: CharacterEconomyMaintenanceService,
     private val proactiveGiftMaintenanceService: ProactiveGiftMaintenanceService,
     private val redPacketExpirationScanService: RedPacketExpirationScanService,
@@ -87,6 +91,7 @@ class AppViewModel @Inject constructor(
     private val reliabilityPromptController: ReliabilityPromptController,
     private val appNightModeSync: AppNightModeSync,
     private val wallpaperMaintenanceService: WallpaperMaintenanceService,
+    private val firstMessageDateBackfill: FirstMessageDateBackfill,
     private val meetupNotificationService: MeetupNotificationService,
     private val meetingMissedReactionService: MeetingMissedReactionService,
     private val backgroundWorkDiagnostics: BackgroundWorkDiagnostics,
@@ -210,6 +215,8 @@ class AppViewModel @Inject constructor(
         viewModelScope.launch { runCatching { settingsRepository.migratePromptModuleMeetingMemoryOnce() } }
         // 短信腔四件线下退场迁移（两语境模型 2026-07-12）：老用户四模块 enabledScenes null→setOf(ONLINE_CHAT) 的一次性归位。
         viewModelScope.launch { runCatching { settingsRepository.migratePromptModuleSceneDefaultsOnce() } }
+        // 我们的日子·卷二：老用户模块「我们的日子」一次性归位到「见面记忆」正后（图纸 §3.2）。
+        viewModelScope.launch { runCatching { settingsRepository.migratePromptModuleOurDaysOnce() } }
         // P12.6 D2：挂进程级前后台观察者（放在 init 末尾，使启动时的 ON_RESUME 重放在 scheduleBackgroundWork 之后触发
         // onAppForeground，时序与旧 AppRoot DisposableEffect 一致）。ProcessLifecycleOwner 是进程单例 → 须在 onCleared 移除防泄漏。
         ProcessLifecycleOwner.get().lifecycle.addObserver(processLifecycleObserver)
@@ -271,6 +278,13 @@ class AppViewModel @Inject constructor(
         backgroundScheduler.scheduleOneShot(
             uniqueName = DiaryGenerationWorker.UNIQUE_ENSURE,
             workerClass = DiaryGenerationWorker::class.java,
+            requireNetwork = true,
+            existingPolicy = ExistingWorkPolicy.KEEP,
+        )
+        // 「我们的日子」卷一（图纸 §2.2）：回前台补一发 catch-up——「次日有动静就写昨天」全靠此路（§0.2 砍聊完一轮钩子）。KEEP 防与冷启/周期重入。
+        backgroundScheduler.scheduleOneShot(
+            uniqueName = OurDayCatchUpWorker.UNIQUE_ENSURE,
+            workerClass = OurDayCatchUpWorker::class.java,
             requireNetwork = true,
             existingPolicy = ExistingWorkPolicy.KEEP,
         )
@@ -341,12 +355,20 @@ class AppViewModel @Inject constructor(
         // 守卫避免多次 ON_RESUME 叠跑（同 pet/economy 模式）；放 viewModelScope（轻量、跑完不随后台取消更稳）。
         if (coldStartMaintenancePassJob?.isActive != true) {
             coldStartMaintenancePassJob = viewModelScope.launch { perfTrace.timedPass(PerfPassNames.COLD_START_HEAL) {
+                // 活人感内核卷零：老角色三维一次性拉回（图纸 §3.3·Z-6 排最前）。必须早于校准——拉回若把某维
+                // 降到原型地板以下，紧随其后的校准把它抬回地板正是预期行为；反序则拉回会覆盖校准结果。
+                runCatching { kernelPullback.runOnceIfNeeded() }
                 // 成长原型校准（图纸 §3.3 入口④·D-14）：先于衰减做内容指纹全量扫（进程内一次·指纹变才扫），
                 // 让本次衰减即吃到新原型地板。失败不影响后续维护。
                 runCatching { archetypeCalibrator.runStartupSweepIfNeeded() }
-                growthAnalysisCoordinator.runIdleRelationshipDecay()
+                // 相识天数 R1 🟡-1：本行原为裸调用，而 timedPass 只有 finally（PerfCollector.kt:274-282 原样重抛）——
+                // 闲置淡化一抛（写锁内 DB 写）就把整个 pass 掀了，其后的壁纸清理与首聊时间补账当轮全不跑。
+                // 与本块其余四步同款 runCatching，让「每次回前台都补账」这条承诺真正成立。
+                runCatching { growthAnalysisCoordinator.runIdleRelationshipDecay() }
                 // 清裁剪壁纸孤儿文件（复核 confirmed MED·防长期累积·失败不影响其它维护）。
                 runCatching { wallpaperMaintenanceService.purgeOrphanWallpapers() }
+                // 相识天数图纸 §4.1（D-3/D-4）：「第一次聊天时间」冷启补账（只往早改·幂等·毫秒级·失败不影响其它维护）。
+                runCatching { firstMessageDateBackfill.run() }
             } }
         }
         // P11 11.1g-2 故事：回前台故事 pass（卡死恢复 + 解锁闹钟重排 + 追更自动生成检查）。
@@ -427,6 +449,20 @@ class AppViewModel @Inject constructor(
             uniqueName = ScheduleGenerationWorker.UNIQUE_ENSURE_TODAY,
             workerClass = ScheduleGenerationWorker::class.java,
             requireNetwork = true,
+        )
+        // 「我们的日子」卷一（图纸 docs/handoff/2026-09-02-我们的日子-卷一-沉淀.md §2.2）：24h 周期兜底 + 冷启一次性 catch-up（KEEP·需网·LLM）。
+        // 协调器自带 per-uuid 锁 + 幂等 + 30 页/轮预算，重复排入安全；无 API 秒退只置 flag。
+        backgroundScheduler.schedulePeriodic(
+            uniqueName = OurDayCatchUpWorker.UNIQUE_DAILY,
+            workerClass = OurDayCatchUpWorker::class.java,
+            repeatInterval = Duration.ofHours(24),
+            requireNetwork = true,
+        )
+        backgroundScheduler.scheduleOneShot(
+            uniqueName = OurDayCatchUpWorker.UNIQUE_ENSURE,
+            workerClass = OurDayCatchUpWorker::class.java,
+            requireNetwork = true,
+            existingPolicy = ExistingWorkPolicy.KEEP,
         )
         // P6.1c 通知：每日重排（兜底长时间不开 App）+ 启动一次性重排（对齐 iOS 启动调度）。无网也跑（回退模板文案）。
         backgroundScheduler.schedulePeriodic(

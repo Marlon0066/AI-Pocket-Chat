@@ -46,6 +46,15 @@ internal object Palette {
     val OnClay = Color(0xFFFFFFFF)      // 浅 气泡内白字
     val OnClayDark = Color(0xFFF5EFEA)  // 深档深陶填充上的暖白字（降纯白光晕）
 
+    // ── 白瓷药丸面（分段控件 / 选择标签选中态·「白瓷药丸」对版稿烘焙值 2026-09-03）──
+    // 浅档 = 纯白起、底 stop 通道值各降 ~1.6%（#FBF5F1）带一丝陶土暖意——暖白非死白，接住顶光的釉面。
+    // 深档 = surface.sunken 提亮到相对亮度 ≈2.94×（暖灰抬升一阶·**非陶土色底**·D-4 拍板）。
+    // 注：倍数只描述本组暖档；青花档另有一组（见下方 GlazeBlue*），其比值 ≈2.58×，不套用此数。
+    val Glaze = Color(0xFFFFFFFF)          // 浅 药丸面顶
+    val GlazeShade = Color(0xFFFBF5F1)     // 浅 药丸面底
+    val GlazeDark = Color(0xFF403A32)      // 深 药丸面顶
+    val GlazeDarkShade = Color(0xFF352F29) // 深 药丸面底
+
     // ── 经济金：贵金属族（与 status.warning 物理隔离） ──
     val Gold = Color(0xFF8C6D1F)        // 浅 金文字/图标（对暖白 ≥4.5:1）
     val GoldDark = Color(0xFFD4B96A)    // 深 金文字 / 深档大元素单色
@@ -158,6 +167,10 @@ internal object Palette {
     val CobaltGradEndDark = Color(0xFF305A95)    // 深 气泡/主钮渐变终点
     val CobaltDeepStartDark = Color(0xFF2F548C)  // 深 恒深档起点
     val CobaltDeepEndDark = Color(0xFF244372)    // 深 恒深档终点
+    val GlazeBlue = Color(0xFFFFFFFF)            // 浅 药丸面顶（白瓷·同暖档口径）
+    val GlazeBlueShade = Color(0xFFF5F8FD)       // 浅 药丸面底（向瓷白底靠）
+    val GlazeBlueDark = Color(0xFF3E485A)        // 深 药丸面顶（冷灰抬升一阶）
+    val GlazeBlueDarkShade = Color(0xFF343E4F)   // 深 药丸面底
 
     // ── 通用 ──
     val Scrim = Color(0xFF000000)

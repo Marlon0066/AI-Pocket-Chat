@@ -138,6 +138,7 @@ class ChatImageSenderTest {
             mockk(relaxed = true),
             embedder,
             mockk<MeetingArchiveVectorService>(relaxed = true),
+            mockk<com.situ.aichat.prompt.memory.OurDayVectorService>(relaxed = true), // 卷二第 5 参
         )
     }
 

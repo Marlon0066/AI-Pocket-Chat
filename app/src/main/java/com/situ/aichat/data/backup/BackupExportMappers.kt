@@ -85,6 +85,14 @@ internal fun CharacterEntity.toExport(avatarArchiveKey: String?, chatWallpaperAr
     worldHomeCityId = worldHomeCityId,
     worldJoinedAt = worldJoinedAt,
     momentsDigestedUntilMillis = momentsDigestedUntilMillis,
+    personalityAnchorJSON = personalityAnchorJSON,
+    personaCompileMetaJSON = personaCompileMetaJSON,
+    personaGainsJSON = personaGainsJSON,
+    personaOperatorsJSON = personaOperatorsJSON,
+    relationshipPressureJSON = relationshipPressureJSON,
+    affectFieldJSON = affectFieldJSON,
+    intentQueueJSON = intentQueueJSON,
+    ourDaysBackfilledAt = ourDaysBackfilledAt,
 )
 
 internal fun ConversationEntity.toExport(messages: List<MessageExport>) = ConversationExport(

@@ -17,11 +17,14 @@ import com.situ.aichat.data.repository.CharacterRepository
 import com.situ.aichat.data.repository.CharacterWriteLock
 import com.situ.aichat.data.repository.ConversationRepository
 import com.situ.aichat.prompt.growth.AnalysisPacing
+import com.situ.aichat.prompt.growth.AffectKernel
 import com.situ.aichat.prompt.growth.GrowthAnalysisCoordinator
 import com.situ.aichat.prompt.growth.GrowthAnalysisError
 import com.situ.aichat.prompt.growth.GrowthAnalysisResult
+import com.situ.aichat.prompt.growth.IntentKernel
 import com.situ.aichat.prompt.growth.RelationshipAnalysisCoordinator
 import com.situ.aichat.prompt.growth.RelationshipAnalysisError
+import com.situ.aichat.prompt.growth.RelationshipBands
 import com.situ.aichat.prompt.memory.InSceneRecapCoordinator
 import com.situ.aichat.prompt.memory.MemoryService
 import com.situ.aichat.prompt.memory.MemoryDigestCoordinator
@@ -67,6 +70,10 @@ class VoiceCallPostReplyRounds @Inject constructor(
     private val relationshipCoordinator: RelationshipAnalysisCoordinator,
     private val characterWriteLock: CharacterWriteLock,
     private val inSceneRecapCoordinator: InSceneRecapCoordinator,
+    /** 卷三：语音回合尾同样 tick 场内核（K-F13 第二处钩子）。 */
+    private val affectKernel: AffectKernel,
+    /** 卷四：语音回合尾 tick 意图内核（无文本可用·N-5：只跑消退 / 清理 / 晋升）。 */
+    private val intentKernel: IntentKernel,
 ) {
     private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
 
@@ -261,6 +268,8 @@ class VoiceCallPostReplyRounds @Inject constructor(
         if (interval <= 0) return
 
         scope.launch {
+            runCatching { affectKernel.tick(characterUuid, System.currentTimeMillis()) } // 卷三：每轮 tick 场（失败吞掉）
+            runCatching { intentKernel.tick(characterUuid, System.currentTimeMillis(), "") } // 卷四：语音回合无文本（N-5）·只跑消退 / 清理 / 晋升
             val incremented = characterWriteLock.withCharacterLock(characterUuid) {
                 val character = characterRepo.get(characterUuid) ?: return@withCharacterLock null
                 val metadata = character.growthMetadata
@@ -295,11 +304,13 @@ class VoiceCallPostReplyRounds @Inject constructor(
             val before = characterRepo.get(characterUuid)?.relationshipQuality ?: RelationshipQuality()
             val result = growthCoordinator.analyzeAndPersist(characterUuid, config, userName, settings)
             checkGrowthDrivenRelationshipTrigger(characterUuid, result, before, settings, userName)
-        } catch (_: GrowthAnalysisError) {
-            // 解析失败 / 无消息：确定性错误，重试结果不会变
+        } catch (e: GrowthAnalysisError) {
+            // 解析失败 / 无消息：确定性错误，重试结果不会变；只留一条观测行（修缮卷 D-13）
+            Log.w(TAG, "成长分析确定性失败：${e.javaClass.simpleName} ${e.message}")
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            // 重试仍失败：静默
+            // 瞬态失败：只留一条观测行
+            Log.w(TAG, "成长分析瞬态失败：${e.javaClass.simpleName}")
         }
     }
 
@@ -408,8 +419,8 @@ class VoiceCallPostReplyRounds @Inject constructor(
     internal companion object {
         private const val TAG = "VoiceCallRounds"
 
-        /** Non-uniform relationship-dimension band edges (= iOS; trailing 100 breaks the 96+ saturation deadlock). */
-        private val RELATIONSHIP_BANDS = intArrayOf(10, 20, 30, 50, 70, 85, 95, 100)
+        /** Non-uniform relationship-dimension band edges (定义点住 [RelationshipBands.CROSSING_BOUNDARIES]). */
+        private val RELATIONSHIP_BANDS = RelationshipBands.CROSSING_BOUNDARIES
 
         /**
          * Relationship fallback trigger (pure, 1:1 iOS `shouldTriggerRelationshipFallback`):

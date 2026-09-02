@@ -24,13 +24,22 @@ enum class ApiFunction(val raw: String, val displayName: String, val subtitle: S
     RELATIONSHIP_ANALYSIS("relationshipAnalysis", "关系分析", "后台分析关系变化；思考模型更准，普通模型也够用"),
     NOTIFICATION_TEMPLATE("notificationTemplate", "通知文案", "生成推送通知的文字内容，普通模型即可"),
     SCENE_PROGRESS("sceneProgress", "节拍状态", "线下见面时更新场景进度和允许结束标志，建议普通模型（要快）"),
-    WORLD("world", "世界", "世界小报、偷听、风物志与初遇的润色，普通模型即可");
+    WORLD("world", "世界", "世界小报、偷听、风物志与初遇的润色，普通模型即可"),
+
+    // 活人感内核·卷一《人设编译器》（图纸 §3.4 逐字锁定）。**追加在末尾**：entries 顺序即分配屏排序，插中间会挪位。
+    // 独立功能位而非复用成长分析：编译是一次性、质量关键的调用（编译歪了会长期污染角色），值得单配更强的模型。
+    // 未分配时 resolveConfigValues 自动回落活动配置 ⇒ 开箱即用，不会出现死按钮。
+    PERSONA_COMPILE("personaCompile", "人设编译", "读一遍角色的性格描述，自动填好本性数值与敏感点；一次性调用，建议用你最好的模型"),
+
+    // 「我们的日子」卷一《沉淀》（总图纸 §3.8 逐字锁定）。**追加在末尾**：entries 顺序即分配屏排序。每天零点后为前一天写手记 + 事实行，
+    // 后台慢写、普通模型即可；未分配时 resolveConfigValues 自动回落活动配置。
+    OUR_DAYS("ourDays", "我们的日子", "每天零点后为前一天写一段手记和一行记录；后台慢慢写，普通模型即可");
 
     val category: ApiFunctionCategory
         get() = when (this) {
             CHAT, VOICE_CALL -> ApiFunctionCategory.CONVERSATION
-            MEMORY_SUMMARY, IMAGE_UNDERSTANDING, GROWTH_ANALYSIS, RELATIONSHIP_ANALYSIS, SCENE_PROGRESS ->
-                ApiFunctionCategory.BACKGROUND
+            MEMORY_SUMMARY, IMAGE_UNDERSTANDING, GROWTH_ANALYSIS, RELATIONSHIP_ANALYSIS, SCENE_PROGRESS,
+            PERSONA_COMPILE, OUR_DAYS -> ApiFunctionCategory.BACKGROUND
             DIARY_GENERATION, MOMENT_GENERATION, SCHEDULE_GENERATION, STORY_CREATION,
             STORY_STRUCTURING, NOTIFICATION_TEMPLATE, WORLD -> ApiFunctionCategory.CONTENT
         }

@@ -2,9 +2,13 @@ package com.situ.aichat.prompt.schedule
 
 import com.situ.aichat.data.local.entity.CharacterEntity
 import com.situ.aichat.data.model.EconomicStatusTier
+import com.situ.aichat.data.model.RelationshipQuality
 import com.situ.aichat.data.model.dynamicInterests
+import com.situ.aichat.data.model.intentQueue
 import com.situ.aichat.data.model.moodHistory
 import com.situ.aichat.data.model.relationshipQuality
+import com.situ.aichat.prompt.IntentExitRenderer
+import com.situ.aichat.prompt.growth.RelationshipBands
 import com.situ.aichat.prompt.memory.MemorySummarySections
 import com.situ.aichat.util.takeCodePoints
 import java.time.Instant
@@ -47,14 +51,15 @@ internal object ScheduleLivenessPromptSections {
 
     // ── D. 关系块（!backfill·图纸 §4-D）─────────────────────────────────
 
-    /** 关系档位（锁定公式：(熟悉+信任+亲近+依恋)/4 整除·边界 25/50/75）。 */
+    /** 关系档位（锁定公式：(熟悉+信任+亲近+依恋)/4 整除；取维与边界的定义点住 [RelationshipBands]）。 */
     fun relationshipTier(character: CharacterEntity): String {
         val q = character.relationshipQuality
-        val score = (q.familiarity + q.trust + q.closeness + q.attachment) / 4
+        val keys = RelationshipQuality.DIMENSION_KEYS
+        val score = RelationshipBands.TIER_DIMENSION_KEYS.sumOf { q.values[keys.indexOf(it)] } / 4
         return when {
-            score < 25 -> "新识"
-            score < 50 -> "熟络"
-            score < 75 -> "亲密"
+            score < RelationshipBands.TIER_FAMILIAR_MAX -> "新识"
+            score < RelationshipBands.TIER_CLOSE_MAX -> "熟络"
+            score < RelationshipBands.TIER_DEEP_MAX -> "亲密"
             else -> "深厚"
         }
     }
@@ -182,6 +187,15 @@ internal object ScheduleLivenessPromptSections {
                 "见面后的余温（回味、心情偏暖），不强制、不重演见面内容。",
         )
     }
+
+    // ── I. 意图块（活人感内核卷四 §4.5 ③·!backfill）─────────────────────
+
+    /**
+     * 【TA心里挂着的事】：live 意图 ≤3 条第三人称「TA」+「只进 innerThought」尾行；无 live 意图缺席。
+     * 一行委托 [IntentExitRenderer.scheduleLines]（保持「段函数全在本文件」的既有落位；文案锁定在 `IntentScripts`）。
+     */
+    fun intentSection(character: CharacterEntity, userName: String, nowMillis: Long): List<String> =
+        IntentExitRenderer.scheduleLines(character.intentQueue.intents, userName, nowMillis)
 
     // ── H4. 经济块（图纸 §4-H4·C6·含 backfill）──────────────────────────
 

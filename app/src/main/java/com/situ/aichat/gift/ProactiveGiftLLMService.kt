@@ -6,11 +6,13 @@ import com.situ.aichat.data.model.ProactiveGiftContext
 import com.situ.aichat.data.model.ProactiveGiftTrigger
 import com.situ.aichat.data.model.ProactiveGiftTriggerType
 import com.situ.aichat.data.model.RedPacketAmountCatalog
+import com.situ.aichat.data.model.intentQueue
 import com.situ.aichat.data.remote.llm.ApiConfigValues
 import com.situ.aichat.data.remote.llm.ChatMessageDto
 import com.situ.aichat.diagnostics.ContextLogService
 import com.situ.aichat.diagnostics.LogSource
 import com.situ.aichat.data.remote.llm.ResponseFormatDto
+import com.situ.aichat.prompt.IntentExitRenderer
 import com.situ.aichat.prompt.memory.MemoryService
 import com.situ.aichat.util.JSONExtractor
 import javax.inject.Inject
@@ -334,6 +336,8 @@ class ProactiveGiftLLMService @Inject constructor(
             candidates: List<GiftItem>,
             character: CharacterEntity,
             previousError: String? = null,
+            /** 卷四 §4.5 ⑤：意图惰性衰减的参考时刻（测试可注入）；默认取当前。 */
+            nowMillis: Long = System.currentTimeMillis(),
         ): Pair<String, String> {
             val redPacketEligible = isRedPacketEligible(trigger.type)
             val sys = mutableListOf<String>()
@@ -413,6 +417,9 @@ class ProactiveGiftLLMService @Inject constructor(
             usr.add("月薪:${context.monthlySalary} 金币 · 余额:${context.coinBalance} 金币")
             context.relationshipLabel?.let { usr.add("当前关系:$it") }
             usr.add("最近心情摘要:${context.recentMoodSummary}")
+            // 卷四 §4.5 ⑤：心里挂着的事（只此 3 行·decide / 校验 / 兜底零碰·钱路零碰）
+            IntentExitRenderer.giftBlock(character.intentQueue.intents, context.userName.ifEmpty { "用户" }, nowMillis)
+                .takeIf { it.isNotEmpty() }?.let { usr.add(it) }
             usr.add("")
             usr.add("## 候选礼物")
             if (candidates.isEmpty()) {

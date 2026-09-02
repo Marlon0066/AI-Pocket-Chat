@@ -13,6 +13,7 @@ import com.situ.aichat.data.model.ApiFunction
 import com.situ.aichat.data.model.MomentTriggerType
 import com.situ.aichat.data.model.dynamicInterests
 import com.situ.aichat.data.model.imagePaths
+import com.situ.aichat.data.model.intentQueue
 import com.situ.aichat.data.model.personalitySpectrum
 import com.situ.aichat.data.remote.llm.ApiConfigValues
 import com.situ.aichat.data.remote.llm.ChatMessageDto
@@ -30,6 +31,7 @@ import com.situ.aichat.pet.growthStage
 import com.situ.aichat.pet.neglectPhase
 import com.situ.aichat.pet.species
 import com.situ.aichat.prompt.GeneratedContentValidator
+import com.situ.aichat.prompt.IntentExitRenderer
 import com.situ.aichat.data.local.entity.OfflineMeetingMemoryEntity
 import com.situ.aichat.offline.MeetingMomentEchoPlanner
 import com.situ.aichat.offline.OfflineAfterglowService
@@ -296,6 +298,7 @@ class MomentGenerationService @Inject constructor(
             giftInspiration = giftInspiration,   // P9.2e 礼物分支（resolveGiftBranch 命中时为英文灵感段）
             petStatus = petStatus,    // moments-logic-1（14.4b）
             userName = userName,      // 图纸一·B5：reqContent %s 填真实用户名
+            intentBlock = IntentExitRenderer.momentBlock(character.intentQueue.intents, userName, nowMillis), // 卷四 §4.5 ②：心里挂着的事
         )
 
         val messages = listOf(

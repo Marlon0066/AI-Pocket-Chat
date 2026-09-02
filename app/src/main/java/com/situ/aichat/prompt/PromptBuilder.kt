@@ -143,6 +143,10 @@ object PromptBuilder {
          *  选择 / 排序 / 软上限 / 渲染在 [buildCharacterMemoryContent] 内经 [com.situ.aichat.promise.PromiseInjectionRenderer]
          *  完成（§3.3·additive·照 openLoops 透传路径）。 */
         val promises: List<com.situ.aichat.data.local.entity.PromiseEntity> = emptyList(),
+        /** 「我们的日子」卷二（图纸 §3.3）：注入候选行（调用方 `OurDayRepository.injectableForCharacter` 预取·空 = 不注入·照 promises 透传路径）/ 用户当前消息组文本（`OurDaysTurnText.from`·buildMessages 从窗口派生）/ 原文窗口最早消息时刻（null = 窗口空）。 */
+        val ourDays: List<com.situ.aichat.data.local.entity.OurDayEntity> = emptyList(),
+        val ourDaysTurnText: String = "",
+        val windowEarliestMillis: Long? = null,
         val assistantDeliveryMode: AssistantDeliveryMode,
         val toolCallingEnabled: Boolean,
         /** MiniMax 语气标签前门判定（P10.1c）。null = 不注入；只有 shouldInjectTagsHint 时才追加教学。 */
@@ -159,6 +163,8 @@ object PromptBuilder {
         /** 方案 G3：本次构建的"现在"，所有模块共用，避免毫秒漂移。 */
         val now: Instant,
         val strings: PromptStrings,
+        /** 卷三 D2：最近 3 轮 · 3h 内的角色在线发言（`AttentionJudge.recentCharacterLines`），【此刻】睡眠/分心裁决取材。 */
+        val recentCharacterLines: List<String> = emptyList(),
     )
 
     internal const val ROLE_USER = "user"
@@ -252,6 +258,8 @@ object PromptBuilder {
         openLoops: List<com.situ.aichat.data.local.entity.OpenLoopEntity> = emptyList(),
         /** 记忆改造一期·部件① 该角色注入候选约定（调用方 [com.situ.aichat.data.repository.PromiseRepository.injectableForCharacter] 预取·空=不注入·照 openLoops 透传路径）。 */
         promises: List<com.situ.aichat.data.local.entity.PromiseEntity> = emptyList(),
+        /** 「我们的日子」卷二 该角色注入候选行（调用方 [com.situ.aichat.data.repository.OurDayRepository.injectableForCharacter] 预取·空=不注入·照 promises 透传路径）。**新调用点必须传 `OurDayRepository.injectableForCharacter`，漏传=该场景丢日子注入。** */
+        ourDays: List<com.situ.aichat.data.local.entity.OurDayEntity> = emptyList(),
         assistantDeliveryMode: AssistantDeliveryMode = AssistantDeliveryMode.TEXT,
         toolCallingEnabled: Boolean = false,
         miniMaxVoiceTagsCapability: MiniMaxVoiceTagsCapability? = null,
@@ -325,6 +333,8 @@ object PromptBuilder {
             now = now,
         )
         val timeSnapshot = ConversationTimeSnapshot.from(filteredMessages)
+        val ourDaysTurnText = com.situ.aichat.prompt.ourdays.OurDaysTurnText.from(filteredMessages) // 卷二 W-4：只有这里知道真实窗口
+        val windowEarliestMillis = filteredMessages.firstOrNull()?.timestamp
 
         // WB4 世界书（契约 §4.3）：宏解析注入内容（{{user}}/{{char}}/{{now}}·未知宏原样输出=D6）。
         // 四锚点全部**只增新段、零改既有段**（CLAUDE.md §5 提示词强耦合红线）。
@@ -342,6 +352,7 @@ object PromptBuilder {
         fun resolveWorld(text: String) = applyPromptMacros(text, worldMacros)
 
         // 1. 系统提示词（前置区模块）+ 收集后置区模块条目（发射顺序在第 4/5 步决定）
+        val recentCharacterLines = com.situ.aichat.prompt.growth.AttentionJudge.recentCharacterLines(filteredMessages, now.toEpochMilli()) // 卷三 D2
         val (systemPrompt, suffixEntries) = buildSystemPromptWithSuffixes(
             character = character,
             milestones = milestones,
@@ -356,6 +367,7 @@ object PromptBuilder {
             worldContext = worldContext,
             openLoops = openLoops,
             promises = promises,
+            ourDays = ourDays, ourDaysTurnText = ourDaysTurnText, windowEarliestMillis = windowEarliestMillis, // 卷二
             assistantDeliveryMode = assistantDeliveryMode,
             toolCallingEnabled = toolCallingEnabled,
             miniMaxVoiceTagsCapability = miniMaxVoiceTagsCapability,
@@ -376,6 +388,7 @@ object PromptBuilder {
             segmentSink = segmentSink,
             worldInfoBefore = activeWorldInfo?.before?.takeIf { it.isNotBlank() }?.let(::resolveWorld) ?: "",
             worldInfoAfter = activeWorldInfo?.after?.takeIf { it.isNotBlank() }?.let(::resolveWorld) ?: "",
+            recentCharacterLines = recentCharacterLines,
         )
         if (systemPrompt.isNotEmpty()) {
             chatMessages.add(ChatMessageDto(role = ROLE_SYSTEM, content = systemPrompt))
@@ -679,6 +692,8 @@ object PromptBuilder {
         meetingTimeline: List<OfflineMeetingMemoryEntity> = emptyList(),
         /** 记忆改造二期·部件⑤ 场内前情提要（图纸 §3.2-D/E）：门控式透传给 [buildMessages]（见其同名参数）。 */
         inSceneRecap: String? = null,
+        /** 「我们的日子」卷二：透传给 [buildMessages]（见其同名参数·语音路走本包装·W-10 只加此一参）。 */
+        ourDays: List<com.situ.aichat.data.local.entity.OurDayEntity> = emptyList(),
     ): PromptBuildResult {
         val segments = mutableListOf<ContextSegment>()
         val messages = buildMessages(
@@ -717,6 +732,7 @@ object PromptBuilder {
             now = now,
             meetingTimeline = meetingTimeline,
             inSceneRecap = inSceneRecap,
+            ourDays = ourDays,
             segmentSink = segments,
         )
         return PromptBuildResult(messages, segments)
@@ -851,6 +867,7 @@ object PromptBuilder {
         SystemModuleType.STICKER_LIBRARY -> PromptMacros.STICKER_LIBRARY       // M17 (P8.1)
         SystemModuleType.PET_STATUS -> PromptMacros.PET_STATUS                 // M11 (P8.2d)
         SystemModuleType.OFFLINE_MEETING_MEMORY -> PromptMacros.MEETING_MEMORY // M16
+        SystemModuleType.OUR_DAYS -> PromptMacros.OUR_DAYS                     // 卷二
         SystemModuleType.GIFT_HISTORY -> PromptMacros.GIFT_HISTORY             // M09 (P9.2b)
         SystemModuleType.CHARACTER_ECONOMIC_STATE -> PromptMacros.ECONOMIC_STATE // M10 (P9.1a)
         SystemModuleType.CORE_RULES,
@@ -909,6 +926,7 @@ object PromptBuilder {
         put(PromptMacros.CHAR_MEMORY) { buildCharacterMemoryContent(ctx) }
         put(PromptMacros.MEMORY_CONTENT) { ctx.character.memorySummary }
         put(PromptMacros.MEETING_MEMORY) { buildOfflineMeetingMemoryContent(ctx) } // 相框包装(§3.2·空→空,唯一收口)
+        put(PromptMacros.OUR_DAYS) { com.situ.aichat.prompt.ourdays.buildOurDaysContent(ctx) } // 卷二(日期指名+那年今日·空→空)
         put(PromptMacros.TIME_CONTEXT) { buildTimeAwarenessContent(ctx) }
         put(PromptMacros.SCHEDULE_TODAY) { buildScheduleModule(ctx) }
         put(PromptMacros.CURRENT_MOMENT) { buildCurrentMomentModule(ctx) }

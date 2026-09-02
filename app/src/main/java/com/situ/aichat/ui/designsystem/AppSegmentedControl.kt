@@ -1,10 +1,10 @@
 package com.situ.aichat.ui.designsystem
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.snap
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
@@ -16,8 +16,12 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -37,16 +41,22 @@ private val TRACK_HEIGHT = 48.dp
 private val THUMB_INSET = 4.dp
 
 /**
- * Fable-5 分段控件 = 凹槽 + 滑动陶土药丸（按钮族重构 2026-06-19·D1 柔陶软填充用户过审）。
+ * Fable-5 分段控件 = 凹槽 + 滑动**白瓷药丸**（按钮族重构 2026-06-19 立件；材质升级「白瓷药丸」2026-09-03 过审）。
  *
  * 替代裸 M3 `SingleChoiceSegmentedButtonRow` + `SegmentedButton` 的「硬描边 + 分隔线 + 选中滑入对勾」骨架：
- * 暖色软填充凹槽（[AppColors.surface] sunken·[AppShapes.full]·**无描边**）+ 选中段一枚陶土药丸
- * （[AppColors.accent] container·随选中索引 [AppMotion.calmSpring] 横向滑行）+ 选中标签陶土
- * （[AppColors.accent] onContainer·Medium 字重）、未选 [AppColors.text] secondary。**无对勾、无分隔线**——
- * 填充 + 字色已表达选中。与 [AppBottomNav] 滑动药丸、[AppDropdownMenuItem] 选中项同源（设计语言 §5 路子）。
+ * 凹槽轨（[porcelainTrack]·sunken 底 + 顶沿内阴影）+ 选中段一枚白瓷药丸（[porcelainThumb]·釉面渐变 +
+ * 陶土暖边 + 软影 + 深档月光沿·随选中索引 [AppMotion.calmSpring] 横向滑行）+ 选中标签陶土
+ * （[AppColors.accent] onContainer·Medium 字重）、未选 [AppColors.text] secondary。**无对勾、无分隔线**。
  *
- * 等宽 N 段（≥2·药丸宽 = 轨宽/段数）→ 药丸位置确定，无测量竞态。每段点按缩放 0.96 + [LocalAppHaptics] selection
- * （EFFECT_TICK）；全 [rememberReduceMotion] 门控（关动画时滑动/缩放瞬时落位·色彩走效果轴永不过冲）。
+ * **材质升级前后**（勿回退）：旧版药丸 = `accent.container` 平填充（`#F0DDD3` 与槽 `#F1ECE4` 亮度几乎相同
+ * → 观感是「槽里一块淡印子」）；新版靠**光**表达浮起，材质细节与三处越出 v2 的登记见 [AppPorcelain]。
+ *
+ * 等宽 N 段（≥2·药丸宽 = 轨宽/段数）→ 药丸位置确定，无测量竞态。触感 [LocalAppHaptics] selection（EFFECT_TICK）；
+ * 全 [rememberReduceMotion] 门控（关动画时滑动/缩放/拉长瞬时落位·色彩走效果轴永不过冲）。
+ *
+ * **两处手感**（对版稿·[AppPorcelain] 存值）：① 滑行时药丸沿运动方向拉长 6.5% / 压扁 3.5%（keyframes
+ * 0→峰 137ms→0 共 360ms·像一滴水滑过去）；② 按住任意段 → 药丸下沉 [AppPorcelain.PRESS_SCALE] 且软影收掉
+ * （**取代**旧「整格文字缩 0.96」·文字改轻缩 [AppPorcelain.PRESS_LABEL_SCALE] 退让给药丸）。
  *
  * a11y：[selectableGroup] + 每段 `Role.Tab` + `selected` 语义（TalkBack 读「<label>·标签页·已选中」）；
  * 段高 48dp = 最小触达。[label] 为 `@Composable` 故调用方可用 `stringResource`。
@@ -67,7 +77,6 @@ fun <T> AppSegmentedControl(
     enabled: Boolean = true,
     label: @Composable (T) -> String,
 ) {
-    val colors = AppTheme.colors
     val reduceMotion = rememberReduceMotion()
     val haptics = LocalAppHaptics.current
     val segments = options.size.coerceAtLeast(1)
@@ -77,33 +86,71 @@ fun <T> AppSegmentedControl(
         animationSpec = if (reduceMotion) snap() else AppMotion.calmSpring(),
         label = "segmentSlide",
     )
+    // 按住任意段 → 药丸下沉（单指故至多一段按住；-1 = 无按压）。
+    var pressedIndex by remember { mutableIntStateOf(-1) }
+    // 滑行拉长：选中索引真的变了才跑（首次组合 lastIndex 已等于 selectedIndex → 不触发入场抽搐）。
+    val squash = remember { Animatable(0f) }
+    var lastIndex by remember { mutableIntStateOf(selectedIndex) }
+    LaunchedEffect(selectedIndex) {
+        if (selectedIndex != lastIndex) {
+            lastIndex = selectedIndex
+            if (!reduceMotion) {
+                squash.snapTo(0f)
+                squash.animateTo(
+                    targetValue = 0f,
+                    // 两段各挂 EaseOutQuint（对版稿 cubic-bezier(.22,.9,.3,1) 的项目同族 token·
+                    // (0.23,1,0.32,1) 形状实质相同，复用既有曲线不新增近邻）。**不写 easing 会落到
+                    // Compose 默认的 LinearEasing → 对称三角波**，水滴感变机械拉扯（PITFALLS §1d 红线）。
+                    animationSpec = keyframes {
+                        durationMillis = AppPorcelain.SQUASH_DURATION_MS
+                        0f at 0 using AppMotion.EaseOutQuint
+                        1f at AppPorcelain.SQUASH_PEAK_MS using AppMotion.EaseOutQuint
+                        0f at AppPorcelain.SQUASH_DURATION_MS
+                    },
+                )
+            }
+        }
+    }
+    val thumbPressScale by animateFloatAsState(
+        targetValue = if (pressedIndex >= 0 && !reduceMotion) AppPorcelain.PRESS_SCALE else 1f,
+        animationSpec = if (reduceMotion) snap() else AppMotion.calmSpring(),
+        label = "segmentThumbPress",
+    )
     Layout(
         modifier = modifier
             .fillMaxWidth()
             .height(TRACK_HEIGHT)
             .alpha(if (enabled) 1f else 0.45f)
-            .clip(AppShapes.full)
-            .background(colors.surface.sunken),
+            .porcelainTrack(),
         content = {
             // 滑动药丸（measurables[0]·先摆=绘于标签后面）。尺寸由父测量按段宽下发，不带 size 修饰符。
             Box(
                 modifier = Modifier
-                    .clip(AppShapes.full)
-                    .background(colors.accent.container)
-                    .border(width = 0.5.dp, color = colors.accent.primary.copy(alpha = 0.22f), shape = AppShapes.full),
+                    .graphicsLayer {
+                        val s = squash.value
+                        scaleX = (1f + AppPorcelain.SQUASH_X * s) * thumbPressScale
+                        scaleY = (1f - AppPorcelain.SQUASH_Y * s) * thumbPressScale
+                    }
+                    .porcelainThumb(pressed = pressedIndex >= 0, raised = enabled),
             )
             // 标签行（measurables[1]）。
+            // 裁剪下放到标签行：只裁过长文字，**不裁药丸的外扩软影**（[porcelainTrack] 已不裁子内容）。
             Row(
-                modifier = Modifier.selectableGroup(),
+                modifier = Modifier
+                    .clip(AppShapes.full)
+                    .selectableGroup(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                options.forEach { option ->
+                options.forEachIndexed { index, option ->
                     SegmentTab(
                         text = label(option),
                         selected = option == selected,
                         enabled = enabled,
                         reduceMotion = reduceMotion,
                         onClick = { haptics.selection(); onSelect(option) },
+                        onPressedChange = { isPressed ->
+                            pressedIndex = nextPressedIndex(pressedIndex, index, isPressed)
+                        },
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -143,6 +190,7 @@ private fun SegmentTab(
     enabled: Boolean,
     reduceMotion: Boolean,
     onClick: () -> Unit,
+    onPressedChange: (Boolean) -> Unit,
     modifier: Modifier,
 ) {
     val colors = AppTheme.colors
@@ -154,10 +202,15 @@ private fun SegmentTab(
         label = "segmentColor",
     )
     val pressScale by animateFloatAsState(
-        targetValue = if (pressed && !reduceMotion) 0.96f else 1f,
+        // 主反馈已交给药丸下沉，文字只轻缩一档退让（旧值 0.96）。
+        targetValue = if (pressed && !reduceMotion) AppPorcelain.PRESS_LABEL_SCALE else 1f,
         animationSpec = AppMotion.calmSpring(),
         label = "segmentPress",
     )
+    LaunchedEffect(pressed) { onPressedChange(pressed) }
+    // 按住期间本段被移出组合（options 变短）时 LaunchedEffect 随之取消、`false` 永不到达 →
+    // 药丸会永久停在下沉态。当前 19 站 options 全定长不可达，此处为公开组件封口。
+    DisposableEffect(Unit) { onDispose { onPressedChange(false) } }
     Box(
         modifier = modifier
             .fillMaxHeight()
@@ -180,4 +233,19 @@ private fun SegmentTab(
             overflow = TextOverflow.Ellipsis,
         )
     }
+}
+
+/**
+ * 按压索引状态转移（药丸是否下沉的唯一判据）。抽成纯函数便于 T1 直测——它承载两条易被"顺手简化"
+ * 掉的语义：① 松开的若不是当前记录的那一段（多指乱序到达）则**保持不变**，不能写成 `else -1`；
+ * ② 无按压恒为 -1。
+ *
+ * @param current 当前记录的按压段索引，-1 = 无按压
+ * @param index 发来事件的段索引
+ * @param isPressed 该段是按下(true)还是松开(false)
+ */
+internal fun nextPressedIndex(current: Int, index: Int, isPressed: Boolean): Int = when {
+    isPressed -> index
+    current == index -> -1
+    else -> current
 }

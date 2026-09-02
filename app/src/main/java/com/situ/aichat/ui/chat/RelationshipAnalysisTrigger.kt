@@ -13,10 +13,12 @@ import com.situ.aichat.data.remote.llm.ApiConfigValues
 import com.situ.aichat.data.repository.ApiConfigRepository
 import com.situ.aichat.data.repository.CharacterRepository
 import com.situ.aichat.data.repository.CharacterWriteLock
+import com.situ.aichat.prompt.growth.AffectKernel
 import com.situ.aichat.prompt.growth.AnalysisPacing
 import com.situ.aichat.prompt.growth.GrowthAnalysisCoordinator
 import com.situ.aichat.prompt.growth.GrowthAnalysisError
 import com.situ.aichat.prompt.growth.GrowthAnalysisResult
+import com.situ.aichat.prompt.growth.IntentKernel
 import com.situ.aichat.prompt.growth.RelationshipAnalysisCoordinator
 import com.situ.aichat.prompt.growth.RelationshipAnalysisError
 import kotlinx.coroutines.CancellationException
@@ -37,6 +39,10 @@ internal class RelationshipAnalysisTrigger(
     private val apiConfigRepo: ApiConfigRepository,
     private val growthCoordinator: GrowthAnalysisCoordinator,
     private val relationshipCoordinator: RelationshipAnalysisCoordinator,
+    /** 卷三：每轮回合尾先 tick 场内核（松弛 + 脉冲 + 跨日），失败吞掉不影响其余段。 */
+    private val affectKernel: AffectKernel,
+    /** 卷四：紧跟场 tick 再 tick 意图内核（层 ① 关键词 + 消退 / 清理 / 晋升），两把内核锁顺序拿、不嵌套（K-16）。 */
+    private val intentKernel: IntentKernel,
 ) {
     /** 防止并发成长分析（对齐 iOS isAnalyzingGrowth）。 */
     private var isAnalyzingGrowth = false
@@ -55,12 +61,18 @@ internal class RelationshipAnalysisTrigger(
         config: ApiConfigValues,
         settings: AppSettings,
         userName: String,
+        /** 卷四层 ①（K-5）：本轮用户消息正文（扫全清词·修缮卷 J4 只剩全清）；空 = 跳过该层（语音回合·N-5）。 */
+        userText: String = "",
     ) {
         if (!settings.growthSystemEnabled) return
         val interval = settings.growthAnalysisInterval
         if (interval <= 0) return
 
         scope.launch {
+            // 卷三 §3.4 表1：每轮 tick 场（内核自有 Mutex·不进 CharacterWriteLock）；tick 内部已吞异常，这里再兜一层（外部行为清单 9）。
+            runCatching { affectKernel.tick(characterUuid, System.currentTimeMillis()) }
+            // 卷四 §3.4：紧跟着 tick 意图（自有 Mutex·与场锁顺序拿不嵌套·K-16）；队列不变则 0 写（K-15）。
+            runCatching { intentKernel.tick(characterUuid, System.currentTimeMillis(), userText) }
             // P12.6 D1：每角色写锁内「重读最新→+1→列级写回」（见 [CharacterWriteLock]）。
             val incremented = characterWriteLock.withCharacterLock(characterUuid) {
                 val character = characterRepo.get(characterUuid) ?: return@withCharacterLock null
@@ -101,11 +113,13 @@ internal class RelationshipAnalysisTrigger(
             val result = growthCoordinator.analyzeAndPersist(characterUuid, config, userName, settings)
             // 成长分析完成 → 检查是否链式触发关系评估
             checkGrowthDrivenRelationshipTrigger(characterUuid, result, before, settings, userName)
-        } catch (_: GrowthAnalysisError) {
-            // 确定性错误（无消息 / 解析失败）：静默
+        } catch (e: GrowthAnalysisError) {
+            // 确定性错误（无消息 / 解析失败）：不重试，只留一条观测行（修缮卷 D-13：此前零日志 = 解析失败静默吞）
+            Log.w("GrowthAnalysis", "成长分析确定性失败：${e.javaClass.simpleName} ${e.message}")
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            // 瞬态错误（网络等）：静默
+            // 瞬态错误（网络等）：不重试，只留一条观测行
+            Log.w("GrowthAnalysis", "成长分析瞬态失败：${e.javaClass.simpleName}")
         }
     }
 

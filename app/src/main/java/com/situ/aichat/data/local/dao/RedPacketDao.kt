@@ -69,4 +69,8 @@ interface RedPacketDao {
     /** 备份恢复用：按 uuid 覆盖式插入（再导入幂等；amount 是托管快照，恢复不重复扣/加币）。 */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrReplace(record: RedPacketRecordEntity)
+
+    /** 我们的日子·卷一·只读：该角色作为送 / 收方的全部红包记录（createdAt 升序·amount 列随行读出但绝不进 facts·总图纸 §3.5）。 */
+    @Query("SELECT * FROM red_packet_records WHERE senderCharacterUUID = :characterUuid OR receiverCharacterUUID = :characterUuid ORDER BY createdAt ASC")
+    suspend fun allForCharacter(characterUuid: String): List<RedPacketRecordEntity>
 }

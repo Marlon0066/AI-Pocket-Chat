@@ -126,6 +126,7 @@ internal class AssistantTurnEngine(
     private val openLoopDetectionTrigger: OpenLoopDetectionTrigger,
     private val openLoopRepository: com.situ.aichat.data.repository.OpenLoopRepository,
     private val promiseRepository: com.situ.aichat.data.repository.PromiseRepository,
+    private val ourDayRepository: com.situ.aichat.data.repository.OurDayRepository,
     private val meetingAppointmentStore: MeetingAppointmentStore,
     private val errorFlow: MutableStateFlow<String?>,
     private val infoToastFlow: MutableStateFlow<String?>,
@@ -239,6 +240,8 @@ internal class AssistantTurnEngine(
         // 承诺账本注入（记忆改造一期·部件①·§3.3）：预取该角色注入候选约定（open 全量 + 近 7 天已结）；
         // 选择/排序/软上限/渲染在 PromptBuilder 内经 PromiseInjectionRenderer 用 ctx.now 完成（照 openLoops 透传路径）。
         val promises = promiseRepository.injectableForCharacter(character.uuid, System.currentTimeMillis())
+        // 我们的日子·卷二（图纸 §3.3）：预取注入候选行（deleted=0·hidden=0·factLine 非空），筛选渲染在 PromptBuilder 内。
+        val ourDays = ourDayRepository.injectableForCharacter(character.uuid)
         val unsummarizedRounds = memoryService.countUnsummarizedRoundsOutsideBaseWindow(
             currentConversation = convo,
             baseShortTermLength = settings.shortTermMemoryLength,
@@ -337,6 +340,7 @@ internal class AssistantTurnEngine(
             worldContext = worldContext,
             openLoops = openLoopsForPrompt,
             promises = promises,
+            ourDays = ourDays,
             assistantDeliveryMode = if (voicePlan.plan.isVoice) AssistantDeliveryMode.VOICE else AssistantDeliveryMode.TEXT,
             miniMaxVoiceTagsCapability = voicePlan.capability,
             toolCallingEnabled = toolCallingEnabled,
@@ -486,7 +490,8 @@ internal class AssistantTurnEngine(
                 scope.launch { inSceneRecapCoordinator.checkMeetingRecap(conversationUuid) }
                 // M14 成长分析（功能可单独分配 API；未分配回退当前激活 = config）
                 val growthConfig = apiConfigRepo.resolveConfigValues(ApiFunction.GROWTH_ANALYSIS) ?: config
-                relationshipAnalysisTrigger.incrementGrowthRoundAndCheck(character.uuid, growthConfig, settings, userName)
+                relationshipAnalysisTrigger.incrementGrowthRoundAndCheck(character.uuid, growthConfig, settings, userName, // 卷四层 ①：本轮文本
+                    userText = userMessageForEmbed?.content.orEmpty())
                 // M14 关系评估：每轮递增 relationshipMessageCount + 保底触发判定（链式触发在成长分析完成后）
                 relationshipAnalysisTrigger.incrementRelationshipRoundAndCheck(character.uuid, settings, userName)
                 // 未来约定见面·快路（工具/文本暗号·8d-3b）：当场识别的候选即时入库冒确认卡（不过扫描节奏）。

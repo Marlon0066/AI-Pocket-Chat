@@ -84,6 +84,8 @@ data class ProactiveGiftContext(
     val relationshipLabel: String?,
     /** 最近 mood 色彩摘要（如 "red/red/yellow"），用于 LLM 判断心情 */
     val recentMoodSummary: String,
+    /** 卷四：用户昵称（礼物出口意图句用·K-20）；空 ⇒ 提示词回退「用户」。默认字段 ⇒ 既有构造点零改。 */
+    val userName: String = "",
 ) {
     /** 是否有任何候选触发 */
     val hasAnyCandidate: Boolean get() = candidateTriggers.isNotEmpty()

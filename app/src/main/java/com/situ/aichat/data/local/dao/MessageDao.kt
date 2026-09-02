@@ -8,6 +8,9 @@ import androidx.room.Upsert
 import com.situ.aichat.data.local.entity.MessageEntity
 import kotlinx.coroutines.flow.Flow
 
+/** 补账投影：角色 uuid + 该角色最早一条「非空内容」消息时间戳（谓词与 [MessageDao.nonEmptyTimestampsForCharacter] 同源 = 资料页「初次相识」）。 */
+data class CharacterFirstMessageRow(val characterUuid: String, val ts: Long)
+
 @Dao
 interface MessageDao {
     /** 按消息 UUID 反查其会话 UUID（P14.2b 全天日程的 userInteraction 事件点击→跳对应会话）。 */
@@ -164,6 +167,13 @@ interface MessageDao {
             "WHERE c.characterUuid = :characterUuid AND m.content != '' ORDER BY m.timestamp ASC",
     )
     suspend fun nonEmptyTimestampsForCharacter(characterUuid: String): List<Long>
+
+    /** 「第一次聊天时间」补账（相识天数图纸 §4.1）：每个有消息的角色一行 = 其最早一条「非空内容」消息时间戳。 */
+    @Query(
+        "SELECT c.characterUuid AS characterUuid, MIN(m.timestamp) AS ts FROM messages m JOIN conversations c ON m.conversationUuid = c.uuid " +
+            "WHERE m.content != '' GROUP BY c.characterUuid",
+    )
+    suspend fun earliestNonEmptyTimestampByCharacter(): List<CharacterFirstMessageRow>
 
     /**
      * 仅取一会话中「带媒体」消息的磁盘路径（音频/图片/缩略图），用于删会话前清磁盘文件
@@ -399,6 +409,18 @@ interface MessageDao {
         """,
     )
     suspend fun messagesForCharacterInRange(characterUuid: String, start: Long, end: Long, limit: Int): List<MessageEntity>
+
+    /**
+     * 成长分析取材（活人感内核卷零 §3.4）：某角色**跨全部会话**的最近 [limit] 条非空非 system 消息，**倒序**。
+     * 与 [recentForAnalysis]（per-conversation）的分工：本查询一次 JOIN 拿全角色，供「按轮切窗」使用
+     * （按轮切窗必须在同一条时间轴上切，逐会话取再合并会在会话边界切错轮）。
+     */
+    @Query(
+        "SELECT m.* FROM messages AS m INNER JOIN conversations AS c ON m.conversationUuid = c.uuid " +
+            "WHERE c.characterUuid = :characterUuid AND m.content != '' AND m.roleRaw != 'system' " +
+            "ORDER BY m.timestamp DESC LIMIT :limit",
+    )
+    suspend fun recentForCharacterAnalysis(characterUuid: String, limit: Int): List<MessageEntity>
 
     /**
      * 某角色最近 [cutoff] 后与用户的非 system 消息数（朋友圈相关性「活跃度」维度，M06 7.2.4）。

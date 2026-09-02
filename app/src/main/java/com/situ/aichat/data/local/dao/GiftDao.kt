@@ -135,4 +135,8 @@ interface GiftDao {
             "AND receiverType = 'character' AND timestamp >= :windowStart ORDER BY timestamp ASC",
     )
     suspend fun userGiftsToCharactersSince(windowStart: Long): List<GiftRecordEntity>
+
+    /** 我们的日子·卷一·只读：该角色作为送 / 收方的全部礼物记录（timestamp 升序·事实层按日切·总图纸 §3.5）。 */
+    @Query("SELECT * FROM gift_records WHERE senderCharacterUUID = :characterUuid OR receiverCharacterUUID = :characterUuid ORDER BY timestamp ASC")
+    suspend fun allForCharacter(characterUuid: String): List<GiftRecordEntity>
 }

@@ -57,7 +57,7 @@ sealed interface ScheduleDayUiState {
  */
 @HiltViewModel
 class ScheduleFullDayViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
+    private val savedStateHandle: SavedStateHandle,
     characterRepo: CharacterRepository,
     private val scheduleDao: ScheduleDao,
     private val messageDao: MessageDao,
@@ -71,7 +71,12 @@ class ScheduleFullDayViewModel @Inject constructor(
     private val yesterdayStart: Long = LocalDate.now(zone).minusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
     private val tomorrowStart: Long = LocalDate.now(zone).plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
 
-    private val _selectedDate = MutableStateFlow(todayStart)
+    private val _selectedDate = MutableStateFlow(initialSelected())
+
+    /** 「我们的日子」卷三 W-10：可选 `date` 参（`yyyy-MM-dd`）⇒ 初值 = 该日零点；缺省 / 非法 ⇒ today（既有行为字节不变）。 */
+    private fun initialSelected(): Long =
+        savedStateHandle.get<String>(ARG_DATE)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+            ?.atStartOfDay(zone)?.toInstant()?.toEpochMilli() ?: todayStart
 
     /** 当前查看的日期（当天 0 点毫秒，设备时区）。 */
     val selectedDate: StateFlow<Long> = _selectedDate.asStateFlow()
@@ -183,5 +188,6 @@ class ScheduleFullDayViewModel @Inject constructor(
 
     companion object {
         const val ARG_CHARACTER_UUID = "characterUuid"
+        const val ARG_DATE = "date"
     }
 }

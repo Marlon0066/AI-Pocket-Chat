@@ -8,6 +8,7 @@ import com.situ.aichat.data.model.PersonalitySpectrum
 import com.situ.aichat.data.model.RelationshipQuality
 import com.situ.aichat.diagnostics.ContextLogService
 import io.mockk.mockk
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -44,6 +45,26 @@ class GrowthAnalysisServiceTest {
         messageUUID = "a1", conversationUuid = "conv1", roleRaw = "assistant", content = content,
         timestamp = 1_700_000_001_000L, messageKindRaw = "plain_text",
     )
+
+    private fun parse(extraJson: String) = service.parseAnalysisResponse(
+        """{"events":[{"type":"majorEvent","summary":"x"}],"narrative":"n"$extraJson}""",
+    )
+
+    // MARK: - 修缮卷 T1-10（E22 / D-9）：老字段宽松取整，坏项丢弃不判废
+
+    @Test
+    fun personalityChanges_lenientValues_dropUnparseable_keepRest_E22() {
+        val r = parse(""","personality_changes":{"warmth":null,"humor":2.6,"extroversion":{"pos":3,"neg":1},"openness":"12","x":4}""")
+        assertEquals(mapOf("humor" to 3, "extroversion" to 2, "openness" to 10), r.personalityChanges)
+        assertFalse("null 项丢弃、整份不判废", r.personalityChanges.containsKey("warmth"))
+    }
+
+    @Test
+    fun interestHeatChanges_lenientValues_andLegacyDetectionStillWorks() {
+        assertEquals(mapOf("画画" to 5, "跑步" to 2), parse(""","interest_heat_changes":{"画画":"5","跑步":2.4,"钓鱼":null}""").interestHeatChanges)
+        assertEquals("钳 ±15", mapOf("画画" to -15), parse(""","interest_heat_changes":{"画画":-20.7}""").interestHeatChanges)
+        assertTrue("旧绝对值格式（全 >15）仍整批丢弃", parse(""","interest_heat_changes":{"画画":"70","跑步":60.5}""").interestHeatChanges.isEmpty())
+    }
 
     private fun systemAndUser(userName: String): Pair<String, String> = service.buildAnalysisPrompt(
         messages = listOf(userMsg("今天好开心"), charMsg("我也是呀")),

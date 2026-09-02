@@ -264,10 +264,21 @@ internal fun buildTimeAwarenessContent(ctx: PromptBuilder.BuildContext): String 
     // （"对方隔了约X才回你""重新拿起手机"），与末位见面说明书"面对面"冲突，见面场景整体退场。
     if (ctx.scene == PromptScene.OFFLINE_MEETING) return TimeAnchorFormatter.buildTimeAnchorFactsOnly(ctx.now)
     val snapshot = ctx.timeSnapshot
+    // 用户称呼（相识天数图纸 §13·用户拍板 2026-09-03）：块级单源，相识行与方向化间隔行共用同一个称呼——
+    // 有昵称叫昵称、空才叫「对方」（与 PromptBuilderGuards / PromptBuilder 的【待见约定】同一条规则）。
+    // 取值与 [PromptBuilder.buildPromptMacros] 同款「先 trim 再判空」：备份导入不 trim 昵称
+    // （`BackupImportMappers` 原样写回），纯空格昵称会渲染成「你和 是 …」「 隔了约 3 小时才回你」两处豁口。
+    val userLabel = ctx.userProfile?.nickname?.trim()?.takeIf { it.isNotEmpty() } ?: TimeAnchorFormatter.USER_LABEL_FALLBACK
+    // 相识行（相识天数图纸 §4.2）：字段为空（从没聊过 / 补账前）→ null → 相识行整行缺席。
+    val acquaintance = ctx.character.firstMessageDate?.let { first ->
+        TimeAnchorFormatter.AcquaintanceFacts(firstMessageDate = first, streakCount = ctx.character.streakCount)
+    }
     return TimeAnchorFormatter.buildTimeAnchor(
         now = ctx.now,
         lastAssistantTime = snapshot.lastAssistantTime,
         directionalGapLine = !ctx.delayedGeneration,
+        acquaintance = acquaintance,
+        userLabel = userLabel,
     )
 }
 

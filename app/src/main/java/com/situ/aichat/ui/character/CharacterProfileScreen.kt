@@ -38,6 +38,7 @@ import com.situ.aichat.R
 import com.situ.aichat.economy.SalaryEditWarningFlag
 import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.meeting.MeetingCountdownChip
+import com.situ.aichat.ui.ourdays.ProfileOurDaysCard
 import com.situ.aichat.ui.starfield.StarfieldEntryCard
 
 /**
@@ -55,6 +56,8 @@ fun CharacterProfileScreen(
     onOpenSchedule: (String) -> Unit,
     onOpenPromises: (String) -> Unit,
     onOpenStarfield: (String) -> Unit,
+    /** 「我们的日子」日历页（卷三图纸 §2.2·预选该角色）。 */
+    onOpenOurDays: (String) -> Unit,
     /** 记忆手动编辑页（图纸 2026-09-01 件③）。 */
     onEditMemory: (String) -> Unit,
     viewModel: CharacterProfileViewModel = hiltViewModel(),
@@ -192,6 +195,11 @@ fun CharacterProfileScreen(
                     // 记忆星空入口卡（图纸 2026-07-16-记忆星空·A 案）：STORY 顶部新增，既有四卡原样不动。
                     item(key = "starfield_entry", contentType = "starfield_entry") {
                         StarfieldEntryCard(onOpen = { onOpenStarfield(c.uuid) }, modifier = cardPadding)
+                    }
+
+                    // 「我们的日子」轻卡（卷三图纸 §2.2·提案 D-2）：紧随星空卡、约定卡之前；空态仍渲染。
+                    item(key = "our_days", contentType = "our_days") {
+                        ProfileOurDaysCard(onOpen = { onOpenOurDays(c.uuid) }, modifier = cardPadding)
                     }
 
                     // 我们的约定卡（记忆改造三期·D-1）：一条约定都没有 → 整卡不渲染（含其上间距·照亲友账卡先例）。

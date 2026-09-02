@@ -62,6 +62,10 @@ fun buildSystemPromptWithSuffixes(
     openLoops: List<com.situ.aichat.data.local.entity.OpenLoopEntity> = emptyList(),
     /** 记忆改造一期·部件① 该角色注入候选约定（空=不注入·透传进 [PromptBuilder.BuildContext]，选择/渲染在消费侧）。 */
     promises: List<com.situ.aichat.data.local.entity.PromiseEntity> = emptyList(),
+    /** 「我们的日子」卷二（图纸 §3.3）：三者原样透传进 [PromptBuilder.BuildContext]（筛选 / 渲染在消费侧 `buildOurDaysContent`）。 */
+    ourDays: List<com.situ.aichat.data.local.entity.OurDayEntity> = emptyList(),
+    ourDaysTurnText: String = "",
+    windowEarliestMillis: Long? = null,
     assistantDeliveryMode: PromptBuilder.AssistantDeliveryMode,
     toolCallingEnabled: Boolean,
     miniMaxVoiceTagsCapability: MiniMaxVoiceTagsCapability? = null,
@@ -83,6 +87,8 @@ fun buildSystemPromptWithSuffixes(
      *  （= 酒馆 position 0/1「角色定义前后」）；身份模块缺席或空内容时兜底 = 前桶置于提示词最前、后桶收尾。 */
     worldInfoBefore: String = "",
     worldInfoAfter: String = "",
+    /** 卷三 D2：透传进 [PromptBuilder.BuildContext.recentCharacterLines]（空 = 无自述·旧行为）。 */
+    recentCharacterLines: List<String> = emptyList(),
 ): Pair<String, List<SuffixModuleEntry>> {
     val macros = PromptBuilder.promptMacros(character, userProfile, strings)
     val ctx = PromptBuilder.BuildContext(
@@ -99,6 +105,9 @@ fun buildSystemPromptWithSuffixes(
         worldContext = worldContext,
         openLoops = openLoops,
         promises = promises,
+        ourDays = ourDays,
+        ourDaysTurnText = ourDaysTurnText,
+        windowEarliestMillis = windowEarliestMillis,
         assistantDeliveryMode = assistantDeliveryMode,
         toolCallingEnabled = toolCallingEnabled,
         miniMaxVoiceTagsCapability = miniMaxVoiceTagsCapability,
@@ -119,6 +128,7 @@ fun buildSystemPromptWithSuffixes(
         extraMacros = extraMacros,
         now = now,
         strings = strings,
+        recentCharacterLines = recentCharacterLines,
     )
 
     val modules = PromptModuleService.effectiveModules(

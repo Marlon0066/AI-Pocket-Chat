@@ -196,6 +196,36 @@ class DiaryExchangeTest {
         )
     }
 
+    // 卷四 T2-6 ④（图纸 §4.5 / §2.2）：意图块在惦记块之后、心情段之前；空 ⇒ 不含、与不传逐字节相同。
+    @Test fun `卷四 intent block sits after loop block and before mood header, empty omitted`() {
+        val zone = ZoneId.of("UTC")
+        val now = 1_700_000_000_000L
+        fun build(enrichment: DiaryExchangeEnrichment) = DiaryExchangePromptBuilder.build(
+            strings = sentinelStrings(),
+            characterName = "Nova", personality = "warm", systemPrompt = "", userName = "U",
+            nowMillis = now, zone = zone,
+            moodLine = "😊", chatSummary = "", scheduleSummary = "",
+            enrichment = enrichment,
+        )
+        val dateStr = DateFormatters.yearMonthDayHourMinuteWithWeekday(now, zone)
+        assertEquals(
+            listOf(
+                "intro<Nova|warm>", "",
+                "task<U,U>", "",
+                "LOOP", "",
+                "INTENT1\nINTENT2", "",          // E 意图块：惦记之后、心情之前
+                "MH", "😊", "",
+                "CT<$dateStr>", "",
+                "REQH", "RS", "RSt<U>", "RW", "RM", "RNS", "RNP", "RNA", "",
+                "OO", "MOR",
+            ).joinToString("\n"),
+            build(DiaryExchangeEnrichment(loopBlock = "LOOP", intentBlock = "INTENT1\nINTENT2")),
+        )
+        val without = build(DiaryExchangeEnrichment(loopBlock = "LOOP"))
+        assertEquals(without, build(DiaryExchangeEnrichment(loopBlock = "LOOP", intentBlock = "")))
+        assertFalse(without.contains("INTENT"))
+    }
+
     @Test fun `formatRelationship - phase line maps by index, recent milestones appended, empties omitted (B)`() {
         val zone = ZoneId.of("UTC")
         val s = sentinelStrings()   // phaseNames="P0|P1|P2|P3|P4"·phaseLine="PL<%1$s>"·milestoneLine="ML<%1$s,%2$s>"

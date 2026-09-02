@@ -118,6 +118,7 @@ class ChatViewModel @Inject constructor(
     private val characterRepo: CharacterRepository,
     private val openLoopRepository: com.situ.aichat.data.repository.OpenLoopRepository,
     private val promiseRepository: com.situ.aichat.data.repository.PromiseRepository,
+    private val ourDayRepository: com.situ.aichat.data.repository.OurDayRepository,
     private val offlineMeetingMemoryRepository: com.situ.aichat.data.repository.OfflineMeetingMemoryRepository,
     private val characterWriteLock: CharacterWriteLock,
     private val apiConfigRepo: ApiConfigRepository,
@@ -142,6 +143,8 @@ class ChatViewModel @Inject constructor(
     private val structuredCoordinator: StructuredMemoryCoordinator,
     private val growthCoordinator: GrowthAnalysisCoordinator,
     private val relationshipCoordinator: RelationshipAnalysisCoordinator,
+    private val affectKernel: com.situ.aichat.prompt.growth.AffectKernel,
+    private val intentKernel: com.situ.aichat.prompt.growth.IntentKernel,
     private val notificationScheduler: NotificationScheduler,
     private val calendarNotificationScheduler: CalendarNotificationScheduler,
     private val notificationLearningService: NotificationLearningService,
@@ -681,6 +684,8 @@ class ChatViewModel @Inject constructor(
         apiConfigRepo = apiConfigRepo,
         growthCoordinator = growthCoordinator,
         relationshipCoordinator = relationshipCoordinator,
+        affectKernel = affectKernel,
+        intentKernel = intentKernel,
     )
 
     // MARK: - 后台分析触发·惦记的事簇（活人感一期 P2·VM 持有并接线引擎；与 MeetingDetectionTrigger 并排）
@@ -734,6 +739,7 @@ class ChatViewModel @Inject constructor(
         openLoopDetectionTrigger = openLoopDetectionTrigger,
         openLoopRepository = openLoopRepository,
         promiseRepository = promiseRepository,
+        ourDayRepository = ourDayRepository,
         meetingAppointmentStore = meetingAppointmentStore,
         errorFlow = _error,
         infoToastFlow = _infoToast,

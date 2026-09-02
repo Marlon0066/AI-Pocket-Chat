@@ -34,6 +34,15 @@ object LogSource {
     // MARK: - 承诺账本对账（记忆改造一期·部件②·安卓特有·归 ANALYSIS 类目，照 OPEN_LOOP_SCAN）
     const val PROMISE_RECONCILE = "约定对账"
 
+    // MARK: - 人设编译（活人感内核·卷一·安卓特有·归 ANALYSIS 类目，照 PROMISE_RECONCILE）
+    const val PERSONA_COMPILE = "人设编译"
+
+    // MARK: - 性格复盘（活人感内核·卷四·调用 C·安卓特有·归 ANALYSIS 类目，照 PERSONA_COMPILE）
+    const val PERSONA_REVIEW = "性格复盘"
+
+    // MARK: - 我们的日子（卷一·安卓特有·归 MEMORY 类目）
+    const val OUR_DAYS = "日子手记"
+
     // MARK: - 通知（iOS-parity）
     const val NOTIFICATION_TEMPLATE = "通知文案生成"
     const val DYNAMIC_NOTIFICATION = "动态通知生成"
@@ -81,10 +90,12 @@ object LogSource {
     /** 全部已知来源（[LogCategory] 覆盖不变量测试 + 去重校验的枚举源）。新增 source 务必同步追加。 */
     val ALL: List<String> = listOf(
         CHAT, VOICE_CALL,
-        MEMORY_SUMMARY, STRUCTURED_MEMORY, SCENE_PROGRESS, IN_SCENE_RECAP,
+        MEMORY_SUMMARY, STRUCTURED_MEMORY, SCENE_PROGRESS, IN_SCENE_RECAP, OUR_DAYS,
         GROWTH_ANALYSIS, RELATIONSHIP_ANALYSIS, MEETING_DETECTION,
         OPEN_LOOP_SCAN, OPEN_LOOP_MESSAGE,
         PROMISE_RECONCILE,
+        PERSONA_COMPILE,
+        PERSONA_REVIEW,
         NOTIFICATION_TEMPLATE, DYNAMIC_NOTIFICATION,
         MOMENT_POST, MOMENT_COMMENT,
         DIARY_GENERATION, DIARY_COMMENT,

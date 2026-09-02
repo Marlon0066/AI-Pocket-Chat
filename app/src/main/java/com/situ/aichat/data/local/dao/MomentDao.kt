@@ -311,4 +311,17 @@ interface MomentDao {
             "(SELECT id FROM moment_notification WHERE isRead = 1 AND timestamp < :cutoff ORDER BY timestamp ASC LIMIT :limit)"
     )
     suspend fun deleteOldReadNotifications(cutoff: Long, limit: Int)
+
+    /** 我们的日子·卷一·只读：该角色非软删自发帖的时间戳（事实层 momentPosts 按日计数·总图纸 §3.5）。 */
+    @Query("SELECT timestamp FROM moment_post WHERE isSoftDeleted = 0 AND authorTypeRaw = 'character' AND characterUuid = :characterUuid")
+    suspend fun postTimestampsByCharacter(characterUuid: String): List<Long>
+
+    /** 我们的日子·卷一·只读：该角色的评论 + 点赞，加用户对该角色帖的评论 + 点赞，四路时间戳并集（事实层 momentInteractions 按日计数·总图纸 §3.5）。 */
+    @Query(
+        "SELECT c.timestamp FROM moment_comment c WHERE c.authorTypeRaw = 'character' AND c.characterUuid = :characterUuid " +
+            "UNION ALL SELECT l.timestamp FROM moment_like l WHERE l.authorTypeRaw = 'character' AND l.characterUuid = :characterUuid " +
+            "UNION ALL SELECT c.timestamp FROM moment_comment c JOIN moment_post p ON c.postUuid = p.uuid WHERE c.authorTypeRaw = 'user' AND p.characterUuid = :characterUuid " +
+            "UNION ALL SELECT l.timestamp FROM moment_like l JOIN moment_post p ON l.postUuid = p.uuid WHERE l.authorTypeRaw = 'user' AND p.characterUuid = :characterUuid",
+    )
+    suspend fun interactionTimestampsForCharacter(characterUuid: String): List<Long>
 }

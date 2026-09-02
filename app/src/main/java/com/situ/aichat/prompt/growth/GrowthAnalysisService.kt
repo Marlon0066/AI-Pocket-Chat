@@ -7,6 +7,7 @@ import com.situ.aichat.data.local.entity.MessageEntity
 import com.situ.aichat.data.local.entity.ScheduleEventEntity
 import com.situ.aichat.data.model.DynamicInterest
 import com.situ.aichat.data.model.GrowthEventType
+import com.situ.aichat.data.model.PRESSURE_DELTA_MAX
 import com.situ.aichat.data.model.PersonalitySpectrum
 import com.situ.aichat.data.model.RelationshipQuality
 import com.situ.aichat.data.remote.llm.ApiConfigValues
@@ -21,6 +22,8 @@ import kotlinx.coroutines.delay
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,12 +32,31 @@ import javax.inject.Singleton
 /** LLM 返回的成长分析结果（解析 + 钳位后）。对齐 iOS `GrowthAnalysisResult`。 */
 data class GrowthAnalysisResult(
     val personalityChanges: Map<String, Int>,    // dimensionKey → 变化量（已钳 -10..10）
-    val relationshipChanges: Map<String, Int>,   // dimensionKey → 变化量（已钳 -5..5）
+    val relationshipChanges: Map<String, PressureDelta>, // dimensionKey → 本次新增的正负两股力（各已钳 0..5）
     val newInterests: List<NewInterest>,         // 新发现的兴趣
     val interestHeatChanges: Map<String, Int>,   // 兴趣名 → 热度变化量（已钳 -15..15）
     val events: List<GrowthEvent>,               // 变化事件
     val narrative: String,                       // 一句话总结
+    /** 卷三 §3.3：27 项增益 key 的命中，已过滤 ∈ GAIN_KEYS、去重、≤ [GrowthAnalysisService.GAIN_HITS_MAX]；缺席即空。 */
+    val gainHits: List<String> = emptyList(),
+    /** 卷三 §3.3：专属敏感点命中，label 已对上传入的清单；缺席即空。 */
+    val customHits: List<CustomHit> = emptyList(),
+    /** 卷四 §3.5：层 ② 意图判定 `intent_status`（key = `IntentKind.key` → open / expressed / resolved，已过滤）；缺席即空。 */
+    val intentStatus: Map<String, String> = emptyMap(),
+    /** 修缮卷 🔵-1：`gain_hits` 里归一后仍认不出的项数（非字符串 / 不在 GAIN_KEYS）——只上观测行，不参与数值。 */
+    val droppedHits: Int = 0,
 ) {
+    /**
+     * 某维**这一次**新增的两股力（活人感内核·卷二 §3.3）。各自 `0..PRESSURE_DELTA_MAX`，都是增量不是总量。
+     *
+     * 取代旧的单个净额值——旧结构每维只能报一个数，「说了很多心里话(+3) 但有句话让她介意(-2)」
+     * 在分析 AI 开口之前就已经被相抵成 `+1`，那两股力再也找不回来了。
+     */
+    data class PressureDelta(val pos: Int, val neg: Int)
+
+    /** 专属敏感点命中（卷三 §3.3）：[label] 已对上人设增益 custom 清单（忽略大小写 / 首尾空白），[positive] = tone `pos`。 */
+    data class CustomHit(val label: String, val positive: Boolean)
+
     data class NewInterest(val name: String, val initialHeat: Int)
     data class GrowthEvent(val type: GrowthEventType, val summary: String)
 }
@@ -76,8 +98,42 @@ class GrowthAnalysisService @Inject constructor(
         val all = conversations.flatMap { messageDao.recentForAnalysis(it.uuid, maxMessages) }
         val sorted = all.sortedBy { it.timestamp }
         val trimmed = if (sorted.size > maxMessages) sorted.takeLast(maxMessages) else sorted
-        return trimmed.map { if (it.isOfflineMode) it.copy(content = OfflineContentParser.stripAllTags(it.content)) else it }
+        return strippingOfflineTags(trimmed)
     }
+
+    /**
+     * 成长分析取材窗口（活人感内核卷零 §3.4）：**按轮切**而不是按条切。
+     *
+     * **为什么换**：旧口径「最近 200 条」与「上次分析到哪」无关 —— 用户把「AI 回复条数」设成 1 时
+     * 200 条 ≈ 100 轮，设成 6 时 ≈ 29 轮，同样的相处被记的分差着好几倍；且一条轮次线以外的旧内容
+     * 会被反复计分、新内容却可能挤不进窗口。改「轮」后取材与设置解耦（回归钉 = 本卷 T1-7）。
+     *
+     * 窗口 = 「[sinceMillis] 之后的全部消息」（[fresh]，超 [WINDOW_MAX_MESSAGES] 截断保留最近）
+     * ∪ 「之前的最后 [WINDOW_LEAD_IN_ROUNDS] 轮」（[AnalysisWindow.leadIn]，只供理解语境）。
+     * [sinceMillis] 为 null（首次分析）⇒ 全部消息进 fresh、leadIn 空。
+     *
+     * 两段各自过**与 [collectMessagesForAnalysis] 同一个**剥标签 helper（线下见面行行为完全一致）。
+     */
+    suspend fun collectAnalysisWindow(characterUuid: String, sinceMillis: Long?): AnalysisWindow {
+        val raw = messageDao.recentForCharacterAnalysis(characterUuid, WINDOW_MAX_MESSAGES + WINDOW_FETCH_SLACK)
+        val sorted = raw.sortedBy { it.timestamp }
+        if (sinceMillis == null) {
+            val firstFresh = if (sorted.size > WINDOW_MAX_MESSAGES) sorted.takeLast(WINDOW_MAX_MESSAGES) else sorted
+            return AnalysisWindow(leadIn = emptyList(), fresh = strippingOfflineTags(firstFresh))
+        }
+        val fresh = sorted.filter { it.timestamp > sinceMillis }
+        val older = sorted.filter { it.timestamp <= sinceMillis }
+        val leadIn = lastNRounds(older, WINDOW_LEAD_IN_ROUNDS)
+        val trimmedFresh = if (fresh.size > WINDOW_MAX_MESSAGES) fresh.takeLast(WINDOW_MAX_MESSAGES) else fresh
+        return AnalysisWindow(leadIn = strippingOfflineTags(leadIn), fresh = strippingOfflineTags(trimmedFresh))
+    }
+
+    /**
+     * 线下见面行剥标签（**[collectMessagesForAnalysis] 与 [collectAnalysisWindow] 的共用单源**）：
+     * 只对线下行做内存副本改写，线上行字节不变、条数与顺序不变。
+     */
+    private fun strippingOfflineTags(messages: List<MessageEntity>): List<MessageEntity> =
+        messages.map { if (it.isOfflineMode) it.copy(content = OfflineContentParser.stripAllTags(it.content)) else it }
 
     // MARK: - 主入口
 
@@ -96,6 +152,11 @@ class GrowthAnalysisService @Inject constructor(
         scheduleSystemEnabled: Boolean,
         characterUuid: String,
         nowMillis: Long,
+        leadInMessageCount: Int = 0,
+        /** 卷三 §3.3：角色专属敏感点标签（`personaGains.custom` 的 label），提示词列出 + 解析端按它对标签。默认空 = 旧行为。 */
+        customGainLabels: List<String> = emptyList(),
+        /** 卷四 §3.5：层 ② 意图段（[IntentStatusParsing.section] 产物），追加到 user 框末尾；默认空 = 不追加、旧行为逐字节不变。 */
+        intentSection: String = "",
     ): GrowthAnalysisResult {
         if (messages.isEmpty()) throw GrowthAnalysisError.NoMessages
 
@@ -106,7 +167,7 @@ class GrowthAnalysisService @Inject constructor(
         } else {
             ""
         }
-        val (systemPrompt, userPrompt) = buildAnalysisPrompt(messages, characterName, spectrum, quality, interests, userName, scheduleAnalysis)
+        val (systemPrompt, userPrompt) = buildAnalysisPrompt(messages, characterName, spectrum, quality, interests, userName, scheduleAnalysis, leadInMessageCount, customGainLabels, intentSection)
         val chatMessages = listOf(
             ChatMessageDto(role = "system", content = systemPrompt),
             ChatMessageDto(role = "user", content = userPrompt),
@@ -134,13 +195,17 @@ class GrowthAnalysisService @Inject constructor(
         if (response.isEmpty()) {
             throw GrowthAnalysisError.InvalidResponse("LLM 返回空内容（重试后仍为空）")
         }
-        return parseAnalysisResponse(response)
+        return parseAnalysisResponse(response, customGainLabels)
     }
 
     // MARK: - 提示词构建
 
     // internal（非 private）：供 T2-B1（GrowthAnalysisServiceTest）直接断言提示词用真名指名——
     // 图纸 §7 明令测 buildAnalysisPrompt，此为其必然推论（图纸一 D-1 先例 + CLAUDE.md §3「纯函数设 internal 便于测」）。
+    /**
+     * [leadInMessageCount]：[messages] 开头有多少条属于「上次已计过分的前置上下文」（活人感内核卷零 §3.4）。
+     * **默认 0 = 逐字节回退到旧行为**（不切段、不输出标注行），老调用方与既有测试零影响。
+     */
     internal fun buildAnalysisPrompt(
         messages: List<MessageEntity>,
         characterName: String,
@@ -149,6 +214,9 @@ class GrowthAnalysisService @Inject constructor(
         interests: List<DynamicInterest>,
         userName: String,
         scheduleAnalysis: String,
+        leadInMessageCount: Int = 0,
+        customGainLabels: List<String> = emptyList(),
+        intentSection: String = "",
     ): Pair<String, String> {
         val interestsText = if (interests.isEmpty()) {
             "暂无"
@@ -204,7 +272,7 @@ class GrowthAnalysisService @Inject constructor(
             - 没有相关对话内容的维度不要改
 
             ### 关系变化规则
-            - 每次分析关系变化范围为 ±1~5
+            - 每次分析关系变化：正向、负向各 0~5，**分开报**（格式见下）
             - 关系发展是非线性的，可以前进、倒退、反复横跳
             - 维度之间可以矛盾共存（例如高张力+高依恋 = 离不开又痛苦）
             - 不同互动对维度的影响举例（不限于此）：
@@ -216,6 +284,11 @@ class GrowthAnalysisService @Inject constructor(
               · 日常陪伴 → 熟悉↑ 默契↑，缓慢但稳定
               · 表白/求婚等重大事件 → 多个维度可能同时大幅变化
             - 没有相关互动的维度不要改
+            - **关系变化要正负分开报**：同一次相处里往往两股力同时在推——比如「说了很多心里话」推正向、
+              「有句话让她介意」推负向。**不要把它们相抵成一个数**，而是各报各的（没有那一侧就写 0）。
+            - pos / neg 各自范围 0~5，都是**这一次**新增的力，不是总量。
+
+            $SENSITIVITY_SECTION_MARKER
 
             ### 兴趣变化规则
             - 对话中反复讨论某个新话题 → 发现新兴趣（系统自动设初始热度，不需要你控制）
@@ -236,9 +309,12 @@ class GrowthAnalysisService @Inject constructor(
             请严格以 JSON 格式输出，不要包含任何其他文字：
             {
               "personality_changes": {"维度key": 变化值, ...},
-              "relationship_changes": {"维度key": 变化值, ...},
+              "relationship_changes": {"维度key": {"pos": 正向压强, "neg": 负向压强}, ...},
               "new_interests": [{"name": "兴趣名"}],
               "interest_heat_changes": {"兴趣名": 变化量, ...},
+              "gain_hits": ["g04", "g13"],
+              "custom_hits": [{"label": "怕黑", "tone": "neg"}],
+              "intent_status": {"意图key": "open 或 expressed 或 resolved", ...},
               "events": [{"type": "personalityShift", "summary": "描述"}],
               "narrative": "一句话总结"
             }
@@ -249,21 +325,26 @@ class GrowthAnalysisService @Inject constructor(
             - 如果没有明显变化，对应字典可以为空 {}
             - events 至少要有一条，描述最显著的变化
             - events 的 summary 和 narrative 里提到角色和对方时，用「${characterName}」「${resolvedUserName}」的名字，不要写「用户」「角色」
+            - intent_status 只对「${characterName}${IntentStatusParsing.SECTION_KEYWORD}」段里列出的意图作答，key 用每行末尾方括号里的英文；没有列出就写 {}
             - 所有文字用中文
 
             ⚠️ 最后再强调一次（最容易出错）：new_interests 里每个 name 只能是简短的名词或短语，控制在8字以内（如"手冲咖啡""解剖学""日本动漫"），绝对不要填入整句话、动作描述或长句。这是硬性要求，务必遵守。
-        """.trimIndent()
+        """.trimIndent().replace(SENSITIVITY_SECTION_MARKER, buildSensitivitySection(customGainLabels))
 
-        val conversationText = MemoryService.formatMessages(messages, userLabel = resolvedUserName, charLabel = characterName)
+        val conversationText = buildConversationText(messages, leadInMessageCount, resolvedUserName, characterName)
         // scheduleAnalysis（最近一周日程活动模式）由 analyzeGrowth 预查日程后传入（1:1 iOS 注入 userPrompt 末尾）。
-        val userPrompt = "以下是最近的对话记录，请分析角色的成长变化：\n\n$conversationText$scheduleAnalysis"
+        // 卷四 §3.5（K-17）：层 ② 意图段挂在 user 框最末（对话记录 + 日程模式之后）；空 ⇒ 逐字节回退旧行为。
+        val userPrompt = "以下是最近的对话记录，请分析角色的成长变化：\n\n$conversationText$scheduleAnalysis" +
+            if (intentSection.isEmpty()) "" else "\n\n$intentSection"
 
         return systemPrompt to userPrompt
     }
 
     // MARK: - JSON 解析（多候选容错 + 钳位）
 
-    private fun parseAnalysisResponse(response: String): GrowthAnalysisResult {
+    // internal（非 private）：图纸 §7.2 T1-6 明令测「双形状解析 + 非法 key 丢弃」，而 Kotlin private 对同模块
+    // 测试不可见 ⇒ 提可见性是该要求的必然推论（卷零 D-1 先例）。函数体逐字未动。
+    internal fun parseAnalysisResponse(response: String, customGainLabels: List<String> = emptyList()): GrowthAnalysisResult {
         val candidates = listOf(response.trim(), JSONExtractor.extract(response))
         var raw: RawAnalysisResponse? = null
         for (candidate in candidates) {
@@ -272,17 +353,19 @@ class GrowthAnalysisService @Inject constructor(
         }
         val parsed = raw ?: throw GrowthAnalysisError.InvalidResponse("解析失败：所有候选文本均无法解码为有效 JSON")
 
-        // 钳位性格变化值（-10 ~ +10），只接受合法 dimensionKey
+        // 钳位性格变化值（-10 ~ +10），只接受合法 dimensionKey；修缮卷 D-9：值按 intLenient 宽松取整，取不出的项丢弃、不判废
         val validPersonalityKeys = PersonalitySpectrum.DIMENSION_KEYS.toSet()
         val personalityChanges = (parsed.personality_changes ?: emptyMap())
             .filterKeys { it in validPersonalityKeys }
-            .mapValues { it.value.coerceIn(-10, 10) }
+            .mapNotNull { (key, element) -> element.intLenient()?.let { key to it.coerceIn(-10, 10) } }
+            .toMap()
 
-        // 钳位关系变化值（-5 ~ +5）
+        // 关系变化：双形状解析 + 各钳 [0, PRESSURE_DELTA_MAX]（图纸 §3.3 表）
         val validRelationshipKeys = RelationshipQuality.DIMENSION_KEYS.toSet()
         val relationshipChanges = (parsed.relationship_changes ?: emptyMap())
             .filterKeys { it in validRelationshipKeys }
-            .mapValues { it.value.coerceIn(-5, 5) }
+            .mapNotNull { (key, element) -> parsePressureDelta(element)?.let { key to it } }
+            .toMap()
 
         // 新兴趣：trim 非空，统一初始热度 40
         val newInterests = (parsed.new_interests ?: emptyList()).mapNotNull { item ->
@@ -290,8 +373,10 @@ class GrowthAnalysisService @Inject constructor(
             if (name.isEmpty()) null else GrowthAnalysisResult.NewInterest(name = name, initialHeat = 40)
         }
 
-        // 兴趣热度变化（delta -15 ~ +15）；旧格式（全部 >15 = 绝对值格式）整批丢弃
-        val rawHeatChanges = parsed.interest_heat_changes ?: emptyMap()
+        // 兴趣热度变化（delta -15 ~ +15）；旧格式（全部 >15 = 绝对值格式）整批丢弃；值同样 intLenient 宽松取整（D-9）
+        val rawHeatChanges = (parsed.interest_heat_changes ?: emptyMap())
+            .mapNotNull { (name, element) -> element.intLenient()?.let { name to it } }
+            .toMap()
         val isLegacyFormat = rawHeatChanges.isNotEmpty() && rawHeatChanges.values.all { it > 15 }
         val interestHeatChanges = if (isLegacyFormat) {
             emptyMap()
@@ -305,6 +390,11 @@ class GrowthAnalysisService @Inject constructor(
             if (summary.isEmpty()) null else GrowthAnalysisResult.GrowthEvent(type = GrowthEventType.fromRaw(item.type), summary = summary)
         }
 
+        // 卷三 §3.3：敏感点命中——两字段缺席 / 非法形状一律空列表，**绝不抛**（按 JsonElement 收再自解，坏形状不拖垮整份分析）。
+        // 修缮卷 🔵-1：`gain_hits` 前缀归一（`G04` / `g4` / `g13 吵架 · 被凶` ⇒ `g04` / `g13`）并计丢弃数上观测行。
+        val gainHits = parseGainHits(parsed.gain_hits)
+        val customHits = parseCustomHits(parsed.custom_hits, customGainLabels)
+
         return GrowthAnalysisResult(
             personalityChanges = personalityChanges,
             relationshipChanges = relationshipChanges,
@@ -312,18 +402,68 @@ class GrowthAnalysisService @Inject constructor(
             interestHeatChanges = interestHeatChanges,
             events = events,
             narrative = parsed.narrative ?: "无明显变化",
+            gainHits = gainHits.hits,
+            customHits = customHits,
+            droppedHits = gainHits.dropped,
+            // 卷四 §3.5：意图判定同样按 JsonElement 收再自解，坏形状 ⇒ 空 map、绝不抛（E37）。
+            intentStatus = IntentStatusParsing.parse(parsed.intent_status),
         )
+    }
+
+    /**
+     * 把 `relationship_changes` 的一个值解析成 [GrowthAnalysisResult.PressureDelta]，**同时认两种形状**（图纸 P-5）：
+     *
+     * | 输入 | 结果 |
+     * |---|---|
+     * | `{"pos": 3, "neg": 2}`（新） | `pos=3, neg=2`（各钳 `[0,5]`） |
+     * | `3`（旧·正数） | `pos=3, neg=0` |
+     * | `-2`（旧·负数） | `pos=0, neg=2`（按符号拆） |
+     * | 其它（字符串 / 数组 / null） | `null` ⇒ 该维丢弃 |
+     *
+     * 认旧形状不是过渡期妥协：模型不会 100% 听话，回落到旧形状时行为**不劣于现状**，且老日志、老响应可重放。
+     * ⚠️ 生成端（`buildAnalysisPrompt` 的「## 输出格式」段）与本解析端在**同一个类**里，改任一侧必须同时改
+     * 另一侧，并跑格式锁测试 `PressureParseTest`（图纸 §6.1）。
+     */
+    private fun parsePressureDelta(element: JsonElement): GrowthAnalysisResult.PressureDelta? {
+        (element as? JsonObject)?.let { obj ->
+            // 修缮卷 D-13：子键值经 intLenient（小数 / 数字串也认）
+            val pos = obj["pos"].intLenient() ?: 0
+            val neg = obj["neg"].intLenient() ?: 0
+            return GrowthAnalysisResult.PressureDelta(
+                pos = pos.coerceIn(0, PRESSURE_DELTA_MAX),
+                neg = neg.coerceIn(0, PRESSURE_DELTA_MAX),
+            )
+        }
+        val single = element.intLenient() ?: return null
+        return if (single >= 0) {
+            GrowthAnalysisResult.PressureDelta(pos = single.coerceAtMost(PRESSURE_DELTA_MAX), neg = 0)
+        } else {
+            GrowthAnalysisResult.PressureDelta(pos = 0, neg = (-single).coerceAtMost(PRESSURE_DELTA_MAX))
+        }
     }
 
     /** 与 LLM 输出 JSON 一一对应的原始结构（snake_case，全可选容错；对齐 iOS RawAnalysisResponse）。 */
     @Serializable
     private data class RawAnalysisResponse(
-        val personality_changes: Map<String, Int>? = null,
-        val relationship_changes: Map<String, Int>? = null,
+        /** 修缮卷 D-9：按 JsonElement 收（`2.6` / `"3"` / `null` / `{pos,neg}` 都不许拖垮整份），[intLenient] 逐项自解。 */
+        val personality_changes: Map<String, JsonElement>? = null,
+        /** 双形状（图纸 P-5）：新 `{"pos":3,"neg":2}` 与旧 `3` 都要认，故按 JsonElement 收再自解。 */
+        val relationship_changes: Map<String, JsonElement>? = null,
         val new_interests: List<RawNewInterest>? = null,
-        val interest_heat_changes: Map<String, Int>? = null,
+        /** 修缮卷 D-9：同 personality_changes。 */
+        val interest_heat_changes: Map<String, JsonElement>? = null,
         val events: List<RawGrowthEvent>? = null,
         val narrative: String? = null,
+        /** 卷三：按 JsonElement 收（字符串数组之外的形状不许拖垮整份解析），[parseGainHits] 自解。 */
+        val gain_hits: JsonElement? = null,
+        /** 卷三：同上，[parseCustomHits] 自解。 */
+        val custom_hits: JsonElement? = null,
+        /**
+         * 卷四 §3.5：层 ② 意图判定，[IntentStatusParsing.parse] 自解（只认对象·key ∈ IntentKind·值 ∈ open/expressed/resolved）。
+         * ⚠️ 与 `buildAnalysisPrompt`「## 输出格式」里的 `"intent_status"` 行 + 注意行是同一对生成/解析（图纸 §6）：改任一侧必须同改另一侧，
+         * 格式锁 = `IntentStatusFormatLockTest`。
+         */
+        val intent_status: JsonElement? = null,
     ) {
         @Serializable
         data class RawNewInterest(val name: String = "", val initial_heat: Int? = null)
@@ -332,8 +472,24 @@ class GrowthAnalysisService @Inject constructor(
         data class RawGrowthEvent(val type: String = "", val summary: String = "")
     }
 
-    private companion object {
+    internal companion object {
         const val MAX_MESSAGES = 200
+
+        /** 窗口前置上下文轮数（活人感内核纪要附录 A.2）。 */
+        internal const val WINDOW_LEAD_IN_ROUNDS = 4
+
+        /** 窗口消息硬上限（防久别爆聊一次灌爆上下文；纪要附录 A.5-2）。 */
+        internal const val WINDOW_MAX_MESSAGES = 300
+
+        /** 卷三 §3.3：一次分析最多认多少个增益命中（提示词说「通常 0~3」，8 是解析端的硬帽）。 */
+        internal const val GAIN_HITS_MAX = 8
+
+        /** 提示词里占一整行的替换标记，见 [buildSensitivitySection]。 */
+        private const val SENSITIVITY_SECTION_MARKER = "@@SENSITIVITY_SECTION@@"
+
+        /** 取数余量：4 轮前置最多 4×7=28 条，取 40 留裕度。 */
+        private const val WINDOW_FETCH_SLACK = 40
+
         private val json = Json { ignoreUnknownKeys = true; isLenient = true; coerceInputValues = true }
     }
 }

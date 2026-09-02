@@ -8,12 +8,12 @@ import org.junit.Test
 /**
  * 提示词模块编辑重设计 · Phase 1 的纯函数单测（[PromptBuilder.defaultModuleTemplate]）。
  *
- * 锁定"数据类模块默认模板 = 单个整块宏"的映射 + 数据/可编辑分类（14 / 8）。配合 [PromptMacrosTest] 已证明的
+ * 锁定"数据类模块默认模板 = 单个整块宏"的映射 + 数据/可编辑分类（15 / 8）。配合 [PromptMacrosTest] 已证明的
  * 「单宏替换 ≡ 该宏 producer」，即得数据类装配「输出按构造与旧 buildXxx 逐字节等价、零漂移」（契约 §3 红线）。
  */
 class PromptModuleTemplateTest {
 
-    /** 数据类 14 个 → 其整块宏（与 buildModuleContent 旧 when 派发的 builder 一一对应）。 */
+    /** 数据类 15 个 → 其整块宏（与 buildModuleContent 旧 when 派发的 builder 一一对应；卷二 +OUR_DAYS）。 */
     private val dataExpected = mapOf(
         SystemModuleType.CHARACTER_IDENTITY to PromptMacros.CHAR_PROFILE,
         SystemModuleType.CHARACTER_GROWTH to PromptMacros.CHAR_GROWTH,
@@ -27,6 +27,7 @@ class PromptModuleTemplateTest {
         SystemModuleType.STICKER_LIBRARY to PromptMacros.STICKER_LIBRARY,
         SystemModuleType.PET_STATUS to PromptMacros.PET_STATUS,
         SystemModuleType.OFFLINE_MEETING_MEMORY to PromptMacros.MEETING_MEMORY,
+        SystemModuleType.OUR_DAYS to PromptMacros.OUR_DAYS, // 「我们的日子」卷二
         SystemModuleType.GIFT_HISTORY to PromptMacros.GIFT_HISTORY,
         SystemModuleType.CHARACTER_ECONOMIC_STATE to PromptMacros.ECONOMIC_STATE,
     )
@@ -66,8 +67,8 @@ class PromptModuleTemplateTest {
     }
 
     @Test fun `classification covers all module types with no overlap`() {
-        // 数据(14) ∪ 可编辑(8) = 全部 22；无遗漏、无交叠
-        assertEquals(14, dataExpected.size)
+        // 数据(15) ∪ 可编辑(8) = 全部 23；无遗漏、无交叠（「我们的日子」卷二 +1 数据类）
+        assertEquals(15, dataExpected.size)
         assertEquals(8, editableTypes.size)
         assertEquals(SystemModuleType.entries.size, dataExpected.size + editableTypes.size)
         val classified = dataExpected.keys + editableTypes.toSet()

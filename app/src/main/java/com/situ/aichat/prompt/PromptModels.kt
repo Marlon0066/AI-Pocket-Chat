@@ -26,6 +26,10 @@ enum class SystemModuleType {
     // 搬进前置区大 system、紧贴角色记忆解决。仅改默认序 + defaultPosition；老用户持久化 JSON 由
     // SettingsRepository.migratePromptModuleMeetingMemoryOnce 一次性归位（@SerialName 线格式零碰）。
     @SerialName("offlineMeetingMemory") OFFLINE_MEETING_MEMORY,
+    // 「我们的日子」卷二（2026-09-02·图纸 §3.2）：按日期翻到的当天记录（日期指名 + 那年今日），声明位紧随「见面记忆」
+    // = 新用户默认序；老用户持久化 JSON 由 SettingsRepository.migratePromptModuleOurDaysOnce 一次性归位到见面记忆正后
+    // （用户手动挪过不动）。@SerialName 线格式自此冻结。
+    @SerialName("ourDays") OUR_DAYS,
     @SerialName("calendarAwareness") CALENDAR_AWARENESS,
     @SerialName("scheduleAwareness") SCHEDULE_AWARENESS,
     @SerialName("momentsContext") MOMENTS_CONTEXT,
@@ -71,6 +75,7 @@ enum class SystemModuleType {
             STICKER_LIBRARY -> "表情包"
             PET_STATUS -> "宠物状态"
             OFFLINE_MEETING_MEMORY -> "见面记忆"
+            OUR_DAYS -> "我们的日子"
             GIFT_HISTORY -> "礼物记忆"
             CHARACTER_ECONOMIC_STATE -> "经济状况"
             BUSY_REPLY_INSTRUCTION -> "忙碌回复指令"
@@ -106,6 +111,8 @@ enum class SystemModuleType {
             // 短信腔四件线下退场（两语境模型 2026-07-12）：只需声明 ONLINE_CHAT 位——装配端
             // moduleScene 二值化使语音/忙碌一律按此位走（数据即语义）。
             CHAT_FORMAT, RESPONSE_STYLE, MOOD_EXPRESSION, STICKER_LIBRARY -> setOf(PromptScene.ONLINE_CHAT)
+            // 「我们的日子」卷二：在线聊天 + 语音通话（提案默认场景）；线下见面不注入（E54）。
+            OUR_DAYS -> setOf(PromptScene.ONLINE_CHAT, PromptScene.VOICE_CALL)
             else -> null
         }
 
@@ -138,6 +145,7 @@ enum class SystemModuleType {
             STICKER_LIBRARY -> "stickerLibrary"
             PET_STATUS -> "petStatus"
             OFFLINE_MEETING_MEMORY -> "offlineMeetingMemory"
+            OUR_DAYS -> "ourDays"
             GIFT_HISTORY -> "giftHistory"
             CHARACTER_ECONOMIC_STATE -> "characterEconomicState"
             BUSY_REPLY_INSTRUCTION -> "busyReplyInstruction"

@@ -1,5 +1,6 @@
 package com.situ.aichat.data.backup
 
+import com.situ.aichat.maintenance.FirstMessageDateBackfill
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.OutputStream
@@ -40,6 +41,7 @@ sealed interface ImportResult {
 class BackupService @Inject constructor(
     private val exporter: BackupExporter,
     private val importer: BackupImporter,
+    private val firstMessageDateBackfill: FirstMessageDateBackfill,
 ) {
     // ════════════════════════════════ EXPORT（委托 BackupExporter） ════════════════════════════════
 
@@ -70,8 +72,9 @@ class BackupService @Inject constructor(
         true
     }
 
-    /** 旧明文 .json 覆盖式导入（委托 [BackupImporter.import]）。 */
-    suspend fun import(jsonStr: String): ImportResult = importer.import(jsonStr)
+    /** 旧明文 .json 覆盖式导入（委托 [BackupImporter.import]）；成功后补一次「第一次聊天时间」（相识天数图纸 D-4·老包该字段为空）。 */
+    suspend fun import(jsonStr: String): ImportResult =
+        importer.import(jsonStr).also { if (it is ImportResult.Success) runCatching { firstMessageDateBackfill.run() } }
 
     /**
      * zip 备份冲突预览（不写库·委托 [BackupImporter.previewArchive]）；非 zip / 损坏 / 版本过高 → null。
@@ -79,10 +82,14 @@ class BackupService @Inject constructor(
      */
     suspend fun previewArchive(source: BackupByteSource): BackupPreview? = importer.previewArchive(source)
 
-    /** zip 全量恢复（两遍流式·事务化·逐角色策略·委托 [BackupImporter.importArchive]）；非 zip 回退旧 .json。 */
+    /**
+     * zip 全量恢复（两遍流式·事务化·逐角色策略·委托 [BackupImporter.importArchive]）；非 zip 回退旧 .json。
+     * 成功后补一次「第一次聊天时间」（相识天数图纸 D-4）：补账抛异常吞掉，不改 [ImportResult]。
+     */
     suspend fun importArchive(
         source: BackupByteSource,
         strategies: Map<String, ImportStrategy> = emptyMap(),
         onProgress: ((BackupProgress) -> Unit)? = null,
     ): ImportResult = importer.importArchive(source, strategies, onProgress)
+        .also { if (it is ImportResult.Success) runCatching { firstMessageDateBackfill.run() } }
 }

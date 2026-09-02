@@ -18,6 +18,7 @@ import com.situ.aichat.data.local.dao.MessageDao
 import com.situ.aichat.data.local.dao.MilestoneDao
 import com.situ.aichat.data.local.dao.OfflineMeetingMemoryDao
 import com.situ.aichat.data.local.dao.OpenLoopDao
+import com.situ.aichat.data.local.dao.OurDayDao
 import com.situ.aichat.data.local.dao.PromiseDao
 import com.situ.aichat.data.local.dao.MomentDao
 import com.situ.aichat.data.local.dao.NotificationDeliveryDao
@@ -92,5 +93,6 @@ object DatabaseModule {
     @Provides fun provideOfflineMeetingMemoryDao(db: AppDatabase): OfflineMeetingMemoryDao = db.offlineMeetingMemoryDao()
     @Provides fun provideOpenLoopDao(db: AppDatabase): OpenLoopDao = db.openLoopDao()
     @Provides fun providePromiseDao(db: AppDatabase): PromiseDao = db.promiseDao()
+    @Provides fun provideOurDayDao(db: AppDatabase): OurDayDao = db.ourDayDao()
     @Provides fun provideUserStoryTemplateDao(db: AppDatabase): UserStoryTemplateDao = db.userStoryTemplateDao()
 }

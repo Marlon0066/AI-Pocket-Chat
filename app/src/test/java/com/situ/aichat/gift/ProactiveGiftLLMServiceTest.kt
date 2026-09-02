@@ -1,6 +1,11 @@
 package com.situ.aichat.gift
 
 import com.situ.aichat.data.local.entity.CharacterEntity
+import com.situ.aichat.data.model.CharacterIntent
+import com.situ.aichat.data.model.GrowthJson
+import com.situ.aichat.data.model.IntentKind
+import com.situ.aichat.data.model.IntentQueueState
+import com.situ.aichat.data.model.IntentState
 import com.situ.aichat.data.model.ProactiveGiftContext
 import com.situ.aichat.data.model.ProactiveGiftTrigger
 import com.situ.aichat.data.model.ProactiveGiftTriggerType
@@ -196,6 +201,31 @@ class ProactiveGiftLLMServiceTest {
     @Test fun prompt_empty_candidates_hint() {
         val (_, usr) = ProactiveGiftLLMService.buildPrompt(ctx(), trig(ProactiveGiftTriggerType.MISSING_YOU), emptyList(), char())
         assertTrue(usr.contains("候选为空"))
+    }
+
+    // ── 卷四 T2-6 ⑤（图纸 §4.5 / §2.2 / K-20）：意图块在「最近心情摘要」之后；用 context.userName、空回退「用户」；无意图不含 ──
+
+    @Test fun prompt_intentBlock_afterMoodLine_usesContextUserName_fallsBack_absentWithoutIntent() {
+        val now = System.currentTimeMillis()
+        val queue = GrowthJson.encode(
+            IntentQueueState(
+                intents = listOf(CharacterIntent(id = "i", kind = IntentKind.WANT_APOLOGIZE, state = IntentState.ACTIVE, strength = 50, bornAt = now, lastChangeAt = now)),
+            ),
+        )
+        val withIntent = char().copy(intentQueueJSON = queue)
+        val trigger = trig(ProactiveGiftTriggerType.MISSING_YOU)
+        val (_, named) = ProactiveGiftLLMService.buildPrompt(ctx().copy(userName = "小明"), trigger, candidates(), withIntent, nowMillis = now)
+        assertTrue(
+            named,
+            named.contains(
+                "最近心情摘要:green/yellow/green\n你心里挂着的事：你想跟小明道个歉，话到嘴边又咽了回去。\n（这件事可以影响你今天送不送、送什么、说什么。）\n\n## 候选礼物",
+            ),
+        )
+        val (_, fallback) = ProactiveGiftLLMService.buildPrompt(ctx(), trigger, candidates(), withIntent, nowMillis = now)
+        assertTrue(fallback.contains("你心里挂着的事：你想跟用户道个歉，话到嘴边又咽了回去。"))
+        val (_, none) = ProactiveGiftLLMService.buildPrompt(ctx().copy(userName = "小明"), trigger, candidates(), char(), nowMillis = now)
+        assertFalse(none.contains("你心里挂着的事"))
+        assertTrue(none.contains("最近心情摘要:green/yellow/green\n\n## 候选礼物"))
     }
 
     @Test fun prompt_previous_error_appended() {

@@ -3,7 +3,11 @@ package com.situ.aichat.prompt.schedule
 import androidx.room.Room
 import com.situ.aichat.data.local.AppDatabase
 import com.situ.aichat.data.local.entity.CharacterEntity
+import com.situ.aichat.data.model.CharacterIntent
 import com.situ.aichat.data.model.GrowthJson
+import com.situ.aichat.data.model.IntentKind
+import com.situ.aichat.data.model.IntentQueueState
+import com.situ.aichat.data.model.IntentState
 import com.situ.aichat.data.model.RelationshipQuality
 import com.situ.aichat.diagnostics.ContextLogService
 import io.mockk.mockk
@@ -102,5 +106,24 @@ class ScheduleGenerationPromptNamingTest {
         assertTrue(user.contains("如需体现角色对用户的思念或情感"))
         assertTrue(user.contains("不是和用户互动的记录"))
         assertTrue(user.contains("按【和用户的关系】给出的参考控制想到用户的频率"))
+    }
+
+    // 卷四 T2-6 ③（图纸 §4.5 / §2.2）：意图块只在 !backfill 出现，落在惦记块之后；无 live 意图零行。
+    @Test
+    fun `卷四_意图块_非backfill含_backfill不含_无意图不含`() {
+        val now = System.currentTimeMillis()
+        val queue = GrowthJson.encode(
+            IntentQueueState(
+                intents = listOf(CharacterIntent(id = "i", kind = IntentKind.WANT_APOLOGIZE, state = IntentState.ACTIVE, strength = 50, bornAt = now, lastChangeAt = now)),
+            ),
+        )
+        val withIntent = req(userName = "小明").copy(character = loadedCharacter().copy(intentQueueJSON = queue))
+        val user = genService.buildPrompt(withIntent).second
+        assertTrue(user.contains("\n\n【TA心里挂着的事】\n- TA想向小明道歉\n这些只能进 innerThought（比如「要不要找个机会跟小明说一声」），不要变成日程事件，也不必每条都用。"))
+        assertTrue("惦记块之后", user.indexOf("【TA心里惦记的事】") < user.indexOf("【TA心里挂着的事】"))
+        val backfill = genService.buildPrompt(withIntent.copy(isBackfill = true, liveness = null)).second
+        assertFalse(backfill.contains("【TA心里挂着的事】"))
+        val noIntent = genService.buildPrompt(req(userName = "小明")).second
+        assertFalse(noIntent.contains("【TA心里挂着的事】"))
     }
 }

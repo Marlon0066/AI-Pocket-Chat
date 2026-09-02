@@ -21,7 +21,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
@@ -31,12 +30,16 @@ import com.situ.aichat.ui.components.LocalAppHaptics
 import com.situ.aichat.ui.components.rememberReduceMotion
 
 /**
- * Fable-5 选择标签（按钮族重构 2026-06-19·D1 柔陶软填充用户过审）。
+ * Fable-5 选择标签（按钮族重构 2026-06-19 立件；材质升级「白瓷药丸」2026-09-03 过审·同批同源
+ * [AppSegmentedControl]）。
  *
- * 替代裸 M3 `FilterChip` 的「方角描边 + 选中对勾前导图标」骨架：暖色软填充胶囊（[AppShapes.full]·**无描边、
- * 无对勾**）——未选 [AppColors.surface] sunken + [AppColors.text] secondary；选中 [AppColors.accent] container
- * 极浅陶土 + [AppColors.accent] onContainer 陶土字（与 [AppSegmentedControl] 选中段、[AppBottomNav] 药丸、
- * [AppDropdownMenuItem] 选中项同源·全 App「戴陶土 = 选中」语言）。填充 + 字色表达选中，不再靠对勾。
+ * 替代裸 M3 `FilterChip` 的「方角描边 + 选中对勾前导图标」骨架：胶囊（[AppShapes.full]·**无对勾**）——
+ * 未选 = [AppColors.surface] sunken 平填充 + [AppColors.text] secondary；选中 = **白瓷浮起**
+ * （[porcelainThumb]·釉面渐变 + 陶土暖边 + 软影 + 深档月光沿）+ [AppColors.accent] onContainer 陶土字。
+ * 一排 chip 里选中那枚**从凹面浮起来**，与分段控件「槽里一枚瓷片」是同一句话。
+ *
+ * **过渡做法**（性能取舍·见 [AppPorcelain] KDoc）：白瓷是独立一层，靠 `graphicsLayer` 的 alpha 在 sunken 底上
+ * **淡入淡出**，而非把 alpha 插进 [porcelainThumb] 的绘制参数——后者会让 `BlurMaskFilter` 逐帧重建。
  *
  * 14sp/Medium 紧凑标签（chip 偏小·与 16sp 分段控件区分）；选中/未选同字号字重 → 无重排，纯靠底色+字色切换
  * （[AppMotion.effectMediumSpring] 效果轴永不过冲·[rememberReduceMotion] 时瞬时）。点按缩放 0.96 + 触感
@@ -63,10 +66,11 @@ fun AppChoiceChip(
     val reduceMotion = rememberReduceMotion()
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val containerColor by animateColorAsState(
-        targetValue = if (selected) colors.accent.container else colors.surface.sunken,
+    // 白瓷层的浮起程度（0 = 只见 sunken 凹面·1 = 白瓷完全盖上）。效果轴恒 ζ1.0 永不过冲。
+    val raise by animateFloatAsState(
+        targetValue = if (selected) 1f else 0f,
         animationSpec = if (reduceMotion) snap() else AppMotion.effectMediumSpring(),
-        label = "chipContainer",
+        label = "chipRaise",
     )
     val contentColor by animateColorAsState(
         targetValue = if (selected) colors.accent.onContainer else colors.text.secondary,
@@ -90,28 +94,40 @@ fun AppChoiceChip(
                 indication = null,
                 onClick = { haptics.selection(); onClick() },
             )
-            .minimumInteractiveComponentSize()
-            .clip(AppShapes.full)
-            .background(containerColor)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .minimumInteractiveComponentSize(),
         contentAlignment = Alignment.Center,
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            if (leading != null) {
-                CompositionLocalProvider(LocalContentColor provides contentColor) {
-                    leading()
-                }
+        // 视觉层：尺寸由内容行决定，两层背景 matchParentSize 跟随（**外层不 clip**——白瓷的软影要能溢出胶囊）。
+        Box(contentAlignment = Alignment.Center) {
+            Box(Modifier.matchParentSize().background(colors.surface.sunken, AppShapes.full))
+            // 未选且未在淡入中时整层短路——白瓷层含两枚 BlurMaskFilter，横滑 chip 行（礼物分类 / 红包吉利数）
+            // 一屏十几枚时不做无谓录制。`raise` 本就因 contentColor 同帧重组被读，判断不引入新重组源。
+            if (raise > 0f) {
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .graphicsLayer { alpha = raise }
+                        .porcelainThumb(pressed = pressed && selected, raised = enabled),
+                )
             }
-            Text(
-                text = label,
-                style = AppTypography.label,
-                color = contentColor,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Row(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                if (leading != null) {
+                    CompositionLocalProvider(LocalContentColor provides contentColor) {
+                        leading()
+                    }
+                }
+                Text(
+                    text = label,
+                    style = AppTypography.label,
+                    color = contentColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }

@@ -63,13 +63,18 @@ interface CharacterDao {
     @Query("UPDATE characters SET momentsDigestedUntilMillis = :value WHERE uuid = :uuid")
     suspend fun updateMomentsDigestWatermark(uuid: String, value: Long)
 
+    /** 「我们的日子」一次性回填完成标记（卷一图纸 §2.2·总图纸 §3.2·唯一写口·列级盲写·照 [updateMomentsDigestWatermark]）。 */
+    @Query("UPDATE characters SET ourDaysBackfilledAt = :millis WHERE uuid = :uuid")
+    suspend fun updateOurDaysBackfilledAt(uuid: String, millis: Long)
+
     // MARK: - 列级定向写（P12.6 D1）：各分析/计数器只写自己那几列，配合 CharacterWriteLock 消除并发覆盖。
 
     /** 成长分析一次性回写（性格/关系/兴趣/成长元数据/成长日志 5 列）。 */
     @Query(
         "UPDATE characters SET personalitySpectrumJSON = :personalitySpectrum, " +
             "relationshipQualityJSON = :relationshipQuality, dynamicInterestsJSON = :dynamicInterests, " +
-            "growthMetadataJSON = :growthMetadata, growthLogJSON = :growthLog WHERE uuid = :uuid",
+            "growthMetadataJSON = :growthMetadata, growthLogJSON = :growthLog, " +
+            "relationshipPressureJSON = :relationshipPressure WHERE uuid = :uuid",
     )
     suspend fun updateGrowthAnalysis(
         uuid: String,
@@ -78,6 +83,7 @@ interface CharacterDao {
         dynamicInterests: String,
         growthMetadata: String,
         growthLog: String,
+        relationshipPressure: String,
     )
 
     /** 成长轮次计数器递增（仅 growthMetadataJSON 一列）。 */
@@ -114,21 +120,30 @@ interface CharacterDao {
     // 礼物路径（关系/成长是读-改-写）须在 CharacterWriteLock 内、锁内 fresh 读后调；情感/心情/火花为
     // 列集互不重叠的盲写或单写点，列级 UPDATE 即原子，无须进锁（见各 service 注释）。
 
-    /** 关系质感 8 维回写（仅 relationshipQualityJSON 一列；礼物店反应 + 聊天送礼非珍贵路径）。 */
-    @Query("UPDATE characters SET relationshipQualityJSON = :relationshipQuality WHERE uuid = :uuid")
-    suspend fun updateRelationshipQuality(uuid: String, relationshipQuality: String)
+    /** 关系质感 8 维回写（净额 + 双压两列**同一条语句**落地，绝不拆开写；礼物店反应 + 聊天送礼非珍贵路径）。 */
+    @Query(
+        "UPDATE characters SET relationshipQualityJSON = :relationshipQuality, " +
+            "relationshipPressureJSON = :relationshipPressure WHERE uuid = :uuid",
+    )
+    suspend fun updateRelationshipQuality(uuid: String, relationshipQuality: String, relationshipPressure: String)
 
     /** 成长原型校准（图纸 §3.4）：原型 id + 关系质感双列一条 UPDATE（棘轮抬分/回拉·锁内列级写）。 */
-    @Query("UPDATE characters SET relationshipArchetypeId = :archetypeId, relationshipQualityJSON = :relationshipQuality WHERE uuid = :uuid")
-    suspend fun updateArchetypeCalibration(uuid: String, archetypeId: String?, relationshipQuality: String)
+    @Query(
+        "UPDATE characters SET relationshipArchetypeId = :archetypeId, relationshipQualityJSON = :relationshipQuality, " +
+            "relationshipPressureJSON = :relationshipPressure WHERE uuid = :uuid",
+    )
+    suspend fun updateArchetypeCalibration(uuid: String, archetypeId: String?, relationshipQuality: String, relationshipPressure: String)
 
     /** 成长原型校准：仅回写原型 id（分数无变化时清/更新陈旧 id·含置 null）。 */
     @Query("UPDATE characters SET relationshipArchetypeId = :archetypeId WHERE uuid = :uuid")
     suspend fun updateRelationshipArchetypeId(uuid: String, archetypeId: String?)
 
     /** 聊天送礼回写关系质感 + 成长日志（珍贵/手作/DIY 路径，两列；1:1 iOS GiftSendService 同一 save）。 */
-    @Query("UPDATE characters SET relationshipQualityJSON = :relationshipQuality, growthLogJSON = :growthLog WHERE uuid = :uuid")
-    suspend fun updateRelationshipQualityAndGrowthLog(uuid: String, relationshipQuality: String, growthLog: String)
+    @Query(
+        "UPDATE characters SET relationshipQualityJSON = :relationshipQuality, growthLogJSON = :growthLog, " +
+            "relationshipPressureJSON = :relationshipPressure WHERE uuid = :uuid",
+    )
+    suspend fun updateRelationshipQualityAndGrowthLog(uuid: String, relationshipQuality: String, growthLog: String, relationshipPressure: String)
 
     /** 角色主动送礼写成长日志（仅 growthLogJSON 一列；1:1 iOS ProactiveGiftExecutor 珍贵/手作分支）。 */
     @Query("UPDATE characters SET growthLogJSON = :growthLog WHERE uuid = :uuid")
@@ -140,13 +155,15 @@ interface CharacterDao {
      */
     @Query(
         "UPDATE characters SET relationshipQualityJSON = :relationshipQuality, " +
-            "growthMetadataJSON = :growthMetadata, growthLogJSON = :growthLog WHERE uuid = :uuid",
+            "growthMetadataJSON = :growthMetadata, growthLogJSON = :growthLog, " +
+            "relationshipPressureJSON = :relationshipPressure WHERE uuid = :uuid",
     )
     suspend fun updateRelationshipDecay(
         uuid: String,
         relationshipQuality: String,
         growthMetadata: String,
         growthLog: String,
+        relationshipPressure: String,
     )
 
     /** 心意反馈文案包回写（包 JSON + 生成时间两列；AffinitySenseService 盲写新包）。 */
@@ -176,6 +193,10 @@ interface CharacterDao {
     /** 火花计数 + 最近聊天日两列回写（用户发消息时，仅 ChatViewModel 写、VM 串行）。 */
     @Query("UPDATE characters SET streakCount = :streakCount, lastChatDate = :lastChatDate WHERE uuid = :uuid")
     suspend fun updateStreak(uuid: String, streakCount: Int, lastChatDate: Long)
+
+    /** 「第一次聊天时间」只往早改：为空、或现值比 [ts] 晚才写。首条消息写口与冷启 / 恢复后补账共用；单列原子 UPDATE 无需写锁。返回受影响行数（0 / 1）。 */
+    @Query("UPDATE characters SET firstMessageDate = :ts WHERE uuid = :uuid AND (firstMessageDate IS NULL OR firstMessageDate > :ts)")
+    suspend fun markFirstMessageDate(uuid: String, ts: Long): Int
 
     /**
      * 编辑角色资料保存：列级写回「表单可编辑」的 20 个 profile 列（P12.6 D1c）。1:1 iOS save() 逐属性改 @Model——
@@ -224,8 +245,52 @@ interface CharacterDao {
      * 「不写成长列」契约）。仅在用户实际改了滑块时由 VM 调用——未改则不写，避免把开屏快照覆盖掉编辑期间后台
      * 成长分析刚写入的新值（比 iOS save() 无条件回写更安全；iOS 同窗口会丢分析）。
      */
-    @Query("UPDATE characters SET personalitySpectrumJSON = :personalitySpectrumJSON, relationshipQualityJSON = :relationshipQualityJSON WHERE uuid = :uuid")
-    suspend fun updateGrowthDimensions(uuid: String, personalitySpectrumJSON: String, relationshipQualityJSON: String)
+    @Query(
+        "UPDATE characters SET personalitySpectrumJSON = :personalitySpectrumJSON, " +
+            "relationshipQualityJSON = :relationshipQualityJSON, " +
+            "relationshipPressureJSON = :relationshipPressureJSON WHERE uuid = :uuid",
+    )
+    suspend fun updateGrowthDimensions(
+        uuid: String,
+        personalitySpectrumJSON: String,
+        relationshipQualityJSON: String,
+        relationshipPressureJSON: String,
+    )
+
+    /**
+     * 人设编译四列一次性列级写（活人感内核·卷一图纸 §3.5）。须在
+     * [com.situ.aichat.data.repository.CharacterWriteLock] 内、**锁内 fresh 读后**调。
+     *
+     * 四新列的**唯一写口**（编译成功 / 编译失败 / 用户手改三条路共用）：
+     * 失败路径只想改 meta 一列时，把另外三列的当前值原样回传即可——**绝不新增第二条 UPDATE 语句**
+     * （图纸 §9.4 写口唯一）。现值列 `personalitySpectrumJSON` 不在本语句内，它只经既有
+     * [updateGrowthDimensions]（图纸 Y-3：仅 totalAnalysisCount == 0 时同步）。
+     */
+    @Query(
+        "UPDATE characters SET personalityAnchorJSON = :anchor, personaCompileMetaJSON = :meta, " +
+            "personaGainsJSON = :gains, personaOperatorsJSON = :operators WHERE uuid = :uuid",
+    )
+    suspend fun updatePersonaCompile(uuid: String, anchor: String, meta: String, gains: String, operators: String)
+
+    // MARK: - 四场列（活人感内核·卷三图纸 §3.2）：只碰 affectFieldJSON 一列，与关系 6 条 UPDATE 零交集（不是第 7 条）。
+
+    /** 卷三：场列单读（每轮 tick 用·不读整行）。 */
+    @Query("SELECT affectFieldJSON FROM characters WHERE uuid = :uuid")
+    suspend fun getAffectFieldJson(uuid: String): String?
+
+    /** 卷三：场列盲写（I-3 列集零重叠 ⇒ 列级 UPDATE 即原子；**不进 CharacterWriteLock**·T-6）。唯二写者都在 AffectKernel 的 Mutex 内。 */
+    @Query("UPDATE characters SET affectFieldJSON = :json WHERE uuid = :uuid")
+    suspend fun updateAffectField(uuid: String, json: String)
+
+    // MARK: - 意图队列列（活人感内核·卷四图纸 §3.2）：只碰 intentQueueJSON 一列，与关系 6 条 UPDATE 零交集（不是第 7 条）。
+
+    /** 卷四：意图列单读（每轮 tick 用·不读整行）。 */
+    @Query("SELECT intentQueueJSON FROM characters WHERE uuid = :uuid")
+    suspend fun getIntentQueueJson(uuid: String): String?
+
+    /** 卷四：意图列盲写（I-3 列集零重叠 ⇒ 列级 UPDATE 即原子；**不进 CharacterWriteLock**）。唯一写者 = IntentKernel（三条写路都在其 Mutex 内）。 */
+    @Query("UPDATE characters SET intentQueueJSON = :json WHERE uuid = :uuid")
+    suspend fun updateIntentQueue(uuid: String, json: String)
 
     // MARK: - 世界成员（W13 图纸 §3.1）：加入/离开只写 joinedWorld+worldJoinedAt 两列，搬家只写 worldHomeCityId 一列。
     // 定点 UPDATE 而非整行 @Update——避免用编辑页开屏的陈旧 copy 覆盖后台并发写的成长/关系/心情列（钱路审计教训）。

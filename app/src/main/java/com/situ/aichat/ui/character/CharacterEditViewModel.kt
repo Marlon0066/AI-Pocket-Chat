@@ -2,22 +2,33 @@ package com.situ.aichat.ui.character
 
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.CharacterEntity
 import com.situ.aichat.data.model.GrowthJson
+import com.situ.aichat.data.model.PersonaCompileMeta
+import com.situ.aichat.data.model.PersonaGains
+import com.situ.aichat.data.model.PersonaOperator
 import com.situ.aichat.data.model.PersonalitySpectrum
 import com.situ.aichat.data.model.RelationshipQuality
+import com.situ.aichat.data.model.personaCompileMeta
+import com.situ.aichat.data.model.personaGains
+import com.situ.aichat.data.model.personaOperators
+import com.situ.aichat.data.model.personalityAnchor
 import com.situ.aichat.data.model.personalitySpectrum
 import com.situ.aichat.data.model.relationshipQuality
 import com.situ.aichat.data.repository.CharacterRepository
+import com.situ.aichat.data.repository.CharacterWriteLock
 import com.situ.aichat.data.repository.ConversationRepository
 import com.situ.aichat.data.repository.SettingsRepository
 import com.situ.aichat.economy.CharacterEconomyMaintenanceService
 import com.situ.aichat.economy.CurrencyService
 import com.situ.aichat.prompt.PromptModuleService
+import com.situ.aichat.prompt.persona.PersonaCompileOutcome
+import com.situ.aichat.prompt.persona.personaTextHash
 import com.situ.aichat.tts.SystemVoiceOption
 import com.situ.aichat.tts.TtsConfigurationRepository
 import com.situ.aichat.tts.TtsPreviewer
@@ -29,14 +40,14 @@ import com.situ.aichat.work.NotificationTemplateWorker
 import com.situ.aichat.world.member.WorldMembershipService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.UUID
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import java.util.UUID
-import javax.inject.Inject
 
 /** Age mode raw values, mirroring iOS `CharacterAgeMode`. */
 object AgeMode {
@@ -79,6 +90,11 @@ data class CharacterEditState(
     // 14.1e 成长维度（8 维性格 + 8 维关系）。create 写入 JSON 列；edit 仅在改动时列级写回（见 [save]）。
     val personalitySpectrum: PersonalitySpectrum = PersonalitySpectrum.NEUTRAL,
     val relationshipQuality: RelationshipQuality = RelationshipQuality.INITIAL,
+    // 活人感内核·卷一（§4.2 V2）：性格区 8 根滑杆改拖「本性」，personalitySpectrum 退为只读的「现在」（竖线）。
+    val personalityAnchor: PersonalitySpectrum = PersonalitySpectrum.NEUTRAL,
+    val personaCompileMeta: PersonaCompileMeta = PersonaCompileMeta(),
+    val personaGains: PersonaGains = PersonaGains(),
+    val personaOperators: List<PersonaOperator> = emptyList(),
     // 14.1e-2 关系定义（→ 播种/追加里程碑）+ 线下主题色（6 位 hex，空=默认 teal）。
     val relationshipName: String = "",
     val offlineThemeColorHex: String = "",
@@ -87,6 +103,14 @@ data class CharacterEditState(
     val joinWorld: Boolean = false,
 ) {
     val canSave: Boolean get() = name.isNotBlank()
+
+    /**
+     * D-2 判据（图纸 §4.1）：编译过、但当前性格描述的指纹与编译时那份对不上 ⇒ 提醒条。
+     * 计算属性（不进 @Serializable 草稿）；hash 走 [personaTextHash] 单源，与落库端同一实现。
+     */
+    val personaStale: Boolean
+        get() = personaCompileMeta.source != PersonaCompileMeta.SOURCE_DEFAULT &&
+            personaTextHash(personalityDescription) != personaCompileMeta.personaHash
 
     /** Build a brand-new character (fresh uuid + creationDate); untouched fields take iOS defaults. */
     fun toNewEntity(): CharacterEntity = CharacterEntity(
@@ -114,8 +138,10 @@ data class CharacterEditState(
         ttsSpeed = ttsSpeed,
         ttsPitch = ttsPitch,
         // 默认维度（NEUTRAL/INITIAL）写空 JSON（解码即默认）；用户动过滑块才落 JSON。
-        personalitySpectrumJSON = if (personalitySpectrum != PersonalitySpectrum.NEUTRAL) GrowthJson.encode(personalitySpectrum) else "",
+        personalitySpectrumJSON = if (personalityAnchor != PersonalitySpectrum.NEUTRAL) GrowthJson.encode(personalityAnchor) else "",
         relationshipQualityJSON = if (relationshipQuality != RelationshipQuality.INITIAL) GrowthJson.encode(relationshipQuality) else "",
+        // 新角色 totalAnalysisCount == 0 ⇒ 本性即现在（Y-3），两列同值；没拖过就都留空 = 全 50。
+        personalityAnchorJSON = if (personalityAnchor != PersonalitySpectrum.NEUTRAL) GrowthJson.encode(personalityAnchor) else "",
         offlineThemeColorHex = offlineThemeColorHex.ifBlank { null },
     )
 
@@ -175,6 +201,11 @@ data class CharacterEditState(
             chatWallpaperPath = c.chatWallpaperPath,
             personalitySpectrum = c.personalitySpectrum,
             relationshipQuality = c.relationshipQuality,
+            // 空锚点列走 Y-1 兜底 = 当前值（本性 == 现在 ⇒ 竖线自动隐藏）。
+            personalityAnchor = c.personalityAnchor,
+            personaCompileMeta = c.personaCompileMeta,
+            personaGains = c.personaGains,
+            personaOperators = c.personaOperators,
             offlineThemeColorHex = c.offlineThemeColorHex ?: "",
             // relationshipName 从当前里程碑单独加载（不在实体上），见 VM init。
         )
@@ -196,6 +227,9 @@ class CharacterEditViewModel @Inject constructor(
     private val ttsConfigRepo: TtsConfigurationRepository,
     private val previewer: TtsPreviewer,
     private val membershipService: WorldMembershipService,
+    private val personaCompiler: PersonaCompileUseCase,
+    /** 修缮卷 J10：编辑页保存段（人设四列 + 成长两列）进角色写锁、锁内 fresh 读只写改过的维（F20）。 */
+    private val characterWriteLock: CharacterWriteLock,
     @ApplicationContext private val appContext: Context,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -212,6 +246,10 @@ class CharacterEditViewModel @Inject constructor(
 
     private val _saving = MutableStateFlow(false)
     val saving: StateFlow<Boolean> = _saving.asStateFlow()
+
+    /** 人设编译进行中（图纸 I-4：按钮转 loading 且**拦重入**，不靠用户手快手慢）。 */
+    private val _compiling = MutableStateFlow(false)
+    val compiling: StateFlow<Boolean> = _compiling.asStateFlow()
 
     /** The loaded row in edit mode — kept so non-form fields survive a save. */
     private var loaded: CharacterEntity? = null
@@ -335,6 +373,59 @@ class CharacterEditViewModel @Inject constructor(
     }
 
     /**
+     * 手动「生成 / 重新生成」（活人感内核·卷一 D-1：除新建首存外**只有**这一个触发口，绝不自动跑）。
+     * 仅编辑模式可用（新建角色还没 uuid，首存后由 [PersonaCompileCoordinator.compileForNewCharacter] 跑一次）；
+     * 人设为空按钮本就置灰（Y-E1），这里再守一道；[_compiling] 拦重入（I-4）。
+     *
+     * 编译在协调器的角色写锁内完成并直接落库；完了重读角色回灌表单（**不**顺手改 personalitySpectrum，
+     * 现值是否同步由协调器按 Y-3 判据决定，这里只重读结果）。
+     */
+    /**
+     * 「人设改了还没保存，先保存再生成」提示（R1 复核 TODO-1）。用户点保存或改回原文即自动消。
+     */
+    private val _personaNeedsSave = MutableStateFlow(false)
+    val personaNeedsSave: StateFlow<Boolean> = _personaNeedsSave.asStateFlow()
+
+    fun compilePersona() {
+        val uuid = editingUuid ?: return
+        if (_compiling.value) return
+        if (_state.value.personalityDescription.isBlank()) return
+        // R1 复核 TODO-1 裁决（③ 给反馈，不做隐式落库）：按钮禁用态判的是**表单里**的人设（图纸 §4.1），
+        // 协调器编译的是**库里**那份（§3.5 锁内 fresh 读）。用户新写一段人设、没保存就点「生成」⇒ 按钮亮着、
+        // 协调器读到空人设早退 ⇒ 屏上毫无反应。这里先判「表单与库不一致」，给一条明确可操作的提示，
+        // **不替用户悄悄落库**（保存是用户的动作，编译按钮不该有隐藏副作用）。
+        // 修缮卷 E30：拖了锚点 / 改了档位 / 增删算子没保存就点「生成」同理——编译会以库里那份为基合并，先保存再生成。
+        val base = loaded
+        if (_state.value.personalityDescription.trim() != (base?.personalityDescription ?: "").trim() ||
+            (base != null && (
+                _state.value.personalityAnchor != base.personalityAnchor ||
+                    _state.value.personaGains != base.personaGains ||
+                    _state.value.personaOperators != base.personaOperators
+                ))
+        ) {
+            _personaNeedsSave.value = true
+            return
+        }
+        _personaNeedsSave.value = false
+        _compiling.value = true
+        viewModelScope.launch {
+            val (outcome, fresh) = personaCompiler.compileAndReload(uuid)
+            fresh?.let {
+                loaded = it
+                _state.value = _state.value.copy(
+                    personalityAnchor = it.personalityAnchor,
+                    personalitySpectrum = it.personalitySpectrum,
+                    personaCompileMeta = it.personaCompileMeta,
+                    personaGains = it.personaGains,
+                    personaOperators = it.personaOperators,
+                )
+            }
+            if (outcome is PersonaCompileOutcome.Failed) Log.i(TAG, "人设编译未成功：${outcome.reason}")
+            _compiling.value = false
+        }
+    }
+
+    /**
      * Persist. In create mode returns the (created/ensured) conversation uuid so the caller can open
      * the chat; in edit mode returns null. No-op if the name is blank or a save is already running.
      */
@@ -357,6 +448,10 @@ class CharacterEditViewModel @Inject constructor(
                 // P1-43：创建即时推断月薪+入职储蓄（=iOS Actions.swift:219-232 异步 Task）。fire-and-forget
                 // 在服务自有 scope——本 VM save 完即导航清场，不可用 viewModelScope。
                 economyMaintenance.runForNewCharacter(entity.uuid)
+                // 卷一 D-1 唯一例外（Y-E21）：新建角色首存自动编译一次（人设为空则协调器内部跳过）。
+                // 同 runForNewCharacter 走服务自有 scope——save 完即导航清场，viewModelScope 会取消这次 LLM。
+                // 修缮卷 J6：拖过性格滑杆的新角色，编译保留手拖锚点与现值（source = manual），只写增益 / 算子。
+                personaCompiler.compileForNewCharacter(entity.uuid, preserveAnchor = s.personalityAnchor != PersonalitySpectrum.NEUTRAL)
                 conversationRepo.getOrCreateForCharacter(entity.uuid, entity.name.trim())
             } else {
                 // P12.6 D1c：列级写回「表单可编辑」字段，不再整行 update 把成长/关系/心情/火花/记忆等并发列从开屏
@@ -411,14 +506,12 @@ class CharacterEditViewModel @Inject constructor(
                 if (effects.occupationChanged) {
                     currencyService.clearSalaryInferred(existing.uuid)
                 }
-                // 14.1e ③ 成长维度（8+8 滑块）：仅在用户实际改了维度时才列级写回，避免覆盖编辑期间后台成长分析
-                //    刚写入的新值（updateEditableProfile 契约不碰成长列，故这里独立写）。
-                if (s.personalitySpectrum != existing.personalitySpectrum || s.relationshipQuality != existing.relationshipQuality) {
-                    characterRepo.updateGrowthDimensions(
-                        existing.uuid,
-                        GrowthJson.encode(s.personalitySpectrum),
-                        GrowthJson.encode(s.relationshipQuality),
-                    )
+                // 活人感内核·卷一 §3.6 + 修缮卷 J10：人设四列 + 成长两列在角色写锁内、以锁内 fresh 读为基只写用户改过的列 / 维
+                //    （touched 判据对开屏快照 existing）；recordRelationship 在上面、自取锁，本段锁内只调不取锁的 UseCase / Repository 写口。
+                characterWriteLock.withCharacterLock(existing.uuid) {
+                    val fresh = characterRepo.get(existing.uuid) ?: return@withCharacterLock
+                    val syncCurrentToAnchor = personaCompiler.persistUserEdits(fresh, existing, s)
+                    personaCompiler.persistGrowthDimensions(fresh, existing, s, syncCurrentToAnchor)
                 }
                 null
             }
@@ -428,6 +521,8 @@ class CharacterEditViewModel @Inject constructor(
     }
 
     private companion object {
+        const val TAG = "CharacterEditVM"
+
         /** E1#0 草稿在 SavedStateHandle 的键（值=Bundle{[KEY_FORM_DRAFT_JSON]→JSON 串}）。 */
         const val KEY_FORM_DRAFT = "characterEditFormDraft"
         const val KEY_FORM_DRAFT_JSON = "json"

@@ -84,6 +84,14 @@ internal fun CharacterExport.toEntity(avatarPath: String?, chatWallpaperPath: St
     worldHomeCityId = worldHomeCityId,
     worldJoinedAt = worldJoinedAt,
     momentsDigestedUntilMillis = momentsDigestedUntilMillis,
+    personalityAnchorJSON = personalityAnchorJSON,
+    personaCompileMetaJSON = personaCompileMetaJSON,
+    personaGainsJSON = personaGainsJSON,
+    personaOperatorsJSON = personaOperatorsJSON,
+    relationshipPressureJSON = relationshipPressureJSON,
+    affectFieldJSON = affectFieldJSON,
+    intentQueueJSON = intentQueueJSON,
+    ourDaysBackfilledAt = ourDaysBackfilledAt,
 )
 
 internal fun ConversationExport.toEntity(characterUuid: String) = ConversationEntity(

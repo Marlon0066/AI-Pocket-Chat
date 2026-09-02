@@ -61,7 +61,7 @@ class PromptEditableTemplateTest {
     @Test fun `data modules have no editable template`() {
         val s = strings()
         val dataTypes = SystemModuleType.entries.filter { it !in editableTypes }
-        assertEquals(14, dataTypes.size)
+        assertEquals(15, dataTypes.size) // 「我们的日子」卷二 +OUR_DAYS（数据类）
         for (type in dataTypes) {
             assertNull("$type 走整块宏，不应有可编辑模板", PromptBuilder.defaultEditableTemplate(type, s))
         }

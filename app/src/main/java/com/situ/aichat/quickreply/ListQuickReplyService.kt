@@ -124,6 +124,8 @@ class ListQuickReplyService @Inject constructor(
         if (renewed !== character) {
             characterDao.updateStreak(character.uuid, renewed.streakCount, renewed.lastChatDate ?: now)
         }
+        // 相识天数图纸 §4.1：首条消息落「第一次聊天时间」（SQL 只往早改；老角色由冷启补账改成真最早）。
+        if (character.firstMessageDate == null) characterDao.markFirstMessageDate(character.uuid, now)
     }
 
     /**

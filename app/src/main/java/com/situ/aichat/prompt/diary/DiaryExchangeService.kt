@@ -16,6 +16,7 @@ import com.situ.aichat.data.model.ApiFunction
 import com.situ.aichat.data.model.DiaryVisibility
 import com.situ.aichat.data.model.MomentTriggerType
 import com.situ.aichat.data.model.growthMetadata
+import com.situ.aichat.data.model.intentQueue
 import com.situ.aichat.data.remote.llm.ChatMessageDto
 import com.situ.aichat.data.repository.ApiConfigRepository
 import com.situ.aichat.data.repository.DiaryRepository
@@ -26,6 +27,7 @@ import com.situ.aichat.diagnostics.ContextLogService
 import com.situ.aichat.diagnostics.LogSource
 import com.situ.aichat.openloop.OpenLoopScanService
 import com.situ.aichat.prompt.GeneratedContentValidator
+import com.situ.aichat.prompt.IntentExitRenderer
 import com.situ.aichat.prompt.PromptStrings
 import com.situ.aichat.prompt.memory.MemoryService
 import com.situ.aichat.promise.PromiseInjectionRenderer
@@ -174,6 +176,7 @@ class DiaryExchangeService @Inject constructor(
             memory = ch.memorySummary.trim(),
             promiseBlock = promiseBlock,
             loopBlock = loopBlock,
+            intentBlock = IntentExitRenderer.diaryBlock(ch.intentQueue.intents, userName, now), // 卷四 §4.5 ④：心里挂着的事
         )
 
         val system = DiaryExchangePromptBuilder.build(

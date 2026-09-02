@@ -72,6 +72,7 @@ class VoiceCallTurnService @Inject constructor(
     private val conversationRepo: ConversationRepository,
     private val characterRepo: CharacterRepository,
     private val offlineMeetingMemoryRepository: com.situ.aichat.data.repository.OfflineMeetingMemoryRepository,
+    private val ourDayRepository: com.situ.aichat.data.repository.OurDayRepository,
     private val apiConfigRepo: ApiConfigRepository,
     private val settingsRepo: SettingsRepository,
     private val stickerRepo: StickerRepository,
@@ -175,6 +176,7 @@ class VoiceCallTurnService @Inject constructor(
         )
         val structuredMemory = StructuredMemory.decode(character.structuredMemoryJSON)
         val offlineMeetingMemoryText = offlineMeetingMemoryRepository.renderedForInjection(character.uuid)
+        val ourDays = ourDayRepository.injectableForCharacter(character.uuid) // 我们的日子·卷二：语音路同样预取（图纸 W-10）
         val milestones = characterRepo.getMilestones(character.uuid)
         val todaySchedule = scheduleDao.scheduleFor(character.uuid, todayStartMillis)
         val todayScheduleEvents = todaySchedule?.let { scheduleDao.eventsForSchedule(it.uuid) } ?: emptyList()
@@ -231,6 +233,7 @@ class VoiceCallTurnService @Inject constructor(
             petRecentPurchaseNames = petRecentPurchaseNames,
             retrievedMemorySnippets = retrievedSnippets,
             offlineMeetingMemoryText = offlineMeetingMemoryText,
+            ourDays = ourDays,
             assistantDeliveryMode = AssistantDeliveryMode.VOICE,
             toolCallingEnabled = false,
             // No voice-tag teaching: the call strips MiniMax voice tags before TTS anyway (= iOS).

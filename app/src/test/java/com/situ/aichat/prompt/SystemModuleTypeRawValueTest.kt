@@ -30,6 +30,7 @@ class SystemModuleTypeRawValueTest {
         assertEquals("currentMoment", SystemModuleType.CURRENT_MOMENT.rawValue)
         assertEquals("characterEconomicState", SystemModuleType.CHARACTER_ECONOMIC_STATE.rawValue)
         assertEquals("busyReplyInstruction", SystemModuleType.BUSY_REPLY_INSTRUCTION.rawValue)
+        assertEquals("ourDays", SystemModuleType.OUR_DAYS.rawValue) // 「我们的日子」卷二
     }
 
     @Test fun `every rawValue is unique and non-blank`() {

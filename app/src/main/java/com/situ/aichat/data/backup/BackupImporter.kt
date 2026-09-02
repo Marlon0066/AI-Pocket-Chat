@@ -80,6 +80,7 @@ class BackupImporter @Inject constructor(
     private val offlineMeetingMemoryDao: com.situ.aichat.data.local.dao.OfflineMeetingMemoryDao,
     private val promiseDao: com.situ.aichat.data.local.dao.PromiseDao,
     private val userStoryTemplateDao: com.situ.aichat.data.local.dao.UserStoryTemplateDao,
+    private val ourDayDao: com.situ.aichat.data.local.dao.OurDayDao,
     private val settingsRepo: SettingsRepository,
     // 卷 A：媒体逐条读→重存→弃（含 zip 键路由与跳过键收集，从本类原样搬出）。
     private val mediaRestorer: BackupMediaRestorer,
@@ -223,7 +224,7 @@ class BackupImporter @Inject constructor(
                 pkg.gifts != null || pkg.redPackets != null || pkg.stickers != null ||
                 pkg.redeemCodeUsages != null || pkg.currencyTransactions != null ||
                 pkg.futureAppointments != null || pkg.worldBooks != null || pkg.world != null ||
-                pkg.promises != null || pkg.userStoryTemplates != null ||
+                pkg.promises != null || pkg.userStoryTemplates != null || pkg.ourDays != null ||
                 pkg.userWallet != null || pkg.userProfile != null || pkg.appSettings != null,
         )
     }
@@ -360,6 +361,8 @@ class BackupImporter @Inject constructor(
                 restorePromises(promiseDao, pkg.promises, existingUuids)
                 // 图纸四：故事「我的模板」（顶层全局段·无幽灵过滤·uuid REPLACE 幂等·§3.2）。
                 restoreUserStoryTemplates(userStoryTemplateDao, pkg.userStoryTemplates)
+                // 「我们的日子」卷一：our_days（顶层全局段·characterUuid 幽灵行跳过·uuid REPLACE 幂等·embedding 落 null·图纸 §3.5）。
+                restoreOurDays(ourDayDao, pkg.ourDays, existingUuids)
                 ImportCounts(imported, overwritten, duplicated, skipped, importedMsgs)
             }
         }

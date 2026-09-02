@@ -134,6 +134,24 @@ class MomentPostPromptBuilderTest {
         assertSubsequence(order, out)
     }
 
+    // 卷四 T2-6 ②（图纸 §4.5 / §2.2）：意图块在 nowContext 之后、schedulePrompt 之前；空 ⇒ 输出与不传逐字节相同。
+    @Test fun `卷四 intentBlock sits after nowContext and before schedulePrompt, empty is byte-identical`() {
+        fun build(block: String?) = MomentPostPromptBuilder.build(
+            strings = ts(), character = char(), hotInterestNames = emptyList(), personalityTraits = emptyList(),
+            recentUserPosts = emptyList(), recentOwnContents = "", nowContext = "NOWCTX", schedulePrompt = "SCHED",
+            userName = "小明", intentBlock = block ?: "",
+        )
+        val with = build("INTENT1\nINTENT2")
+        assertSubsequence(listOf("NOWCTX", "INTENT1\nINTENT2", "SCHED"), with)
+        assertTrue(with.contains("NOWCTX\n\nINTENT1\nINTENT2\n\nSCHED"))
+        val without = MomentPostPromptBuilder.build(
+            strings = ts(), character = char(), hotInterestNames = emptyList(), personalityTraits = emptyList(),
+            recentUserPosts = emptyList(), recentOwnContents = "", nowContext = "NOWCTX", schedulePrompt = "SCHED", userName = "小明",
+        )
+        assertEquals(without, build(""))
+        assertFalse(without.contains("INTENT"))
+    }
+
     @Test fun `overrides replace word count, tone, emoji, and append extra rules`() {
         val out = MomentPostPromptBuilder.build(
             strings = ts(),

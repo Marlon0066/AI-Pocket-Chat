@@ -47,6 +47,7 @@ object PromptModuleService {
         SystemModuleType.GIFT_HISTORY to "10000001-0000-0000-0000-000000000013",
         SystemModuleType.CHARACTER_ECONOMIC_STATE to "10000001-0000-0000-0000-000000000014",
         SystemModuleType.BUSY_REPLY_INSTRUCTION to "10000001-0000-0000-0000-000000000015",
+        SystemModuleType.OUR_DAYS to "10000001-0000-0000-0000-000000000017", // 「我们的日子」卷二（…016 已被 CURRENT_MOMENT 占）
     )
 
     private fun systemModuleUUID(type: SystemModuleType): String =
@@ -363,6 +364,63 @@ object PromptModuleService {
         val newDict = dict.mapValues { (_, mods) ->
             val mutable = mods.toMutableList()
             if (migrateMeetingMemoryToPrefix(mutable)) {
+                characterChanged = true
+                mutable.toList()
+            } else {
+                mods
+            }
+        }
+        val newCharacter = if (characterChanged) encodeCharacterDict(newDict) else null
+
+        return if (newGlobal == null && newCharacter == null) null else newGlobal to newCharacter
+    }
+
+    // MARK: - 「我们的日子」归位迁移（卷二 2026-09-02·图纸 §3.2：紧随「见面记忆」·只动 sortOrder·缺席按 reconcile 字段插入）
+
+    /**
+     * 缺席：见面记忆（PREFIX）缺席 → 追加末尾，否则插缝到其正后（>= target 全 +1 不产并列）。在场：仅当仍在追加位（sortOrder ==
+     * 全表最大 = reconcile 内存追加位）且见面记忆在 PREFIX 且尚未在正后才归位；挪过 / 已归位 / 无锚点 → false。只动 sortOrder；幂等。
+     */
+    fun migrateOurDaysAfterMeetingMemory(modules: MutableList<PromptModule>): Boolean {
+        val type = SystemModuleType.OUR_DAYS
+        val mm = modules.firstOrNull { it.systemModuleType == SystemModuleType.OFFLINE_MEETING_MEMORY && it.position == PromptModulePosition.PREFIX }
+        val od = modules.indexOfFirst { it.systemModuleType == type }
+        if (od >= 0) {
+            if (mm == null || modules[od].sortOrder != modules.maxOf { it.sortOrder }) return false // 无锚点 / 不在追加位
+            if (modules[od].sortOrder == mm.sortOrder + 1) return false // 已在正后
+        }
+        val target = if (mm == null) (modules.maxOfOrNull { it.sortOrder } ?: -1) + 1 else mm.sortOrder + 1
+        for (i in modules.indices) {
+            val m = modules[i]
+            if (i != od && m.sortOrder >= target) modules[i] = m.copy(sortOrder = m.sortOrder + 1)
+        }
+        if (od >= 0) {
+            modules[od] = modules[od].copy(sortOrder = target)
+        } else {
+            modules.add(
+                PromptModule(
+                    id = systemModuleUUID(type), name = type.displayName, content = "", sortOrder = target, isEnabled = true,
+                    isSystemGenerated = true, systemModuleType = type, position = type.defaultPosition, enabledScenes = type.defaultEnabledScenes,
+                ),
+            )
+        }
+        return true
+    }
+
+    /** 对全局 + 每个角色覆盖各自应用 [migrateOurDaysAfterMeetingMemory]；返回语义同 [migratePromptModuleTimeOrder]。 */
+    fun migratePromptModuleOurDays(globalJson: String, characterJson: String): Pair<String?, String?>? {
+        val newGlobal: String? = globalJson
+            .takeIf { it.isNotEmpty() }
+            ?.let { decodeModules(it) }
+            ?.toMutableList()
+            ?.takeIf { migrateOurDaysAfterMeetingMemory(it) }
+            ?.let { encodeModules(it) }
+
+        var characterChanged = false
+        val dict = decodeCharacterDict(characterJson)
+        val newDict = dict.mapValues { (_, mods) ->
+            val mutable = mods.toMutableList()
+            if (migrateOurDaysAfterMeetingMemory(mutable)) {
                 characterChanged = true
                 mutable.toList()
             } else {

@@ -14,6 +14,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -123,6 +124,16 @@ class ListQuickReplyRetryTest {
         val after = db.characterDao().getByUuid("c1")!!
         assertEquals("同日不重复计数", 1, after.streakCount)
         assertEquals("同日零写（recordChat 引用相等跳过持久化）", stamp, after.lastChatDate)
+    }
+
+    /** 相识天数图纸 §5 E6：快捷回复路（真 Room）落「第一次聊天时间」= 该次 now，与火花的 lastChatDate 同刻。 */
+    @Test
+    fun `快捷回复_字段空时落第一次聊天时间`() = runBlocking {
+        val c = conv()
+        assertTrue(service.insertUserMessage(c, "早呀"))
+        val after = db.characterDao().getByUuid("c1")!!
+        assertNotNull("首聊时间已落", after.firstMessageDate)
+        assertEquals("与火花同一个 now", after.lastChatDate, after.firstMessageDate)
     }
 
     @Test

@@ -7,6 +7,7 @@ import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.CharacterEntity
 import com.situ.aichat.data.model.AppSettings
 import com.situ.aichat.data.repository.CharacterRepository
+import com.situ.aichat.data.repository.CharacterWriteLock
 import com.situ.aichat.data.repository.ConversationRepository
 import com.situ.aichat.data.repository.SettingsRepository
 import com.situ.aichat.economy.CharacterEconomyMaintenanceService
@@ -67,6 +68,8 @@ class CharacterEditViewModelTest {
             ttsConfigRepo = mockk(relaxed = true),
             previewer = mockk(relaxed = true),
             membershipService = membershipService,
+            personaCompiler = mockk(relaxed = true),
+            characterWriteLock = CharacterWriteLock(),
             appContext = mockk<Context>(relaxed = true),
             savedStateHandle = SavedStateHandle(),
         )
@@ -106,6 +109,8 @@ class CharacterEditViewModelTest {
             ttsConfigRepo = mockk(relaxed = true),
             previewer = mockk(relaxed = true),
             membershipService = mockk(relaxed = true),
+            personaCompiler = mockk(relaxed = true),
+            characterWriteLock = CharacterWriteLock(),
             appContext = RuntimeEnvironment.getApplication(),
             savedStateHandle = SavedStateHandle(),
         )
@@ -138,6 +143,8 @@ class CharacterEditViewModelTest {
             ttsConfigRepo = mockk(relaxed = true),
             previewer = mockk(relaxed = true),
             membershipService = mockk(relaxed = true),
+            personaCompiler = mockk(relaxed = true),
+            characterWriteLock = CharacterWriteLock(),
             appContext = RuntimeEnvironment.getApplication(),
             savedStateHandle = SavedStateHandle(mapOf("characterUuid" to "c1")),
         )

@@ -213,8 +213,12 @@ class SettingsRepository @Inject constructor(
             val gJson2 = mmMigrated?.first ?: gJson
             val cJson2 = mmMigrated?.second ?: cJson
             val sceneMigrated = PromptModuleService.migratePromptModuleSceneDefaults(gJson2, cJson2)
-            p[KEY_PROMPT_MODULES] = sceneMigrated?.first ?: gJson2
-            p[KEY_CHARACTER_PROMPT_MODULES] = sceneMigrated?.second ?: cJson2
+            // 「我们的日子」卷二（2026-09-02）：老备份无 ourDays 模块 → 链尾补迁到见面记忆正后（不置 once flag·幂等）。
+            val gJson3 = sceneMigrated?.first ?: gJson2
+            val cJson3 = sceneMigrated?.second ?: cJson2
+            val ourDaysMigrated = PromptModuleService.migratePromptModuleOurDays(gJson3, cJson3)
+            p[KEY_PROMPT_MODULES] = ourDaysMigrated?.first ?: gJson3
+            p[KEY_CHARACTER_PROMPT_MODULES] = ourDaysMigrated?.second ?: cJson3
             p[KEY_PROMPT_MODULE_PRESETS] = s.promptModulePresetsJSON
             p[KEY_SHORT_TERM_MEMORY] = s.shortTermMemoryLength
             p[KEY_AUTO_SUMMARIZE_INTERVAL] = s.autoSummarizeInterval
@@ -352,6 +356,24 @@ class SettingsRepository @Inject constructor(
             result?.first?.let { p[KEY_PROMPT_MODULES] = it }
             result?.second?.let { p[KEY_CHARACTER_PROMPT_MODULES] = it }
             p[KEY_MEETING_MEMORY_POSITION_MIGRATED] = true
+        }
+    }
+
+    /**
+     * 一次性迁移（「我们的日子」卷二·2026-09-02·图纸 §3.2）：把老用户全局/角色模块里缺席或停在追加位的 ourDays 归位到
+     * 「见面记忆」正后。[KEY_OUR_DAYS_MODULE_ORDER_MIGRATED] 守卫只跑一次；最坏情况解码失败=顺序不变不抛,仍置 flag。
+     */
+    suspend fun migratePromptModuleOurDaysOnce() {
+        // 读-检-迁-写同一 edit 事务（原子·不占主线程·同 [migratePromptModuleTimeOrderOnce]）。
+        dataStore.edit { p ->
+            if (p[KEY_OUR_DAYS_MODULE_ORDER_MIGRATED] == true) return@edit
+            val result = PromptModuleService.migratePromptModuleOurDays(
+                globalJson = p[KEY_PROMPT_MODULES] ?: "",
+                characterJson = p[KEY_CHARACTER_PROMPT_MODULES] ?: "",
+            )
+            result?.first?.let { p[KEY_PROMPT_MODULES] = it }
+            result?.second?.let { p[KEY_CHARACTER_PROMPT_MODULES] = it }
+            p[KEY_OUR_DAYS_MODULE_ORDER_MIGRATED] = true
         }
     }
 
@@ -813,6 +835,8 @@ class SettingsRepository @Inject constructor(
         // 见面记忆前置（2026-07-11）：offlineMeetingMemory SUFFIX→PREFIX·插到「角色记忆」正后的一次性迁移守卫。
         val KEY_MEETING_MEMORY_POSITION_MIGRATED = booleanPreferencesKey("meeting_memory_position_migrated_v1")
         val KEY_PROMPT_MODULE_SCENE_DEFAULTS_MIGRATED = booleanPreferencesKey("prompt_module_scene_defaults_migrated")
+        // 「我们的日子」卷二（2026-09-02）：ourDays 归位到「见面记忆」正后的一次性迁移守卫。
+        val KEY_OUR_DAYS_MODULE_ORDER_MIGRATED = booleanPreferencesKey("our_days_module_order_migrated_v1")
         // 聊天合并等待窗（输入排契约 C1）
         val KEY_CHAT_SEND_WAIT_SECONDS = floatPreferencesKey("chat_send_wait_seconds")
         val KEY_CHAT_SEND_TIMESTAMPS = stringPreferencesKey("chat_send_timestamps")

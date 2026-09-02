@@ -3,6 +3,7 @@ package com.situ.aichat.ui.designsystem
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 
 /**
  * Fable-5 自研设计语言 · **第二层：semantic + feature 色 token**（主题切换枢纽）。
@@ -22,6 +23,7 @@ data class AppColors(
     val economy: AppEconomyColors,
     val emotion: AppEmotionColors,
     val pet: AppPetColors,
+    val ourDays: AppOurDaysColors,
 )
 
 /**
@@ -37,7 +39,10 @@ data class AppTextColors(
     val onAccent: Color,
 )
 
-/** 表面层级：底 / raised（纸·靠极浅投影或 1px 描边立体）/ sunken（凹）/ stroke（1px 明度分隔）/ scrim。 */
+/**
+ * 表面层级：底 / raised（纸·靠极浅投影或 1px 描边立体）/ sunken（凹）/ stroke（1px 明度分隔）/ scrim
+ * / glaze+glazeShade（白瓷药丸面·浮在 sunken 凹槽之上）。
+ */
 @Immutable
 data class AppSurfaceColors(
     val base: Color,
@@ -45,6 +50,11 @@ data class AppSurfaceColors(
     val sunken: Color,
     val stroke: Color,
     val scrim: Color,
+    // 白瓷药丸面纵向渐变两 stop（顶 [glaze] → 底 [glazeShade]）——分段控件 / 选择标签选中态浮起的那枚瓷片
+    // （「白瓷药丸」2026-09-03·消费方 = `Modifier.porcelainThumb`）。**不是** raised：它专为「凹槽里浮起
+    // 一块」而生，浅档比 raised 更亮更暖、深档比 sunken 亮一阶，两者不可互换。
+    val glaze: Color,
+    val glazeShade: Color,
 )
 
 /**
@@ -157,6 +167,33 @@ data class AppPetColors(
     val health: Color,
 )
 
+/** 「我们的日子」feature 色（卷三图纸 §4.1·提案 D-11）：热度三档底 + 三家族点 + 六识别色（识别色只作识别圈 / 头像描边·不作文字）。 */
+@Immutable
+data class AppOurDaysColors(
+    val heat1: Color,
+    val heat2: Color,
+    val heat3: Color,
+    val dotMeeting: Color,
+    val dotRelation: Color,
+    val dotLife: Color,
+    val identity: List<Color>,
+) {
+    companion object {
+        val IDENTITY: List<Color> = listOf(Color(0xFFBE8A76), Color(0xFF8FA085), Color(0xFF8A9BAA), Color(0xFFC49A94), Color(0xFFC4AC7A), Color(0xFFA093A8))
+
+        /** 非陶土主题（青花）派生：heat1 = lerp(base, container, 0.5)；heat2 = container；heat3 = lerp(container, primary, 0.2)。 */
+        fun derive(base: Color, container: Color, primary: Color, dotMeeting: Color, dotRelation: Color, dotLife: Color) = AppOurDaysColors(
+            heat1 = lerp(base, container, 0.5f),
+            heat2 = container,
+            heat3 = lerp(container, primary, 0.2f),
+            dotMeeting = dotMeeting,
+            dotRelation = dotRelation,
+            dotLife = dotLife,
+            identity = IDENTITY,
+        )
+    }
+}
+
 /**
  * 圈子枢纽分色 IconTile 浅 tile 的不透明度（`emotion.X.copy(alpha = EmotionTileAlpha)` over surface.raised）。
  * 与同族 `*Ink` 图标的对比度由 `ColorContrastTest` 按此值看门——调此值会同步影响渲染与测试，单一事实源（契约 §4）。
@@ -179,6 +216,8 @@ val LightAppColors: AppColors = AppColors(
         sunken = Palette.Linen,
         stroke = Palette.Linen,
         scrim = Palette.Scrim,
+        glaze = Palette.Glaze,
+        glazeShade = Palette.GlazeShade,
     ),
     accent = AppAccentColors(
         primary = Palette.Clay,
@@ -247,6 +286,15 @@ val LightAppColors: AppColors = AppColors(
         mood = Palette.PetMood,
         health = Palette.PetHealth,
     ),
+    ourDays = AppOurDaysColors(
+        heat1 = Color(0xFFF6EBE4),
+        heat2 = Palette.ClayWhisper,
+        heat3 = Color(0xFFE8CDBF),
+        dotMeeting = Color(0xFFA88E4E),
+        dotRelation = Palette.CalmInk,
+        dotLife = Palette.SadInk,
+        identity = AppOurDaysColors.IDENTITY,
+    ),
 )
 
 /** 深色档（深暖灰默认·点缀降饱和 20–30%·AI 气泡靠 1px 描边替投影）。AMOLED 纯黑档后续只替 surface 映射。 */
@@ -264,6 +312,8 @@ val DarkAppColors: AppColors = AppColors(
         sunken = Palette.Bark,
         stroke = Palette.BarkLine,
         scrim = Palette.Scrim,
+        glaze = Palette.GlazeDark,
+        glazeShade = Palette.GlazeDarkShade,
     ),
     // 深陶+白字拍板（2026-06-13·微信深色式）：深档气泡/主钮渐变换深陶 #9A5B3E→#8A4E33 配暖白
     // #F5EFEA（4.67–5.72:1·避开中间调死区 #A8765F）——夜里大面积浅陶有眩光感，深陶贴「同一房间的
@@ -337,6 +387,15 @@ val DarkAppColors: AppColors = AppColors(
         mood = Palette.PetMoodDark,
         health = Palette.PetHealthDark,
     ),
+    ourDays = AppOurDaysColors(
+        heat1 = Color(0xFF221B17),
+        heat2 = Palette.ClayWhisperDark,
+        heat3 = Color(0xFF4A362B),
+        dotMeeting = Palette.EmotionJoy,
+        dotRelation = Palette.EmotionCalm,
+        dotLife = Palette.EmotionSad,
+        identity = AppOurDaysColors.IDENTITY,
+    ),
 )
 
 /**
@@ -357,6 +416,8 @@ val QinghuaLightAppColors: AppColors = AppColors(
         sunken = Palette.MistBlue,
         stroke = Palette.MistBlue,
         scrim = Palette.Scrim,
+        glaze = Palette.GlazeBlue,
+        glazeShade = Palette.GlazeBlueShade,
     ),
     accent = AppAccentColors(
         primary = Palette.Cobalt,
@@ -381,6 +442,14 @@ val QinghuaLightAppColors: AppColors = AppColors(
     economy = LightAppColors.economy,
     emotion = LightAppColors.emotion,
     pet = LightAppColors.pet,
+    ourDays = AppOurDaysColors.derive(
+        base = Palette.PorcelainBlue,
+        container = Palette.CobaltContainer,
+        primary = Palette.Cobalt,
+        dotMeeting = Color(0xFFA88E4E),
+        dotRelation = Palette.CalmInk,
+        dotLife = Palette.SadInk,
+    ),
 )
 
 /** 青花主题 · 深色档（青花·夜墨青底 + 略提亮钴蓝·见 §3.2）。沿用 [DarkAppColors] 的 status/economy/emotion/pet。 */
@@ -398,6 +467,8 @@ val QinghuaDarkAppColors: AppColors = AppColors(
         sunken = Palette.NightSunken,
         stroke = Palette.NightStroke,
         scrim = Palette.Scrim,
+        glaze = Palette.GlazeBlueDark,
+        glazeShade = Palette.GlazeBlueDarkShade,
     ),
     accent = AppAccentColors(
         primary = Palette.CobaltBright,
@@ -422,6 +493,14 @@ val QinghuaDarkAppColors: AppColors = AppColors(
     economy = DarkAppColors.economy,
     emotion = DarkAppColors.emotion,
     pet = DarkAppColors.pet,
+    ourDays = AppOurDaysColors.derive(
+        base = Palette.NightInk,
+        container = Palette.CobaltContainerDark,
+        primary = Palette.CobaltBright,
+        dotMeeting = Palette.EmotionJoy,
+        dotRelation = Palette.EmotionCalm,
+        dotLife = Palette.EmotionSad,
+    ),
 )
 
 /** semantic 色的 CompositionLocal（[AIPocketChatTheme] 按解析后的深浅 provide·默认浅档）。 */

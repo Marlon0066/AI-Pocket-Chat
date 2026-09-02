@@ -25,11 +25,12 @@ class ImageEmbeddingDeferralTest {
     private val conversationDao = mockk<com.situ.aichat.data.local.dao.ConversationDao>(relaxed = true)
     private val embedder = mockk<TextEmbedder>(relaxed = true)
     private val archiveIndex = mockk<MeetingArchiveVectorService>(relaxed = true)
+    private val ourDayIndex = mockk<OurDayVectorService>(relaxed = true) // 卷二第 5 参：本测不触检索
 
     private fun service(): VectorMemoryService {
         every { embedder.isAvailable } returns true
         coEvery { embedder.embed(any()) } returns FloatArray(8) { 0.1f }
-        return VectorMemoryService(messageDao, conversationDao, embedder, archiveIndex)
+        return VectorMemoryService(messageDao, conversationDao, embedder, archiveIndex, ourDayIndex)
     }
 
     private fun imageMessage(summary: String, embedding: ByteArray? = null) = MessageEntity(

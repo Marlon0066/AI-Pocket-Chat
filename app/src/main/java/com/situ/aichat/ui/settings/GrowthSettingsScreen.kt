@@ -9,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.situ.aichat.BuildConfig
 import com.situ.aichat.R
 import com.situ.aichat.ui.components.SettingsSection
 import com.situ.aichat.ui.components.SettingsSliderRow
@@ -40,6 +42,7 @@ import kotlin.math.roundToInt
 @Composable
 fun GrowthSettingsScreen(
     onBack: () -> Unit,
+    onOpenObservatory: () -> Unit = {},
     viewModel: GrowthSettingsViewModel = hiltViewModel(),
 ) {
     val s by viewModel.state.collectAsStateWithLifecycle()
@@ -121,6 +124,18 @@ fun GrowthSettingsScreen(
                         steps = 58,
                         onManualInput = { viewModel.setInterestCooldownDays(it) }, // settings-slider-manualinput
                         onValueChange = { viewModel.setInterestCooldownDays(it.roundToInt()) },
+                    )
+                }
+            }
+
+            // 活人感内核卷零 chunk5：开发者调试页入口。BuildConfig.DEBUG 门控（屏本体另有一道守卫）
+            // ⇒ release 构建整块短路，用户侧零变化。
+            if (BuildConfig.DEBUG) {
+                SettingsSection(title = "开发者") {
+                    SettingsRow(
+                        icon = Icons.Filled.Insights,
+                        title = "内核观测台（仅 debug）",
+                        onClick = onOpenObservatory,
                     )
                 }
             }

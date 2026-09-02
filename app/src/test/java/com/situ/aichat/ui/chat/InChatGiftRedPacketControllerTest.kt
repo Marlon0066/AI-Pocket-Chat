@@ -130,6 +130,14 @@ class InChatGiftRedPacketControllerTest {
         assertEquals(1, enqueuedTurns) // C1：回合入合并等待窗（enqueueExternalTurn），不再直跑引擎
     }
 
+    /** 相识天数图纸 §5 E6：送礼路的受理尾段同样落「第一次聊天时间」（字段空的角色第一次互动即是送礼）。 */
+    @Test
+    fun 送礼成功_字段空时落第一次聊天时间() = runBlocking {
+        coEvery { giftSendService.sendInChat(any(), any(), any(), any()) } returns giftSuccess()
+        controller.sendGiftInChat(mockk<GiftItem>(relaxed = true) { every { name } returns "玫瑰花" })
+        coVerify(exactly = 1) { characterRepo.markFirstMessageDate("c1", any()) }
+    }
+
     @Test
     fun 送礼扣币失败_不触发回复() = runBlocking {
         coEvery { giftSendService.sendInChat(any(), any(), any(), any()) } returns GiftSendService.InChatSendOutcome.SpendFailed

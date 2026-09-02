@@ -6,6 +6,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.situ.aichat.prompt.memory.MeetingArchiveVectorService
+import com.situ.aichat.prompt.memory.OurDayVectorService
 import com.situ.aichat.prompt.memory.VectorMemoryService
 import com.situ.aichat.world.link.WorldMemoryEmbedder
 import dagger.assisted.Assisted
@@ -30,6 +31,7 @@ class EmbeddingBackfillWorker @AssistedInject constructor(
     private val vectorMemory: VectorMemoryService,
     private val worldMemoryEmbedder: WorldMemoryEmbedder,
     private val meetingArchiveVector: MeetingArchiveVectorService,
+    private val ourDayVector: OurDayVectorService,
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
@@ -41,6 +43,7 @@ class EmbeddingBackfillWorker @AssistedInject constructor(
             vectorMemory.backfillMissingEmbeddings()
             worldMemoryEmbedder.backfillMissing() // W5：世界记忆嵌入限流回填（同款分批让片·空批秒退）
             meetingArchiveVector.backfillMissing() // 记忆改造四期·部件⑥：见面档案向量回填（同款分批让片·空批秒退）
+            ourDayVector.backfillMissing() // 我们的日子·卷二：事实行向量回填（同款分批让片·空批秒退）
             Result.success()
         } catch (e: Exception) {
             Log.e(TAG, "嵌入回填失败: ${e.message}")

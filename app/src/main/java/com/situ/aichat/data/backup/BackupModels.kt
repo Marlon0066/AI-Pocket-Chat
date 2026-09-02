@@ -70,6 +70,8 @@ data class BackupPackage(
     val offlineMeetingMemories: List<OfflineMeetingMemoryExport>? = null,
     /** 承诺账本（记忆改造一期·部件①·顶层全局段·图纸 §3.1）：「我们的约定」结构化行；恢复靠 characterUuid 幽灵过滤；uuid REPLACE 幂等。 */
     val promises: List<PromiseExport>? = null,
+    /** 「我们的日子」（卷一《沉淀》·顶层全局段·图纸 §3.5）：一天 × 一角色的事实 + 手记行（不含向量）；恢复靠 characterUuid 幽灵过滤；uuid REPLACE 幂等。 */
+    val ourDays: List<OurDayExport>? = null,
     /** 故事「我的模板」（图纸四 §3.2·顶层全局段）：整套创作设定；无幽灵过滤（不挂角色/故事）；uuid REPLACE 幂等。 */
     val userStoryTemplates: List<UserStoryTemplateExport>? = null,
 )
@@ -171,6 +173,20 @@ data class CharacterExport(
     val worldJoinedAt: Long? = null,
     /** 朋友圈消化水位线（记忆改造一期·图纸 §3.5-B）。老备份缺字段 → 0 = 从未消化（收集时视作 now−7 天起步）。 */
     val momentsDigestedUntilMillis: Long = 0,
+    // 活人感内核·卷一《人设编译器》四列对称往返（图纸 §表3）。老备份缺字段 → "" = 从未编译过：
+    // 锚点走解码访问器兜底（本性 == 现在），其余三列回落默认值，不崩不清零。
+    val personalityAnchorJSON: String = "",
+    val personaCompileMetaJSON: String = "",
+    val personaGainsJSON: String = "",
+    val personaOperatorsJSON: String = "",
+    /** 活人感内核·卷二《正负双压》关系压强列（图纸 §表3）。老备份缺字段 → "" = 访问器按净额播种，不崩不清零。 */
+    val relationshipPressureJSON: String = "",
+    /** 活人感内核·卷三《场内核与渲染收编》四场列（图纸 §表3）。老备份缺字段 → "" = 访问器回默认场，不崩不清零。 */
+    val affectFieldJSON: String = "",
+    /** 活人感内核·卷四《意图队列 + 性格复盘》意图列（图纸 §3.2 · E22）。老备份缺字段 → "" = 访问器回默认队列，不崩不清零。 */
+    val intentQueueJSON: String = "",
+    /** 「我们的日子」一次性回填完成标记（卷一图纸 §2.2 · 总图纸 §3.2）。老备份缺字段 → null = 未回填 → 导入后下次 catch-up 走一次回填（E14）。 */
+    val ourDaysBackfilledAt: Long? = null,
 )
 
 @Serializable

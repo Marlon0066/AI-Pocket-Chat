@@ -278,6 +278,8 @@ internal class AssistantTurnController(
             if (chatCharacter !== character) {
                 characterRepo.updateStreak(character.uuid, chatCharacter.streakCount, chatCharacter.lastChatDate ?: now)
             }
+            // 相识天数图纸 §4.1：首条消息落「第一次聊天时间」（SQL 只往早改；老角色由冷启补账改成真最早）。
+            if (character.firstMessageDate == null) characterRepo.markFirstMessageDate(character.uuid, now)
             notificationLearningService.recordUserResponse(character.uuid, now)
             // 忙碌延迟回复功能已删除（2026-07-11 用户拍板）：忙碌时段照常即时回复，
             // 分心/简短语气由现在卡【此刻】的 ⚠️ 提示承担。

@@ -286,6 +286,15 @@ class ScheduleGenerationService @Inject constructor(
             }
         }
 
+        // 意图块（活人感内核卷四 §4.5 ③·!backfill）：TA 心里挂着的事只进 innerThought，不变成日程事件；无 live 意图零行。
+        if (!request.isBackfill) {
+            val intentBlock = ScheduleLivenessPromptSections.intentSection(character, request.userName, System.currentTimeMillis())
+            if (intentBlock.isNotEmpty()) {
+                sections.add("")
+                sections.addAll(intentBlock)
+            }
+        }
+
         // 经济块（图纸 C6·§4-H4·拍板⑤含 backfill）：iOS 9.1b-5 既有引导文案接线，只给档位不给数字。
         val economic = ScheduleLivenessPromptSections.economicSection(request.economicTier)
         if (economic.isNotEmpty()) {

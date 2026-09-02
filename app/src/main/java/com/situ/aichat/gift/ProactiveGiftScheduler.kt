@@ -70,6 +70,8 @@ class ProactiveGiftScheduler @Inject constructor(
         userBirthday: Long?,
         now: Long = System.currentTimeMillis(),
         randomValue: Double? = null,
+        /** 卷四 K-20：用户昵称透传给 [ProactiveGiftContext.userName]（意图句用）；默认空 = 既有调用点零改。 */
+        userName: String = "",
     ): ProactiveGiftContext {
         val wallet = currencyDao.getCharacterWallet(character.uuid)
         val moodColors = recentMoodColors(character.moodHistory)
@@ -98,6 +100,7 @@ class ProactiveGiftScheduler @Inject constructor(
             coinBalance = coinBalance,
             relationshipLabel = characterRepo.currentRelationship(character.uuid),
             recentMoodSummary = moodSummary.ifEmpty { "无记录" },
+            userName = userName,
         )
     }
 

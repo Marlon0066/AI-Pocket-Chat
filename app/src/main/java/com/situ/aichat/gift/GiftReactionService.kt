@@ -10,7 +10,10 @@ import com.situ.aichat.data.model.GiftCategory
 import com.situ.aichat.data.model.GiftContext
 import com.situ.aichat.data.model.GrowthJson
 import com.situ.aichat.data.model.moodHistory
+import com.situ.aichat.data.model.relationshipPressure
 import com.situ.aichat.data.model.relationshipQuality
+import com.situ.aichat.data.model.syncedTo
+import com.situ.aichat.data.model.toQuality
 import com.situ.aichat.data.remote.llm.ApiConfigValues
 import com.situ.aichat.data.remote.llm.ChatMessageDto
 import com.situ.aichat.diagnostics.ContextLogService
@@ -118,8 +121,14 @@ class GiftReactionService @Inject constructor(
                 )
                 currencyService.addAffinityFromUser(character.uuid, finalGain, now)
                 val fresh = characterRepo.get(character.uuid) ?: character
+                // 卷二表1 ④：同②③——impact 本体零碰，只把目标净额经写口翻译成压强。
                 val newRel = GiftRelationshipImpactService.apply(impact, fresh.relationshipQuality)
-                characterRepo.updateRelationshipQuality(character.uuid, GrowthJson.encode(newRel))
+                val pressure = fresh.relationshipPressure.syncedTo(newRel)
+                characterRepo.updateRelationshipQuality(
+                    character.uuid,
+                    GrowthJson.encode(pressure.toQuality()),
+                    GrowthJson.encode(pressure),
+                )
             }
         }
 

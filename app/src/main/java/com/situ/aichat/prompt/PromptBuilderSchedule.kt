@@ -2,6 +2,15 @@ package com.situ.aichat.prompt
 
 import com.situ.aichat.data.local.entity.CharacterDailyScheduleEntity
 import com.situ.aichat.data.local.entity.ScheduleEventEntity
+import com.situ.aichat.data.model.affectField
+import com.situ.aichat.prompt.growth.fieldForRead
+import com.situ.aichat.data.model.intentQueue
+import com.situ.aichat.data.model.personaOperators
+import com.situ.aichat.data.model.relationshipPressure
+import com.situ.aichat.prompt.growth.AttentionJudge
+import com.situ.aichat.prompt.growth.AttentionVerdict
+import com.situ.aichat.prompt.growth.ScheduleSignal
+import com.situ.aichat.prompt.schedule.schedulePastLine
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -14,6 +23,10 @@ import java.time.format.DateTimeFormatter
  * 提示词全部**硬编码中文**（LLM 读的产品资产），不进 values。
  * 线下见面专版已落地（前后置区审计 🟡-1b·2026-07-13）：【此刻】走 [buildOfflineCurrentMomentBlock]
  * （见面=唯一事实、日程降级背景板）；时间锚同卷 factsOnly。**仍延后**：今日天气行（数据列已留、P11 才有值）。
+ *
+ * 活人感内核卷三（图纸 docs/handoff/2026-09-02-活人感内核-卷三-场内核与渲染收编.md §4）：三入口末尾各追加一行内心状态
+ * （[innerLine]·恒在 [MOMENT_PRIVATE_NOTE] 之前·无内容整行不出）；在线主路的睡眠/分心 ⚠️ 改由 [AttentionJudge] 三源裁决
+ * （退化时老文案逐字回退）；[DEFAULT_INJECTION_INSTRUCTION] 补第 6 条。线下版与兜底版**不**接 ⚠️ 与第 6 条（N-5）。
  */
 
 /** 日程列表 + 状态标签 + 天气 + 时态硬约束（scheduleAwareness 模块）。无日程数据→空串（【此刻】兜底交给 currentMoment）。 */
@@ -28,10 +41,7 @@ internal fun buildScheduleModule(ctx: PromptBuilder.BuildContext): String {
     // [▶️正在]/[⏳未来] 各行原样全细节;段标题与三个时态标签字面 = 红线零碰。
     val past = data.sortedEvents.filter { it.endTime < data.nowMillis }
     if (past.isNotEmpty()) {
-        val pastLine = past.joinToString(" → ") { event ->
-            val periodPart = if (event.periodLabel.isEmpty()) "" else "${event.periodLabel} "
-            "$periodPart${event.activity}"
-        }
+        val pastLine = schedulePastLine(past)
         parts.add("$TAG_PAST $pastLine")
     }
     for (event in data.sortedEvents.filter { it.endTime >= data.nowMillis }) {
@@ -66,7 +76,7 @@ internal fun buildCurrentMomentModule(ctx: PromptBuilder.BuildContext): String {
     if (ctx.scene == PromptScene.OFFLINE_MEETING) return buildOfflineCurrentMomentBlock(ctx)
     val data = loadScheduleData(ctx) ?: return buildEmptyScheduleFallback(ctx)
 
-    val momentBlock = buildCurrentMomentBlock(data, ctx.resolvedUserName)
+    val momentBlock = buildCurrentMomentBlock(data, ctx)
     if (momentBlock.isEmpty()) return ""
     return "$momentBlock\n\n$DEFAULT_INJECTION_INSTRUCTION"
 }
@@ -94,6 +104,8 @@ private fun buildOfflineCurrentMomentBlock(ctx: PromptBuilder.BuildContext): Str
     data.sortedEvents.firstOrNull { it.startTime > now }?.let { next ->
         lines.add("今天晚些时候（${hhmm(next.startTime, data.zone)}）原本还有「${next.activity}」——不用赶时间，也别把日程当清单念。")
     }
+    // 卷三 §4.2：内心行永远在私 note 之前（总图纸 §4.2 负向锁）；线下版不接 ⚠️ 判定与第 6 条（N-5）。
+    innerLine(ctx, data.zone).takeIf { it.isNotEmpty() }?.let { lines.add(it) }
     lines.add(MOMENT_PRIVATE_NOTE)
     return lines.joinToString("\n")
 }
@@ -122,9 +134,15 @@ private fun loadScheduleData(ctx: PromptBuilder.BuildContext): ScheduleData? {
 
 // MARK: - 「此刻」即时块（非线下 3 情况；线下专版见上方 buildOfflineCurrentMomentBlock）
 
-private fun buildCurrentMomentBlock(data: ScheduleData, userName: String): String {
+private fun buildCurrentMomentBlock(data: ScheduleData, ctx: PromptBuilder.BuildContext): String {
     val now = data.nowMillis
     val zone = data.zone
+    val hour = Instant.ofEpochMilli(now).atZone(zone).hour
+    // 卷三 §4.3 D2：她刚说的（最近 3 轮 · 3h）与精力值只取一次，三种情况共用同一份裁决输入。
+    // 修缮卷 §3.5：精力值取**读值**（列里存的是上次 tick 时刻的值，按 now 松弛后才是此刻）。
+    val selfReport = AttentionJudge.selfReport(ctx.recentCharacterLines)
+    val arousal = fieldForRead(ctx.character.affectField, now, zone).arousal
+    fun attentionLine(schedule: ScheduleSignal): String? = attentionText(AttentionJudge.judge(selfReport, schedule, arousal, hour))
 
     // 刀2 现在卡合并（2026-07-11 过审）：日期/时刻行删除——本模块与 timeAwareness 合并为一条「现在卡」，
     // 时间事实由前半的 <time_context> 独家供给（用户禁用 timeAwareness 的边缘配置=宁缺勿错，接受）。
@@ -144,12 +162,13 @@ private fun buildCurrentMomentBlock(data: ScheduleData, userName: String): Strin
         current.innerThought?.takeIf { it.isNotEmpty() }?.let { lines.add("内心活动：$it") }
         current.relatedCharacterNames?.takeIf { it.isNotEmpty() }?.let { lines.add("身边的人：$it") }
 
-        val hour = Instant.ofEpochMilli(now).atZone(zone).hour
-        if (scheduleIsSleepEvent(current.activity, current.isPhoneAvailable, hour)) {
-            lines.add("⚠️ 你此刻处于睡觉/半睡状态——回复要体现困意（用省略号、短句、哈欠等措辞），一两句就好，不要精神饱满地展开长话题。只用文字回复，不要用括号写动作、神态或场景。")
-        } else if (!current.isPhoneAvailable) {
-            lines.add("⚠️ 此刻你注意力不在手机上（比如开会、开车、专注做事）——回复应该简短、略显分心（例如\"稍等\"、\"在开会\"、\"晚点说\"），不要展开长对话。")
+        // 卷三 §4.3：日程只提供输入信号（睡眠段 / 手机不可用），⚠️ 行由三源裁决产出；无自述时与原 if/else 逐字等价（外部行为 6）。
+        val signal = when {
+            scheduleIsSleepEvent(current.activity, current.isPhoneAvailable, hour) -> ScheduleSignal.SLEEP
+            !current.isPhoneAvailable -> ScheduleSignal.PHONE_UNAVAILABLE
+            else -> ScheduleSignal.NONE
         }
+        attentionLine(signal)?.let { lines.add(it) }
 
         data.sortedEvents.firstOrNull { it.startTime > now }?.let { next ->
             var nextLine = "接下来 ${hhmm(next.startTime, zone)} 要${next.activity}"
@@ -168,6 +187,7 @@ private fun buildCurrentMomentBlock(data: ScheduleData, userName: String): Strin
             if (next.location.isNotEmpty()) headline += "（地点：${next.location}）"
             headline += "。"
             lines.add(headline)
+            attentionLine(ScheduleSignal.NONE)?.let { lines.add(it) } // 卷三 §4.3：只有「深夜 + 她说困了」一格会产出
             lines.add("这段时间没有明确安排，你可以根据自己的人设自然决定此刻在做什么（比如走路、处理杂事、休息、刷手机等）。")
         } else {
             // 情况 3：今日日程全部结束
@@ -175,10 +195,41 @@ private fun buildCurrentMomentBlock(data: ScheduleData, userName: String): Strin
             if (pastLast != null) headline += "（最后一件事是「${pastLast.activity}」）"
             headline += "。"
             lines.add(headline)
+            attentionLine(ScheduleSignal.NONE)?.let { lines.add(it) } // 卷三 §4.3：同上
             lines.add("你可能在放松、自由活动或准备休息。")
         }
     }
+    // 卷三 §4.2：内心行 = block 末尾追加（跟着【此刻】走，不依赖条件性末位钉）；无内容整行不出。
+    innerLine(ctx, zone).takeIf { it.isNotEmpty() }?.let { lines.add(it) }
     return lines.joinToString("\n")
+}
+
+/** 裁决结论 → 文案（四条都以 ⚠️ 开头·F29；老两条 = 原内联字面逐字搬入 [InnerStateScripts]）。[AttentionVerdict.NONE] ⇒ 不加行。 */
+private fun attentionText(verdict: AttentionVerdict): String? = when (verdict) {
+    AttentionVerdict.SLEEP_OLD -> InnerStateScripts.SLEEP_OLD
+    AttentionVerdict.DISTRACTED_OLD -> InnerStateScripts.DISTRACTED_OLD
+    AttentionVerdict.AWAKE_OVERRIDE -> InnerStateScripts.AWAKE_OVERRIDE
+    AttentionVerdict.AVAILABLE_OVERRIDE -> InnerStateScripts.AVAILABLE_OVERRIDE
+    AttentionVerdict.NONE -> null
+}
+
+/**
+ * 三入口共用的内心行（卷三 §4.2）：场（**读值**·修缮卷 §3.5 [fieldForRead]）+ 双压 + 算子 → [InnerStateRenderer]；`zone` 与
+ * [loadScheduleData] 同源（有日程用日程时区、否则系统时区），读值 / 时（hour）/ 台词变体（内心行换气）都按它算。
+ * 成长系统关 ⇒ 恒空（场系统随成长系统开关）。
+ */
+private fun innerLine(ctx: PromptBuilder.BuildContext, zone: ZoneId): String {
+    if (!ctx.appSettings.growthSystemEnabled) return ""
+    return InnerStateRenderer.render(
+        field = fieldForRead(ctx.character.affectField, ctx.now.toEpochMilli(), zone),
+        pressure = ctx.character.relationshipPressure,
+        operators = ctx.character.personaOperators,
+        userName = ctx.resolvedUserName,
+        hour = ctx.now.atZone(zone).hour,
+        now = ctx.now.toEpochMilli(),
+        intents = ctx.character.intentQueue.intents, // 卷四 §4.4：第 2 位候选 + 算子 c01–c06
+        zone = zone, // 内心行换气：台词变体按同一时区的本地日算（三入口同源）
+    )
 }
 
 /**
@@ -186,10 +237,12 @@ private fun buildCurrentMomentBlock(data: ScheduleData, userName: String): Strin
  * 刀2 现在卡合并：时刻/日期行删除（由同卡前半 <time_context> 独家供给）；「历史是过去式」护栏
  * 由时间锚的间隔五档措辞承担（见 [TimeAnchorFormatter.buildTimeAnchor]），此处不重复。
  */
-private fun buildEmptyScheduleFallback(ctx: PromptBuilder.BuildContext): String = """
-    【此刻】结合你自己的职业、性格和作息，代入你这个角色此刻真实的状态，自然体现在回应里——不用硬编具体地点。
-    ${MOMENT_PRIVATE_NOTE}
-""".trimIndent()
+private fun buildEmptyScheduleFallback(ctx: PromptBuilder.BuildContext): String = listOfNotNull(
+    "【此刻】结合你自己的职业、性格和作息，代入你这个角色此刻真实的状态，自然体现在回应里——不用硬编具体地点。",
+    // 卷三 §4.2：内心行在【此刻】行之后、私 note 之前；无内心行时输出与改前逐字节相同（K-F19 钉）。
+    innerLine(ctx, ZoneId.systemDefault()).takeIf { it.isNotEmpty() },
+    MOMENT_PRIVATE_NOTE,
+).joinToString("\n")
 
 // MARK: - 纯函数（单测覆盖）
 
@@ -251,6 +304,7 @@ private const val MOMENT_PRIVATE_NOTE = "（这段是给你看的，不要在回
  * currentMoment 末尾默认注入指令（刀2 现在卡合并过审稿）：删「若聊天记录…以【此刻】为准」括号句
  * （双裁判之二,历史过时语义已由时间锚五档承担）；原第 4/5 条并一条；末尾追加全卡唯一尾注。
  * 第 5 条 = 多源事实裁决句（四小件图纸·2026-07-16）：记忆/朋友圈/日程与【此刻】冲突时的全局裁决序。
+ * 第 6 条 = 活人感内核卷三 D3（总图纸 §4.4）：她自己刚说过的状态优先于日程陈述——只在在线主路。
  * 仅在线主路注入——线下走 [buildOfflineCurrentMomentBlock]、无日程走 [buildEmptyScheduleFallback]，
  * 二者均无「日程 vs 此刻」冲突面（历史时态护栏由时间锚五档承担，不重复设岗）。
  */
@@ -262,6 +316,7 @@ private val DEFAULT_INJECTION_INSTRUCTION = """
     3. 【此刻】有 ⚠️ 提示时（睡眠、开会、专注）——回复要简短、体现分心
     4. 其他情况下可以自然带出，但不要强行塞进每句话；整段回复里带出一次足够，同一状态也别在连续几次回复里反复强调
     5. 记忆、朋友圈、日程里更早的信息如果和【此刻】说得不一样，一律以【此刻】为准——那些是过去，这是现在
+    6. 你自己在最近几轮对话里刚说过的状态，优先于【此刻】的日程陈述。
 
     合格示范（仅供参考风格，不要照搬用词）：
     - 用户"在吗？" → "在呢，刚到公司准备开会，等会儿回你"

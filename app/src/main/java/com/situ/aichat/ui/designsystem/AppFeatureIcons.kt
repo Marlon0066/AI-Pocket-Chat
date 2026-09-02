@@ -150,4 +150,25 @@ object AppFeatureIcons {
             }
         }.build()
     }
+
+    /** 我们的日子：日历页（封皮圆角矩形 + 顶栏线 + 两只环 + 右下翻页折角·描边）。 */
+    val Days: ImageVector by lazy {
+        builder("FeatureDays").apply {
+            path(stroke = PLACEHOLDER, strokeLineWidth = W, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+                moveTo(6f, 6f); lineTo(18f, 6f)
+                arcToRelative(2f, 2f, 0f, isMoreThanHalf = false, isPositiveArc = true, 2f, 2f)
+                lineTo(20f, 14f); lineTo(14f, 20f); lineTo(6f, 20f)
+                arcToRelative(2f, 2f, 0f, isMoreThanHalf = false, isPositiveArc = true, -2f, -2f)
+                lineTo(4f, 8f)
+                arcToRelative(2f, 2f, 0f, isMoreThanHalf = false, isPositiveArc = true, 2f, -2f)
+                close()
+            }
+            path(stroke = PLACEHOLDER, strokeLineWidth = W, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+                moveTo(4f, 10f); lineTo(20f, 10f)           // 顶栏线
+                moveTo(8.5f, 4f); lineTo(8.5f, 7.5f)        // 左环
+                moveTo(15.5f, 4f); lineTo(15.5f, 7.5f)      // 右环
+                moveTo(14f, 20f); lineTo(14f, 14f); lineTo(20f, 14f) // 翻页折角
+            }
+        }.build()
+    }
 }

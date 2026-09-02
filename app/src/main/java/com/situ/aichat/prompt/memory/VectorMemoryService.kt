@@ -7,6 +7,7 @@ import android.content.Context
 import android.util.Log
 import com.situ.aichat.data.model.MessageKind
 import com.situ.aichat.offline.OfflineContentParser
+import com.situ.aichat.ourdays.OurDayKey
 import com.situ.aichat.prompt.DirtyMessageDetector
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -32,6 +33,8 @@ class VectorMemoryService @Inject constructor(
     private val embedder: TextEmbedder,
     /** 见面档案第二路候选（记忆改造四期·部件⑥·图纸 §3.2）：档案行向量与消息向量在同一 TOP_K 池竞争。 */
     private val archiveIndex: MeetingArchiveVectorService,
+    /** 「我们的日子」第三路候选（卷二图纸 §3.6·W-1）：事实行向量与消息 / 档案在同一 TOP_K 池竞争。 */
+    private val ourDayIndex: OurDayVectorService,
 ) {
 
     private data class Candidate(
@@ -231,8 +234,9 @@ class VectorMemoryService @Inject constructor(
             SignatureAction.CLEAR_AND_REEMBED -> {
                 val cleared = messageDao.clearAllEmbeddings()
                 val clearedArchive = archiveIndex.clearAll() // 四期：消息 + 档案双清（图纸 §3.2·计数并入日志）
+                val clearedOurDays = ourDayIndex.clearAll() // 卷二：三清含 our_days（E52）
                 EmbeddingModelSignatureStore.set(context, current)
-                Log.i(TAG, "嵌入模型签名变更 $saved → $current，已清空 $cleared 条消息 + $clearedArchive 条档案旧向量，待回填重嵌")
+                Log.i(TAG, "嵌入模型签名变更 $saved → $current，已清空 $cleared 条消息 + $clearedArchive 条档案 + $clearedOurDays 条日子旧向量，待回填重嵌")
                 cleared
             }
         }
@@ -289,7 +293,11 @@ class VectorMemoryService @Inject constructor(
 
             val conversationUuids = conversationDao.getByCharacter(characterUuid).map { it.uuid }
                 .ifEmpty { listOf(currentConversationUuid) }
-            val windowCutoff = shortTermWindowCutoffMillis(currentConversationUuid, shortTermLength)
+            val windowTimestamps = messageDao.recentUserTimestamps(currentConversationUuid, shortTermLength) // DESC
+            val windowCutoff = shortTermWindowCutoffMillis(windowTimestamps, shortTermLength)
+            // 第三路候选（我们的日子·卷二 W-8·R1 🟡-1）：cutoff 与消息路同源。消息路的 null = 会话短于窗口、整个会话都在原文里；
+            // 对日子路它等价于「从该会话最早一条用户消息那天起全部排除」→ 退回最旧用户消息时刻，守住「窗口内日子永不出」（§9.4）。
+            val ourDays = ourDayIndex.retrieval(queryEmbedding, characterUuid, effectiveThreshold, windowCutoff ?: windowTimestamps.lastOrNull())
 
             val candidates = ArrayList<Candidate>()
             for (convUuid in conversationUuids) {
@@ -346,11 +354,12 @@ class VectorMemoryService @Inject constructor(
             // 单池合并（记忆改造四期·图纸 §3.2·锁定）：消息路 TOP_K + 档案路全部候选，统一按相似度再取 TOP_K。
             val scored = candidates.sortedByDescending { it.similarity }.take(TOP_K)
                 .map { Scored(it.similarity, formatRetrievalSnippet(MemoryService.formatTimestamp(it.timestamp), it.roleRaw, it.content, it.isOffline, userName, characterName)) } +
-                archive.candidates.map { Scored(it.similarity, formatArchiveSnippet(MemoryService.formatTimestamp(it.startedAtMillis), it.content)) }
+                archive.candidates.map { Scored(it.similarity, formatArchiveSnippet(MemoryService.formatTimestamp(it.startedAtMillis), it.content)) } +
+                ourDays.candidates.map { Scored(it.similarity, formatOurDaySnippet(it.dayKey, it.factLine)) }
             val result = scored.sortedByDescending { it.similarity }.take(TOP_K).map { it.snippet }
             Log.i(
                 TAG,
-                "检索完成: 过阈值(${"%.2f".format(effectiveThreshold)})候选=${candidates.size} 档案候选=${archive.candidates.size} " +
+                "检索完成: 过阈值(${"%.2f".format(effectiveThreshold)})候选=${candidates.size} 档案候选=${archive.candidates.size} 日子候选=${ourDays.candidates.size} " +
                     "注入prompt=${result.size} 耗时=${(System.nanoTime() - startNanos) / 1_000_000}ms(后台)",
             )
             result
@@ -359,11 +368,10 @@ class VectorMemoryService @Inject constructor(
 
     // MARK: - 短期窗口截断时间
 
-    /** 第 [shortTermLength] 近的用户消息时间戳；不足 N 条 → null（全部在窗口内）。 */
-    private suspend fun shortTermWindowCutoffMillis(conversationUuid: String, shortTermLength: Int): Long? {
-        val timestamps = messageDao.recentUserTimestamps(conversationUuid, shortTermLength)
+    /** 第 [shortTermLength] 近的用户消息时间戳（[timestamps] = 该会话最近 N 条用户消息时刻·DESC）；不足 N 条 → null（全部在窗口内）。 */
+    private fun shortTermWindowCutoffMillis(timestamps: List<Long>, shortTermLength: Int): Long? {
         if (timestamps.size < shortTermLength) return null
-        return timestamps.last() // DESC 取回，最后一个 = 第 N 近（最旧）
+        return timestamps.lastOrNull() // DESC 取回，最后一个 = 第 N 近（最旧）
     }
 
     // 内容渲染（renderMemoryContent）与时间格式（formatTimestamp）已下沉到 MemoryService，
@@ -456,6 +464,9 @@ class VectorMemoryService @Inject constructor(
          * （与既有 `[… · 线下见面]` 同性质·§6）。
          */
         internal fun formatArchiveSnippet(ts: String, content: String): String = "[$ts · 见面档案] $content"
+
+        /** 「我们的日子」第三路片段格式（卷二 §4.2 锁定·REDLINES §1 与 `pb_mem_format_ban` / `OurDayNoteParser.DATE_PREFIX` 强耦合）。 */
+        internal fun formatOurDaySnippet(dayKey: String, factLine: String): String = "[$dayKey ${OurDayKey.weekdayCn(dayKey)} · 日子] $factLine"
 
         const val TOP_K = 5
         const val DEFAULT_SIMILARITY_THRESHOLD = 0.65

@@ -42,6 +42,9 @@ object PromptMacros {
     const val MEMORY_CONTENT = "{{记忆内容}}"
     const val MEETING_MEMORY = "{{见面记忆}}"
 
+    /** 「我们的日子」（卷二）：日期指名 + 那年今日两路的注入块；空 ⇒ 模块跳过。 */
+    const val OUR_DAYS = "{{我们的日子}}"
+
     // MARK: - 时间 / 日程
 
     const val TIME_CONTEXT = "{{时间上下文}}"

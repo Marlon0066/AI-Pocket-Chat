@@ -6,6 +6,7 @@ import com.situ.aichat.data.local.entity.MessageEntity
 import com.situ.aichat.data.local.entity.MilestoneEntity
 import com.situ.aichat.data.local.entity.OpenLoopEntity
 import com.situ.aichat.data.local.entity.OpenLoopType
+import com.situ.aichat.data.local.entity.OurDayEntity
 import com.situ.aichat.data.local.entity.ScheduleEventEntity
 import com.situ.aichat.data.model.AppSettings
 import com.situ.aichat.data.model.StructuredMemory
@@ -118,6 +119,23 @@ class PromptLayoutAuditReport {
         "2026-06-${10 + i} 你们聊到你小时候在外婆家长大,夏天在院子里乘凉吃西瓜,她说很想看看那个院子的照片。"
     }
 
+    // 「我们的日子」卷二(2026-09-02)：中档给两页——「上周三」(now=07-11 周六 ⇒ 07-01) + 一年前的今天(2025-07-11)；
+    // 历史末条用户消息改成提「上周三」,让日期指名 + 那年今日两路都真出行,量得出块的字符量与位置。
+    private fun auditOurDays() = listOf(
+        OurDayEntity(uuid = "od1", characterUuid = "c1", dayKey = "2026-07-01", messageCount = 18,
+            factLine = "夏晴子和用户聊了店里新到的豆子,用户抱怨加班到十点,夏晴子说等周末给他留一杯手冲", createdAtMillis = 0L, updatedAtMillis = 0L),
+        OurDayEntity(uuid = "od2", characterUuid = "c1", dayKey = "2025-07-11", messageCount = 6,
+            factLine = "夏晴子第一次给用户发了团子踩拉花的照片,用户笑了很久", createdAtMillis = 0L, updatedAtMillis = 0L),
+    )
+
+    /** 中档历史：末条用户消息提「上周三」（其余同 [history]）。 */
+    private fun historyMentioningLastWednesday(rounds: Int): List<MessageEntity> {
+        val msgs = history(rounds).toMutableList()
+        val last = msgs.indexOfLast { it.roleRaw == "user" }
+        msgs[last] = msgs[last].copy(content = "上周三我们聊到的那个豆子后来怎么样了(第${rounds - 1}轮)")
+        return msgs
+    }
+
     // 见面记忆(第一人称日记体·07-11 改)：中档 2 段、重档 = 中档 + legacy 合并头 + 第三段(布局审计"改前/改后"对照用)。
     private val meetingMemoryMid =
         "【见面 · 2026-06-20 19:30 · 江边夜市】\n" +
@@ -151,12 +169,13 @@ class PromptLayoutAuditReport {
                 val (sched, events) = schedule()
                 PromptBuilder.buildMessages(
                     character = character(memoryChars = 1500),
-                    sortedMessages = history(20), userProfile = null,
+                    sortedMessages = historyMentioningLastWednesday(20), userProfile = null,
                     appSettings = settings.copy(calendarIntegrationEnabled = true, characterCanInitiateOfflineMeeting = true),
                     strings = strings(), structuredMemory = structuredMemory(), milestones = milestones(),
                     todaySchedule = sched, todayScheduleEvents = events,
                     retrievedMemorySnippets = snippets(3), openLoops = openLoops(),
                     offlineMeetingMemoryText = meetingMemoryMid,
+                    ourDays = auditOurDays(),
                     now = now,
                 )
             }
@@ -185,6 +204,7 @@ class PromptLayoutAuditReport {
         val c = content.replace("\n", " ").trim()
         val known = listOf(
             "<time_context>" to "⏰时间锚<time_context>", "【此刻】" to "📍【此刻】状态",
+            "[我们的日子" to "📦前置区大system·内含📅[我们的日子]块(日期指名+那年今日)",
         )
         for ((k, v) in known) if (c.contains(k)) return v
         return c.take(22)

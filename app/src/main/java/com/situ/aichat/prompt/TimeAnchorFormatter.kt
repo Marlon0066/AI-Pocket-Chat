@@ -9,7 +9,8 @@ import java.time.temporal.ChronoUnit
 /**
  * 时间锚（方案 G2 → 布局审计刀2「现在卡」改造，2026-07-11 过审）：生成 `<time_context>` 块 =
  * 客观时间事实（当前时刻/星期/间隔）+ **间隔五档措辞**。设计要点：
- * - 间隔行自带方向：「对方隔了约 X 才回你」（项目里最后一条消息恒为角色的，方向恒定——用户补充拍板）；
+ * - 间隔行自带方向：「{userLabel}隔了约 X 才回你」（项目里最后一条消息恒为角色的，方向恒定——用户补充拍板）；
+ * - 用户称呼**块级单源** [USER_LABEL_FALLBACK] 规则：有昵称叫昵称、空才叫「对方」，相识行与间隔行共用（图纸 §13）；
  * - 五档取代旧的一刀切「重新拿起手机」段：短憩(<10min 静默)/小隔(10min–2h 仅间隔行)/半日(≥2h，
  *   按时长分"这几个小时/这大半天")/跨夜(隔 1 自然日且 ≥6h)/数日(2–7 天)/久别(>7 天)；
  * - 只给事实与气口，不预设情绪（时间感知专项原则：状态交 AI 按人设判断）；
@@ -27,26 +28,45 @@ object TimeAnchorFormatter {
     private val timeOnlyFmt: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     private val chineseWeekdayChars = listOf("日", "一", "二", "三", "四", "五", "六")
 
+    /** 相识事实（现在卡第二行·相识天数图纸 §4.2）：[firstMessageDate] = 角色「第一次聊天时间」epoch ms；[streakCount] = 火花连续天数。用户称呼不在此，见 [buildTimeAnchor] 的 `userLabel`。 */
+    data class AcquaintanceFacts(val firstMessageDate: Long, val streakCount: Int)
+
+    /** 连续聊天半句门槛（D-8）。 */
+    internal const val STREAK_MENTION_MIN_DAYS = 7
+
     /**
-     * @param directionalGapLine 间隔行措辞:true=「对方隔了约X才回你」(即时聊天,最后一条恒为角色的,方向成立);
+     * 昵称为空时的用户称呼（D-6）。**块级单源**：相识行与间隔行共用同一个 `userLabel`
+     * （相识天数 R1 用户拍板 2026-09-03·图纸 §13），全 App 同一条规则「有昵称叫名字、没有才叫『对方』」。
+     */
+    internal const val USER_LABEL_FALLBACK = "对方"
+
+    /**
+     * @param directionalGapLine 间隔行措辞:true=「{userLabel}隔了约X才回你」(即时聊天,最后一条恒为角色的,方向成立);
      * false=中性「距离你上条回复：约X」——**延迟生成路**(进程恢复补生成)必须用中性:那段延迟是系统的,
      * 方向化会把锅甩给用户(T5 复核🟡④·2026-07-11 修)。
+     * @param userLabel 块内对用户的统一称呼：昵称非空即昵称，空则 [USER_LABEL_FALLBACK]；相识行与方向化间隔行共用。
      */
     fun buildTimeAnchor(
         now: Instant,
         lastAssistantTime: Instant?,
         directionalGapLine: Boolean = true,
+        acquaintance: AcquaintanceFacts? = null,
+        userLabel: String = USER_LABEL_FALLBACK,
     ): String {
         val lines = mutableListOf<String>()
         lines.add(formatCurrentMoment(now))
+        // 相识行（图纸 §4.2）：现在卡第二行，紧随「现在：…」——与现在日期并排，模型可自算周年。
+        val acqLine = acquaintance?.let { acquaintanceLine(it, now, userLabel) }
+        acqLine?.let { lines.add(it) }
 
         // 首次对话：没 assistant 历史就认定新会话
         if (lastAssistantTime == null) {
-            lines.add("这是你们的第一次对话")
+            // D-9：相识行在场时不出「第一次对话」句——老角色新开对话串，两句同段自相矛盾。
+            if (acqLine == null) lines.add("这是你们的第一次对话")
             return wrap(lines, tierNote = null)
         }
 
-        formatSinceLastAssistant(now, lastAssistantTime, directionalGapLine)?.let { lines.add(it) }
+        formatSinceLastAssistant(now, lastAssistantTime, directionalGapLine, userLabel)?.let { lines.add(it) }
         val seconds = Duration.between(lastAssistantTime, now).seconds
         return wrap(lines, gapTierNote(now, lastAssistantTime, seconds))
     }
@@ -65,15 +85,23 @@ object TimeAnchorFormatter {
     }
 
     /**
-     * 间隔行（自带方向）：间隔 < 10 分钟返回 null（正常聊天节奏不显示）；否则「对方隔了约 X 才回你」。
+     * 间隔行（自带方向）：间隔 < 10 分钟返回 null（正常聊天节奏不显示）；否则「{userLabel}隔了约 X 才回你」。
      * 旧「（跨夜）/（跨日）」后缀已废——跨夜语义由五档措辞承担，不再叠标注。
      */
-    fun formatSinceLastAssistant(now: Instant, lastAssistantTime: Instant?, directional: Boolean = true): String? {
+    fun formatSinceLastAssistant(
+        now: Instant,
+        lastAssistantTime: Instant?,
+        directional: Boolean = true,
+        userLabel: String = USER_LABEL_FALLBACK,
+    ): String? {
         if (lastAssistantTime == null) return null
         val seconds = Duration.between(lastAssistantTime, now).seconds
         if (seconds < 600) return null
         val duration = gapDurationForLine(seconds)
-        return if (directional) "对方隔了${duration}才回你" else "距离你上条回复：$duration"
+        // 相识天数 R1 用户拍板（图纸 §13）：方向化间隔行改用块级 [userLabel]，与相识行同一个称呼；
+        // 昵称为空时退回 [USER_LABEL_FALLBACK] = 旧文案「对方隔了…才回你」逐字不变。
+        // 中性变体（延迟生成路）不提人，保持原样。
+        return if (directional) "${userLabel}隔了${duration}才回你" else "距离你上条回复：$duration"
     }
 
     /** 间隔行用时长文案：复用 [formatDuration]，仅 ≥1 年档改成能嵌进句子的「一年多」。 */
@@ -145,6 +173,24 @@ object TimeAnchorFormatter {
         // java DayOfWeek: MON=1..SUN=7 → 映射到 iOS 的 [日一二三四五六]（日=0）
         val dow = instant.atZone(zone).dayOfWeek.value % 7  // SUN(7)→0, MON(1)→1, ... SAT(6)→6
         return "周${chineseWeekdayChars[dow]}"
+    }
+
+    /**
+     * 相识行（图纸 §4.2·D-6/D-7/D-8）：「你和{昵称}是 yyyy-MM-dd 第一次聊天认识的，到今天相识 N 天。」
+     * 天数 = 本地日历日差；当天（0）与未来（负·时钟回拨/坏值）一律不出行。连续聊天满 [STREAK_MENTION_MIN_DAYS]
+     * 天、且不超过相识天数 +1（坏数据不上屏）时追加半句「，最近连续 N 天每天都聊。」。
+     * 角色恒称「你」、用户用块级 [userLabel]（空昵称退 [USER_LABEL_FALLBACK]）——与同块间隔行**同一个称呼**（图纸 §13）。
+     */
+    internal fun acquaintanceLine(facts: AcquaintanceFacts, now: Instant, userLabel: String = USER_LABEL_FALLBACK): String? {
+        val first = Instant.ofEpochMilli(facts.firstMessageDate)
+        val days = calendarDayDifference(first, now)
+        if (days < 1) return null
+        val base = "你和${userLabel}是 ${formatDateOnly(first)} 第一次聊天认识的，到今天相识 $days 天"
+        return if (facts.streakCount >= STREAK_MENTION_MIN_DAYS && facts.streakCount <= days + 1) {
+            "$base，最近连续 ${facts.streakCount} 天每天都聊。"
+        } else {
+            "$base。"
+        }
     }
 
     /**

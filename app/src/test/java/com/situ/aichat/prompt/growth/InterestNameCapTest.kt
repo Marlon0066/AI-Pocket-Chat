@@ -2,6 +2,9 @@ package com.situ.aichat.prompt.growth
 
 import com.situ.aichat.data.model.DynamicInterest
 import io.mockk.mockk
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -25,6 +28,9 @@ class InterestNameCapTest {
         characterWriteLock = mockk(relaxed = true),
         settingsRepo = mockk(relaxed = true),
         throttleStore = mockk(relaxed = true),
+        affectKernel = mockk(relaxed = true),
+        intentKernel = mockk(relaxed = true),
+        clock = Clock.fixed(Instant.ofEpochMilli(now), ZoneId.systemDefault()),
     )
 
     private val now = 1_700_000_000_000L

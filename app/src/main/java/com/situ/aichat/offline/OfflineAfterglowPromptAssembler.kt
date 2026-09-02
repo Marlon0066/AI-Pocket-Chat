@@ -122,6 +122,12 @@ class OfflineAfterglowPromptAssembler @Inject constructor(
             offlineMeetingMemoryText = offlineMeetingMemoryRepository.renderedForInjection(character.uuid),
             unsummarizedRoundsOutsideBaseWindow = unsummarizedRounds,
             scene = PromptScene.ONLINE_CHAT,
+            // 余温消息是 TA **主动**发起（见 [OfflineAfterglowService] KDoc），不是在「回」用户——
+            // 方向化间隔行「…隔了约 X 才回你」在这条路上事实即错，须走中性措辞
+            // （与 [com.situ.aichat.recovery.RecoveryReplyGenerator] 同款：T5 复核🟡④「那段延迟是系统的，
+            // 方向化会把锅甩给用户」）。本组装器自称复刻 Recovery 全量 fan-out，当初漏抄了这一个参数；
+            // 相识天数 §13 把该行从「对方」换成真名后，这句错话变得会被模型顺口接出来，故一并补上。
+            delayedGeneration = true,
             worldInfo = worldInfo,
             now = nowInstant,
         )

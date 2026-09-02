@@ -19,7 +19,10 @@ import com.situ.aichat.data.model.GrowthLogEntry
 import com.situ.aichat.data.model.MessageKind
 import com.situ.aichat.data.model.growthLog
 import com.situ.aichat.data.model.moodHistory
+import com.situ.aichat.data.model.relationshipPressure
 import com.situ.aichat.data.model.relationshipQuality
+import com.situ.aichat.data.model.syncedTo
+import com.situ.aichat.data.model.toQuality
 import com.situ.aichat.data.repository.CharacterRepository
 import com.situ.aichat.data.repository.CharacterWriteLock
 import com.situ.aichat.data.repository.ConversationRepository
@@ -285,22 +288,28 @@ class GiftSendService @Inject constructor(
      *
      * [character] 由调用方在 [CharacterWriteLock] 内、事务起始读得（无并发写者持锁 → 即最新值），故直接对其
      * `relationshipQuality`/`growthLog` 施加增量即对齐 iOS 单线程逐属性改 @Model。写回改列级 @Query UPDATE：
-     * 无成长日志（聊天送礼非珍贵）只写 relationshipQuality 一列，有则两列一起写，**不整行覆盖**分析/计数器刚写的其它列。
+     * 无成长日志（聊天送礼非珍贵）写 relationshipQuality + relationshipPressure 两列，有则连 growthLog 三列一起写，
+     * **不整行覆盖**分析/计数器刚写的其它列。
      */
     private suspend fun applyRelationshipAndGrowth(
         character: CharacterEntity,
         impact: GiftRelationshipImpact,
         growthEntry: GrowthLogEntry?,
     ) {
-        val newRelationship = GrowthJson.encode(GiftRelationshipImpactService.apply(impact, character.relationshipQuality))
+        // 卷二表1 ②③：impact 的计算（GiftRelationshipImpactService.compute/apply）**本体零碰**，
+        // 只把算出来的目标净额经写口翻译成压强——impact 恒 ≥0 ⇒ 实际只加正压；某维为负则按符号进负压。
+        val pressure = character.relationshipPressure
+            .syncedTo(GiftRelationshipImpactService.apply(impact, character.relationshipQuality))
+        val newRelationship = GrowthJson.encode(pressure.toQuality())
         if (growthEntry != null) {
             characterRepo.updateRelationshipQualityAndGrowthLog(
                 character.uuid,
                 newRelationship,
                 GrowthJson.encodeGrowthLog(character.growthLog + growthEntry),
+                GrowthJson.encode(pressure),
             )
         } else {
-            characterRepo.updateRelationshipQuality(character.uuid, newRelationship)
+            characterRepo.updateRelationshipQuality(character.uuid, newRelationship, GrowthJson.encode(pressure))
         }
     }
 

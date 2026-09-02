@@ -41,6 +41,8 @@ import com.situ.aichat.ui.designsystem.AppNavIcons
 import com.situ.aichat.ui.character.CharacterEditScreen
 import com.situ.aichat.ui.character.CharacterProfileScreen
 import com.situ.aichat.ui.offline.OfflineMeetingMemoryScreen
+import com.situ.aichat.ui.ourdays.OurDayPageScreen
+import com.situ.aichat.ui.ourdays.OurDaysScreen
 import com.situ.aichat.ui.promise.PromiseLedgerScreen
 import com.situ.aichat.ui.schedule.ScheduleFullDayScreen
 import com.situ.aichat.ui.starfield.StarfieldScreen
@@ -104,6 +106,7 @@ import com.situ.aichat.ui.contextlog.ContextLogTextScreen
 import com.situ.aichat.ui.settings.AppearanceSettingsScreen
 import com.situ.aichat.ui.settings.ContentFilterSettingsScreen
 import com.situ.aichat.ui.settings.GrowthSettingsScreen
+import com.situ.aichat.ui.settings.KernelObservatoryScreen
 import com.situ.aichat.ui.settings.ReplyRuleSettingsScreen
 import com.situ.aichat.ui.settings.MemoryHubScreen
 import com.situ.aichat.ui.wallet.RedeemCodeScreen
@@ -360,6 +363,7 @@ fun AIChatApp(
                 MomentsHubScreen(
                     onOpenFeed = { navController.navigate("momentsFeed") },
                     onOpenDiary = { navController.navigate("diary") },
+                    onOpenOurDays = { navController.navigate("ourDays") },
                     onOpenStory = { navController.navigate("momentsStory") },
                     onOpenWorld = { navController.navigate("world") { launchSingleTop = true } },
                     bottomContentPadding = AppBottomNavHeight,
@@ -809,7 +813,14 @@ fun AIChatApp(
                 SystemTogglesScreen(onBack = { navController.popBackStack() })
             }
             composable("growthSettings") {
-                GrowthSettingsScreen(onBack = { navController.popBackStack() })
+                GrowthSettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenObservatory = { navController.navigate("kernelObservatory") },
+                )
+            }
+            // 活人感内核卷零：开发者调试页（DEBUG 守卫在 Screen 内部，本文件只接线）。
+            composable("kernelObservatory") {
+                KernelObservatoryScreen(onBack = { navController.popBackStack() })
             }
             composable("replyRuleSettings") {
                 ReplyRuleSettingsScreen(onBack = { navController.popBackStack() })
@@ -974,6 +985,7 @@ fun AIChatApp(
                     onOpenSchedule = { uuid -> navController.navigate("scheduleFullDay/$uuid") },
                     onOpenPromises = { uuid -> navController.navigate("promises/$uuid") },
                     onOpenStarfield = { uuid -> navController.navigate("starfield/$uuid") },
+                    onOpenOurDays = { uuid -> navController.navigate("ourDays?character=$uuid") },
                     onEditMemory = { uuid -> navController.navigate("memoryEdit/$uuid") },
                 )
             }
@@ -1010,12 +1022,39 @@ fun AIChatApp(
             }
             // 14.2 全天行程视图（资料页日程卡「查看全天行程」目标）。
             composable(
-                route = "scheduleFullDay/{characterUuid}",
-                arguments = listOf(navArgument("characterUuid") { type = NavType.StringType }),
+                route = "scheduleFullDay/{characterUuid}?date={date}",
+                arguments = listOf(navArgument("characterUuid") { type = NavType.StringType }, navArgument("date") { type = NavType.StringType; nullable = true; defaultValue = null }),
             ) {
                 ScheduleFullDayScreen(
                     onBack = { navController.popBackStack() },
                     onOpenChat = { conversationUuid -> navController.navigate("chat/$conversationUuid") },
+                )
+            }
+            // 「我们的日子」卷三（图纸 §3.6）：日历页（两入口共用·可选预选角色 + 日期）/ 一天的页（"all" = 全部模式）。
+            composable(
+                route = "ourDays?character={character}&date={date}",
+                arguments = listOf(
+                    navArgument("character") { type = NavType.StringType; nullable = true; defaultValue = null },
+                    navArgument("date") { type = NavType.StringType; nullable = true; defaultValue = null },
+                ),
+            ) {
+                OurDaysScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenDay = { uuid, dayKey -> navController.navigate("ourDays/day/$uuid/$dayKey") },
+                )
+            }
+            composable(
+                route = "ourDays/day/{characterUuid}/{dayKey}",
+                arguments = listOf(navArgument("characterUuid") { type = NavType.StringType }, navArgument("dayKey") { type = NavType.StringType }),
+            ) {
+                OurDayPageScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenDay = { uuid, dayKey -> navController.navigate("ourDays/day/$uuid/$dayKey") },
+                    onOpenMeetings = { uuid -> navController.navigate("offlineMeetings/$uuid") },
+                    onOpenPromises = { uuid -> navController.navigate("promises/$uuid") },
+                    onOpenMoments = { navController.navigate("momentsFeed") },
+                    onOpenDiary = { uuid -> navController.navigate("diary/$uuid") },
+                    onOpenSchedule = { uuid, dayKey -> navController.navigate("scheduleFullDay/$uuid?date=$dayKey") },
                 )
             }
         }

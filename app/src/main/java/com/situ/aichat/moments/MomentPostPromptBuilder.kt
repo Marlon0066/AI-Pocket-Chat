@@ -83,6 +83,8 @@ object MomentPostPromptBuilder {
         petStatus: String? = null,
         overrides: Map<String, String> = emptyMap(),
         userName: String,
+        /** 卷四 §4.5 ②：`IntentExitRenderer.momentBlock` 产出的两行（空 ⇒ 不插任何行，提示词逐字节同前）。 */
+        intentBlock: String = "",
     ): String {
         val wordCountRange = resolveOverride(overrides, MomentsPromptField.WORD_COUNT_RANGE, DEFAULT_WORD_COUNT_RANGE)
         val toneStyle = resolveOverride(overrides, MomentsPromptField.TONE_STYLE, "")
@@ -126,6 +128,12 @@ object MomentPostPromptBuilder {
 
         parts.add(nowContext)
         parts.add("")
+
+        // 卷四 §4.5 ②：心里挂着的事——nowContext 之后、schedulePrompt 之前；空则整段省略。
+        if (intentBlock.isNotEmpty()) {
+            parts.add(intentBlock)
+            parts.add("")
+        }
 
         if (schedulePrompt.isNotEmpty()) {
             parts.add(schedulePrompt)

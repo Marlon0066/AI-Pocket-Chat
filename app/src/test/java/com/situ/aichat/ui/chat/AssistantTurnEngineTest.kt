@@ -114,6 +114,7 @@ class AssistantTurnEngineTest {
     private lateinit var openLoopDetectionTrigger: OpenLoopDetectionTrigger
     private lateinit var openLoopRepository: OpenLoopRepository
     private lateinit var promiseRepository: com.situ.aichat.data.repository.PromiseRepository
+    private lateinit var ourDayRepository: com.situ.aichat.data.repository.OurDayRepository
     private lateinit var errorFlow: MutableStateFlow<String?>
     private lateinit var infoToastFlow: MutableStateFlow<String?>
     private lateinit var isDelivering: MutableStateFlow<Boolean>
@@ -170,6 +171,8 @@ class AssistantTurnEngineTest {
         openLoopDetectionTrigger = mockk(relaxed = true)
         openLoopRepository = mockk(relaxed = true)
         promiseRepository = mockk(relaxed = true)
+        ourDayRepository = mockk(relaxed = true)
+        coEvery { ourDayRepository.injectableForCharacter(any()) } returns emptyList() // 卷二：默认无行 = 装配零变化
         errorFlow = MutableStateFlow(null)
         infoToastFlow = MutableStateFlow(null)
         isDelivering = MutableStateFlow(false)
@@ -221,6 +224,7 @@ class AssistantTurnEngineTest {
             openLoopDetectionTrigger = openLoopDetectionTrigger,
             openLoopRepository = openLoopRepository,
             promiseRepository = promiseRepository,
+            ourDayRepository = ourDayRepository, // 我们的日子·卷二 T2-4
             meetingAppointmentStore = mockk(relaxed = true),
             // WB4：本测试族不测世界书——stub 成「无书」保持既有断言语义（activateForTurn 恒 null = 装配零变化）。
             worldBookPromptService = mockk {
@@ -270,7 +274,8 @@ class AssistantTurnEngineTest {
         verify { replyDeliverer.closeTypingSlot() }
         // 逐回合维护（仅成功投递才跑）：记忆 / 成长 / 关系 / 通知 / 补帖 / 节拍。
         coVerify { memoryAnalysisTrigger.checkAndTriggerMemorySummary("c1", any(), any(), any()) }
-        coVerify { relationshipAnalysisTrigger.incrementGrowthRoundAndCheck("c1", any(), any(), any()) }
+        // 卷四层 ①：引擎多传本轮 userText / replyText（图纸 §2.2 AssistantTurnEngine +1 行）；MockK 对省略的默认参按 eq("") 匹配会误红，故显式 any()。
+        coVerify { relationshipAnalysisTrigger.incrementGrowthRoundAndCheck("c1", any(), any(), any(), any()) }
         coVerify { relationshipAnalysisTrigger.incrementRelationshipRoundAndCheck("c1", any(), any()) }
         coVerify { notificationScheduler.schedule(character) }
         coVerify { momentGenerationService.triggerCatchUpPostIfNeeded("c1", any(), any()) } // now/zone 带默认 → any()
@@ -280,6 +285,18 @@ class AssistantTurnEngineTest {
         verify { llmForegroundController.release() }
         assertFalse(isDelivering.value)
         verify { replyDeliverer.closeTypingSlot() } // S4：打字占位清空=旧布尔断言的等价语义
+    }
+
+    @Test
+    fun 我们的日子_每回合预取该角色注入候选行_T2_4() = runBlocking {
+        coEvery {
+            replyDeliverer.deliverAssistantReply(any(), any(), any(), any(), any(), any(), any(), any(), any())
+        } returns deliveredTurn(empty = false)
+
+        engine.runAssistantTurn(config, character, settings, userProfile = null, userMessageForEmbed = null)
+
+        // 卷二图纸 §3.3：装配前必经仓库预取（漏传 = 该场景丢日子注入）。
+        coVerify(exactly = 1) { ourDayRepository.injectableForCharacter("c1") }
     }
 
     @Test

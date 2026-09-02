@@ -44,7 +44,7 @@ class VectorMemoryBackfillTest {
             .build()
         embedder = mockk(relaxed = true)
         every { embedder.isAvailable } returns true
-        service = VectorMemoryService(db.messageDao(), db.conversationDao(), embedder, mockk(relaxed = true))
+        service = VectorMemoryService(db.messageDao(), db.conversationDao(), embedder, mockk(relaxed = true), mockk(relaxed = true)) // 第 5 参 ourDayIndex（卷二·本测不触检索）
         runBlocking {
             db.characterDao().upsert(CharacterEntity(uuid = "char-1", name = "角色", creationDate = 0L))
             db.conversationDao().upsert(

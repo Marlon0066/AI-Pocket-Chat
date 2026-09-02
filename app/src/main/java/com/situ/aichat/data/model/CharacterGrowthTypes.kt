@@ -211,6 +211,17 @@ object GrowthJson {
     fun decodeRelationshipQuality(s: String): RelationshipQuality =
         if (s.isEmpty()) RelationshipQuality() else runCatching { json.decodeFromString<RelationshipQuality>(s) }.getOrDefault(RelationshipQuality())
 
+    fun decodeRelationshipPressure(s: String): RelationshipPressure =
+        decodeRelationshipPressureOrNull(s) ?: RelationshipPressure()
+
+    /**
+     * 空串 / 解码失败 ⇒ `null`，让调用方决定兜底（卷二 T5 F-1：访问器把这两种坏值**同路**回落到净额列播种，
+     * 绝不能回落成全零——全零经 ①⑦⑧ 三条「从压强派生净额」的写口落库 = 静默清空整段相处史）。
+     */
+    fun decodeRelationshipPressureOrNull(s: String): RelationshipPressure? =
+        if (s.isEmpty()) null
+        else runCatching { json.decodeFromString<RelationshipPressure>(s) }.getOrNull()?.normalized()
+
     fun decodeMoodHistory(s: String): List<MoodHistoryEntry> =
         if (s.isEmpty()) emptyList() else runCatching { json.decodeFromString<List<MoodHistoryEntry>>(s) }.getOrDefault(emptyList())
 
@@ -223,14 +234,79 @@ object GrowthJson {
     fun decodeGrowthMetadata(s: String): GrowthAnalysisMetadata =
         if (s.isEmpty()) GrowthAnalysisMetadata() else runCatching { json.decodeFromString<GrowthAnalysisMetadata>(s) }.getOrDefault(GrowthAnalysisMetadata())
 
+    // 活人感内核·卷一《人设编译器》三产物（类型见 CharacterKernelTypes.kt）。配置复用同一 json 实例。
+
+    fun decodePersonaCompileMeta(s: String): PersonaCompileMeta =
+        if (s.isEmpty()) PersonaCompileMeta() else runCatching { json.decodeFromString<PersonaCompileMeta>(s) }.getOrDefault(PersonaCompileMeta())
+
+    fun decodePersonaGains(s: String): PersonaGains =
+        if (s.isEmpty()) PersonaGains() else runCatching { json.decodeFromString<PersonaGains>(s) }.getOrDefault(PersonaGains())
+
+    fun decodePersonaOperators(s: String): List<PersonaOperator> =
+        if (s.isEmpty()) emptyList() else runCatching { json.decodeFromString<List<PersonaOperator>>(s) }.getOrDefault(emptyList())
+
+    // 活人感内核·卷三《场内核与渲染收编》四场（类型见 CharacterKernelTypes.kt·图纸 §3.1）。配置复用同一 json 实例。
+
+    /**
+     * 空串 / 解码失败 ⇒ `null`（调用方 = `CharacterEntity.affectField` 访问器同路回默认 `AffectField()`·K-11）；
+     * 成功 ⇒ 逐字段钳回域内（security/investment/arousal `0..100`、valence `-100..100`、
+     * budgetUsed `0..DAILY_BUDGET`、hits 截 `MAX_HITS`、修缮卷 `slowDayUsed` 补齐 / 截为 2 项各钳 `0..FIELD_DAY_CAP`），
+     * 坏值绝不带着越界数进内核。
+     */
+    fun decodeAffectFieldOrNull(s: String): AffectField? {
+        if (s.isEmpty()) return null
+        val raw = runCatching { json.decodeFromString<AffectField>(s) }.getOrNull() ?: return null
+        return raw.copy(
+            security = raw.security.coerceIn(0, 100),
+            investment = raw.investment.coerceIn(0, 100),
+            valence = raw.valence.coerceIn(-100, 100),
+            arousal = raw.arousal.coerceIn(0, 100),
+            budgetUsed = raw.budgetUsed.coerceIn(0, AffectField.DAILY_BUDGET),
+            hits = raw.hits.take(AffectField.MAX_HITS),
+            slowDayUsed = List(2) { i -> (raw.slowDayUsed.getOrNull(i) ?: 0).coerceIn(0, AffectField.FIELD_DAY_CAP) },
+            // 内心行换气：两列表补齐 / 截为 2 项；档钳 −1..2（−1 = 未知）
+            slowBands = List(2) { i -> (raw.slowBands.getOrNull(i) ?: -1).coerceIn(-1, 2) },
+            slowBandsAt = List(2) { i -> (raw.slowBandsAt.getOrNull(i) ?: 0L).coerceAtLeast(0L) },   // R1 A-3：负值钳 0（未来值在 trackSlowBands 钳 now）
+        )
+    }
+
+    // 活人感内核·卷四《意图队列 + 性格复盘》（类型见 CharacterKernelTypes.kt·图纸 §3.2）。配置复用同一 json 实例。
+
+    /**
+     * 空串 / 解码失败 ⇒ `null`（调用方 = `CharacterEntity.intentQueue` 访问器同路回默认 `IntentQueueState()`·E36）；
+     * 成功 ⇒ 逐条 `strength` 钳 `0..100`，条目按 `lastChangeAt` 降序只留 [IntentQueueState.MAX_STORED] 条后
+     * **恢复原相对顺序**（稳定排序：先记下标再筛），`reviewRoundsAccrued` 钳 `0..REVIEW_ROUNDS`。
+     */
+    fun decodeIntentQueueOrNull(s: String): IntentQueueState? {
+        if (s.isEmpty()) return null
+        val raw = runCatching { json.decodeFromString<IntentQueueState>(s) }.getOrNull() ?: return null
+        val kept = raw.intents.withIndex()
+            .sortedByDescending { it.value.lastChangeAt }
+            .take(IntentQueueState.MAX_STORED)
+            .sortedBy { it.index }
+            .map { it.value.copy(strength = it.value.strength.coerceIn(0, 100)) }
+        return raw.copy(
+            intents = kept,
+            reviewRoundsAccrued = raw.reviewRoundsAccrued.coerceIn(0, IntentQueueState.REVIEW_ROUNDS),
+        )
+    }
+
     // 写路径兜底 ""：编码一个良构 @Serializable 实际上永不抛（防御性不可达分支）。一旦真返回 "" 并被持久化，
     // 会静默清空对应成长/关系 JSON 列（下次解码回落默认值）——故保留 runCatching 仅为不崩，绝非常规路径。
     fun encode(value: PersonalitySpectrum): String = runCatching { json.encodeToString(value) }.getOrDefault("")
     fun encode(value: RelationshipQuality): String = runCatching { json.encodeToString(value) }.getOrDefault("")
+    fun encode(value: RelationshipPressure): String = runCatching { json.encodeToString(value) }.getOrDefault("")
     fun encode(value: GrowthAnalysisMetadata): String = runCatching { json.encodeToString(value) }.getOrDefault("")
     fun encodeMoodHistory(value: List<MoodHistoryEntry>): String = runCatching { json.encodeToString(value) }.getOrDefault("")
     fun encodeDynamicInterests(value: List<DynamicInterest>): String = runCatching { json.encodeToString(value) }.getOrDefault("")
     fun encodeGrowthLog(value: List<GrowthLogEntry>): String = runCatching { json.encodeToString(value) }.getOrDefault("")
+    fun encode(value: PersonaCompileMeta): String = runCatching { json.encodeToString(value) }.getOrDefault("")
+    fun encode(value: PersonaGains): String = runCatching { json.encodeToString(value) }.getOrDefault("")
+    fun encode(value: AffectField): String = runCatching { json.encodeToString(value) }.getOrDefault("")
+    fun encode(value: IntentQueueState): String = runCatching { json.encodeToString(value) }.getOrDefault("")
+    // 列表编码器沿用 encodeXxx 命名（既有 encodeMoodHistory / encodeDynamicInterests / encodeGrowthLog 同因：
+    // 泛型擦除后 List 重载彼此冲突，不能都叫 encode）。
+    fun encodePersonaOperators(value: List<PersonaOperator>): String = runCatching { json.encodeToString(value) }.getOrDefault("")
 }
 
 // MARK: - CharacterEntity 解码访问器（iOS `AICharacter` 的 `@Transient` 计算属性等价）
@@ -243,6 +319,19 @@ val CharacterEntity.personalitySpectrum: PersonalitySpectrum
     get() = GrowthJson.decodePersonalitySpectrum(personalitySpectrumJSON)
 val CharacterEntity.relationshipQuality: RelationshipQuality
     get() = GrowthJson.decodeRelationshipQuality(relationshipQualityJSON)
+/**
+ * 关系双压（卷二 §3.1）。**空列 / 坏 JSON 兜底 = [fromQuality]**（照卷一 Y-1 先例：只读不写、零迁移扫、渲染天然正确）。
+ * 坏 JSON 与空列走同一路（T5 F-1）：回落全零会让 ①⑦⑧ 三个写口把零净额写回 `relationshipQualityJSON`。
+ *
+ * **修缮卷 F19 交叉校验**：解得开但派生净额 ≠ 净额列（`{}` / `{"pos":[],"neg":[]}` 这类「合法空壳」）同样回落播种——
+ * 合法写路恒满足 I-1，不等只可能是坏列。只读不写（§9.5：禁在解码访问器里写库）。
+ */
+val CharacterEntity.relationshipPressure: RelationshipPressure
+    get() {
+        val decoded = GrowthJson.decodeRelationshipPressureOrNull(relationshipPressureJSON)
+        val quality = relationshipQuality
+        return if (decoded == null || decoded.toQuality() != quality) RelationshipPressure.fromQuality(quality) else decoded
+    }
 val CharacterEntity.dynamicInterests: List<DynamicInterest>
     get() = GrowthJson.decodeDynamicInterests(dynamicInterestsJSON)
 val CharacterEntity.growthLog: List<GrowthLogEntry>
@@ -251,3 +340,35 @@ val CharacterEntity.growthMetadata: GrowthAnalysisMetadata
     get() = GrowthJson.decodeGrowthMetadata(growthMetadataJSON)
 val CharacterEntity.moodHistory: List<MoodHistoryEntry>
     get() = GrowthJson.decodeMoodHistory(moodHistoryJSON)
+
+// MARK: - 人设编译三产物的解码访问器（活人感内核·卷一 §3.1）
+
+/**
+ * 本性锚点。**空列兜底 = 当前值**（卷一图纸 Y-1）：没编译过的角色，「本来的样子」就是她现在的样子
+ * ——语义等价于「给老角色跑一次迁移」，但零写库、零幂等风险，且 UI 天然正确
+ * （本性 == 现在 ⇒ 偏移 0 ⇒「现在」竖线按 D-3 自动隐藏）。
+ *
+ * ⚠️ 兜底**只读不写**：任何读路径都不许顺手把回落值写回库（图纸 §9.4）。
+ */
+val CharacterEntity.personalityAnchor: PersonalitySpectrum
+    get() = if (personalityAnchorJSON.isEmpty()) personalitySpectrum
+    else GrowthJson.decodePersonalitySpectrum(personalityAnchorJSON)
+
+val CharacterEntity.personaCompileMeta: PersonaCompileMeta
+    get() = GrowthJson.decodePersonaCompileMeta(personaCompileMetaJSON)
+val CharacterEntity.personaGains: PersonaGains
+    get() = GrowthJson.decodePersonaGains(personaGainsJSON)
+val CharacterEntity.personaOperators: List<PersonaOperator>
+    get() = GrowthJson.decodePersonaOperators(personaOperatorsJSON)
+
+// MARK: - 四场的解码访问器（活人感内核·卷三 §3.1）
+
+/** 四场。**空列 / 坏 JSON 同路回默认** [AffectField]（K-11：本列无派生源可播种，默认值即正确兜底）。只读不写。 */
+val CharacterEntity.affectField: AffectField
+    get() = GrowthJson.decodeAffectFieldOrNull(affectFieldJSON) ?: AffectField()
+
+// MARK: - 意图队列的解码访问器（活人感内核·卷四 §3.2）
+
+/** 意图队列 + 复盘计数。**空列 / 坏 JSON 同路回默认** [IntentQueueState]（E36）。只读不写——唯一写者 = `IntentKernel`。 */
+val CharacterEntity.intentQueue: IntentQueueState
+    get() = GrowthJson.decodeIntentQueueOrNull(intentQueueJSON) ?: IntentQueueState()

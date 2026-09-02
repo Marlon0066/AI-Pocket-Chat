@@ -641,6 +641,73 @@ val MIGRATION_42_43 = object : Migration(42, 43) {
     }
 }
 
+/** v43→v44（活人感统一内核·卷一《人设编译器》·图纸 docs/handoff/2026-09-01-活人感内核-卷一-人设编译器.md §表3）：
+ *  `characters` 加人设编译四列——`personalityAnchorJSON`（本性锚点）/ `personaCompileMetaJSON`（编译元数据）/
+ *  `personaGainsJSON`（增益）/ `personaOperatorsJSON`（算子），全部 TEXT NOT NULL DEFAULT ''。
+ *  存量行一律落 ''  = 「从未编译过」：锚点走解码访问器兜底（图纸 Y-1 · 本性 == 现在），其余三列解码回落默认值，
+ *  **不扫全库、不写库、不清零**。列型与 `worldHomeCityId` / `momentsDigestedUntilMillis` 同例（实体侧无
+ *  @ColumnInfo(defaultValue)，DEFAULT '' 只服务存量行回填，MigrationTest 逐版本校验）；纯增量·旧行零丢失。 */
+val MIGRATION_43_44 = object : Migration(43, 44) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE characters ADD COLUMN personalityAnchorJSON TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE characters ADD COLUMN personaCompileMetaJSON TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE characters ADD COLUMN personaGainsJSON TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE characters ADD COLUMN personaOperatorsJSON TEXT NOT NULL DEFAULT ''")
+    }
+}
+
+/** v44→v45（活人感统一内核·卷二《正负双压》·图纸 docs/handoff/2026-09-02-活人感内核-卷二-正负双压.md §表3）：
+ *  `characters` 加 `relationshipPressureJSON`（关系 8 维正压/负压双记账），TEXT NOT NULL DEFAULT ''。
+ *  存量行一律落 '' = 「还没分开记过」：解码访问器按 `RelationshipPressure.fromQuality` 播种
+ *  （pos = 当前净额、neg = 0，满足不变式 I-1），**不扫全库、不写库、不清零**；净额列 `relationshipQualityJSON`
+ *  语义一字不变（7 类下游读者零改动）。列型与卷一四列同例；纯增量·旧行零丢失。 */
+val MIGRATION_44_45 = object : Migration(44, 45) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE characters ADD COLUMN relationshipPressureJSON TEXT NOT NULL DEFAULT ''")
+    }
+}
+
+/** v45→v46（活人感统一内核·卷三《场内核与渲染收编》·图纸 docs/handoff/2026-09-02-活人感内核-卷三-场内核与渲染收编.md §3.2）：
+ *  `characters` 加 `affectFieldJSON`（四场 + 日预算 + 最近命中），TEXT NOT NULL DEFAULT ''。
+ *  存量行一律落 '' = 「还没写过场」：解码访问器回默认 `AffectField()`（K-11：本列无派生源可播种），
+ *  **不扫全库、不写库**，首次 tick 才写出默认 + 脉冲。列型与卷一/卷二同例；纯增量·旧行零丢失。 */
+val MIGRATION_45_46 = object : Migration(45, 46) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE characters ADD COLUMN affectFieldJSON TEXT NOT NULL DEFAULT ''")
+    }
+}
+
+/** v46→v47（活人感统一内核·卷四《意图队列 + 性格复盘》·图纸 docs/handoff/2026-09-02-活人感内核-卷四-意图队列与性格复盘.md §3.2）：
+ *  `characters` 加 `intentQueueJSON`（意图队列 + 性格复盘计数），TEXT NOT NULL DEFAULT ''。
+ *  存量行一律落 '' = 「还没写过意图」：解码访问器回默认 `IntentQueueState()`（E36：本列无派生源可播种），
+ *  **不扫全库、不写库**，首次分析通道 / 有变化的 tick 才写出。列型与卷一/二/三同例；纯增量·旧行零丢失。 */
+val MIGRATION_46_47 = object : Migration(46, 47) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE characters ADD COLUMN intentQueueJSON TEXT NOT NULL DEFAULT ''")
+    }
+}
+
+/** v47→v48（「我们的日子」卷一《沉淀》·总图纸 docs/handoff/2026-09-02-我们的日子-总图纸.md §3.1 / §3.2）：
+ *  ① 新建 `our_days`（一天 × 一角色的事实快照 + 手记 + 事实行·索引 characterUuid + 唯一索引 (characterUuid, dayKey)·无 FK·手动级联清）；
+ *  ② `characters` 加 `ourDaysBackfilledAt`（可空·一次性回填完成标记·NULL = 未回填）。
+ *  DDL 逐字取自 Room 生成的 48.json createSql（`${'$'}{TABLE_NAME}` 换真表名，其余字节一致），MigrationTest 校验；纯增量·旧表零丢失。 */
+val MIGRATION_47_48 = object : Migration(47, 48) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `our_days` (`uuid` TEXT NOT NULL, `characterUuid` TEXT NOT NULL, " +
+                "`dayKey` TEXT NOT NULL, `factsJson` TEXT NOT NULL, `messageCount` INTEGER NOT NULL, " +
+                "`callSeconds` INTEGER NOT NULL, `hasMeeting` INTEGER NOT NULL, `hasRelation` INTEGER NOT NULL, " +
+                "`hasLife` INTEGER NOT NULL, `note` TEXT NOT NULL, `factLine` TEXT NOT NULL, `noteStatus` TEXT NOT NULL, " +
+                "`noteAttempts` INTEGER NOT NULL, `noteEdited` INTEGER NOT NULL, `hiddenFromMemory` INTEGER NOT NULL, " +
+                "`deleted` INTEGER NOT NULL, `generatedAt` INTEGER, `createdAtMillis` INTEGER NOT NULL, " +
+                "`updatedAtMillis` INTEGER NOT NULL, `embedding` BLOB, PRIMARY KEY(`uuid`))",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_our_days_characterUuid` ON `our_days` (`characterUuid`)")
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_our_days_characterUuid_dayKey` ON `our_days` (`characterUuid`, `dayKey`)")
+        db.execSQL("ALTER TABLE characters ADD COLUMN ourDaysBackfilledAt INTEGER")
+    }
+}
+
 /** 全部迁移（按序），注入 Room.databaseBuilder().addMigrations(*ALL_MIGRATIONS)。 */
 val ALL_MIGRATIONS = arrayOf(
     MIGRATION_1_2,
@@ -685,4 +752,9 @@ val ALL_MIGRATIONS = arrayOf(
     MIGRATION_40_41,
     MIGRATION_41_42,
     MIGRATION_42_43,
+    MIGRATION_43_44,
+    MIGRATION_44_45,
+    MIGRATION_45_46,
+    MIGRATION_46_47,
+    MIGRATION_47_48,
 )

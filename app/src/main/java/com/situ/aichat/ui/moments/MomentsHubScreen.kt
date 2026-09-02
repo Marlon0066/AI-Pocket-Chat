@@ -58,6 +58,7 @@ import com.situ.aichat.ui.components.clickableScale
 import com.situ.aichat.ui.components.contentMaxWidth
 import com.situ.aichat.ui.designsystem.AppFeatureIcons
 import com.situ.aichat.ui.designsystem.AppShapes
+import com.situ.aichat.ui.ourdays.OurDaysStrip
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.EmotionTileAlpha
 import com.situ.aichat.ui.designsystem.appCardSurface
@@ -81,6 +82,7 @@ fun MomentsHubScreen(
     onOpenFeed: () -> Unit,
     onOpenDiary: () -> Unit,
     onOpenStory: () -> Unit,
+    onOpenOurDays: () -> Unit,
     onOpenWorld: () -> Unit,
     bottomContentPadding: Dp = 0.dp,
     onOpenPet: (String) -> Unit = {}, // W12.5（§4.4）：世界卡信息条宠物段 → petDetail
@@ -110,6 +112,8 @@ fun MomentsHubScreen(
             WorldHeroCard(worldCard = worldCard, onOpenWorld = onOpenWorld, onOpenPet = onOpenPet)
 
             CircleStrip(state = state, onClick = onOpenFeed)
+
+            OurDaysStrip(onClick = onOpenOurDays)
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 DiaryCard(state = state, onClick = onOpenDiary, modifier = Modifier.weight(1f))

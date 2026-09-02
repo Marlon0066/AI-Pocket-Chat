@@ -179,4 +179,8 @@ interface DiaryDao {
     /** 删角色时清掉它的所有日记点赞（对齐 [deleteCommentsByCharacter] 清理口径）。 */
     @Query("DELETE FROM diary_reactions WHERE characterUuid = :characterUuid")
     suspend fun deleteReactionsByCharacter(characterUuid: String)
+
+    /** 我们的日子·卷一·只读：该角色已发布的全部交换日记（timestamp 升序·事实层取当日最早一篇·总图纸 §3.5）。 */
+    @Query("SELECT * FROM diary_entries WHERE authorCharacterUuid = :charUuid AND triggerTypeRaw = 'exchange' AND isDraft = 0 ORDER BY timestamp ASC")
+    suspend fun exchangeEntriesForCharacter(charUuid: String): List<DiaryEntryEntity>
 }

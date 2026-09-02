@@ -97,6 +97,8 @@ fun CharacterEditScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val saving by viewModel.saving.collectAsStateWithLifecycle()
+    val compiling by viewModel.compiling.collectAsStateWithLifecycle()
+    val personaNeedsSave by viewModel.personaNeedsSave.collectAsStateWithLifecycle()
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
@@ -359,18 +361,39 @@ fun CharacterEditScreen(
             )
             SectionFooter(stringResource(R.string.char_footer_communication))
 
-            // ---- 性格光谱（8 维滑块·14.1e）----
+            // ---- 性格光谱（活人感内核·卷一：原地扩展为「本性锚点」+ 生成卡·图纸 §4.1/§4.2/D-7）----
             SectionHeader(stringResource(R.string.char_section_personality))
+            // 生成卡只在编辑模式露面：新建时角色还没 uuid、编译无从谈起，首次保存后自动跑一次（D-1/Y-E21）。
+            if (viewModel.isEditing) {
+                PersonaCompileCard(
+                    meta = state.personaCompileMeta,
+                    personaStale = state.personaStale,
+                    personaBlank = state.personalityDescription.isBlank(),
+                    compiling = compiling,
+                    needsSave = personaNeedsSave,
+                    onCompile = { viewModel.compilePersona() },
+                )
+            }
             val personalityHints = stringArrayResource(R.array.char_personality_hints)
             PersonalitySpectrum.DIMENSION_NAMES.forEachIndexed { i, dim ->
-                DimensionSlider(
+                PersonaAnchorSlider(
                     name = dim,
                     hint = personalityHints.getOrElse(i) { "" },
-                    value = state.personalitySpectrum.values[i],
-                    onChange = { v -> viewModel.update { it.copy(personalitySpectrum = it.personalitySpectrum.setValue(i, v)) } },
+                    anchor = state.personalityAnchor.values[i],
+                    current = state.personalitySpectrum.values[i],
+                    basis = state.personaCompileMeta.anchorBasis[PersonalitySpectrum.DIMENSION_KEYS[i]],
+                    onChange = { v -> viewModel.update { it.copy(personalityAnchor = it.personalityAnchor.setValue(i, v)) } },
                 )
             }
             SectionFooter(stringResource(R.string.char_footer_personality_spectrum))
+            PersonaGainsSection(
+                gains = state.personaGains,
+                onChange = { g -> viewModel.update { it.copy(personaGains = g) } },
+            )
+            PersonaOperatorsSection(
+                operators = state.personaOperators,
+                onChange = { ops -> viewModel.update { it.copy(personaOperators = ops) } },
+            )
 
             // ---- 关系质感（8 维滑块·14.1e）----
             SectionHeader(stringResource(R.string.char_section_relationship))

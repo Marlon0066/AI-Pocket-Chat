@@ -22,6 +22,7 @@ enum class LogCategory(val sources: List<String>) {
         listOf(
             LogSource.MEMORY_SUMMARY, LogSource.STRUCTURED_MEMORY,
             LogSource.OFFLINE_MEETING_MEMORY, LogSource.IN_SCENE_RECAP,
+            LogSource.OUR_DAYS,
         ),
     ),
 
@@ -32,7 +33,8 @@ enum class LogCategory(val sources: List<String>) {
             LogSource.SALARY_INFERENCE, LogSource.RED_PACKET_DECISION,
             LogSource.MEETING_DETECTION,
             LogSource.OPEN_LOOP_SCAN, LogSource.OPEN_LOOP_MESSAGE,
-            LogSource.PROMISE_RECONCILE,
+            LogSource.PROMISE_RECONCILE, LogSource.PERSONA_COMPILE,
+            LogSource.PERSONA_REVIEW,
         ),
     ),
 

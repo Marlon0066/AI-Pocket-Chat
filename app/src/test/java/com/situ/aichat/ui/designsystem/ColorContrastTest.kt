@@ -58,6 +58,11 @@ class ColorContrastTest {
         assertContrast(c.accent.text, c.surface.raised, body, "$name accent.text×raised")
         // 选中态软填充容器上的字（= M3 primaryContainer↔onPrimaryContainer 对·按钮族重构 2026-06-19）
         assertContrast(c.accent.onContainer, c.accent.container, body, "$name accent.onContainer×container")
+        // 白瓷药丸面上的字（材质升级「白瓷药丸」2026-09-03·[AppPorcelain] / [porcelainThumb]）：分段控件选中段
+        // 与选择标签选中态的**实际底色已不再是 accent.container**，而是 surface.glaze→glazeShade 纵向渐变。
+        // worst case 取「离字最近的那个 stop」——浅档字深故取更暗的 glazeShade、深档字亮故取更亮的 glaze。
+        assertContrast(c.accent.onContainer, c.surface.glaze, body, "$name accent.onContainer×glaze")
+        assertContrast(c.accent.onContainer, c.surface.glazeShade, body, "$name accent.onContainer×glazeShade")
         // 经济金文字（= ST8 结局档案卡「结局类型徽章」金字·徽章无填充金字直接 on base·金@0.1 填充实测仅 4.02:1<4.5 故改金边）
         assertContrast(c.economy.gold, c.surface.base, body, "$name economy.gold×base")
         // status 双档（功能深档文字 × 装饰浅档底）
@@ -125,6 +130,12 @@ class ColorContrastTest {
                 assertContrast(c.text.primary, stampBg, body, "$name diary.stamp.${mood.emoji}")
             }
         }
+        // 「我们的日子」卷三（图纸 §7 T1-6·提案 D-11·R1 🟡-1 裁决后）：月格里凡落在热度填充上的文字一律深墨
+        // （日数 + 强调副行都是 text.primary·设计语言 §1.4「陶土填充上的文字一律深墨」）；陶土功能深档只用在无填充格上
+        // （accent.text × surface.base 已由上方通用断言覆盖）。原「accent.text × heat3」组合自 R1 起代码中不再存在。
+        assertContrast(c.text.primary, c.ourDays.heat1, body, "$name ourDays.text.primary×heat1")
+        assertContrast(c.text.primary, c.ourDays.heat2, body, "$name ourDays.text.primary×heat2")
+        assertContrast(c.text.primary, c.ourDays.heat3, body, "$name ourDays.text.primary×heat3")
     }
 
     @Test fun lightScheme_meetsWcag() = checkScheme(LightAppColors, "light")

@@ -1,8 +1,10 @@
 package com.situ.aichat.prompt
 
+import com.situ.aichat.data.model.RelationshipPressure
 import com.situ.aichat.data.model.RelationshipQuality
 import com.situ.aichat.prompt.growth.Band
 import com.situ.aichat.prompt.growth.RelationshipArchetype
+import com.situ.aichat.prompt.growth.RelationshipBands
 
 /**
  * 成长原型校准（图纸 docs/handoff/2026-07-11-成长原型校准.md §3.5）读侧二维渲染：
@@ -14,9 +16,9 @@ import com.situ.aichat.prompt.growth.RelationshipArchetype
 
 /** 水位分档（图纸 §3.5 / D-11 锁定阈值）。返回 null = 静默档（该维不输出，对齐旧 40–60 静默的 token 经济）。 */
 internal fun bandFor(t: Float): Band? = when {
-    t < 0.30f -> Band.L1
-    t < 0.65f -> null
-    t < 0.90f -> Band.L3
+    t < RelationshipBands.WATER_L1_MAX -> Band.L1
+    t < RelationshipBands.WATER_SILENT_MAX -> null
+    t < RelationshipBands.WATER_L3_MAX -> Band.L3
     else -> Band.L4
 }
 
@@ -28,11 +30,17 @@ internal fun buildArchetypeRelationshipDescription(
     quality: RelationshipQuality,
     archetype: RelationshipArchetype,
     userName: String,
+    pressure: RelationshipPressure? = null,
 ): String {
     val keys = RelationshipQuality.DIMENSION_KEYS
     val values = quality.values
     val lines = mutableListOf<String>()
+    // 卷二：矛盾维先出矛盾句并**跳过** waterLevel / bandFor / textFor 三步；其余维原样走既有渲染。
+    // [pressure] 为 null ⇒ 空集 ⇒ 输出与卷二之前逐字节相同（回归钉 = ArchetypeRelationshipRendererTest）。
+    val contradictions = contradictionDims(pressure)
+    for (i in contradictions) lines.add(RelationshipContradictionScripts.textFor(keys[i], userName))
     for (i in keys.indices) {
+        if (i in contradictions) continue
         val floor = archetype.floors[i]
         val ceiling = archetype.ceilings?.get(i) ?: -1
         val t = RelationshipArchetype.waterLevel(values[i], floor, ceiling)

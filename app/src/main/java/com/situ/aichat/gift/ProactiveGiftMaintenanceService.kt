@@ -49,14 +49,15 @@ class ProactiveGiftMaintenanceService @Inject constructor(
             val characters = characterRepo.getAll()
             if (characters.isEmpty()) return
 
-            val userBirthday = userProfileDao.get()?.birthday
+            val profile = userProfileDao.get()
+            val userBirthday = profile?.birthday
             // LLM 决策走 CHAT 路由（未配置 API → config 为 null，decide 内部直接走 rule 兜底）
             val config = apiConfigRepo.resolveConfigValues(ApiFunction.CHAT)
 
             for (character in characters) {
                 // 每角色取 fresh now（=iOS 循环内 Date()，LLM await 期间真实时间会推进）
                 val now = System.currentTimeMillis()
-                val ctx = scheduler.buildContext(character, userBirthday, now)
+                val ctx = scheduler.buildContext(character, userBirthday, now, userName = profile?.nickname?.trim().orEmpty()) // 卷四 K-20：意图句用真名
                 val trigger = ctx.topTrigger
                 if (!ctx.hasAnyCandidate || trigger == null) {
                     Log.d(TAG, "主动送礼跳过·无触发 ${character.name}")

@@ -1,0 +1,5530 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 45,
+    "identityHash": "620246bd1282116adf68a2f921397381",
+    "entities": [
+      {
+        "tableName": "characters",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `name` TEXT NOT NULL, `avatarPath` TEXT, `chatWallpaperPath` TEXT, `systemPrompt` TEXT NOT NULL, `personalityDescription` TEXT NOT NULL, `creationDate` INTEGER NOT NULL, `gender` TEXT NOT NULL, `birthday` INTEGER, `ageModeRaw` TEXT NOT NULL, `fixedAge` INTEGER NOT NULL, `appearanceDescription` TEXT NOT NULL, `occupation` TEXT NOT NULL, `backstory` TEXT NOT NULL, `speakingStyle` TEXT NOT NULL, `catchphrases` TEXT NOT NULL, `exampleDialogues` TEXT NOT NULL, `initialInterests` TEXT NOT NULL, `memorySummary` TEXT NOT NULL, `previousMemorySummary` TEXT NOT NULL, `offlineMeetingMemorySummary` TEXT NOT NULL, `voiceIdentifier` TEXT NOT NULL, `remoteVoiceID` TEXT NOT NULL, `ttsEmotionRaw` TEXT NOT NULL, `ttsSpeed` REAL NOT NULL, `ttsPitch` INTEGER NOT NULL, `lastMoodEmoji` TEXT NOT NULL, `lastMoodText` TEXT NOT NULL, `lastMoodColorName` TEXT NOT NULL, `firstMessageDate` INTEGER, `streakCount` INTEGER NOT NULL, `lastChatDate` INTEGER, `personalitySpectrumJSON` TEXT NOT NULL, `relationshipQualityJSON` TEXT NOT NULL, `relationshipPressureJSON` TEXT NOT NULL, `relationshipArchetypeId` TEXT, `moodHistoryJSON` TEXT NOT NULL, `dynamicInterestsJSON` TEXT NOT NULL, `growthLogJSON` TEXT NOT NULL, `growthMetadataJSON` TEXT NOT NULL, `structuredMemoryJSON` TEXT NOT NULL, `structuredMemoryMetadataJSON` TEXT NOT NULL, `previousStructuredMemoryJSON` TEXT NOT NULL, `affinitySensePackageJSON` TEXT NOT NULL, `affinitySensePackageGeneratedAt` INTEGER, `relationshipMessageCount` INTEGER NOT NULL, `lastRelationshipAnalysisDate` INTEGER, `cityName` TEXT, `cityLatitude` REAL, `cityLongitude` REAL, `offlineThemeColorHex` TEXT, `joinedWorld` INTEGER NOT NULL, `worldHomeCityId` TEXT NOT NULL, `worldJoinedAt` INTEGER, `momentsDigestedUntilMillis` INTEGER NOT NULL, `personalityAnchorJSON` TEXT NOT NULL, `personaCompileMetaJSON` TEXT NOT NULL, `personaGainsJSON` TEXT NOT NULL, `personaOperatorsJSON` TEXT NOT NULL, PRIMARY KEY(`uuid`))",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "avatarPath",
+            "columnName": "avatarPath",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "chatWallpaperPath",
+            "columnName": "chatWallpaperPath",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "systemPrompt",
+            "columnName": "systemPrompt",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "personalityDescription",
+            "columnName": "personalityDescription",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "creationDate",
+            "columnName": "creationDate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "gender",
+            "columnName": "gender",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "birthday",
+            "columnName": "birthday",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "ageModeRaw",
+            "columnName": "ageModeRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fixedAge",
+            "columnName": "fixedAge",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "appearanceDescription",
+            "columnName": "appearanceDescription",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "occupation",
+            "columnName": "occupation",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "backstory",
+            "columnName": "backstory",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "speakingStyle",
+            "columnName": "speakingStyle",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "catchphrases",
+            "columnName": "catchphrases",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "exampleDialogues",
+            "columnName": "exampleDialogues",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "initialInterests",
+            "columnName": "initialInterests",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "memorySummary",
+            "columnName": "memorySummary",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "previousMemorySummary",
+            "columnName": "previousMemorySummary",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "offlineMeetingMemorySummary",
+            "columnName": "offlineMeetingMemorySummary",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "voiceIdentifier",
+            "columnName": "voiceIdentifier",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "remoteVoiceID",
+            "columnName": "remoteVoiceID",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ttsEmotionRaw",
+            "columnName": "ttsEmotionRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ttsSpeed",
+            "columnName": "ttsSpeed",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ttsPitch",
+            "columnName": "ttsPitch",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastMoodEmoji",
+            "columnName": "lastMoodEmoji",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastMoodText",
+            "columnName": "lastMoodText",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastMoodColorName",
+            "columnName": "lastMoodColorName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "firstMessageDate",
+            "columnName": "firstMessageDate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "streakCount",
+            "columnName": "streakCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastChatDate",
+            "columnName": "lastChatDate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "personalitySpectrumJSON",
+            "columnName": "personalitySpectrumJSON",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "relationshipQualityJSON",
+            "columnName": "relationshipQualityJSON",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "relationshipPressureJSON",
+            "columnName": "relationshipPressureJSON",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "relationshipArchetypeId",
+            "columnName": "relationshipArchetypeId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "moodHistoryJSON",
+            "columnName": "moodHistoryJSON",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dynamicInterestsJSON",
+            "columnName": "dynamicInterestsJSON",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "growthLogJSON",
+            "columnName": "growthLogJSON",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "growthMetadataJSON",
+            "columnName": "growthMetadataJSON",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "structuredMemoryJSON",
+            "columnName": "structuredMemoryJSON",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "structuredMemoryMetadataJSON",
+            "columnName": "structuredMemoryMetadataJSON",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "previousStructuredMemoryJSON",
+            "columnName": "previousStructuredMemoryJSON",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "affinitySensePackageJSON",
+            "columnName": "affinitySensePackageJSON",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "affinitySensePackageGeneratedAt",
+            "columnName": "affinitySensePackageGeneratedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "relationshipMessageCount",
+            "columnName": "relationshipMessageCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastRelationshipAnalysisDate",
+            "columnName": "lastRelationshipAnalysisDate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "cityName",
+            "columnName": "cityName",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "cityLatitude",
+            "columnName": "cityLatitude",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "cityLongitude",
+            "columnName": "cityLongitude",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "offlineThemeColorHex",
+            "columnName": "offlineThemeColorHex",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "joinedWorld",
+            "columnName": "joinedWorld",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "worldHomeCityId",
+            "columnName": "worldHomeCityId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "worldJoinedAt",
+            "columnName": "worldJoinedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "momentsDigestedUntilMillis",
+            "columnName": "momentsDigestedUntilMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "personalityAnchorJSON",
+            "columnName": "personalityAnchorJSON",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "personaCompileMetaJSON",
+            "columnName": "personaCompileMetaJSON",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "personaGainsJSON",
+            "columnName": "personaGainsJSON",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "personaOperatorsJSON",
+            "columnName": "personaOperatorsJSON",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_characters_creationDate",
+            "unique": false,
+            "columnNames": [
+              "creationDate"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_characters_creationDate` ON `${TABLE_NAME}` (`creationDate`)"
+          }
+        ]
+      },
+      {
+        "tableName": "conversations",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `title` TEXT NOT NULL, `characterUuid` TEXT NOT NULL, `creationDate` INTEGER NOT NULL, `lastSummarizedMessageDate` INTEGER, `lastMemorySummarySuccessDate` INTEGER, `lastMemorySummaryFailureDate` INTEGER, `lastMemorySummaryAttemptDate` INTEGER, `lastMeetingScanSuccessDate` INTEGER, `lastMeetingScanFailureDate` INTEGER, `lastOpenLoopScanSuccessDate` INTEGER, `lastOpenLoopScanFailureDate` INTEGER, `isPinned` INTEGER NOT NULL, `isArchived` INTEGER NOT NULL, `isReservedForNotifications` INTEGER NOT NULL, `lastReadDate` INTEGER, `lastMessageDate` INTEGER, `lastMessagePreview` TEXT NOT NULL, `lastMessageRole` TEXT NOT NULL, `moodEmoji` TEXT NOT NULL, `moodText` TEXT NOT NULL, `moodColorName` TEXT NOT NULL, `cachedUnreadCount` INTEGER NOT NULL, `voiceRoundsSinceLastVoice` INTEGER NOT NULL, `voiceNextThreshold` INTEGER NOT NULL, `isInOfflineMode` INTEGER NOT NULL, `currentOfflineSessionId` TEXT, `currentSceneProgress` TEXT NOT NULL, `pendingOfflineSummarySessionId` TEXT, `pendingOfflineSummaryFailCount` INTEGER NOT NULL, `pendingOfflineSummaryLastAttemptAt` INTEGER, `offlineSummaryFallbackSessionIds` TEXT NOT NULL, `inSceneRecapText` TEXT NOT NULL, `inSceneRecapSessionKey` TEXT NOT NULL, `inSceneRecapUntilMillis` INTEGER NOT NULL, PRIMARY KEY(`uuid`), FOREIGN KEY(`characterUuid`) REFERENCES `characters`(`uuid`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "characterUuid",
+            "columnName": "characterUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "creationDate",
+            "columnName": "creationDate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastSummarizedMessageDate",
+            "columnName": "lastSummarizedMessageDate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastMemorySummarySuccessDate",
+            "columnName": "lastMemorySummarySuccessDate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastMemorySummaryFailureDate",
+            "columnName": "lastMemorySummaryFailureDate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastMemorySummaryAttemptDate",
+            "columnName": "lastMemorySummaryAttemptDate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastMeetingScanSuccessDate",
+            "columnName": "lastMeetingScanSuccessDate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastMeetingScanFailureDate",
+            "columnName": "lastMeetingScanFailureDate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastOpenLoopScanSuccessDate",
+            "columnName": "lastOpenLoopScanSuccessDate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastOpenLoopScanFailureDate",
+            "columnName": "lastOpenLoopScanFailureDate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "isPinned",
+            "columnName": "isPinned",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isArchived",
+            "columnName": "isArchived",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isReservedForNotifications",
+            "columnName": "isReservedForNotifications",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastReadDate",
+            "columnName": "lastReadDate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastMessageDate",
+            "columnName": "lastMessageDate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastMessagePreview",
+            "columnName": "lastMessagePreview",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastMessageRole",
+            "columnName": "lastMessageRole",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "moodEmoji",
+            "columnName": "moodEmoji",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "moodText",
+            "columnName": "moodText",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "moodColorName",
+            "columnName": "moodColorName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cachedUnreadCount",
+            "columnName": "cachedUnreadCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "voiceRoundsSinceLastVoice",
+            "columnName": "voiceRoundsSinceLastVoice",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "voiceNextThreshold",
+            "columnName": "voiceNextThreshold",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isInOfflineMode",
+            "columnName": "isInOfflineMode",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "currentOfflineSessionId",
+            "columnName": "currentOfflineSessionId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "currentSceneProgress",
+            "columnName": "currentSceneProgress",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pendingOfflineSummarySessionId",
+            "columnName": "pendingOfflineSummarySessionId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "pendingOfflineSummaryFailCount",
+            "columnName": "pendingOfflineSummaryFailCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pendingOfflineSummaryLastAttemptAt",
+            "columnName": "pendingOfflineSummaryLastAttemptAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "offlineSummaryFallbackSessionIds",
+            "columnName": "offlineSummaryFallbackSessionIds",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "inSceneRecapText",
+            "columnName": "inSceneRecapText",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "inSceneRecapSessionKey",
+            "columnName": "inSceneRecapSessionKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "inSceneRecapUntilMillis",
+            "columnName": "inSceneRecapUntilMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_conversations_characterUuid",
+            "unique": false,
+            "columnNames": [
+              "characterUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_conversations_characterUuid` ON `${TABLE_NAME}` (`characterUuid`)"
+          },
+          {
+            "name": "index_conversations_isArchived",
+            "unique": false,
+            "columnNames": [
+              "isArchived"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_conversations_isArchived` ON `${TABLE_NAME}` (`isArchived`)"
+          },
+          {
+            "name": "index_conversations_creationDate",
+            "unique": false,
+            "columnNames": [
+              "creationDate"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_conversations_creationDate` ON `${TABLE_NAME}` (`creationDate`)"
+          },
+          {
+            "name": "index_conversations_lastMessageDate",
+            "unique": false,
+            "columnNames": [
+              "lastMessageDate"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_conversations_lastMessageDate` ON `${TABLE_NAME}` (`lastMessageDate`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "characters",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "characterUuid"
+            ],
+            "referencedColumns": [
+              "uuid"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "messages",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`messageUUID` TEXT NOT NULL, `conversationUuid` TEXT NOT NULL, `roleRaw` TEXT NOT NULL, `content` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `isVoiceMessage` INTEGER NOT NULL, `isPartOfVoiceCall` INTEGER NOT NULL, `audioRelativePath` TEXT, `audioDuration` REAL, `imageRelativePath` TEXT, `imageThumbnailRelativePath` TEXT, `mediaMemorySummary` TEXT NOT NULL, `embedding` BLOB, `isContentRevealed` INTEGER NOT NULL, `isHeldForDelivery` INTEGER NOT NULL, `scheduledDeliveryDate` INTEGER, `quotedMessageUUID` TEXT, `quotedContent` TEXT, `quotedSenderRole` TEXT, `emotionTag` TEXT, `isPetMessage` INTEGER NOT NULL, `isOfflineMode` INTEGER NOT NULL, `offlineSessionId` TEXT, `messageKindRaw` TEXT NOT NULL, PRIMARY KEY(`messageUUID`), FOREIGN KEY(`conversationUuid`) REFERENCES `conversations`(`uuid`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "messageUUID",
+            "columnName": "messageUUID",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "conversationUuid",
+            "columnName": "conversationUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "roleRaw",
+            "columnName": "roleRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "content",
+            "columnName": "content",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isVoiceMessage",
+            "columnName": "isVoiceMessage",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isPartOfVoiceCall",
+            "columnName": "isPartOfVoiceCall",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "audioRelativePath",
+            "columnName": "audioRelativePath",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "audioDuration",
+            "columnName": "audioDuration",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "imageRelativePath",
+            "columnName": "imageRelativePath",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "imageThumbnailRelativePath",
+            "columnName": "imageThumbnailRelativePath",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "mediaMemorySummary",
+            "columnName": "mediaMemorySummary",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "embedding",
+            "columnName": "embedding",
+            "affinity": "BLOB"
+          },
+          {
+            "fieldPath": "isContentRevealed",
+            "columnName": "isContentRevealed",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isHeldForDelivery",
+            "columnName": "isHeldForDelivery",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "scheduledDeliveryDate",
+            "columnName": "scheduledDeliveryDate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "quotedMessageUUID",
+            "columnName": "quotedMessageUUID",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "quotedContent",
+            "columnName": "quotedContent",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "quotedSenderRole",
+            "columnName": "quotedSenderRole",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "emotionTag",
+            "columnName": "emotionTag",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isPetMessage",
+            "columnName": "isPetMessage",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isOfflineMode",
+            "columnName": "isOfflineMode",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "offlineSessionId",
+            "columnName": "offlineSessionId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "messageKindRaw",
+            "columnName": "messageKindRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "messageUUID"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_messages_conversationUuid",
+            "unique": false,
+            "columnNames": [
+              "conversationUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_messages_conversationUuid` ON `${TABLE_NAME}` (`conversationUuid`)"
+          },
+          {
+            "name": "index_messages_timestamp",
+            "unique": false,
+            "columnNames": [
+              "timestamp"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_messages_timestamp` ON `${TABLE_NAME}` (`timestamp`)"
+          },
+          {
+            "name": "index_messages_conversationUuid_timestamp",
+            "unique": false,
+            "columnNames": [
+              "conversationUuid",
+              "timestamp"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_messages_conversationUuid_timestamp` ON `${TABLE_NAME}` (`conversationUuid`, `timestamp`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "conversations",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "conversationUuid"
+            ],
+            "referencedColumns": [
+              "uuid"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "api_configurations",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `providerName` TEXT NOT NULL, `providerTypeRaw` TEXT NOT NULL, `apiKeyId` TEXT NOT NULL, `baseURL` TEXT NOT NULL, `modelName` TEXT NOT NULL, `isActive` INTEGER NOT NULL, `creationDate` INTEGER NOT NULL, `toolCallingModeRaw` TEXT NOT NULL, `detectedToolSupportLevelRaw` TEXT NOT NULL, `detectedToolProtocolFamilyRaw` TEXT NOT NULL, `detectedStreamingToolSupportRaw` TEXT NOT NULL, `detectedThinkingToolSupportRaw` TEXT NOT NULL, `toolDetectionSummary` TEXT NOT NULL, `toolDetectionCheckedAt` INTEGER, `visionModeRaw` TEXT NOT NULL, `detectedVisionSupport` INTEGER NOT NULL, `audioInputModeRaw` TEXT NOT NULL, `detectedAudioInputSupport` INTEGER NOT NULL, `thinkingModelModeRaw` TEXT NOT NULL, `detectedThinkingModelType` INTEGER NOT NULL, `thinkingBudgetLevelRaw` TEXT NOT NULL, `maxOutputLengthRaw` TEXT NOT NULL, PRIMARY KEY(`uuid`))",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "providerName",
+            "columnName": "providerName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "providerTypeRaw",
+            "columnName": "providerTypeRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "apiKeyId",
+            "columnName": "apiKeyId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "baseURL",
+            "columnName": "baseURL",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "modelName",
+            "columnName": "modelName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isActive",
+            "columnName": "isActive",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "creationDate",
+            "columnName": "creationDate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "toolCallingModeRaw",
+            "columnName": "toolCallingModeRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "detectedToolSupportLevelRaw",
+            "columnName": "detectedToolSupportLevelRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "detectedToolProtocolFamilyRaw",
+            "columnName": "detectedToolProtocolFamilyRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "detectedStreamingToolSupportRaw",
+            "columnName": "detectedStreamingToolSupportRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "detectedThinkingToolSupportRaw",
+            "columnName": "detectedThinkingToolSupportRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "toolDetectionSummary",
+            "columnName": "toolDetectionSummary",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "toolDetectionCheckedAt",
+            "columnName": "toolDetectionCheckedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "visionModeRaw",
+            "columnName": "visionModeRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "detectedVisionSupport",
+            "columnName": "detectedVisionSupport",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "audioInputModeRaw",
+            "columnName": "audioInputModeRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "detectedAudioInputSupport",
+            "columnName": "detectedAudioInputSupport",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "thinkingModelModeRaw",
+            "columnName": "thinkingModelModeRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "detectedThinkingModelType",
+            "columnName": "detectedThinkingModelType",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "thinkingBudgetLevelRaw",
+            "columnName": "thinkingBudgetLevelRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "maxOutputLengthRaw",
+            "columnName": "maxOutputLengthRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_api_configurations_isActive",
+            "unique": false,
+            "columnNames": [
+              "isActive"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_api_configurations_isActive` ON `${TABLE_NAME}` (`isActive`)"
+          }
+        ]
+      },
+      {
+        "tableName": "user_profile",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `nickname` TEXT NOT NULL, `bio` TEXT NOT NULL, `avatarPath` TEXT, `cityName` TEXT, `cityLatitude` REAL, `cityLongitude` REAL, `birthday` INTEGER, `companionPreference` TEXT NOT NULL DEFAULT '', PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nickname",
+            "columnName": "nickname",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bio",
+            "columnName": "bio",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "avatarPath",
+            "columnName": "avatarPath",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "cityName",
+            "columnName": "cityName",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "cityLatitude",
+            "columnName": "cityLatitude",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "cityLongitude",
+            "columnName": "cityLongitude",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "birthday",
+            "columnName": "birthday",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "companionPreference",
+            "columnName": "companionPreference",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "relationship_milestones",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `characterUuid` TEXT NOT NULL, `relationshipName` TEXT NOT NULL, `establishedDate` INTEGER NOT NULL, `reason` TEXT NOT NULL, `triggerTypeRaw` TEXT NOT NULL, `phase` TEXT, PRIMARY KEY(`uuid`), FOREIGN KEY(`characterUuid`) REFERENCES `characters`(`uuid`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "characterUuid",
+            "columnName": "characterUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "relationshipName",
+            "columnName": "relationshipName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "establishedDate",
+            "columnName": "establishedDate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reason",
+            "columnName": "reason",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "triggerTypeRaw",
+            "columnName": "triggerTypeRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "phase",
+            "columnName": "phase",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_relationship_milestones_characterUuid",
+            "unique": false,
+            "columnNames": [
+              "characterUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_relationship_milestones_characterUuid` ON `${TABLE_NAME}` (`characterUuid`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "characters",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "characterUuid"
+            ],
+            "referencedColumns": [
+              "uuid"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "character_daily_schedules",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `characterUuid` TEXT NOT NULL, `date` INTEGER NOT NULL, `cityName` TEXT, `weatherCondition` TEXT, `weatherEmoji` TEXT, `temperatureHigh` REAL, `temperatureLow` REAL, `timezoneIdentifier` TEXT, `generatedAt` INTEGER, `lastWeatherCheckAt` INTEGER, `isBackfilled` INTEGER NOT NULL, PRIMARY KEY(`uuid`), FOREIGN KEY(`characterUuid`) REFERENCES `characters`(`uuid`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "characterUuid",
+            "columnName": "characterUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "date",
+            "columnName": "date",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cityName",
+            "columnName": "cityName",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "weatherCondition",
+            "columnName": "weatherCondition",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "weatherEmoji",
+            "columnName": "weatherEmoji",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "temperatureHigh",
+            "columnName": "temperatureHigh",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "temperatureLow",
+            "columnName": "temperatureLow",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "timezoneIdentifier",
+            "columnName": "timezoneIdentifier",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "generatedAt",
+            "columnName": "generatedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastWeatherCheckAt",
+            "columnName": "lastWeatherCheckAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "isBackfilled",
+            "columnName": "isBackfilled",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_character_daily_schedules_characterUuid_date",
+            "unique": false,
+            "columnNames": [
+              "characterUuid",
+              "date"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_character_daily_schedules_characterUuid_date` ON `${TABLE_NAME}` (`characterUuid`, `date`)"
+          },
+          {
+            "name": "index_character_daily_schedules_characterUuid",
+            "unique": false,
+            "columnNames": [
+              "characterUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_character_daily_schedules_characterUuid` ON `${TABLE_NAME}` (`characterUuid`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "characters",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "characterUuid"
+            ],
+            "referencedColumns": [
+              "uuid"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "schedule_events",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `scheduleUuid` TEXT NOT NULL, `startTime` INTEGER NOT NULL, `endTime` INTEGER NOT NULL, `periodLabel` TEXT NOT NULL, `location` TEXT NOT NULL, `activity` TEXT NOT NULL, `moodEmoji` TEXT NOT NULL, `moodText` TEXT, `innerThought` TEXT, `isPhoneAvailable` INTEGER NOT NULL, `eventTypeRaw` TEXT NOT NULL, `relatedCharacterNames` TEXT, `relatedMessageUUID` TEXT, `sourceRaw` TEXT NOT NULL, `sortOrder` INTEGER NOT NULL, PRIMARY KEY(`uuid`), FOREIGN KEY(`scheduleUuid`) REFERENCES `character_daily_schedules`(`uuid`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "scheduleUuid",
+            "columnName": "scheduleUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startTime",
+            "columnName": "startTime",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endTime",
+            "columnName": "endTime",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "periodLabel",
+            "columnName": "periodLabel",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "location",
+            "columnName": "location",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "activity",
+            "columnName": "activity",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "moodEmoji",
+            "columnName": "moodEmoji",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "moodText",
+            "columnName": "moodText",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "innerThought",
+            "columnName": "innerThought",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isPhoneAvailable",
+            "columnName": "isPhoneAvailable",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "eventTypeRaw",
+            "columnName": "eventTypeRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "relatedCharacterNames",
+            "columnName": "relatedCharacterNames",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "relatedMessageUUID",
+            "columnName": "relatedMessageUUID",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "sourceRaw",
+            "columnName": "sourceRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sortOrder",
+            "columnName": "sortOrder",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_schedule_events_scheduleUuid",
+            "unique": false,
+            "columnNames": [
+              "scheduleUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_schedule_events_scheduleUuid` ON `${TABLE_NAME}` (`scheduleUuid`)"
+          },
+          {
+            "name": "index_schedule_events_startTime",
+            "unique": false,
+            "columnNames": [
+              "startTime"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_schedule_events_startTime` ON `${TABLE_NAME}` (`startTime`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "character_daily_schedules",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "scheduleUuid"
+            ],
+            "referencedColumns": [
+              "uuid"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "notification_templates",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `characterId` TEXT NOT NULL, `category` TEXT NOT NULL, `content` TEXT NOT NULL, `isUsed` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "characterId",
+            "columnName": "characterId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "category",
+            "columnName": "category",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "content",
+            "columnName": "content",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isUsed",
+            "columnName": "isUsed",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_notification_templates_characterId_category",
+            "unique": false,
+            "columnNames": [
+              "characterId",
+              "category"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_notification_templates_characterId_category` ON `${TABLE_NAME}` (`characterId`, `category`)"
+          }
+        ]
+      },
+      {
+        "tableName": "notification_delivery_records",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `characterId` TEXT NOT NULL, `category` TEXT NOT NULL, `deliveryIdentifier` TEXT NOT NULL, `requestIdentifier` TEXT NOT NULL, `conversationUuid` TEXT NOT NULL, `notificationBody` TEXT NOT NULL, `windowId` TEXT NOT NULL, `windowStartMinute` INTEGER NOT NULL, `windowEndMinute` INTEGER NOT NULL, `scheduledAt` INTEGER NOT NULL, `deliveredAt` INTEGER, `materializedAt` INTEGER, `materializedMessageId` TEXT, `respondedAt` INTEGER, `responseLatency` REAL, `stateRaw` TEXT NOT NULL, `statsApplied` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "characterId",
+            "columnName": "characterId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "category",
+            "columnName": "category",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deliveryIdentifier",
+            "columnName": "deliveryIdentifier",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "requestIdentifier",
+            "columnName": "requestIdentifier",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "conversationUuid",
+            "columnName": "conversationUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notificationBody",
+            "columnName": "notificationBody",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "windowId",
+            "columnName": "windowId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "windowStartMinute",
+            "columnName": "windowStartMinute",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "windowEndMinute",
+            "columnName": "windowEndMinute",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "scheduledAt",
+            "columnName": "scheduledAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deliveredAt",
+            "columnName": "deliveredAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "materializedAt",
+            "columnName": "materializedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "materializedMessageId",
+            "columnName": "materializedMessageId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "respondedAt",
+            "columnName": "respondedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "responseLatency",
+            "columnName": "responseLatency",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "stateRaw",
+            "columnName": "stateRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "statsApplied",
+            "columnName": "statsApplied",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_notification_delivery_records_deliveryIdentifier",
+            "unique": false,
+            "columnNames": [
+              "deliveryIdentifier"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_notification_delivery_records_deliveryIdentifier` ON `${TABLE_NAME}` (`deliveryIdentifier`)"
+          },
+          {
+            "name": "index_notification_delivery_records_characterId_category",
+            "unique": false,
+            "columnNames": [
+              "characterId",
+              "category"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_notification_delivery_records_characterId_category` ON `${TABLE_NAME}` (`characterId`, `category`)"
+          },
+          {
+            "name": "index_notification_delivery_records_scheduledAt",
+            "unique": false,
+            "columnNames": [
+              "scheduledAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_notification_delivery_records_scheduledAt` ON `${TABLE_NAME}` (`scheduledAt`)"
+          },
+          {
+            "name": "index_notification_delivery_records_stateRaw",
+            "unique": false,
+            "columnNames": [
+              "stateRaw"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_notification_delivery_records_stateRaw` ON `${TABLE_NAME}` (`stateRaw`)"
+          }
+        ]
+      },
+      {
+        "tableName": "notification_window_stats",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `characterId` TEXT NOT NULL, `category` TEXT NOT NULL, `windowId` TEXT NOT NULL, `windowStartMinute` INTEGER NOT NULL, `windowEndMinute` INTEGER NOT NULL, `scheduledCount` INTEGER NOT NULL, `responseCount` INTEGER NOT NULL, `smoothedScore` REAL NOT NULL, `lastScheduledAt` INTEGER, `lastRespondedAt` INTEGER, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "characterId",
+            "columnName": "characterId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "category",
+            "columnName": "category",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "windowId",
+            "columnName": "windowId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "windowStartMinute",
+            "columnName": "windowStartMinute",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "windowEndMinute",
+            "columnName": "windowEndMinute",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "scheduledCount",
+            "columnName": "scheduledCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "responseCount",
+            "columnName": "responseCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "smoothedScore",
+            "columnName": "smoothedScore",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastScheduledAt",
+            "columnName": "lastScheduledAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastRespondedAt",
+            "columnName": "lastRespondedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_notification_window_stats_characterId_category_windowId",
+            "unique": false,
+            "columnNames": [
+              "characterId",
+              "category",
+              "windowId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_notification_window_stats_characterId_category_windowId` ON `${TABLE_NAME}` (`characterId`, `category`, `windowId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "diary_entries",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `content` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `imagePathsJson` TEXT NOT NULL, `moodEmoji` TEXT, `moodText` TEXT, `isAutoGenerated` INTEGER NOT NULL, `isDraft` INTEGER NOT NULL, `isPetDiary` INTEGER NOT NULL, `petSpeciesRaw` TEXT, `visibilityRaw` TEXT NOT NULL, `triggerTypeRaw` TEXT NOT NULL, `relatedGiftId` TEXT, `authorCharacterUuid` TEXT, `authorNameSnapshot` TEXT, `digestedAtMillis` INTEGER, PRIMARY KEY(`uuid`))",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "content",
+            "columnName": "content",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "imagePathsJson",
+            "columnName": "imagePathsJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "moodEmoji",
+            "columnName": "moodEmoji",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "moodText",
+            "columnName": "moodText",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isAutoGenerated",
+            "columnName": "isAutoGenerated",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isDraft",
+            "columnName": "isDraft",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isPetDiary",
+            "columnName": "isPetDiary",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "petSpeciesRaw",
+            "columnName": "petSpeciesRaw",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "visibilityRaw",
+            "columnName": "visibilityRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "triggerTypeRaw",
+            "columnName": "triggerTypeRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "relatedGiftId",
+            "columnName": "relatedGiftId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "authorCharacterUuid",
+            "columnName": "authorCharacterUuid",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "authorNameSnapshot",
+            "columnName": "authorNameSnapshot",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "digestedAtMillis",
+            "columnName": "digestedAtMillis",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_diary_entries_timestamp",
+            "unique": false,
+            "columnNames": [
+              "timestamp"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_diary_entries_timestamp` ON `${TABLE_NAME}` (`timestamp`)"
+          }
+        ]
+      },
+      {
+        "tableName": "diary_comments",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `entryUuid` TEXT NOT NULL, `content` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `characterUuid` TEXT, `parentCommentId` TEXT, `isFromUser` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`entryUuid`) REFERENCES `diary_entries`(`uuid`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "entryUuid",
+            "columnName": "entryUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "content",
+            "columnName": "content",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "characterUuid",
+            "columnName": "characterUuid",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "parentCommentId",
+            "columnName": "parentCommentId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isFromUser",
+            "columnName": "isFromUser",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_diary_comments_entryUuid",
+            "unique": false,
+            "columnNames": [
+              "entryUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_diary_comments_entryUuid` ON `${TABLE_NAME}` (`entryUuid`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "diary_entries",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "entryUuid"
+            ],
+            "referencedColumns": [
+              "uuid"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "diary_reactions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `entryUuid` TEXT NOT NULL, `characterUuid` TEXT NOT NULL, `emoji` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`entryUuid`) REFERENCES `diary_entries`(`uuid`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "entryUuid",
+            "columnName": "entryUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "characterUuid",
+            "columnName": "characterUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "emoji",
+            "columnName": "emoji",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_diary_reactions_entryUuid",
+            "unique": false,
+            "columnNames": [
+              "entryUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_diary_reactions_entryUuid` ON `${TABLE_NAME}` (`entryUuid`)"
+          },
+          {
+            "name": "index_diary_reactions_entryUuid_characterUuid",
+            "unique": true,
+            "columnNames": [
+              "entryUuid",
+              "characterUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_diary_reactions_entryUuid_characterUuid` ON `${TABLE_NAME}` (`entryUuid`, `characterUuid`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "diary_entries",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "entryUuid"
+            ],
+            "referencedColumns": [
+              "uuid"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "monthly_reviews",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `monthStartMillis` INTEGER NOT NULL, `content` TEXT NOT NULL, `moodCountsJson` TEXT NOT NULL, `generatedAt` INTEGER NOT NULL, PRIMARY KEY(`uuid`))",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "monthStartMillis",
+            "columnName": "monthStartMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "content",
+            "columnName": "content",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "moodCountsJson",
+            "columnName": "moodCountsJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "generatedAt",
+            "columnName": "generatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_monthly_reviews_monthStartMillis",
+            "unique": true,
+            "columnNames": [
+              "monthStartMillis"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_monthly_reviews_monthStartMillis` ON `${TABLE_NAME}` (`monthStartMillis`)"
+          }
+        ]
+      },
+      {
+        "tableName": "moment_post",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `content` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `authorTypeRaw` TEXT NOT NULL, `characterUuid` TEXT, `isAutoGenerated` INTEGER NOT NULL, `imagePathsJson` TEXT NOT NULL, `isSoftDeleted` INTEGER NOT NULL, `triggerTypeRaw` TEXT NOT NULL, `relatedGiftId` TEXT, PRIMARY KEY(`uuid`))",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "content",
+            "columnName": "content",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "authorTypeRaw",
+            "columnName": "authorTypeRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "characterUuid",
+            "columnName": "characterUuid",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isAutoGenerated",
+            "columnName": "isAutoGenerated",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "imagePathsJson",
+            "columnName": "imagePathsJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isSoftDeleted",
+            "columnName": "isSoftDeleted",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "triggerTypeRaw",
+            "columnName": "triggerTypeRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "relatedGiftId",
+            "columnName": "relatedGiftId",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_moment_post_timestamp",
+            "unique": false,
+            "columnNames": [
+              "timestamp"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_moment_post_timestamp` ON `${TABLE_NAME}` (`timestamp`)"
+          },
+          {
+            "name": "index_moment_post_characterUuid",
+            "unique": false,
+            "columnNames": [
+              "characterUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_moment_post_characterUuid` ON `${TABLE_NAME}` (`characterUuid`)"
+          }
+        ]
+      },
+      {
+        "tableName": "moment_comment",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `content` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `authorTypeRaw` TEXT NOT NULL, `characterUuid` TEXT, `replyToName` TEXT, `postUuid` TEXT, `parentCommentUuid` TEXT, PRIMARY KEY(`uuid`), FOREIGN KEY(`postUuid`) REFERENCES `moment_post`(`uuid`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`parentCommentUuid`) REFERENCES `moment_comment`(`uuid`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "content",
+            "columnName": "content",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "authorTypeRaw",
+            "columnName": "authorTypeRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "characterUuid",
+            "columnName": "characterUuid",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "replyToName",
+            "columnName": "replyToName",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "postUuid",
+            "columnName": "postUuid",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "parentCommentUuid",
+            "columnName": "parentCommentUuid",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_moment_comment_postUuid",
+            "unique": false,
+            "columnNames": [
+              "postUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_moment_comment_postUuid` ON `${TABLE_NAME}` (`postUuid`)"
+          },
+          {
+            "name": "index_moment_comment_parentCommentUuid",
+            "unique": false,
+            "columnNames": [
+              "parentCommentUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_moment_comment_parentCommentUuid` ON `${TABLE_NAME}` (`parentCommentUuid`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "moment_post",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "postUuid"
+            ],
+            "referencedColumns": [
+              "uuid"
+            ]
+          },
+          {
+            "table": "moment_comment",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "parentCommentUuid"
+            ],
+            "referencedColumns": [
+              "uuid"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "moment_like",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `authorTypeRaw` TEXT NOT NULL, `characterUuid` TEXT, `postUuid` TEXT, FOREIGN KEY(`postUuid`) REFERENCES `moment_post`(`uuid`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "authorTypeRaw",
+            "columnName": "authorTypeRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "characterUuid",
+            "columnName": "characterUuid",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "postUuid",
+            "columnName": "postUuid",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_moment_like_postUuid_characterUuid",
+            "unique": false,
+            "columnNames": [
+              "postUuid",
+              "characterUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_moment_like_postUuid_characterUuid` ON `${TABLE_NAME}` (`postUuid`, `characterUuid`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "moment_post",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "postUuid"
+            ],
+            "referencedColumns": [
+              "uuid"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "moment_notification",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `typeRaw` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `isRead` INTEGER NOT NULL, `characterUuid` TEXT NOT NULL, `contentPreview` TEXT NOT NULL, `postTimestamp` REAL NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "typeRaw",
+            "columnName": "typeRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isRead",
+            "columnName": "isRead",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "characterUuid",
+            "columnName": "characterUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "contentPreview",
+            "columnName": "contentPreview",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "postTimestamp",
+            "columnName": "postTimestamp",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_moment_notification_isRead",
+            "unique": false,
+            "columnNames": [
+              "isRead"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_moment_notification_isRead` ON `${TABLE_NAME}` (`isRead`)"
+          },
+          {
+            "name": "index_moment_notification_timestamp",
+            "unique": false,
+            "columnNames": [
+              "timestamp"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_moment_notification_timestamp` ON `${TABLE_NAME}` (`timestamp`)"
+          }
+        ]
+      },
+      {
+        "tableName": "custom_sticker",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`stickerUuid` TEXT NOT NULL, `name` TEXT NOT NULL, `semanticDescription` TEXT NOT NULL, `isAnimated` INTEGER NOT NULL, `imagePath` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `usageCount` INTEGER NOT NULL, PRIMARY KEY(`stickerUuid`))",
+        "fields": [
+          {
+            "fieldPath": "stickerUuid",
+            "columnName": "stickerUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "semanticDescription",
+            "columnName": "semanticDescription",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isAnimated",
+            "columnName": "isAnimated",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "imagePath",
+            "columnName": "imagePath",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "usageCount",
+            "columnName": "usageCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "stickerUuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_custom_sticker_createdAt",
+            "unique": false,
+            "columnNames": [
+              "createdAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_custom_sticker_createdAt` ON `${TABLE_NAME}` (`createdAt`)"
+          }
+        ]
+      },
+      {
+        "tableName": "character_pet",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `name` TEXT NOT NULL, `speciesRaw` TEXT NOT NULL, `isHiddenSpecies` INTEGER NOT NULL, `personalityTypeRaw` TEXT NOT NULL, `adoptedDate` INTEGER NOT NULL, `hunger` INTEGER NOT NULL, `cleanliness` INTEGER NOT NULL, `happiness` INTEGER NOT NULL, `health` INTEGER NOT NULL, `growthStageRaw` TEXT NOT NULL, `growthPoints` INTEGER NOT NULL, `totalInteractions` INTEGER NOT NULL, `lastFedDate` INTEGER, `lastCleanedDate` INTEGER, `lastPlayedDate` INTEGER, `lastInteractionDate` INTEGER, `neglectPhaseRaw` TEXT NOT NULL, `petGrowthLogJson` TEXT NOT NULL, `petMetadataJson` TEXT NOT NULL, `characterUuid` TEXT NOT NULL, PRIMARY KEY(`uuid`), FOREIGN KEY(`characterUuid`) REFERENCES `characters`(`uuid`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "speciesRaw",
+            "columnName": "speciesRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isHiddenSpecies",
+            "columnName": "isHiddenSpecies",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "personalityTypeRaw",
+            "columnName": "personalityTypeRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "adoptedDate",
+            "columnName": "adoptedDate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hunger",
+            "columnName": "hunger",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cleanliness",
+            "columnName": "cleanliness",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "happiness",
+            "columnName": "happiness",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "health",
+            "columnName": "health",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "growthStageRaw",
+            "columnName": "growthStageRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "growthPoints",
+            "columnName": "growthPoints",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalInteractions",
+            "columnName": "totalInteractions",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastFedDate",
+            "columnName": "lastFedDate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastCleanedDate",
+            "columnName": "lastCleanedDate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastPlayedDate",
+            "columnName": "lastPlayedDate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastInteractionDate",
+            "columnName": "lastInteractionDate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "neglectPhaseRaw",
+            "columnName": "neglectPhaseRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "petGrowthLogJson",
+            "columnName": "petGrowthLogJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "petMetadataJson",
+            "columnName": "petMetadataJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "characterUuid",
+            "columnName": "characterUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_character_pet_characterUuid",
+            "unique": true,
+            "columnNames": [
+              "characterUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_character_pet_characterUuid` ON `${TABLE_NAME}` (`characterUuid`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "characters",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "characterUuid"
+            ],
+            "referencedColumns": [
+              "uuid"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "user_wallet",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `coinBalance` INTEGER NOT NULL, `totalEarned` INTEGER NOT NULL, `totalSpent` INTEGER NOT NULL, PRIMARY KEY(`uuid`))",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "coinBalance",
+            "columnName": "coinBalance",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalEarned",
+            "columnName": "totalEarned",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalSpent",
+            "columnName": "totalSpent",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        }
+      },
+      {
+        "tableName": "character_wallet",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `characterUuid` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `coinBalance` INTEGER NOT NULL, `totalEarned` INTEGER NOT NULL, `totalSpent` INTEGER NOT NULL, `monthlySalary` INTEGER NOT NULL, `salaryInferred` INTEGER NOT NULL, `salaryDay` INTEGER NOT NULL, `lastSalaryDate` INTEGER, `lastEconomicScanDate` INTEGER, `lastProactiveGiftDate` INTEGER, `affinityFromUser` INTEGER NOT NULL, `affinityToUser` INTEGER NOT NULL, PRIMARY KEY(`uuid`), FOREIGN KEY(`characterUuid`) REFERENCES `characters`(`uuid`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "characterUuid",
+            "columnName": "characterUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "coinBalance",
+            "columnName": "coinBalance",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalEarned",
+            "columnName": "totalEarned",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalSpent",
+            "columnName": "totalSpent",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "monthlySalary",
+            "columnName": "monthlySalary",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "salaryInferred",
+            "columnName": "salaryInferred",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "salaryDay",
+            "columnName": "salaryDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastSalaryDate",
+            "columnName": "lastSalaryDate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastEconomicScanDate",
+            "columnName": "lastEconomicScanDate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastProactiveGiftDate",
+            "columnName": "lastProactiveGiftDate",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "affinityFromUser",
+            "columnName": "affinityFromUser",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "affinityToUser",
+            "columnName": "affinityToUser",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_character_wallet_characterUuid",
+            "unique": true,
+            "columnNames": [
+              "characterUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_character_wallet_characterUuid` ON `${TABLE_NAME}` (`characterUuid`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "characters",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "characterUuid"
+            ],
+            "referencedColumns": [
+              "uuid"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "currency_transaction",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `ownerTypeRaw` TEXT NOT NULL, `characterUuid` TEXT NOT NULL, `kindRaw` TEXT NOT NULL, `categoryRaw` TEXT NOT NULL, `amount` INTEGER NOT NULL, `balanceAfter` INTEGER NOT NULL, `relatedEntityId` TEXT, `note` TEXT NOT NULL, PRIMARY KEY(`uuid`))",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ownerTypeRaw",
+            "columnName": "ownerTypeRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "characterUuid",
+            "columnName": "characterUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kindRaw",
+            "columnName": "kindRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "categoryRaw",
+            "columnName": "categoryRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "amount",
+            "columnName": "amount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "balanceAfter",
+            "columnName": "balanceAfter",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "relatedEntityId",
+            "columnName": "relatedEntityId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "note",
+            "columnName": "note",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_currency_transaction_relatedEntityId",
+            "unique": false,
+            "columnNames": [
+              "relatedEntityId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_currency_transaction_relatedEntityId` ON `${TABLE_NAME}` (`relatedEntityId`)"
+          },
+          {
+            "name": "index_currency_transaction_characterUuid",
+            "unique": false,
+            "columnNames": [
+              "characterUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_currency_transaction_characterUuid` ON `${TABLE_NAME}` (`characterUuid`)"
+          },
+          {
+            "name": "index_currency_transaction_timestamp",
+            "unique": false,
+            "columnNames": [
+              "timestamp"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_currency_transaction_timestamp` ON `${TABLE_NAME}` (`timestamp`)"
+          }
+        ]
+      },
+      {
+        "tableName": "gift_records",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `senderType` TEXT NOT NULL, `senderCharacterUUID` TEXT NOT NULL, `receiverType` TEXT NOT NULL, `receiverCharacterUUID` TEXT NOT NULL, `giftItemId` TEXT NOT NULL, `pricePaid` INTEGER NOT NULL, `isDIY` INTEGER NOT NULL, `diyTitle` TEXT NOT NULL, `diyContent` TEXT NOT NULL, `diyImagePath` TEXT, `context` TEXT NOT NULL, `senderMessage` TEXT NOT NULL, `reactionText` TEXT NOT NULL, `reactionMoodEmoji` TEXT NOT NULL, `affinityGain` INTEGER NOT NULL, `relationshipImpactJSON` TEXT NOT NULL, PRIMARY KEY(`uuid`))",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "senderType",
+            "columnName": "senderType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "senderCharacterUUID",
+            "columnName": "senderCharacterUUID",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "receiverType",
+            "columnName": "receiverType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "receiverCharacterUUID",
+            "columnName": "receiverCharacterUUID",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "giftItemId",
+            "columnName": "giftItemId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pricePaid",
+            "columnName": "pricePaid",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isDIY",
+            "columnName": "isDIY",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "diyTitle",
+            "columnName": "diyTitle",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "diyContent",
+            "columnName": "diyContent",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "diyImagePath",
+            "columnName": "diyImagePath",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "context",
+            "columnName": "context",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "senderMessage",
+            "columnName": "senderMessage",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reactionText",
+            "columnName": "reactionText",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reactionMoodEmoji",
+            "columnName": "reactionMoodEmoji",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "affinityGain",
+            "columnName": "affinityGain",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "relationshipImpactJSON",
+            "columnName": "relationshipImpactJSON",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_gift_records_receiverCharacterUUID",
+            "unique": false,
+            "columnNames": [
+              "receiverCharacterUUID"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_gift_records_receiverCharacterUUID` ON `${TABLE_NAME}` (`receiverCharacterUUID`)"
+          },
+          {
+            "name": "index_gift_records_senderCharacterUUID",
+            "unique": false,
+            "columnNames": [
+              "senderCharacterUUID"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_gift_records_senderCharacterUUID` ON `${TABLE_NAME}` (`senderCharacterUUID`)"
+          },
+          {
+            "name": "index_gift_records_timestamp",
+            "unique": false,
+            "columnNames": [
+              "timestamp"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_gift_records_timestamp` ON `${TABLE_NAME}` (`timestamp`)"
+          }
+        ]
+      },
+      {
+        "tableName": "red_packet_records",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `messageUuid` TEXT NOT NULL, `conversationUuid` TEXT NOT NULL, `senderType` TEXT NOT NULL, `senderCharacterUUID` TEXT NOT NULL, `receiverType` TEXT NOT NULL, `receiverCharacterUUID` TEXT NOT NULL, `amount` INTEGER NOT NULL, `blessingText` TEXT NOT NULL, `festivalId` TEXT, `status` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `expiresAt` INTEGER NOT NULL, `resolvedAt` INTEGER, `rejectionReason` TEXT NOT NULL, `notifiedExpiringSoon` INTEGER NOT NULL, PRIMARY KEY(`uuid`))",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "messageUuid",
+            "columnName": "messageUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "conversationUuid",
+            "columnName": "conversationUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "senderType",
+            "columnName": "senderType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "senderCharacterUUID",
+            "columnName": "senderCharacterUUID",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "receiverType",
+            "columnName": "receiverType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "receiverCharacterUUID",
+            "columnName": "receiverCharacterUUID",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "amount",
+            "columnName": "amount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "blessingText",
+            "columnName": "blessingText",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "festivalId",
+            "columnName": "festivalId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "expiresAt",
+            "columnName": "expiresAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "resolvedAt",
+            "columnName": "resolvedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "rejectionReason",
+            "columnName": "rejectionReason",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notifiedExpiringSoon",
+            "columnName": "notifiedExpiringSoon",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_red_packet_records_messageUuid",
+            "unique": false,
+            "columnNames": [
+              "messageUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_red_packet_records_messageUuid` ON `${TABLE_NAME}` (`messageUuid`)"
+          },
+          {
+            "name": "index_red_packet_records_conversationUuid",
+            "unique": false,
+            "columnNames": [
+              "conversationUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_red_packet_records_conversationUuid` ON `${TABLE_NAME}` (`conversationUuid`)"
+          },
+          {
+            "name": "index_red_packet_records_status",
+            "unique": false,
+            "columnNames": [
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_red_packet_records_status` ON `${TABLE_NAME}` (`status`)"
+          },
+          {
+            "name": "index_red_packet_records_receiverCharacterUUID",
+            "unique": false,
+            "columnNames": [
+              "receiverCharacterUUID"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_red_packet_records_receiverCharacterUUID` ON `${TABLE_NAME}` (`receiverCharacterUUID`)"
+          }
+        ]
+      },
+      {
+        "tableName": "stories",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `genre` TEXT NOT NULL, `coverColorScheme` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `worldSetting` TEXT, `plotDirection` TEXT, `writingStyle` TEXT NOT NULL, `chapterLengthPreference` INTEGER NOT NULL, `maxChapters` INTEGER, `autoExtendCount` INTEGER NOT NULL, `chatInfluenceWeight` TEXT NOT NULL, `narrativePerson` TEXT NOT NULL, `updateMode` TEXT NOT NULL, `unlockHour` INTEGER NOT NULL, `unlockMinute` INTEGER NOT NULL, `worldInfoEnabled` INTEGER NOT NULL, `status` TEXT NOT NULL, `storySummary` TEXT, `currentArc` TEXT, `characterStates` TEXT, `openThreads` TEXT, `storyBible` TEXT, `lastCompressedAtChapter` INTEGER, `lastBibleCompressedAtChapter` INTEGER, `storyOutline` TEXT, `pendingChapterBeats` TEXT, `pendingBeatsUserEdited` INTEGER NOT NULL, `currentArcStartChapter` INTEGER, `arcHistory` TEXT, `intimacyLedger` TEXT, `sceneState` TEXT, `sceneLedger` TEXT, `customPromptsJson` TEXT, `requestedEndingType` TEXT, `requestedEndingDetail` TEXT, `rewriteInstruction` TEXT, `pendingRewriteDraftJson` TEXT, `finaleEndingType` TEXT, `finaleEndingDetail` TEXT, `finalEndingType` TEXT, `cachedChapterCount` INTEGER NOT NULL, `cachedLatestChapterNumber` INTEGER, `cachedLatestChapterTitle` TEXT, `cachedLatestChapterCreatedAt` INTEGER, `cachedHasPendingChoice` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "genre",
+            "columnName": "genre",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "coverColorScheme",
+            "columnName": "coverColorScheme",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "worldSetting",
+            "columnName": "worldSetting",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "plotDirection",
+            "columnName": "plotDirection",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "writingStyle",
+            "columnName": "writingStyle",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "chapterLengthPreference",
+            "columnName": "chapterLengthPreference",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "maxChapters",
+            "columnName": "maxChapters",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "autoExtendCount",
+            "columnName": "autoExtendCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "chatInfluenceWeight",
+            "columnName": "chatInfluenceWeight",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "narrativePerson",
+            "columnName": "narrativePerson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updateMode",
+            "columnName": "updateMode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "unlockHour",
+            "columnName": "unlockHour",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "unlockMinute",
+            "columnName": "unlockMinute",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "worldInfoEnabled",
+            "columnName": "worldInfoEnabled",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "storySummary",
+            "columnName": "storySummary",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "currentArc",
+            "columnName": "currentArc",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "characterStates",
+            "columnName": "characterStates",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "openThreads",
+            "columnName": "openThreads",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "storyBible",
+            "columnName": "storyBible",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "lastCompressedAtChapter",
+            "columnName": "lastCompressedAtChapter",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastBibleCompressedAtChapter",
+            "columnName": "lastBibleCompressedAtChapter",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "storyOutline",
+            "columnName": "storyOutline",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "pendingChapterBeats",
+            "columnName": "pendingChapterBeats",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "pendingBeatsUserEdited",
+            "columnName": "pendingBeatsUserEdited",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "currentArcStartChapter",
+            "columnName": "currentArcStartChapter",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "arcHistory",
+            "columnName": "arcHistory",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "intimacyLedger",
+            "columnName": "intimacyLedger",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "sceneState",
+            "columnName": "sceneState",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "sceneLedger",
+            "columnName": "sceneLedger",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "customPromptsJson",
+            "columnName": "customPromptsJson",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "requestedEndingType",
+            "columnName": "requestedEndingType",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "requestedEndingDetail",
+            "columnName": "requestedEndingDetail",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "rewriteInstruction",
+            "columnName": "rewriteInstruction",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "pendingRewriteDraftJson",
+            "columnName": "pendingRewriteDraftJson",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "finaleEndingType",
+            "columnName": "finaleEndingType",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "finaleEndingDetail",
+            "columnName": "finaleEndingDetail",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "finalEndingType",
+            "columnName": "finalEndingType",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "cachedChapterCount",
+            "columnName": "cachedChapterCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cachedLatestChapterNumber",
+            "columnName": "cachedLatestChapterNumber",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "cachedLatestChapterTitle",
+            "columnName": "cachedLatestChapterTitle",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "cachedLatestChapterCreatedAt",
+            "columnName": "cachedLatestChapterCreatedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "cachedHasPendingChoice",
+            "columnName": "cachedHasPendingChoice",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_stories_updatedAt",
+            "unique": false,
+            "columnNames": [
+              "updatedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_stories_updatedAt` ON `${TABLE_NAME}` (`updatedAt`)"
+          },
+          {
+            "name": "index_stories_status",
+            "unique": false,
+            "columnNames": [
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_stories_status` ON `${TABLE_NAME}` (`status`)"
+          }
+        ]
+      },
+      {
+        "tableName": "story_chapters",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `storyId` TEXT NOT NULL, `chapterNumber` INTEGER NOT NULL, `title` TEXT NOT NULL, `teaser` TEXT, `createdAt` INTEGER NOT NULL, `content` TEXT NOT NULL, `mood` TEXT NOT NULL, `scenes` TEXT, `hasChoice` INTEGER NOT NULL, `choicePrompt` TEXT, `choiceOptions` TEXT, `userChoice` TEXT, `aiSuggestedEnding` INTEGER NOT NULL, `choiceMadeAt` INTEGER, `chapterSummary` TEXT, `unlockAt` INTEGER, `userRating` INTEGER, `previousDraftJson` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`storyId`) REFERENCES `stories`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "storyId",
+            "columnName": "storyId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "chapterNumber",
+            "columnName": "chapterNumber",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "teaser",
+            "columnName": "teaser",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "content",
+            "columnName": "content",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mood",
+            "columnName": "mood",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "scenes",
+            "columnName": "scenes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "hasChoice",
+            "columnName": "hasChoice",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "choicePrompt",
+            "columnName": "choicePrompt",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "choiceOptions",
+            "columnName": "choiceOptions",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "userChoice",
+            "columnName": "userChoice",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "aiSuggestedEnding",
+            "columnName": "aiSuggestedEnding",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "choiceMadeAt",
+            "columnName": "choiceMadeAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "chapterSummary",
+            "columnName": "chapterSummary",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "unlockAt",
+            "columnName": "unlockAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "userRating",
+            "columnName": "userRating",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "previousDraftJson",
+            "columnName": "previousDraftJson",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_story_chapters_storyId",
+            "unique": false,
+            "columnNames": [
+              "storyId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_story_chapters_storyId` ON `${TABLE_NAME}` (`storyId`)"
+          },
+          {
+            "name": "index_story_chapters_createdAt",
+            "unique": false,
+            "columnNames": [
+              "createdAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_story_chapters_createdAt` ON `${TABLE_NAME}` (`createdAt`)"
+          },
+          {
+            "name": "index_story_chapters_chapterNumber",
+            "unique": false,
+            "columnNames": [
+              "chapterNumber"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_story_chapters_chapterNumber` ON `${TABLE_NAME}` (`chapterNumber`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "stories",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "storyId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "story_character_roles",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `storyId` TEXT NOT NULL, `roleName` TEXT NOT NULL, `roleType` TEXT NOT NULL, `roleDescription` TEXT, `isUserRole` INTEGER NOT NULL, `characterId` TEXT, `intimatePersona` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`storyId`) REFERENCES `stories`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "storyId",
+            "columnName": "storyId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "roleName",
+            "columnName": "roleName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "roleType",
+            "columnName": "roleType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "roleDescription",
+            "columnName": "roleDescription",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isUserRole",
+            "columnName": "isUserRole",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "characterId",
+            "columnName": "characterId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "intimatePersona",
+            "columnName": "intimatePersona",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_story_character_roles_storyId",
+            "unique": false,
+            "columnNames": [
+              "storyId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_story_character_roles_storyId` ON `${TABLE_NAME}` (`storyId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "stories",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "storyId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "redeem_code_usage",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `codeHash` TEXT NOT NULL, `redeemedAt` INTEGER NOT NULL, `amount` INTEGER NOT NULL, PRIMARY KEY(`uuid`))",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "codeHash",
+            "columnName": "codeHash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "redeemedAt",
+            "columnName": "redeemedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "amount",
+            "columnName": "amount",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_redeem_code_usage_codeHash",
+            "unique": true,
+            "columnNames": [
+              "codeHash"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_redeem_code_usage_codeHash` ON `${TABLE_NAME}` (`codeHash`)"
+          }
+        ]
+      },
+      {
+        "tableName": "log_entries",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestampMillis` INTEGER NOT NULL, `characterName` TEXT NOT NULL, `modelName` TEXT NOT NULL, `isSuccess` INTEGER NOT NULL, `source` TEXT NOT NULL, `messageCount` INTEGER NOT NULL, `durationMillis` INTEGER, `errorMessage` TEXT, `fullContext` TEXT NOT NULL, `responseContent` TEXT, `contextSegmentsJson` TEXT NOT NULL, `toolInfoJson` TEXT NOT NULL DEFAULT '', `promptTokens` INTEGER NOT NULL, `completionTokens` INTEGER NOT NULL, `reasoningTokens` INTEGER NOT NULL, `cacheHitTokens` INTEGER NOT NULL, `cacheMissTokens` INTEGER NOT NULL, `isTokenEstimated` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestampMillis",
+            "columnName": "timestampMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "characterName",
+            "columnName": "characterName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "modelName",
+            "columnName": "modelName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isSuccess",
+            "columnName": "isSuccess",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "messageCount",
+            "columnName": "messageCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "durationMillis",
+            "columnName": "durationMillis",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "errorMessage",
+            "columnName": "errorMessage",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "fullContext",
+            "columnName": "fullContext",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "responseContent",
+            "columnName": "responseContent",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "contextSegmentsJson",
+            "columnName": "contextSegmentsJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "toolInfoJson",
+            "columnName": "toolInfoJson",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "promptTokens",
+            "columnName": "promptTokens",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "completionTokens",
+            "columnName": "completionTokens",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reasoningTokens",
+            "columnName": "reasoningTokens",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cacheHitTokens",
+            "columnName": "cacheHitTokens",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cacheMissTokens",
+            "columnName": "cacheMissTokens",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isTokenEstimated",
+            "columnName": "isTokenEstimated",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_log_entries_timestampMillis",
+            "unique": false,
+            "columnNames": [
+              "timestampMillis"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_log_entries_timestampMillis` ON `${TABLE_NAME}` (`timestampMillis`)"
+          }
+        ]
+      },
+      {
+        "tableName": "meeting_appointments",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `characterUuid` TEXT NOT NULL, `conversationUuid` TEXT NOT NULL, `status` TEXT NOT NULL, `proposedBy` TEXT NOT NULL, `source` TEXT NOT NULL, `scheduledAt` INTEGER NOT NULL, `timeGranularity` TEXT NOT NULL, `rawWhenText` TEXT NOT NULL, `location` TEXT NOT NULL, `activity` TEXT NOT NULL, `invitationText` TEXT NOT NULL, `tensionHint` TEXT NOT NULL, `hiddenTensionSeed` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `confirmedAt` INTEGER, `outcomeAt` INTEGER, `honoredSessionId` TEXT, `lastReminderScheduledAt` INTEGER, PRIMARY KEY(`uuid`))",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "characterUuid",
+            "columnName": "characterUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "conversationUuid",
+            "columnName": "conversationUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "proposedBy",
+            "columnName": "proposedBy",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "scheduledAt",
+            "columnName": "scheduledAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timeGranularity",
+            "columnName": "timeGranularity",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rawWhenText",
+            "columnName": "rawWhenText",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "location",
+            "columnName": "location",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "activity",
+            "columnName": "activity",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "invitationText",
+            "columnName": "invitationText",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tensionHint",
+            "columnName": "tensionHint",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hiddenTensionSeed",
+            "columnName": "hiddenTensionSeed",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "confirmedAt",
+            "columnName": "confirmedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "outcomeAt",
+            "columnName": "outcomeAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "honoredSessionId",
+            "columnName": "honoredSessionId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "lastReminderScheduledAt",
+            "columnName": "lastReminderScheduledAt",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_meeting_appointments_characterUuid",
+            "unique": false,
+            "columnNames": [
+              "characterUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_meeting_appointments_characterUuid` ON `${TABLE_NAME}` (`characterUuid`)"
+          },
+          {
+            "name": "index_meeting_appointments_conversationUuid",
+            "unique": false,
+            "columnNames": [
+              "conversationUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_meeting_appointments_conversationUuid` ON `${TABLE_NAME}` (`conversationUuid`)"
+          },
+          {
+            "name": "index_meeting_appointments_status",
+            "unique": false,
+            "columnNames": [
+              "status"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_meeting_appointments_status` ON `${TABLE_NAME}` (`status`)"
+          },
+          {
+            "name": "index_meeting_appointments_scheduledAt",
+            "unique": false,
+            "columnNames": [
+              "scheduledAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_meeting_appointments_scheduledAt` ON `${TABLE_NAME}` (`scheduledAt`)"
+          }
+        ]
+      },
+      {
+        "tableName": "world_books",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `name` TEXT NOT NULL, `description` TEXT NOT NULL, `scanDepth` INTEGER, `tokenBudget` INTEGER, `recursiveScanning` INTEGER, `isGlobal` INTEGER NOT NULL, `enabled` INTEGER NOT NULL, `extraJson` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`uuid`))",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "scanDepth",
+            "columnName": "scanDepth",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "tokenBudget",
+            "columnName": "tokenBudget",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "recursiveScanning",
+            "columnName": "recursiveScanning",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "isGlobal",
+            "columnName": "isGlobal",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "enabled",
+            "columnName": "enabled",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "extraJson",
+            "columnName": "extraJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        }
+      },
+      {
+        "tableName": "world_book_entries",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `bookUuid` TEXT NOT NULL, `uid` INTEGER NOT NULL, `displayIndex` INTEGER NOT NULL, `keysJson` TEXT NOT NULL, `secondaryKeysJson` TEXT NOT NULL, `selective` INTEGER NOT NULL, `selectiveLogic` INTEGER NOT NULL, `constant` INTEGER NOT NULL, `vectorized` INTEGER NOT NULL, `comment` TEXT NOT NULL, `content` TEXT NOT NULL, `enabled` INTEGER NOT NULL, `insertionOrder` INTEGER NOT NULL, `position` INTEGER NOT NULL, `depth` INTEGER NOT NULL, `role` INTEGER NOT NULL, `ignoreBudget` INTEGER NOT NULL, `probability` INTEGER NOT NULL, `useProbability` INTEGER NOT NULL, `scanDepth` INTEGER, `caseSensitive` INTEGER, `matchWholeWords` INTEGER, `excludeRecursion` INTEGER NOT NULL, `preventRecursion` INTEGER NOT NULL, `delayUntilRecursion` INTEGER NOT NULL, `groupName` TEXT NOT NULL, `groupOverride` INTEGER NOT NULL, `groupWeight` INTEGER NOT NULL, `useGroupScoring` INTEGER, `sticky` INTEGER, `cooldown` INTEGER, `delay` INTEGER, `extraJson` TEXT NOT NULL, `embedding` BLOB, `embeddingSignature` TEXT, PRIMARY KEY(`uuid`), FOREIGN KEY(`bookUuid`) REFERENCES `world_books`(`uuid`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bookUuid",
+            "columnName": "bookUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "uid",
+            "columnName": "uid",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "displayIndex",
+            "columnName": "displayIndex",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "keysJson",
+            "columnName": "keysJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "secondaryKeysJson",
+            "columnName": "secondaryKeysJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "selective",
+            "columnName": "selective",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "selectiveLogic",
+            "columnName": "selectiveLogic",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "constant",
+            "columnName": "constant",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "vectorized",
+            "columnName": "vectorized",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "comment",
+            "columnName": "comment",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "content",
+            "columnName": "content",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "enabled",
+            "columnName": "enabled",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "insertionOrder",
+            "columnName": "insertionOrder",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "depth",
+            "columnName": "depth",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "role",
+            "columnName": "role",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ignoreBudget",
+            "columnName": "ignoreBudget",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "probability",
+            "columnName": "probability",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "useProbability",
+            "columnName": "useProbability",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "scanDepth",
+            "columnName": "scanDepth",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "caseSensitive",
+            "columnName": "caseSensitive",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "matchWholeWords",
+            "columnName": "matchWholeWords",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "excludeRecursion",
+            "columnName": "excludeRecursion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "preventRecursion",
+            "columnName": "preventRecursion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "delayUntilRecursion",
+            "columnName": "delayUntilRecursion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "groupName",
+            "columnName": "groupName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "groupOverride",
+            "columnName": "groupOverride",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "groupWeight",
+            "columnName": "groupWeight",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "useGroupScoring",
+            "columnName": "useGroupScoring",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sticky",
+            "columnName": "sticky",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "cooldown",
+            "columnName": "cooldown",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "delay",
+            "columnName": "delay",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "extraJson",
+            "columnName": "extraJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "embedding",
+            "columnName": "embedding",
+            "affinity": "BLOB"
+          },
+          {
+            "fieldPath": "embeddingSignature",
+            "columnName": "embeddingSignature",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_world_book_entries_bookUuid",
+            "unique": false,
+            "columnNames": [
+              "bookUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_world_book_entries_bookUuid` ON `${TABLE_NAME}` (`bookUuid`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "world_books",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "bookUuid"
+            ],
+            "referencedColumns": [
+              "uuid"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "world_book_bindings",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`characterUuid` TEXT NOT NULL, `bookUuid` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`characterUuid`, `bookUuid`), FOREIGN KEY(`characterUuid`) REFERENCES `characters`(`uuid`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`bookUuid`) REFERENCES `world_books`(`uuid`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "characterUuid",
+            "columnName": "characterUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bookUuid",
+            "columnName": "bookUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "characterUuid",
+            "bookUuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_world_book_bindings_bookUuid",
+            "unique": false,
+            "columnNames": [
+              "bookUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_world_book_bindings_bookUuid` ON `${TABLE_NAME}` (`bookUuid`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "characters",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "characterUuid"
+            ],
+            "referencedColumns": [
+              "uuid"
+            ]
+          },
+          {
+            "table": "world_books",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "bookUuid"
+            ],
+            "referencedColumns": [
+              "uuid"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "world_book_timed_states",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`conversationUuid` TEXT NOT NULL, `entryUuid` TEXT NOT NULL, `effectType` TEXT NOT NULL, `triggeredAtMessageCount` INTEGER NOT NULL, `durationMessages` INTEGER NOT NULL, PRIMARY KEY(`conversationUuid`, `entryUuid`, `effectType`), FOREIGN KEY(`conversationUuid`) REFERENCES `conversations`(`uuid`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`entryUuid`) REFERENCES `world_book_entries`(`uuid`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "conversationUuid",
+            "columnName": "conversationUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "entryUuid",
+            "columnName": "entryUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "effectType",
+            "columnName": "effectType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "triggeredAtMessageCount",
+            "columnName": "triggeredAtMessageCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "durationMessages",
+            "columnName": "durationMessages",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "conversationUuid",
+            "entryUuid",
+            "effectType"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_world_book_timed_states_entryUuid",
+            "unique": false,
+            "columnNames": [
+              "entryUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_world_book_timed_states_entryUuid` ON `${TABLE_NAME}` (`entryUuid`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "conversations",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "conversationUuid"
+            ],
+            "referencedColumns": [
+              "uuid"
+            ]
+          },
+          {
+            "table": "world_book_entries",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "entryUuid"
+            ],
+            "referencedColumns": [
+              "uuid"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "world_state",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `seed` INTEGER NOT NULL, `userTimezoneId` TEXT, `userHomeCityId` TEXT NOT NULL, `userCurrentCityId` TEXT NOT NULL, `lastSettledAt` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "seed",
+            "columnName": "seed",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userTimezoneId",
+            "columnName": "userTimezoneId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "userHomeCityId",
+            "columnName": "userHomeCityId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userCurrentCityId",
+            "columnName": "userCurrentCityId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastSettledAt",
+            "columnName": "lastSettledAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "world_travel",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`ownerId` TEXT NOT NULL, `fromCityId` TEXT NOT NULL, `toCityId` TEXT NOT NULL, `departAt` INTEGER NOT NULL, `arriveAt` INTEGER NOT NULL, `modeRaw` TEXT NOT NULL, `costGold` INTEGER NOT NULL, PRIMARY KEY(`ownerId`))",
+        "fields": [
+          {
+            "fieldPath": "ownerId",
+            "columnName": "ownerId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fromCityId",
+            "columnName": "fromCityId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "toCityId",
+            "columnName": "toCityId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "departAt",
+            "columnName": "departAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "arriveAt",
+            "columnName": "arriveAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "modeRaw",
+            "columnName": "modeRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "costGold",
+            "columnName": "costGold",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "ownerId"
+          ]
+        }
+      },
+      {
+        "tableName": "world_native_state",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`nativeId` TEXT NOT NULL, `discovered` INTEGER NOT NULL, `discoveredAt` INTEGER, `narrativeFuel` INTEGER NOT NULL, `giftFuel` INTEGER NOT NULL, `encounterCount` INTEGER NOT NULL, `lastEncounterAt` INTEGER, `recruitedCharacterUuid` TEXT, `currentCityId` TEXT, PRIMARY KEY(`nativeId`))",
+        "fields": [
+          {
+            "fieldPath": "nativeId",
+            "columnName": "nativeId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "discovered",
+            "columnName": "discovered",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "discoveredAt",
+            "columnName": "discoveredAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "narrativeFuel",
+            "columnName": "narrativeFuel",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "giftFuel",
+            "columnName": "giftFuel",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "encounterCount",
+            "columnName": "encounterCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastEncounterAt",
+            "columnName": "lastEncounterAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "recruitedCharacterUuid",
+            "columnName": "recruitedCharacterUuid",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "currentCityId",
+            "columnName": "currentCityId",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "nativeId"
+          ]
+        }
+      },
+      {
+        "tableName": "world_relationship",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`fromId` TEXT NOT NULL, `toId` TEXT NOT NULL, `typesJson` TEXT NOT NULL, `closeness` INTEGER NOT NULL, `trust` INTEGER NOT NULL, `tension` INTEGER NOT NULL, `colorRaw` TEXT NOT NULL, `trajectoryRaw` TEXT NOT NULL, `bond` TEXT NOT NULL, `origin` TEXT NOT NULL, `dormant` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`fromId`, `toId`))",
+        "fields": [
+          {
+            "fieldPath": "fromId",
+            "columnName": "fromId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "toId",
+            "columnName": "toId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "typesJson",
+            "columnName": "typesJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "closeness",
+            "columnName": "closeness",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "trust",
+            "columnName": "trust",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tension",
+            "columnName": "tension",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "colorRaw",
+            "columnName": "colorRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "trajectoryRaw",
+            "columnName": "trajectoryRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bond",
+            "columnName": "bond",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "origin",
+            "columnName": "origin",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dormant",
+            "columnName": "dormant",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "fromId",
+            "toId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_world_relationship_toId",
+            "unique": false,
+            "columnNames": [
+              "toId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_world_relationship_toId` ON `${TABLE_NAME}` (`toId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "world_relationship_event",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `pairKey` TEXT NOT NULL, `actorId` TEXT NOT NULL, `targetId` TEXT NOT NULL, `kindRaw` TEXT NOT NULL, `arcId` TEXT, `summary` TEXT NOT NULL, `happenedAt` INTEGER NOT NULL, `settledAt` INTEGER NOT NULL, PRIMARY KEY(`uuid`))",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pairKey",
+            "columnName": "pairKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "actorId",
+            "columnName": "actorId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "targetId",
+            "columnName": "targetId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kindRaw",
+            "columnName": "kindRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "arcId",
+            "columnName": "arcId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "summary",
+            "columnName": "summary",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "happenedAt",
+            "columnName": "happenedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "settledAt",
+            "columnName": "settledAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_world_relationship_event_pairKey_happenedAt",
+            "unique": false,
+            "columnNames": [
+              "pairKey",
+              "happenedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_world_relationship_event_pairKey_happenedAt` ON `${TABLE_NAME}` (`pairKey`, `happenedAt`)"
+          }
+        ]
+      },
+      {
+        "tableName": "world_event",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `kindRaw` TEXT NOT NULL, `involvedIdsJson` TEXT NOT NULL, `cityId` TEXT, `summary` TEXT NOT NULL, `happenedAt` INTEGER NOT NULL, `notifiedAt` INTEGER, `seenAt` INTEGER, PRIMARY KEY(`uuid`))",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kindRaw",
+            "columnName": "kindRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "involvedIdsJson",
+            "columnName": "involvedIdsJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cityId",
+            "columnName": "cityId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "summary",
+            "columnName": "summary",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "happenedAt",
+            "columnName": "happenedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notifiedAt",
+            "columnName": "notifiedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "seenAt",
+            "columnName": "seenAt",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_world_event_happenedAt",
+            "unique": false,
+            "columnNames": [
+              "happenedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_world_event_happenedAt` ON `${TABLE_NAME}` (`happenedAt`)"
+          }
+        ]
+      },
+      {
+        "tableName": "world_city_lore",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`cityId` TEXT NOT NULL, `loreJson` TEXT NOT NULL, `generatedAt` INTEGER NOT NULL, PRIMARY KEY(`cityId`))",
+        "fields": [
+          {
+            "fieldPath": "cityId",
+            "columnName": "cityId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "loreJson",
+            "columnName": "loreJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "generatedAt",
+            "columnName": "generatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "cityId"
+          ]
+        }
+      },
+      {
+        "tableName": "world_discovery",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`placeId` TEXT NOT NULL, `discoveredAt` INTEGER NOT NULL, PRIMARY KEY(`placeId`))",
+        "fields": [
+          {
+            "fieldPath": "placeId",
+            "columnName": "placeId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "discoveredAt",
+            "columnName": "discoveredAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "placeId"
+          ]
+        }
+      },
+      {
+        "tableName": "world_memory",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `characterUuid` TEXT NOT NULL, `otherIdsJson` TEXT NOT NULL, `kindRaw` TEXT NOT NULL, `content` TEXT NOT NULL, `happenedAt` INTEGER NOT NULL, `sourceUuid` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `embedding` BLOB, PRIMARY KEY(`uuid`))",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "characterUuid",
+            "columnName": "characterUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "otherIdsJson",
+            "columnName": "otherIdsJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kindRaw",
+            "columnName": "kindRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "content",
+            "columnName": "content",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "happenedAt",
+            "columnName": "happenedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sourceUuid",
+            "columnName": "sourceUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "embedding",
+            "columnName": "embedding",
+            "affinity": "BLOB"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_world_memory_characterUuid",
+            "unique": false,
+            "columnNames": [
+              "characterUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_world_memory_characterUuid` ON `${TABLE_NAME}` (`characterUuid`)"
+          },
+          {
+            "name": "index_world_memory_happenedAt",
+            "unique": false,
+            "columnNames": [
+              "happenedAt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_world_memory_happenedAt` ON `${TABLE_NAME}` (`happenedAt`)"
+          }
+        ]
+      },
+      {
+        "tableName": "world_bulletin",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`epochDay` INTEGER NOT NULL, `windowStartMs` INTEGER NOT NULL, `windowEndMs` INTEGER NOT NULL, `eventsHash` INTEGER NOT NULL, `templateText` TEXT NOT NULL, `polishedText` TEXT, `polishedAt` INTEGER, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`epochDay`))",
+        "fields": [
+          {
+            "fieldPath": "epochDay",
+            "columnName": "epochDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "windowStartMs",
+            "columnName": "windowStartMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "windowEndMs",
+            "columnName": "windowEndMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "eventsHash",
+            "columnName": "eventsHash",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "templateText",
+            "columnName": "templateText",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "polishedText",
+            "columnName": "polishedText",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "polishedAt",
+            "columnName": "polishedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "epochDay"
+          ]
+        }
+      },
+      {
+        "tableName": "world_llm_spend",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`epochDay` INTEGER NOT NULL, `category` TEXT NOT NULL, `count` INTEGER NOT NULL, PRIMARY KEY(`epochDay`, `category`))",
+        "fields": [
+          {
+            "fieldPath": "epochDay",
+            "columnName": "epochDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "category",
+            "columnName": "category",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "count",
+            "columnName": "count",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "epochDay",
+            "category"
+          ]
+        }
+      },
+      {
+        "tableName": "offline_meeting_memories",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `characterUuid` TEXT NOT NULL, `conversationUuid` TEXT NOT NULL, `sessionId` TEXT NOT NULL, `kindRaw` TEXT NOT NULL, `startedAtMillis` INTEGER NOT NULL, `endedAtMillis` INTEGER NOT NULL, `location` TEXT NOT NULL, `activity` TEXT NOT NULL, `moodRaw` TEXT NOT NULL, `initiatedByUser` INTEGER, `messageCount` INTEGER NOT NULL, `summary` TEXT NOT NULL, `highlightsJson` TEXT NOT NULL, `promisesJson` TEXT NOT NULL, `sourceRaw` TEXT NOT NULL, `createdAtMillis` INTEGER NOT NULL, `updatedAtMillis` INTEGER NOT NULL, `digestedAtMillis` INTEGER, `embedding` BLOB, PRIMARY KEY(`uuid`))",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "characterUuid",
+            "columnName": "characterUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "conversationUuid",
+            "columnName": "conversationUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sessionId",
+            "columnName": "sessionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kindRaw",
+            "columnName": "kindRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startedAtMillis",
+            "columnName": "startedAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endedAtMillis",
+            "columnName": "endedAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "location",
+            "columnName": "location",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "activity",
+            "columnName": "activity",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "moodRaw",
+            "columnName": "moodRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "initiatedByUser",
+            "columnName": "initiatedByUser",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "messageCount",
+            "columnName": "messageCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "summary",
+            "columnName": "summary",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "highlightsJson",
+            "columnName": "highlightsJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "promisesJson",
+            "columnName": "promisesJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sourceRaw",
+            "columnName": "sourceRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAtMillis",
+            "columnName": "createdAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAtMillis",
+            "columnName": "updatedAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "digestedAtMillis",
+            "columnName": "digestedAtMillis",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "embedding",
+            "columnName": "embedding",
+            "affinity": "BLOB"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_offline_meeting_memories_characterUuid",
+            "unique": false,
+            "columnNames": [
+              "characterUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_offline_meeting_memories_characterUuid` ON `${TABLE_NAME}` (`characterUuid`)"
+          },
+          {
+            "name": "index_offline_meeting_memories_sessionId",
+            "unique": false,
+            "columnNames": [
+              "sessionId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_offline_meeting_memories_sessionId` ON `${TABLE_NAME}` (`sessionId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "open_loops",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `conversationUuid` TEXT NOT NULL, `characterUuid` TEXT NOT NULL, `content` TEXT NOT NULL, `typeRaw` TEXT NOT NULL, `dueAt` INTEGER, `statusRaw` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `resolvedAt` INTEGER, PRIMARY KEY(`uuid`))",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "conversationUuid",
+            "columnName": "conversationUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "characterUuid",
+            "columnName": "characterUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "content",
+            "columnName": "content",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "typeRaw",
+            "columnName": "typeRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dueAt",
+            "columnName": "dueAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "statusRaw",
+            "columnName": "statusRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "resolvedAt",
+            "columnName": "resolvedAt",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_open_loops_conversationUuid",
+            "unique": false,
+            "columnNames": [
+              "conversationUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_open_loops_conversationUuid` ON `${TABLE_NAME}` (`conversationUuid`)"
+          },
+          {
+            "name": "index_open_loops_characterUuid",
+            "unique": false,
+            "columnNames": [
+              "characterUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_open_loops_characterUuid` ON `${TABLE_NAME}` (`characterUuid`)"
+          }
+        ]
+      },
+      {
+        "tableName": "world_user_resident",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`slug` TEXT NOT NULL, `name` TEXT NOT NULL, `gender` TEXT NOT NULL, `age` INTEGER NOT NULL, `cityId` TEXT NOT NULL, `occupation` TEXT NOT NULL, `personaBrief` TEXT NOT NULL, `traitsJson` TEXT NOT NULL, `freeformLore` TEXT NOT NULL, `initialRelationText` TEXT NOT NULL, `fuelBias` TEXT NOT NULL, `avatarPath` TEXT, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`slug`))",
+        "fields": [
+          {
+            "fieldPath": "slug",
+            "columnName": "slug",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "gender",
+            "columnName": "gender",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "age",
+            "columnName": "age",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cityId",
+            "columnName": "cityId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "occupation",
+            "columnName": "occupation",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "personaBrief",
+            "columnName": "personaBrief",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "traitsJson",
+            "columnName": "traitsJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "freeformLore",
+            "columnName": "freeformLore",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "initialRelationText",
+            "columnName": "initialRelationText",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fuelBias",
+            "columnName": "fuelBias",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "avatarPath",
+            "columnName": "avatarPath",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "slug"
+          ]
+        }
+      },
+      {
+        "tableName": "promises",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `characterUuid` TEXT NOT NULL, `conversationUuid` TEXT NOT NULL, `content` TEXT NOT NULL, `statusRaw` TEXT NOT NULL, `dueAtMillis` INTEGER, `sourceRaw` TEXT NOT NULL, `sourceSessionId` TEXT NOT NULL, `openLoopUuid` TEXT, `resolvedAtMillis` INTEGER, `resolutionEvidence` TEXT NOT NULL, `createdAtMillis` INTEGER NOT NULL, `updatedAtMillis` INTEGER NOT NULL, PRIMARY KEY(`uuid`))",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "characterUuid",
+            "columnName": "characterUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "conversationUuid",
+            "columnName": "conversationUuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "content",
+            "columnName": "content",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "statusRaw",
+            "columnName": "statusRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dueAtMillis",
+            "columnName": "dueAtMillis",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sourceRaw",
+            "columnName": "sourceRaw",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sourceSessionId",
+            "columnName": "sourceSessionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "openLoopUuid",
+            "columnName": "openLoopUuid",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "resolvedAtMillis",
+            "columnName": "resolvedAtMillis",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "resolutionEvidence",
+            "columnName": "resolutionEvidence",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAtMillis",
+            "columnName": "createdAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAtMillis",
+            "columnName": "updatedAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_promises_characterUuid",
+            "unique": false,
+            "columnNames": [
+              "characterUuid"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_promises_characterUuid` ON `${TABLE_NAME}` (`characterUuid`)"
+          }
+        ]
+      },
+      {
+        "tableName": "user_story_templates",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`uuid` TEXT NOT NULL, `name` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `payloadJson` TEXT NOT NULL, PRIMARY KEY(`uuid`))",
+        "fields": [
+          {
+            "fieldPath": "uuid",
+            "columnName": "uuid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "payloadJson",
+            "columnName": "payloadJson",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "uuid"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '620246bd1282116adf68a2f921397381')"
+    ]
+  }
+}

@@ -20,7 +20,8 @@ object MeetingDisplayFormatter {
 
     private fun isChinese(locale: Locale): Boolean = locale.language == "zh"
 
-    private fun cnWeekday(date: LocalDate): String = CN_WEEKDAYS[date.dayOfWeek.value - 1]
+    /** `周一…周日`。internal：「我们的日子」`OurDayKey.weekdayCn` 复用同一张周几表（卷一图纸 §2.2·零行为变化）。 */
+    internal fun cnWeekday(date: LocalDate): String = CN_WEEKDAYS[date.dayOfWeek.value - 1]
 
     /**
      * 确认卡 / 预览展示用人话。exact → "6月27日 周六 15:00"；dayOnly / vague → "6月27日 周六"。

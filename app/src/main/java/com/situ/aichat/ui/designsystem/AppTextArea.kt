@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.OffsetMapping
@@ -98,6 +99,7 @@ fun AppTextArea(
     containerColor: Color? = null,
     contentColor: Color? = null,
     placeholderColor: Color? = null,
+    textStyle: TextStyle? = null,
 ) {
     val colors = AppTheme.colors
     val interactionSource = remember { MutableInteractionSource() }
@@ -136,7 +138,7 @@ fun AppTextArea(
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
             enabled = enabled,
             maxLines = maxLines,
-            textStyle = AppTypography.body.copy(
+            textStyle = (textStyle ?: AppTypography.body).copy(
                 color = if (enabled) (contentColor ?: colors.text.primary) else colors.text.tertiary,
             ),
             cursorBrush = SolidColor(colors.accent.primary),
@@ -153,7 +155,7 @@ fun AppTextArea(
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                 ) {
                     if (value.isEmpty() && placeholder != null) {
-                        Text(text = placeholder, style = AppTypography.body, color = placeholderColor ?: colors.text.secondary)
+                        Text(text = placeholder, style = textStyle ?: AppTypography.body, color = placeholderColor ?: colors.text.secondary)
                     }
                     innerTextField()
                 }
@@ -186,6 +188,7 @@ fun AppTextArea(
     isError: Boolean = false,
     minHeight: Dp = 120.dp,
     highlightMacros: Boolean = false,
+    textStyle: TextStyle? = null,
 ) {
     val colors = AppTheme.colors
     val interactionSource = remember { MutableInteractionSource() }
@@ -219,7 +222,7 @@ fun AppTextArea(
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth(),
-            textStyle = AppTypography.body.copy(color = colors.text.primary),
+            textStyle = (textStyle ?: AppTypography.body).copy(color = colors.text.primary),
             cursorBrush = SolidColor(colors.accent.primary),
             visualTransformation = transformation,
             interactionSource = interactionSource,
@@ -234,7 +237,7 @@ fun AppTextArea(
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                 ) {
                     if (value.text.isEmpty() && placeholder != null) {
-                        Text(text = placeholder, style = AppTypography.body, color = colors.text.secondary)
+                        Text(text = placeholder, style = textStyle ?: AppTypography.body, color = colors.text.secondary)
                     }
                     innerTextField()
                 }

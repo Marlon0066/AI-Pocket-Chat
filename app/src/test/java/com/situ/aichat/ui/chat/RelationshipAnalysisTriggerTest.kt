@@ -11,15 +11,20 @@ import com.situ.aichat.data.remote.llm.ApiConfigValues
 import com.situ.aichat.data.repository.ApiConfigRepository
 import com.situ.aichat.data.repository.CharacterRepository
 import com.situ.aichat.data.repository.CharacterWriteLock
+import com.situ.aichat.prompt.growth.AffectKernel
 import com.situ.aichat.prompt.growth.GrowthAnalysisCoordinator
+import com.situ.aichat.prompt.growth.GrowthAnalysisError
 import com.situ.aichat.prompt.growth.GrowthAnalysisResult
+import com.situ.aichat.prompt.growth.IntentKernel
 import com.situ.aichat.prompt.growth.RelationshipAnalysisCoordinator
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
+import io.mockk.verify
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import org.junit.After
@@ -93,6 +98,8 @@ class RelationshipAnalysisTriggerTest {
     private lateinit var apiConfigRepo: ApiConfigRepository
     private lateinit var growthCoordinator: GrowthAnalysisCoordinator
     private lateinit var relationshipCoordinator: RelationshipAnalysisCoordinator
+    private lateinit var affectKernel: AffectKernel
+    private lateinit var intentKernel: IntentKernel
     private lateinit var trigger: RelationshipAnalysisTrigger
     private val config = mockk<ApiConfigValues>(relaxed = true)
 
@@ -102,11 +109,14 @@ class RelationshipAnalysisTriggerTest {
         // "not mocked" 会在 coordinator 调用前中断 → 静态假掉 Log（本测不验日志副作用，保持纯 JVM 快测，不升级 Robolectric）。
         mockkStatic(Log::class)
         every { Log.d(any(), any()) } returns 0
+        every { Log.w(any<String>(), any<String>()) } returns 0   // 修缮卷 D-13：失败路径打 Log.w（T2-4 断言其文案）
         characterRepo = mockk(relaxed = true)
         characterWriteLock = mockk(relaxed = true)
         apiConfigRepo = mockk(relaxed = true)
         growthCoordinator = mockk(relaxed = true)
         relationshipCoordinator = mockk(relaxed = true)
+        affectKernel = mockk(relaxed = true)
+        intentKernel = mockk(relaxed = true)
         // withCharacterLock 真正执行其 block（否则"重读→+1→写回→触发判定"逻辑不会跑）。
         // 成长递增 block 返回 GrowthAnalysisMetadata?，关系递增 block 返回 CharacterEntity? → 两个 reified 类型各 stub 一次。
         coEvery { characterWriteLock.withCharacterLock<GrowthAnalysisMetadata?>(any(), any()) } coAnswers {
@@ -124,6 +134,8 @@ class RelationshipAnalysisTriggerTest {
             apiConfigRepo = apiConfigRepo,
             growthCoordinator = growthCoordinator,
             relationshipCoordinator = relationshipCoordinator,
+            affectKernel = affectKernel,
+            intentKernel = intentKernel,
         )
     }
 
@@ -147,6 +159,98 @@ class RelationshipAnalysisTriggerTest {
             "c1", config, AppSettings(growthSystemEnabled = true, growthAnalysisInterval = 0), "用户",
         )
         coVerify(exactly = 0) { characterWriteLock.withCharacterLock<GrowthAnalysisMetadata?>(any(), any()) }
+    }
+
+    // ---- 卷三 T2-2（Trigger 部分·E19 / E24 / E35）：每轮回合尾恰 tick 一次场内核，且不拿 CharacterWriteLock ----
+
+    @Test
+    fun 成长_每轮递增_恰tick场内核一次() {
+        coEvery { characterRepo.get("c1") } returns CharacterEntity(uuid = "c1", name = "测试", creationDate = 0L)
+        trigger.incrementGrowthRoundAndCheck(
+            "c1", config, AppSettings(growthSystemEnabled = true, growthAnalysisInterval = 10), "用户",
+        )
+        coVerify(exactly = 1) { affectKernel.tick("c1", any(), any()) }
+        // tick 不进角色写锁：写锁只被「递增」那一次拿到（若 tick 也拿，就是 2 次）。
+        coVerify(exactly = 1) { characterWriteLock.withCharacterLock<GrowthAnalysisMetadata?>(any(), any()) }
+    }
+
+    @Test
+    fun 成长_系统关_不tick() {
+        trigger.incrementGrowthRoundAndCheck("c1", config, AppSettings(growthSystemEnabled = false), "用户")
+        coVerify(exactly = 0) { affectKernel.tick(any(), any(), any()) }
+    }
+
+    @Test
+    fun 成长_tick抛异常_递增与分析照常() {
+        coEvery { affectKernel.tick(any(), any(), any()) } throws IllegalStateException("boom")
+        coEvery { characterRepo.get("c1") } returns CharacterEntity(uuid = "c1", name = "测试", creationDate = 0L)
+        trigger.incrementGrowthRoundAndCheck(
+            "c1", config, AppSettings(growthSystemEnabled = true, growthAnalysisInterval = 1), "用户",
+        )
+        coVerify { characterRepo.updateGrowthMetadata("c1", any()) }
+        coVerify { growthCoordinator.analyzeAndPersist("c1", config, "用户", any()) }
+    }
+
+    // ---- 卷四 T2-3（tick 部分·K-15 / K-16 / N-5）：每轮递增恰 tick 意图内核一次、文本透传、两 tick 顺序不嵌套、系统关不 tick、抛异常不影响 ----
+
+    @Test
+    fun 卷四_成长_每轮递增_恰tick意图内核一次_文本透传_场先意图后() {
+        coEvery { characterRepo.get("c1") } returns CharacterEntity(uuid = "c1", name = "测试", creationDate = 0L)
+        trigger.incrementGrowthRoundAndCheck(
+            "c1", config, AppSettings(growthSystemEnabled = true, growthAnalysisInterval = 10), "用户",
+            userText = "用户文本",
+        )
+        coVerify(exactly = 1) { intentKernel.tick("c1", any(), "用户文本") }
+        coVerifyOrder {
+            affectKernel.tick("c1", any(), any())
+            intentKernel.tick("c1", any(), any())
+        }
+        // 两个 tick 都不进角色写锁：写锁仍只被「递增」那一次拿到
+        coVerify(exactly = 1) { characterWriteLock.withCharacterLock<GrowthAnalysisMetadata?>(any(), any()) }
+    }
+
+    @Test
+    fun 卷四_成长_不传文本_tick收到空串() {
+        coEvery { characterRepo.get("c1") } returns CharacterEntity(uuid = "c1", name = "测试", creationDate = 0L)
+        trigger.incrementGrowthRoundAndCheck("c1", config, AppSettings(growthSystemEnabled = true, growthAnalysisInterval = 10), "用户")
+        coVerify(exactly = 1) { intentKernel.tick("c1", any(), "") }
+    }
+
+    @Test
+    fun 卷四_成长_系统关_不tick意图() {
+        trigger.incrementGrowthRoundAndCheck("c1", config, AppSettings(growthSystemEnabled = false), "用户", userText = "x")
+        coVerify(exactly = 0) { intentKernel.tick(any(), any(), any()) }
+    }
+
+    @Test
+    fun 卷四_成长_意图tick抛异常_递增与分析照常() {
+        coEvery { intentKernel.tick(any(), any(), any()) } throws IllegalStateException("boom")
+        coEvery { characterRepo.get("c1") } returns CharacterEntity(uuid = "c1", name = "测试", creationDate = 0L)
+        trigger.incrementGrowthRoundAndCheck(
+            "c1", config, AppSettings(growthSystemEnabled = true, growthAnalysisInterval = 1), "用户",
+        )
+        coVerify { characterRepo.updateGrowthMetadata("c1", any()) }
+        coVerify { growthCoordinator.analyzeAndPersist("c1", config, "用户", any()) }
+    }
+
+    // ---- 修缮卷 T2-4（E25 / D-13）：分析失败 ⇒ 零写 + 恰一条 Log.w ----
+
+    @Test
+    fun 修缮卷_分析抛确定性错误_打一条确定性失败日志() {
+        coEvery { growthCoordinator.analyzeAndPersist(any(), any(), any(), any()) } throws GrowthAnalysisError.NoMessages
+        coEvery { characterRepo.get("c1") } returns CharacterEntity(uuid = "c1", name = "测试", creationDate = 0L)
+        trigger.incrementGrowthRoundAndCheck("c1", config, AppSettings(growthSystemEnabled = true, growthAnalysisInterval = 1), "用户")
+        verify(exactly = 1) { Log.w("GrowthAnalysis", match<String> { it.startsWith("成长分析确定性失败：NoMessages") }) }
+        verify(exactly = 0) { Log.w("GrowthAnalysis", match<String> { it.startsWith("成长分析瞬态失败") }) }
+        coVerify(exactly = 0) { relationshipCoordinator.analyzeAndPersist(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun 修缮卷_分析抛瞬态错误_打一条瞬态失败日志() {
+        coEvery { growthCoordinator.analyzeAndPersist(any(), any(), any(), any()) } throws IllegalStateException("网络")
+        coEvery { characterRepo.get("c1") } returns CharacterEntity(uuid = "c1", name = "测试", creationDate = 0L)
+        trigger.incrementGrowthRoundAndCheck("c1", config, AppSettings(growthSystemEnabled = true, growthAnalysisInterval = 1), "用户")
+        verify(exactly = 1) { Log.w("GrowthAnalysis", "成长分析瞬态失败：IllegalStateException") }
     }
 
     // ---- 成长真触发路径 ----

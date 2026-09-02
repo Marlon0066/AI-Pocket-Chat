@@ -15,6 +15,7 @@ import com.situ.aichat.data.local.dao.MeetingAppointmentDao
 import com.situ.aichat.data.local.dao.MessageDao
 import com.situ.aichat.data.local.dao.OfflineMeetingMemoryDao
 import com.situ.aichat.data.local.dao.OpenLoopDao
+import com.situ.aichat.data.local.dao.OurDayDao
 import com.situ.aichat.data.local.dao.PromiseDao
 import com.situ.aichat.data.local.dao.MilestoneDao
 import com.situ.aichat.data.local.dao.MomentDao
@@ -51,6 +52,7 @@ import com.situ.aichat.data.local.entity.MeetingAppointmentEntity
 import com.situ.aichat.data.local.entity.MessageEntity
 import com.situ.aichat.data.local.entity.OfflineMeetingMemoryEntity
 import com.situ.aichat.data.local.entity.OpenLoopEntity
+import com.situ.aichat.data.local.entity.OurDayEntity
 import com.situ.aichat.data.local.entity.PromiseEntity
 import com.situ.aichat.data.local.entity.MilestoneEntity
 import com.situ.aichat.data.local.entity.MonthlyReviewEntity
@@ -148,8 +150,10 @@ import com.situ.aichat.data.local.entity.WorldUserResidentEntity
         PromiseEntity::class,
         // 故事「我的模板」（图纸四 §3.2）：整套创作设定存单列 JSON，与故事表零关联（删模板不影响已开的书）。
         UserStoryTemplateEntity::class,
+        // 「我们的日子」卷一《沉淀》（总图纸 docs/handoff/2026-09-02-我们的日子-总图纸.md §3.1）：一天 × 一角色的事实快照 + 手记（无 FK·手动级联清）。
+        OurDayEntity::class,
     ],
-    version = 43,
+    version = 48,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -184,6 +188,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun offlineMeetingMemoryDao(): OfflineMeetingMemoryDao
     abstract fun openLoopDao(): OpenLoopDao
     abstract fun promiseDao(): PromiseDao
+    abstract fun ourDayDao(): OurDayDao
     abstract fun userStoryTemplateDao(): UserStoryTemplateDao
 
     companion object {

@@ -42,7 +42,7 @@ class WorldChatContextProviderTest {
             .allowMainThreadQueries().build()
         embedder = mockk(relaxed = true)
         // 第 4 参 archiveIndex（记忆改造四期·E15·图纸侦察漏点）：本测走 provider 自有世界记忆检索，不触 searchRelevantMemories → relaxed 桩不被调用。
-        vectorService = VectorMemoryService(mockk(relaxed = true), mockk(relaxed = true), embedder, mockk(relaxed = true)) // 真余弦/序列化
+        vectorService = VectorMemoryService(mockk(relaxed = true), mockk(relaxed = true), embedder, mockk(relaxed = true), mockk(relaxed = true)) // 真余弦/序列化（第 5 参 ourDayIndex·卷二·同上不触）
         provider = WorldChatContextProvider(db.worldDao(), db.worldSocialDao(), db.worldMemoryDao(), db.characterDao(), embedder, vectorService)
     }
 
