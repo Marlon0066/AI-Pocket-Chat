@@ -105,6 +105,25 @@ internal fun appendConversationMessages(
     var previousTimestamp: Long? = null
     val historyStartIndex = chatMessages.size  // A1：清理悬空分割线时不越界到本函数之前的前置内容。
 
+    // 场边界注记（时间感知三期 §3.3）：主循环前预扫一遍时间戳，算出全部「新的一场」的下标
+    //（判据单源 = [TimeAnchorFormatter.gapTier] >= MOST_OF_DAY；null 与 FEW_HOURS 都算同一场），
+    // 只给**最后 2 个**加长版换算注记——20 轮历史横跨 10 天会有 10 个边界，全插会淹没提示词，
+    // 而模型主要接着最后一场往下演。now=null（非在线聊天）时整体跳过，恒空。
+    val regroundingIndices: Set<Int> = if (now == null) {
+        emptySet()
+    } else {
+        val boundaries = mutableListOf<Int>()
+        for (i in 1 until recentMessages.size) {
+            val tier = TimeAnchorFormatter.gapTier(
+                recentMessages[i - 1].timestamp,
+                recentMessages[i].timestamp,
+                dividerZone,
+            )
+            if (tier != null && tier >= TimeAnchorFormatter.GapTier.MOST_OF_DAY) boundaries.add(i)
+        }
+        boundaries.takeLast(2).toSet()
+    }
+
     // 见面时间线注记（记忆改造二期·部件④·§3.1-C）：now 非空 + 有档案行 + 有历史时，先算好本窗口跨度内的候选见面
     // （selectEligible 自筛 kind/跨度/上限 5）；遍历时在相邻两条消息的时间缝里逐条升序发（发射后移除，每行只发一次）。
     val meetingAnnotations: MutableList<OfflineMeetingMemoryEntity> =
@@ -122,7 +141,7 @@ internal fun appendConversationMessages(
     //（O(消息数×表情数)）。输出与逐条建表版逐字节同（StickerServiceTest 等价锁）。
     val uuidToAlias = StickerService.buildUuidToAliasMap(customStickers)
 
-    for (message in recentMessages) {
+    for ((messageIndex, message) in recentMessages.withIndex()) {
         if (now != null) {
             // §3.1-C：注记在前、分割线在后。取落在 (previousTimestamp, message.timestamp) 开区间的见面（首条 null 跳过），
             // 按升序逐条 flush 各 bucket 后发 system 注记行；每行发射后从待发集合移除。
@@ -145,7 +164,13 @@ internal fun appendConversationMessages(
                     }
                 }
             }
-            HistoryTimeDivider.lineFor(message.timestamp, previousTimestamp, now, dividerZone)?.let { divider ->
+            HistoryTimeDivider.lineFor(
+                message.timestamp,
+                previousTimestamp,
+                now,
+                dividerZone,
+                withRegrounding = messageIndex in regroundingIndices,
+            )?.let { divider ->
                 flushAssistant()
                 flushUser()
                 flushPet()

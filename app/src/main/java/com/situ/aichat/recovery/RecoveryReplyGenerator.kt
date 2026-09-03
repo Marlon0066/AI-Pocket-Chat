@@ -138,6 +138,10 @@ class RecoveryReplyGenerator @Inject constructor(
         val milestones = characterRepo.getMilestones(character.uuid)
         val todaySchedule = scheduleDao.scheduleFor(character.uuid, todayStart)
         val todayScheduleEvents = todaySchedule?.let { scheduleDao.eventsForSchedule(it.uuid) } ?: emptyList()
+        // 时间感知三期：今天之前 3 天的日程事件 → 【你最近几天的日子】（与主引擎同口径·日期算术起点）。
+        val recentDaysStartMillis = Instant.ofEpochMilli(todayStart).atZone(zone)
+            .toLocalDate().minusDays(3).atStartOfDay(zone).toInstant().toEpochMilli()
+        val recentDaysScheduleEvents = scheduleDao.eventsForCharacterSince(character.uuid, recentDaysStartMillis)
         val calendarUpcoming = if (settings.calendarIntegrationEnabled) {
             calendarReader.upcomingEvents(nowInstant.toEpochMilli())?.text
         } else {
@@ -177,6 +181,7 @@ class RecoveryReplyGenerator @Inject constructor(
             milestones = milestones,
             todaySchedule = todaySchedule,
             todayScheduleEvents = todayScheduleEvents,
+            recentDaysScheduleEvents = recentDaysScheduleEvents,
             calendarUpcomingEvents = calendarUpcoming,
             momentChatContext = momentChatContext,
             economicState = economicState,

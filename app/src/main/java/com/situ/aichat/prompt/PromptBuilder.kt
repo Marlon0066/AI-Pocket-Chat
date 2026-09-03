@@ -106,6 +106,8 @@ object PromptBuilder {
         /** 今日日程 + 其事件（P5.2，独立表加载后传入；scheduleAwareness / currentMoment 模块用）。 */
         val todaySchedule: CharacterDailyScheduleEntity? = null,
         val todayScheduleEvents: List<ScheduleEventEntity> = emptyList(),
+        /** 今天之前 3 天的日程事件（时间感知三期）：渲染【你最近几天的日子】；空=整段不出。 */
+        val recentDaysScheduleEvents: List<ScheduleEventEntity> = emptyList(),
         /** 设备日历近期事件的 `[#E1]` 提示词块（P5.3a，读侧已格式化后传入；calendarAwareness 模块用）。 */
         val calendarUpcomingEvents: String? = null,
         /** 近 7 天朋友圈互动摘要（M06 7.2.6，MomentChatContextService 装配后传入；MOMENTS_CONTEXT 模块用）。 */
@@ -237,6 +239,7 @@ object PromptBuilder {
         milestones: List<MilestoneEntity> = emptyList(),
         todaySchedule: CharacterDailyScheduleEntity? = null,
         todayScheduleEvents: List<ScheduleEventEntity> = emptyList(),
+        recentDaysScheduleEvents: List<ScheduleEventEntity> = emptyList(),
         calendarUpcomingEvents: String? = null,
         momentChatContext: MomentChatContext? = null,
         economicState: CharacterEconomicChatState? = null,
@@ -358,6 +361,7 @@ object PromptBuilder {
             milestones = milestones,
             todaySchedule = todaySchedule,
             todayScheduleEvents = todayScheduleEvents,
+            recentDaysScheduleEvents = recentDaysScheduleEvents,
             calendarUpcomingEvents = calendarUpcomingEvents,
             userProfile = userProfile,
             appSettings = appSettings,
@@ -665,6 +669,7 @@ object PromptBuilder {
         milestones: List<MilestoneEntity> = emptyList(),
         todaySchedule: CharacterDailyScheduleEntity? = null,
         todayScheduleEvents: List<ScheduleEventEntity> = emptyList(),
+        recentDaysScheduleEvents: List<ScheduleEventEntity> = emptyList(),
         calendarUpcomingEvents: String? = null,
         momentChatContext: MomentChatContext? = null,
         economicState: CharacterEconomicChatState? = null,
@@ -707,6 +712,7 @@ object PromptBuilder {
             milestones = milestones,
             todaySchedule = todaySchedule,
             todayScheduleEvents = todayScheduleEvents,
+            recentDaysScheduleEvents = recentDaysScheduleEvents,
             calendarUpcomingEvents = calendarUpcomingEvents,
             momentChatContext = momentChatContext,
             economicState = economicState,

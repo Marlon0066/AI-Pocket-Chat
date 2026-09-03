@@ -45,6 +45,8 @@ fun buildSystemPromptWithSuffixes(
     milestones: List<MilestoneEntity> = emptyList(),
     todaySchedule: CharacterDailyScheduleEntity? = null,
     todayScheduleEvents: List<ScheduleEventEntity> = emptyList(),
+    /** 时间感知三期：透传进 [PromptBuilder.BuildContext.recentDaysScheduleEvents]（渲染在消费侧日程模块）。 */
+    recentDaysScheduleEvents: List<ScheduleEventEntity> = emptyList(),
     calendarUpcomingEvents: String? = null,
     momentChatContext: MomentChatContext? = null,
     economicState: CharacterEconomicChatState? = null,
@@ -96,6 +98,7 @@ fun buildSystemPromptWithSuffixes(
         milestones = milestones,
         todaySchedule = todaySchedule,
         todayScheduleEvents = todayScheduleEvents,
+        recentDaysScheduleEvents = recentDaysScheduleEvents,
         calendarUpcomingEvents = calendarUpcomingEvents,
         userProfile = userProfile,
         appSettings = appSettings,

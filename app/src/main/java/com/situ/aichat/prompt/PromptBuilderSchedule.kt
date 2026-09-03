@@ -10,6 +10,7 @@ import com.situ.aichat.data.model.relationshipPressure
 import com.situ.aichat.prompt.growth.AttentionJudge
 import com.situ.aichat.prompt.growth.AttentionVerdict
 import com.situ.aichat.prompt.growth.ScheduleSignal
+import com.situ.aichat.prompt.schedule.buildRecentDaysSection
 import com.situ.aichat.prompt.schedule.schedulePastLine
 import java.time.Instant
 import java.time.ZoneId
@@ -29,12 +30,29 @@ import java.time.format.DateTimeFormatter
  * （退化时老文案逐字回退）；[DEFAULT_INJECTION_INSTRUCTION] 补第 6 条。线下版与兜底版**不**接 ⚠️ 与第 6 条（N-5）。
  */
 
-/** 日程列表 + 状态标签 + 天气 + 时态硬约束（scheduleAwareness 模块）。无日程数据→空串（【此刻】兜底交给 currentMoment）。 */
+/**
+ * 日程列表 + 状态标签 + 天气 + 时态硬约束（scheduleAwareness 模块）。今日日程数据缺席 → 只剩
+ * 【你最近几天的日子】段（它也空才返空串，【此刻】兜底交给 currentMoment）。
+ */
 internal fun buildScheduleModule(ctx: PromptBuilder.BuildContext): String {
     if (!ctx.appSettings.scheduleSystemEnabled) return ""
-    val data = loadScheduleData(ctx) ?: return ""
+    // 时间感知三期（图纸 §4.1）：今天之前 3 天的流水账段，位于今日日程**之前**、两段间隔一个空行。
+    // 今天那份原样不动（拍板 6）——本段只管今天之前，零冲突。空表 / 无往日事件 → 整段不出。
+    // R1 🟡-1：本段数据源与今日日程**相互独立**，故构建在 [loadScheduleData] 之前——今日日程缺席
+    //（未生成 / 生成失败 / 事件全被过滤）时它仍应注入：「隔了几天回来」正是它存在的理由，而那时今天的
+    // 日程恰恰最可能还没生成（backfillMissedDays 只补到昨天，今日那份靠异步 LLM 调用）。
+    // 时区取值口径与 [loadScheduleData] 内部逐字一致（同一次装配单一时区源），不许简写成裸 systemDefault()。
+    val recentZone = ctx.todaySchedule?.timezoneIdentifier?.let { runCatching { ZoneId.of(it) }.getOrNull() }
+        ?: ZoneId.systemDefault()
+    val todayStartMillis = ctx.now.atZone(recentZone).toLocalDate()
+        .atStartOfDay(recentZone).toInstant().toEpochMilli()
+    val recentDays = buildRecentDaysSection(ctx.recentDaysScheduleEvents, todayStartMillis, recentZone)
+
+    val data = loadScheduleData(ctx)
+    if (data == null) return recentDays  // 今日无数据：只出最近几天段（它也空 → "" = 改动前行为）
 
     val parts = mutableListOf<String>()
+    if (recentDays.isNotEmpty()) parts.add("$recentDays\n")
     parts.add("【你今天完整的日程】")
     // 刀4 旧戏份压缩（招3·2026-07-11 过审）：[✓已发生] 事件合并为**一行流水账**——保留时段词、删钟点/
     // 地点/心情（演完的戏只留存在感,降低"拿早晨素材演此刻"的显著度;13:39 被答成清晨的事故根源之二）。

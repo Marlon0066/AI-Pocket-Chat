@@ -47,6 +47,10 @@ interface ScheduleDao {
     /**
      * 该角色近一周（schedule.date >= [sinceMillis]）所有日程的事件，供成长分析的「最近一周日常活动模式」
      * 补充材料（1:1 iOS GrowthAnalysisService.buildScheduleAnalysis 的 schedules.flatMap { events }）。
+     *
+     * **消费者二**（时间感知三期）：最近几天日程注入——两个发起点（`AssistantTurnEngine` / `RecoveryReplyGenerator`）
+     * 传「今天往前 3 天 0 点」取事件，交 `buildRecentDaysSection` 渲染【你最近几天的日子】。
+     * 本查询**只 SELECT e.\***（不返回 s.date），按日期分组一律用事件自带的绝对 `startTime`。
      */
     @Query(
         "SELECT e.* FROM schedule_events e " +

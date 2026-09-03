@@ -260,6 +260,11 @@ internal class AssistantTurnEngine(
             .toLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
         val todaySchedule = scheduleDao.scheduleFor(character.uuid, todayStartMillis)
         val todayScheduleEvents = todaySchedule?.let { scheduleDao.eventsForSchedule(it.uuid) } ?: emptyList()
+        // 时间感知三期：今天之前 3 天的日程事件 → 【你最近几天的日子】。起点用**日期算术**
+        //（不是 todayStart − 3×86400000，夏令时 / 时区偏移下不安全）；复用上面同一个 now，不另起 Instant.now()。
+        val recentDaysStartMillis = Instant.ofEpochMilli(todayStartMillis).atZone(ZoneId.systemDefault())
+            .toLocalDate().minusDays(3).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val recentDaysScheduleEvents = scheduleDao.eventsForCharacterSince(character.uuid, recentDaysStartMillis)
         // 等待期（Phase 9）：该角色下一个「已确认未来约定」→ 注入【待见约定】让 AI 自然提起（PromptBuilder 仅非线下时注入）。
         val nextMeetingAppointment = meetingAppointmentStore.nextUpcomingForCharacter(character.uuid, nowInstant.toEpochMilli())
         // M12 日历感知（P5.3a）：已授权 + 开启时注入设备日历近期事件（calendarAwareness）。
@@ -326,6 +331,7 @@ internal class AssistantTurnEngine(
             milestones = milestones,
             todaySchedule = todaySchedule,
             todayScheduleEvents = todayScheduleEvents,
+            recentDaysScheduleEvents = recentDaysScheduleEvents,
             calendarUpcomingEvents = calendarUpcomingEvents,
             momentChatContext = momentChatContext,
             economicState = economicState,

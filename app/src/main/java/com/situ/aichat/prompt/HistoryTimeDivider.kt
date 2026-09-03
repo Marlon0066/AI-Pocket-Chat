@@ -1,6 +1,7 @@
 package com.situ.aichat.prompt
 
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -24,6 +25,11 @@ import java.time.temporal.ChronoUnit
  * - **横线包裹格式**避开 [DirtyMessageDetector] 的所有保留标记（不含 `<event time=`/`【…】`/`[系统记录`）；
  *   万一 LLM 仍模仿，[ReplyParser] 输出端有横线 echo 兜底。
  * - **相对当前时间**表达（今天/昨天/M月D日 周X），与 [TimeAnchorFormatter] 同口径；zone 注入便于确定性单测。
+ * - **场边界长版注记**（时间感知三期）：在「新的一场」的缝上（档位 ≥ [TimeAnchorFormatter.GapTier.MOST_OF_DAY]）
+ *   给分割线追加一段时间坐标系换算（[regroundingSuffix]），治「把前天说的事当成正在发生」。注记与短版**共用同一条
+ *   system 消息**，不拆两条。格式硬约束（违反即静默漏进气泡）：整串必须**单行**、以 `【时间 · ` 开头、以 `】` 结尾、
+ *   中间**不得出现 `】` 或换行**——否则不被 [ReplyParser] 的 echo 正则 `(?m)^[ \t]*【时间 ·[^】\n]*】[ \t]*$` 整行命中，
+ *   模型模仿吐回来就直漏进气泡入库。长版对 [isDivider] 天然仍为真（前后缀判据），悬空清理照旧生效。
  */
 object HistoryTimeDivider {
 
@@ -50,12 +56,16 @@ object HistoryTimeDivider {
      * @param previousTimeMillis 上一条已遍历消息的时刻；null = 这是历史第一条（总给起始锚）
      * @param now 当前真实时间（用于「今天/昨天」相对表达）
      * @param zone 时区（注入以便确定性单测；线上传 `ZoneId.systemDefault()`）
+     * @param withRegrounding 该缝是否为「最近 2 个场边界」之一（由 `appendConversationMessages` 预扫判定）：
+     *   true 时在分割线里追加 [regroundingSuffix] 长版注记。默认 false = 短版，输出与三期改造前**逐字节相同**。
+     *   历史第一条（[previousTimeMillis] 为 null）恒不产注记——没有「以上」可指。
      */
     fun lineFor(
         messageTimeMillis: Long,
         previousTimeMillis: Long?,
         now: Instant,
         zone: ZoneId,
+        withRegrounding: Boolean = false,
     ): String? {
         if (previousTimeMillis == null) {
             // 历史第一条：仅当落在往日才给起始锚（消除「后面的消息钟点反而更早」的跨日歧义）；
@@ -66,8 +76,43 @@ object HistoryTimeDivider {
         val gapSeconds = (messageTimeMillis - previousTimeMillis) / 1000
         val crossesDay = dayDifference(previousTimeMillis, messageTimeMillis, zone) != 0
         if (gapSeconds < GAP_THRESHOLD_SECONDS && !crossesDay) return null
-        return wrap(messageTimeMillis, now, zone)
+        val suffix = if (withRegrounding) regroundingSuffix(previousTimeMillis, messageTimeMillis, now, zone) else ""
+        return "$OPEN${formatLabel(messageTimeMillis, now, zone)}$suffix$CLOSE"
     }
+
+    /**
+     * 场边界注记后缀（时间感知三期 §4.2·逐字锁定）——**摊时间坐标系，不解析原文里的时间词**：
+     * - 同日档（[TimeAnchorFormatter.GapTier.MOST_OF_DAY]）只给「已隔多久」，不给换算表——同一自然日内
+     *   「今天/明天/今晚」所指未变，列换算表是噪音；
+     * - 跨日档（跨夜 / 数日 / 久别）给完整换算表，让模型把旧话里的相对时间词对号入座。
+     *
+     * 时长直接用 [TimeAnchorFormatter.formatDuration]，其返回值**自带「约」**——模板里禁止再写「约」（会成「约约」）。
+     * 短日期手写拼接（不引入 [DateTimeFormatter]，避免 locale 依赖）；所有日期算术统一走注入的 [zone]。
+     * 档位 < MOST_OF_DAY（含 null）时返 `""`：同一场之内不产注记，分割线退回短版。
+     */
+    internal fun regroundingSuffix(
+        prevTimeMillis: Long,
+        messageTimeMillis: Long,
+        now: Instant,
+        zone: ZoneId,
+    ): String {
+        val tier = TimeAnchorFormatter.gapTier(prevTimeMillis, messageTimeMillis, zone) ?: return ""
+        if (tier < TimeAnchorFormatter.GapTier.MOST_OF_DAY) return ""
+        val oldLabel = formatLabel(prevTimeMillis, now, zone)
+        if (tier == TimeAnchorFormatter.GapTier.MOST_OF_DAY) {
+            val seconds = (messageTimeMillis - prevTimeMillis) / 1000
+            return "——以上对话发生在$oldLabel 前后，已隔${TimeAnchorFormatter.formatDuration(seconds)}"
+        }
+        val prevDate = Instant.ofEpochMilli(prevTimeMillis).atZone(zone).toLocalDate()
+        val oldShort = shortDate(prevDate)
+        val nextShort = shortDate(prevDate.plusDays(1))
+        val days = dayDifference(prevTimeMillis, now.toEpochMilli(), zone)
+        return "——以上对话发生在$oldLabel 前后，距今 $days 天；" +
+            "那时说的\"今天\"指$oldShort、\"明天\"指$nextShort、\"今晚\"指${oldShort}晚"
+    }
+
+    /** 短日期「M月D日」（手写拼接，不随设备 locale）。 */
+    private fun shortDate(date: LocalDate): String = "${date.monthValue}月${date.dayOfMonth}日"
 
     /** 某条消息内容是否是本生成器产出的时间分割线整行（清理悬空分割线 / 输出端剥 echo 用）。 */
     fun isDivider(content: String): Boolean {

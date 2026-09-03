@@ -2,6 +2,7 @@ package com.situ.aichat.prompt
 
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -18,6 +19,8 @@ import java.util.TimeZone
  * - 五档：<2h 无附言 / 同日或跨日但 <6h=半日(几个小时) / 同日 ≥6h=半日(大半天) / 跨 1 日且 ≥6h=跨夜 /
  *   2–7 天=数日 / >7 天=久别；命中任一档追加「长期持续」保命附言；
  * - 深夜边界（23:00→01:30 跨日 2.5h）落半日档，不预设「睡过一觉」；
+ * - 三期改写（图纸 §4.3）：五档从「翻篇」措辞改为「换时态」措辞（记忆保留、别当成正在发生）；
+ *   ≥ 半日档追加话题优先级半句，FEW_HOURS 不加；跨夜档不得替角色断言作息；
  * - 「（这段是给你看的…）」尾注已移至 currentMoment（本类输出不得再含）。
  * 时长分档表 formatDuration 规格未变。时区钉死 Asia/Shanghai 保证确定性。
  */
@@ -137,6 +140,137 @@ class TimeAnchorFormatterTest {
         assertTrue(fewDays.startsWith(TimeAnchorFormatter.TIER_FEW_DAYS))
         val longGap = tier(at(2026, 6, 30, 10, 0), at(2026, 6, 12, 10, 0))!!
         assertTrue(longGap.startsWith(TimeAnchorFormatter.TIER_LONG_GAP))
+    }
+
+    // MARK: - 五档文案（三期图纸 §4.3·断言从锁定文案逐字反推，不照抄实现输出）
+
+    @Test
+    fun tierTexts_matchLockedWording() {
+        assertEquals(
+            "这几个小时你在过自己的生活，现在才重新拿起手机。前面聊的还算近，接得上就自然接。",
+            TimeAnchorFormatter.TIER_FEW_HOURS,
+        )
+        assertEquals(
+            "距上次说话已经过去大半天了。前面那些事你都记得，但它们是那时候发生的，别当成此刻正在发生。",
+            TimeAnchorFormatter.TIER_MOST_OF_DAY,
+        )
+        assertEquals(
+            "中间隔了一夜。昨天聊的事你都记得，但那是昨天的——要提就用回想的口吻，不是接着往下演。",
+            TimeAnchorFormatter.TIER_OVERNIGHT,
+        )
+        assertEquals(
+            "隔了好几天。那几天的事你记得，但它们已经过去了——想提就当成前几天的事提一句，别接着往下演。",
+            TimeAnchorFormatter.TIER_FEW_DAYS,
+        )
+        assertEquals(
+            "很久没联系了。上次聊的细节你可以记得模糊些，你的近况也该有变化；找回联系的感觉，但别刻意煽情，也别翻旧账。",
+            TimeAnchorFormatter.TIER_LONG_GAP,
+        )
+        assertEquals(
+            "开口先回应对方这条消息本身；对方开了新话题就跟着新话题走，别硬把话题拉回上次。",
+            TimeAnchorFormatter.TOPIC_PRIORITY_NOTE,
+        )
+    }
+
+    @Test
+    fun tierOvernight_neverAssertsSleepHabit() {
+        // 时间感知专项核心原则：系统只给客观事实，状态交 AI 按人设判断——夜班 / 作息颠倒 / 不睡觉的角色
+        // 会被「你已经睡过一觉」带偏。旧文案的这四个字必须彻底消失（负向断言）。
+        assertFalse(TimeAnchorFormatter.TIER_OVERNIGHT.contains("睡过一觉"))
+        val note = tier(at(2026, 6, 13, 8, 0), at(2026, 6, 12, 23, 0))!!
+        assertFalse("跨夜档整段都不得替角色断言作息", note.contains("睡过一觉"))
+    }
+
+    @Test
+    fun topicPriority_onlyFromMostOfDayUp() {
+        // 装配顺序（§4.3）：>= 半日档 = tier + 话题优先级 + 保命附言；FEW_HOURS 档 = tier + 保命附言。
+        val fewHours = tier(at(2026, 6, 13, 15, 0), at(2026, 6, 13, 12, 0))!!
+        assertEquals(
+            TimeAnchorFormatter.TIER_FEW_HOURS + TimeAnchorFormatter.PERSISTENT_NOTE,
+            fewHours,
+        )
+        val mostOfDay = tier(at(2026, 6, 13, 20, 0), at(2026, 6, 13, 7, 0))!!
+        assertEquals(
+            TimeAnchorFormatter.TIER_MOST_OF_DAY + TimeAnchorFormatter.TOPIC_PRIORITY_NOTE +
+                TimeAnchorFormatter.PERSISTENT_NOTE,
+            mostOfDay,
+        )
+        val overnight = tier(at(2026, 6, 13, 8, 0), at(2026, 6, 12, 23, 0))!!
+        assertTrue(overnight.contains(TimeAnchorFormatter.TOPIC_PRIORITY_NOTE))
+        val fewDays = tier(at(2026, 6, 15, 10, 0), at(2026, 6, 12, 10, 0))!!
+        assertTrue(fewDays.contains(TimeAnchorFormatter.TOPIC_PRIORITY_NOTE))
+        val longGap = tier(at(2026, 6, 30, 10, 0), at(2026, 6, 12, 10, 0))!!
+        assertTrue(longGap.contains(TimeAnchorFormatter.TOPIC_PRIORITY_NOTE))
+    }
+
+    // MARK: - gapTier 档位单源（时间感知三期 §3.1·断言从规格独立反推：2h 起档 / 同日 6h / 跨 1 日 6h / <36h 归跨夜 / >7 天久别）
+
+    private fun tierOf(from: Instant, to: Instant): TimeAnchorFormatter.GapTier? =
+        TimeAnchorFormatter.gapTier(from.toEpochMilli(), to.toEpochMilli(), zone)
+
+    @Test
+    fun gapTier_underTwoHours_isNull() {
+        // 规格：< 2 小时不成档（正常聊天节奏）。1h59m 差一分钟不到线。
+        assertNull(tierOf(at(2026, 6, 13, 12, 0), at(2026, 6, 13, 13, 59)))
+    }
+
+    @Test
+    fun gapTier_exactlyTwoHours_fewHours() {
+        // 规格：恰 2 小时 = 起档线（>= 2h 成档），同日 < 6h → FEW_HOURS。
+        assertEquals(TimeAnchorFormatter.GapTier.FEW_HOURS, tierOf(at(2026, 6, 13, 12, 0), at(2026, 6, 13, 14, 0)))
+    }
+
+    @Test
+    fun gapTier_sameDayBoundaryAtSixHours() {
+        // 规格：同日 < 6h → FEW_HOURS；同日 >= 6h → MOST_OF_DAY。5h59m / 6h 两侧各取一点。
+        assertEquals(TimeAnchorFormatter.GapTier.FEW_HOURS, tierOf(at(2026, 6, 13, 8, 0), at(2026, 6, 13, 13, 59)))
+        assertEquals(TimeAnchorFormatter.GapTier.MOST_OF_DAY, tierOf(at(2026, 6, 13, 8, 0), at(2026, 6, 13, 14, 0)))
+    }
+
+    @Test
+    fun gapTier_lateNightCrossMidnight_staysFewHours() {
+        // E4 熬夜坑（二期已修，三期必须继承）：23:30 → 次日 00:30 跨 1 日历日但仅 1 小时 → 连档都不成（< 2h）；
+        // 拉到 23:30 → 次日 02:30（跨日 3 小时）仍是 FEW_HOURS，绝不因「跨天」升成新场。
+        assertNull(tierOf(at(2026, 6, 12, 23, 30), at(2026, 6, 13, 0, 30)))
+        assertEquals(TimeAnchorFormatter.GapTier.FEW_HOURS, tierOf(at(2026, 6, 12, 23, 30), at(2026, 6, 13, 2, 30)))
+    }
+
+    @Test
+    fun gapTier_deepNightToSameDayEvening_mostOfDay() {
+        // E5 真实翻车场景的同日变体：03:00 → 同日 21:00（同一自然日，18 小时）→ MOST_OF_DAY（同日档）。
+        assertEquals(TimeAnchorFormatter.GapTier.MOST_OF_DAY, tierOf(at(2026, 6, 13, 3, 0), at(2026, 6, 13, 21, 0)))
+    }
+
+    @Test
+    fun gapTier_crossOneDayOverSixHours_overnight() {
+        // 规格：跨 1 日历日且 >= 6h → OVERNIGHT。前一天 23:00 → 次日 08:00 = 9 小时。
+        assertEquals(TimeAnchorFormatter.GapTier.OVERNIGHT, tierOf(at(2026, 6, 12, 23, 0), at(2026, 6, 13, 8, 0)))
+    }
+
+    @Test
+    fun gapTier_twoCalendarDaysUnderThirtySixHours_overnight() {
+        // E6：跨 2 日历日但仅 26 小时（前天 23:59 → 今天 01:59）→ 仍归 OVERNIGHT（<36h 分支）。
+        assertEquals(TimeAnchorFormatter.GapTier.OVERNIGHT, tierOf(at(2026, 6, 11, 23, 59), at(2026, 6, 13, 1, 59)))
+    }
+
+    @Test
+    fun gapTier_overThirtySixHoursWithinWeek_fewDays() {
+        // 规格：日历日差 2..7 且 >= 36h → FEW_DAYS。40 小时（6/11 10:00 → 6/13 02:00）。
+        assertEquals(TimeAnchorFormatter.GapTier.FEW_DAYS, tierOf(at(2026, 6, 11, 10, 0), at(2026, 6, 13, 2, 0)))
+    }
+
+    @Test
+    fun gapTier_beyondSevenDays_longGap() {
+        // 规格：日历日差 > 7 → LONG_GAP。8 天整。
+        assertEquals(TimeAnchorFormatter.GapTier.LONG_GAP, tierOf(at(2026, 6, 5, 10, 0), at(2026, 6, 13, 10, 0)))
+        // 边界内侧：恰 7 天（且 >= 36h）仍是 FEW_DAYS。
+        assertEquals(TimeAnchorFormatter.GapTier.FEW_DAYS, tierOf(at(2026, 6, 6, 10, 0), at(2026, 6, 13, 10, 0)))
+    }
+
+    @Test
+    fun gapTier_negativeGap_isNullNotCrash() {
+        // E15 时钟回拨 / 坏时间戳：to < from → 秒数为负 → 落 < 2h 分支返 null，不抛不出乱码。
+        assertNull(tierOf(at(2026, 6, 13, 12, 0), at(2026, 6, 10, 9, 0)))
     }
 
     // MARK: - 当前时刻与星期映射（未变）
@@ -286,7 +420,7 @@ class TimeAnchorFormatterTest {
         assertEquals("你和小明是 2026-06-01 第一次聊天认识的，到今天相识 93 天。", blockLine(out, 1))
         assertTrue("延迟生成路的间隔行仍是中性措辞", out.contains("距离你上条回复：约 8 小时"))
         // 中性变体一个人都不提：块内没有任何一行是方向化间隔行（「…隔了…才回你」），既不是「对方隔了」也不是「小明隔了」。
-        // ⚠️ 不能写成 `!out.contains("隔了")`：五档措辞里的 [TIER_FEW_DAYS] 本身就是「隔了好几天——…」，
+        // ⚠️ 不能写成 `!out.contains("隔了")`：五档措辞里的 [TIER_FEW_DAYS] 本身就以「隔了好几天。」开头，
         // 那样的断言只是碰巧对 8 小时这个输入成立，换成 2–7 天的间隔就会误红（自查发现，2026-09-03）。
         val block = out.substringAfter("<time_context>\n").substringBefore("\n</time_context>").split("\n")
         assertEquals("块内不得出现方向化间隔行", 0, block.count { it.endsWith("才回你") })

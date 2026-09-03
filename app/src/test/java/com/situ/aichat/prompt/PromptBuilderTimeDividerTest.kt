@@ -89,8 +89,14 @@ class PromptBuilderTimeDividerTest {
             ),
             now = inst(2026, 6, 26, 0, 17),
         )
+        // 三期起：第二条缝是「新的一场」（跨 1 日 9h18m → 跨夜档）→ 长版注记，按 §4.2 跨日模板逐字反推；
+        // 起始锚（prev=null）恒不带注记。
         assertEquals(
-            listOf("【时间 · 昨天 14:56】", "【时间 · 今天 00:15】"),
+            listOf(
+                "【时间 · 昨天 14:56】",
+                "【时间 · 今天 00:15——以上对话发生在昨天 14:57 前后，距今 1 天；" +
+                    "那时说的\"今天\"指6月25日、\"明天\"指6月26日、\"今晚\"指6月25日晚】",
+            ),
             dividers(out),
         )
     }
@@ -139,6 +145,99 @@ class PromptBuilderTimeDividerTest {
             now = inst(2026, 6, 26, 0, 17),
         )
         assertEquals(listOf("【时间 · 昨天 14:00】"), dividers(out))
+    }
+
+    // MARK: - 场边界长版注记（时间感知三期 §3.3 / §4.2）
+
+    /** 带时间词换算的长版注记（短版分割线不含此串）。 */
+    private fun regroundings(msgs: List<ChatMessageDto>): List<String> =
+        dividers(msgs).filter { it.contains("以上对话发生在") }
+
+    @Test
+    fun realCrashCase_dayBeforeYesterdayScene_getsCrossDayRegrounding() {
+        // T2-1 复刻用户真实翻车（2026-09-03）：前天 23:10 角色说「刚试了新制服」，今天 02:34 用户开口。
+        // 该缝必须是跨日档长版，并明说「距今 2 天」，让模型把那句话的时间坐标系摆正。
+        val out = build(
+            listOf(
+                msg("assistant", "刚才试了新制服，想给你看~", ms(2026, 9, 1, 23, 10)),
+                msg("user", "你睡了吗？", ms(2026, 9, 3, 2, 34)),
+            ),
+            now = inst(2026, 9, 3, 2, 36),
+        )
+        assertEquals(
+            listOf(
+                "【时间 · 今天 02:34——以上对话发生在9月1日 周二 23:10 前后，距今 2 天；" +
+                    "那时说的\"今天\"指9月1日、\"明天\"指9月2日、\"今晚\"指9月1日晚】",
+            ),
+            regroundings(out),
+        )
+    }
+
+    @Test
+    fun fiveSceneBoundaries_onlyLastTwoAnnotated() {
+        // E7：窗口内 5 个场边界 → 恰 2 条长版注记，且落在**最后两个**缝（更早的仍出短版）。
+        val out = build(
+            listOf(
+                msg("user", "第一天", ms(2026, 8, 24, 10, 0)),
+                msg("assistant", "第二天", ms(2026, 8, 26, 10, 0)),
+                msg("user", "第三天", ms(2026, 8, 28, 10, 0)),
+                msg("assistant", "第四天", ms(2026, 8, 30, 10, 0)),
+                msg("user", "第五天", ms(2026, 9, 1, 10, 0)),
+                msg("assistant", "第六天", ms(2026, 9, 3, 1, 0)),
+            ),
+            now = inst(2026, 9, 3, 2, 0),
+        )
+        val longOnes = regroundings(out)
+        assertEquals("恰 2 条长版注记：$longOnes", 2, longOnes.size)
+        assertTrue("倒数第二个缝（8月30日 → 9月1日）", longOnes[0].contains("以上对话发生在8月30日"))
+        assertTrue("最后一个缝（9月1日 → 9月3日）", longOnes[1].contains("以上对话发生在9月1日"))
+        // 更早的三个缝仍是短版（总分割线数 = 起始锚 1 + 5 个缝 = 6）。
+        assertEquals(6, dividers(out).size)
+    }
+
+    @Test
+    fun singleMessageHistory_doesNotCrash() {
+        // E16：短期记忆设得极小（窗口内仅 1 条）→ 预扫命中 0 个边界，takeLast(2) 对空表安全。
+        val out = build(
+            listOf(msg("user", "在吗", ms(2026, 9, 3, 2, 34))),
+            now = inst(2026, 9, 3, 2, 36),
+        )
+        assertTrue("单条历史零长版注记：${regroundings(out)}", regroundings(out).isEmpty())
+    }
+
+    @Test
+    fun regroundingAtTail_strippedAsDanglingDivider() {
+        // E9：长版注记落末尾（其后消息被 normalize 剥空）→ 与短版一样被 A1 悬空清理连带清掉。
+        val out = build(
+            listOf(
+                msg("user", "在吗", ms(2026, 9, 1, 14, 0)),
+                msg("assistant", "在的", ms(2026, 9, 1, 14, 1)),
+                msg("assistant", "（她揉了揉眼睛打了个哈欠然后慢慢往沙发上靠过去整个人都困得不行了）", ms(2026, 9, 3, 2, 10)),
+            ),
+            now = inst(2026, 9, 3, 2, 17),
+        )
+        assertEquals(listOf("【时间 · 9月1日 周二 14:00】"), dividers(out))
+    }
+
+    @Test
+    fun nonOnlineChatScene_noRegrounding() {
+        // E10：非在线聊天（now=null 门控）→ 零分割线、零注记，预扫整体跳过。
+        val strings = PromptStrings(RuntimeEnvironment.getApplication())
+        val character = CharacterEntity(uuid = "c1", name = "小雨", creationDate = 0L)
+        val out = PromptBuilder.buildMessages(
+            character = character,
+            sortedMessages = listOf(
+                msg("assistant", "刚才试了新制服，想给你看~", ms(2026, 9, 1, 23, 10)),
+                msg("user", "你睡了吗？", ms(2026, 9, 3, 2, 34)),
+            ),
+            userProfile = null,
+            appSettings = AppSettings(),
+            strings = strings,
+            now = inst(2026, 9, 3, 2, 36),
+            scene = PromptScene.VOICE_CALL,
+        )
+        assertTrue("非在线聊天零注记：${regroundings(out)}", regroundings(out).isEmpty())
+        assertTrue("非在线聊天零分割线：${dividers(out)}", dividers(out).isEmpty())
     }
 
     @Test

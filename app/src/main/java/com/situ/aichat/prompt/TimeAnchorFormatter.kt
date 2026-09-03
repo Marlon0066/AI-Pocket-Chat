@@ -119,15 +119,54 @@ object TimeAnchorFormatter {
      * 否则间隔行「约 1 天」和数日档「隔了好几天」同段自相矛盾;<36h 的日历日差按实际时长归跨夜。
      */
     internal fun gapTierNote(now: Instant, lastAssistantTime: Instant, seconds: Long): String? {
+        // 触发边界仍以调用方算好的 [seconds] 为准（与改造前逐字节同）；档位判据下沉 [gapTier] 单源。
         if (seconds < 2 * 3600) return null
-        val daysDiff = calendarDayDifference(lastAssistantTime, now)
-        val tier = when {
-            daysDiff == 0 -> if (seconds < 6 * 3600) TIER_FEW_HOURS else TIER_MOST_OF_DAY
-            daysDiff == 1 -> if (seconds < 6 * 3600) TIER_FEW_HOURS else TIER_OVERNIGHT
-            daysDiff <= 7 -> if (seconds < 36 * 3600) TIER_OVERNIGHT else TIER_FEW_DAYS
-            else -> TIER_LONG_GAP
+        val gap = gapTier(lastAssistantTime.toEpochMilli(), now.toEpochMilli()) ?: return null
+        val tier = when (gap) {
+            GapTier.FEW_HOURS -> TIER_FEW_HOURS
+            GapTier.MOST_OF_DAY -> TIER_MOST_OF_DAY
+            GapTier.OVERNIGHT -> TIER_OVERNIGHT
+            GapTier.FEW_DAYS -> TIER_FEW_DAYS
+            GapTier.LONG_GAP -> TIER_LONG_GAP
         }
-        return tier + PERSISTENT_NOTE
+        // 话题优先级只在「已是新的一场」时追加（>= MOST_OF_DAY，与场边界注记同一把尺子）：
+        // 2–6 小时内还算同一场延续，此时叫人「别把话题拉回上次」反而制造割裂。
+        val topicNote = if (gap >= GapTier.MOST_OF_DAY) TOPIC_PRIORITY_NOTE else ""
+        return tier + topicNote + PERSISTENT_NOTE
+    }
+
+    /** 间隔档位（时间感知三期·单源）：五档措辞与历史场边界注记共用同一把尺子。 */
+    internal enum class GapTier { FEW_HOURS, MOST_OF_DAY, OVERNIGHT, FEW_DAYS, LONG_GAP }
+
+    /**
+     * 两个时刻之间的间隔档位。< 2 小时返 null（正常聊天节奏，不成档）。
+     * 判据**只搬不改**自原 [gapTierNote]——`daysDiff==1 && <6h → FEW_HOURS` 是二期为熬夜
+     * （23:30→00:30 跨日历日但仅 1 小时）修过的坑，禁止改写成「跨天即新场」。
+     *
+     * 消费点恰 2 处：[gapTierNote]（底部五档·管开口姿态）与 [HistoryTimeDivider.regroundingSuffix]
+     * （历史场边界·管时间词换算）。「是不是新的一场」的唯一判据 = 返回值 >= [GapTier.MOST_OF_DAY]。
+     *
+     * @param zone 默认系统时区（[gapTierNote] 不传 → 与改造前逐字节一致）；[HistoryTimeDivider] 必须
+     *   显式传它自己注入的 zone，保持确定性可测 + 同一次装配内单一时区源。
+     */
+    internal fun gapTier(
+        fromMillis: Long,
+        toMillis: Long,
+        zone: ZoneId = ZoneId.systemDefault(),
+    ): GapTier? {
+        val seconds = (toMillis - fromMillis) / 1000
+        if (seconds < 2 * 3600) return null
+        // 自然日差就地算（收 zone 便于确定性单测）：**不复用** [calendarDayDifference]——那个是相识天数 /
+        // 火花连续天数的尺子，语义与换日点锁定不动；此处也不去给它加形参。
+        val fromDay = Instant.ofEpochMilli(fromMillis).atZone(zone).toLocalDate()
+        val toDay = Instant.ofEpochMilli(toMillis).atZone(zone).toLocalDate()
+        val daysDiff = ChronoUnit.DAYS.between(fromDay, toDay).toInt()
+        return when {
+            daysDiff == 0 -> if (seconds < 6 * 3600) GapTier.FEW_HOURS else GapTier.MOST_OF_DAY
+            daysDiff == 1 -> if (seconds < 6 * 3600) GapTier.FEW_HOURS else GapTier.OVERNIGHT
+            daysDiff <= 7 -> if (seconds < 36 * 3600) GapTier.OVERNIGHT else GapTier.FEW_DAYS
+            else -> GapTier.LONG_GAP
+        }
     }
 
     /**
@@ -206,18 +245,29 @@ object TimeAnchorFormatter {
         return "$xmlBlock\n$note"
     }
 
-    // MARK: - 五档措辞（刀2 过审终稿·只给事实与气口，不预设情绪）
+    // MARK: - 五档措辞（时间感知三期改写·只给事实与气口，不预设情绪）
+    //
+    // 三期改的是「说的是什么时态」而不是「翻不翻篇」：角色**记得**前面聊的事（记忆正确、也不该丢），
+    // 错在把它说成正在发生。故全档从旧的「上次聊到一半的场景已经过去了」（翻篇措辞）改为「那是那时候的事，
+    // 别当成此刻正在发生」（换时态措辞）。跨夜档删掉旧的「你已经睡过一觉，是新的一天了」——那是替角色断言
+    // 普通人作息，违反时间感知专项核心原则（系统只给客观事实，状态交 AI 按人设判断；夜班 / 作息颠倒 / 不睡觉
+    // 的角色会被带偏），改为客观的「中间隔了一夜」。
 
     internal const val TIER_FEW_HOURS =
-        "这几个小时你在过自己的生活，现在才重新拿起手机——上次聊到一半的场景已经过去了。"
+        "这几个小时你在过自己的生活，现在才重新拿起手机。前面聊的还算近，接得上就自然接。"
     internal const val TIER_MOST_OF_DAY =
-        "这大半天你在过自己的生活，现在才重新拿起手机——上次聊到一半的场景已经过去了。"
+        "距上次说话已经过去大半天了。前面那些事你都记得，但它们是那时候发生的，别当成此刻正在发生。"
     internal const val TIER_OVERNIGHT =
-        "你已经睡过一觉，是新的一天了——昨天聊的事是昨天的，今天有今天的状态。"
+        "中间隔了一夜。昨天聊的事你都记得，但那是昨天的——要提就用回想的口吻，不是接着往下演。"
     internal const val TIER_FEW_DAYS =
-        "隔了好几天——这几天你照常过自己的日子，接话时可以自然带一点这几天的生活气。"
+        "隔了好几天。那几天的事你记得，但它们已经过去了——想提就当成前几天的事提一句，别接着往下演。"
     internal const val TIER_LONG_GAP =
-        "很久没联系了——上次聊天的细节你可以记得模糊些，你的近况也该有变化；找回联系的感觉，但别刻意煽情。"
+        "很久没联系了。上次聊的细节你可以记得模糊些，你的近况也该有变化；找回联系的感觉，但别刻意煽情，也别翻旧账。"
+
+    /** 话题优先级（三期新增）：给排序不给动作——「该不该提旧话题」交模型按对方这条消息判断。 */
+    internal const val TOPIC_PRIORITY_NOTE =
+        "开口先回应对方这条消息本身；对方开了新话题就跟着新话题走，别硬把话题拉回上次。"
+
     internal const val PERSISTENT_NOTE =
         "长期、持续的事（还在感冒、人在外地）本来就会延续——具体哪些还算数、此刻你是什么状态，你按现在的时间自己判断。"
 }
