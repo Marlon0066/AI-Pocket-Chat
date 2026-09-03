@@ -32,6 +32,8 @@ import java.util.Locale
 class PromptBuilderPersonaIdentityTest {
 
     private val fixedNow = Instant.ofEpochMilli(1_750_000_000_000)
+    /** 老包反序列化用（宽容未知字段）；提到类级，避免每条用例各造一个 Json 实例。 */
+    private val lenientJson = Json { ignoreUnknownKeys = true }
     private fun strings() = PromptStrings(RuntimeEnvironment.getApplication())
 
     private fun character(examples: String = "") = CharacterEntity(
@@ -203,8 +205,7 @@ class PromptBuilderPersonaIdentityTest {
     fun 老备份包无相处偏好字段_反序列化兜底空串() {
         // E9：@Serializable 默认值兜底——老包 JSON 不含 companionPreference。
         val legacyJson = """{"nickname":"阿宝","bio":"爱喝手冲","birthday":5356800000}"""
-        val restored = Json { ignoreUnknownKeys = true }
-            .decodeFromString(UserProfileExport.serializer(), legacyJson)
+        val restored = lenientJson.decodeFromString(UserProfileExport.serializer(), legacyJson)
         assertEquals("新字段兜底空串", "", restored.companionPreference)
         assertEquals("既有字段照常", "阿宝", restored.nickname)
         assertEquals("既有字段照常", 5_356_800_000L, restored.birthday)

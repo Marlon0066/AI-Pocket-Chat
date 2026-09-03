@@ -61,6 +61,7 @@ import com.situ.aichat.ui.gift.GiftReactionScreen
 import com.situ.aichat.ui.gift.GiftShopScreen
 import com.situ.aichat.ui.gift.ReceivedGiftDetailScreen
 import com.situ.aichat.ui.moments.ComposeMomentScreen
+import com.situ.aichat.ui.moments.DayMomentsScreen
 import com.situ.aichat.ui.moments.MomentAuthorScreen
 import com.situ.aichat.ui.moments.MomentDetailScreen
 import com.situ.aichat.ui.moments.MomentNotificationListScreen
@@ -1052,9 +1053,18 @@ fun AIChatApp(
                     onOpenDay = { uuid, dayKey -> navController.navigate("ourDays/day/$uuid/$dayKey") },
                     onOpenMeetings = { uuid -> navController.navigate("offlineMeetings/$uuid") },
                     onOpenPromises = { uuid -> navController.navigate("promises/$uuid") },
-                    onOpenMoments = { navController.navigate("momentsFeed") },
+                    onOpenMoments = { uuid, dayKey -> navController.navigate("dayMoments/$uuid/$dayKey") },
                     onOpenDiary = { uuid -> navController.navigate("diary/$uuid") },
                     onOpenSchedule = { uuid, dayKey -> navController.navigate("scheduleFullDay/$uuid?date=$dayKey") },
+                )
+            }
+            composable(
+                route = "dayMoments/{characterUuid}/{dayKey}",
+                arguments = listOf(navArgument("characterUuid") { type = NavType.StringType }, navArgument("dayKey") { type = NavType.StringType }),
+            ) {
+                DayMomentsScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenPost = { uuid -> navController.navigate("moment/$uuid") },
                 )
             }
         }

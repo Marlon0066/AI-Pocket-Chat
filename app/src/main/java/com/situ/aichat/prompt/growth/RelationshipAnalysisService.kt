@@ -133,6 +133,12 @@ class RelationshipAnalysisService @Inject constructor(
         ).joinToString("\n")
 
         // trimMargin（而非 trimIndent）：qualityText/milestonesText 为多行插值，续行无 "|" 前缀会被原样保留。
+        // 「## 关于 reason」一节（+ 关系历史段末的免模仿行 + JSON 示例的 reason 描述）**逐字锁定**：
+        // 契约 = 图纸《2026-09-03 关系历程注入根治》§3 件 5a/5b/5c，它修订了《2026-07-14 人称指名统一·图纸一》
+        // §9①B1 的旧 reason 描述串（双名字 + 禁「用户」「角色」的原意由件 5a 规矩 2 承接并加强）。
+        // 改这几段必须同步 RelationshipAnalysisServiceTest（逐字断言）——两侧互指，勿单改一侧。
+        // 注：注入端（[com.situ.aichat.prompt.buildRelationshipMilestoneDescription]）**不设任何校验闸**
+        // （用户 2026-09-03 裁决·图纸 §4-C），reason 的文体只在这里从源头管。
         val systemPrompt = """
             |你是一个关系分析师。你的任务是根据对话记录判断${characterName}和${resolvedUserName}之间的关系是否发生了变化。
             |
@@ -146,6 +152,7 @@ class RelationshipAnalysisService @Inject constructor(
             |
             |## 关系历史
             |$milestonesText
+            |（以上是历史记录。其中旧条目的写法可能不符合下面对 reason 的要求，不必模仿。）
             |
             |## 分析规则
             |1. 关系变化必须有充分的对话证据支持，不能凭猜测
@@ -171,13 +178,25 @@ class RelationshipAnalysisService @Inject constructor(
             |    · 修复：和解、复燃、重逢、缓和
             |13. 如果当前关系标签和时期都还准确描述两人状态，返回 changed=false（不要硬变）
             |
+            |## 关于 reason（变化原因怎么写）
+            |这句话${characterName}本人会读到，也会显示给用户看。要像在说一件真实发生过的事，不是写系统报告。
+            |1. 只写**发生了什么**。不要写"关系从 X 变成 Y"、"进入 Y 阶段"——关系变成什么系统另有记录，不用你复述。
+            |2. 两个人都用名字：「${characterName}」「${resolvedUserName}」。不要出现"用户""角色""AI""系统"。
+            |3. 要具体。写得出细节就写细节；不要写"确认了彼此的心意归属""感情得到升华"这类放在谁身上都成立的空话。
+            |4. 一句话，40 字以内。
+            |
+            |对照：
+            |✅ ${characterName}说出了一直没敢提的那件事，${resolvedUserName}没有回避，认真接住了。
+            |❌ 双方在信任试探中确认了彼此的心意归属，关系从热恋进入更成熟的坦诚沟通阶段。（全是空话，还在复述关系变化）
+            |❌ 对话中涉及多个亲密话题，用户明确提出邀约。（像在写监控日志，还写了"用户"）
+            |
             |## 输出格式
             |请严格以 JSON 格式输出，不要包含任何其他文字：
             |如果关系没有变化：
             |{"changed": false}
             |
             |如果关系发生了变化（标签变 / 时期变 / 两者都变 都算变化）：
-            |{"changed": true, "newRelationship": "新关系名称", "newPhase": "时期(2-4字)", "reason": "简短的变化原因（一句话，提到两人时用「${characterName}」「${resolvedUserName}」的名字，不要写「用户」「角色」）"}
+            |{"changed": true, "newRelationship": "新关系名称", "newPhase": "时期(2-4字)", "reason": "见上节要求：写发生了什么，两人用名字，具体，40 字内"}
         """.trimMargin()
 
         val conversationText = MemoryService.formatMessages(messages, userLabel = resolvedUserName, charLabel = characterName)

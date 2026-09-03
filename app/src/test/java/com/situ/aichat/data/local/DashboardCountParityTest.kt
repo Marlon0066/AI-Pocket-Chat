@@ -44,11 +44,27 @@ class DashboardCountParityTest {
         dao.insertPost(MomentPostEntity(uuid = "u3", timestamp = 3, isSoftDeleted = true)) // 软删不计
         dao.insertPost(MomentPostEntity(uuid = "c1", timestamp = 4, authorTypeRaw = "character", characterUuid = "ch")) // 角色帖不计
         assertEquals(2, dao.observeUserFeedCount().first())
-        assertEquals(dao.observeUserFeedWithRelations().first().size, dao.observeUserFeedCount().first())
+        assertEquals(dao.observeUserFeedWithRelations(100).first().size, dao.observeUserFeedCount().first())
 
         dao.softDeletePost("u1") // 软删翻转实时反映
         assertEquals(1, dao.observeUserFeedCount().first())
-        assertEquals(dao.observeUserFeedWithRelations().first().size, dao.observeUserFeedCount().first())
+        assertEquals(dao.observeUserFeedWithRelations(100).first().size, dao.observeUserFeedCount().first())
+    }
+
+    @Test
+    fun characterFeedCount_matchesFullQuery_acrossSoftDeleteAndAuthorType() = runBlocking {
+        val dao = db.momentDao()
+        dao.insertPost(MomentPostEntity(uuid = "c1", timestamp = 1, authorTypeRaw = "character", characterUuid = "ch"))
+        dao.insertPost(MomentPostEntity(uuid = "c2", timestamp = 2, authorTypeRaw = "character", characterUuid = "ch"))
+        dao.insertPost(MomentPostEntity(uuid = "c3", timestamp = 3, authorTypeRaw = "character", characterUuid = "ch", isSoftDeleted = true)) // 软删不计
+        dao.insertPost(MomentPostEntity(uuid = "o1", timestamp = 4, authorTypeRaw = "character", characterUuid = "other")) // 别的角色不计
+        dao.insertPost(MomentPostEntity(uuid = "u1", timestamp = 5)) // 用户帖不计
+        assertEquals(2, dao.observeCharacterFeedCount("ch").first())
+        assertEquals(dao.observeCharacterFeedWithRelations("ch", 100).first().size, dao.observeCharacterFeedCount("ch").first())
+
+        dao.softDeletePost("c1") // 软删翻转实时反映
+        assertEquals(1, dao.observeCharacterFeedCount("ch").first())
+        assertEquals(dao.observeCharacterFeedWithRelations("ch", 100).first().size, dao.observeCharacterFeedCount("ch").first())
     }
 
     @Test

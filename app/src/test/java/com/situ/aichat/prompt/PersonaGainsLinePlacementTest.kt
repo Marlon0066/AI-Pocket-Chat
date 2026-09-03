@@ -19,9 +19,13 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 /**
- * 活人感内核·修缮卷 T2-3（图纸 §3.7 · E40 / E41）：敏感点行在 Growth 段的**落位**——真 `PromptBuilder.buildMessages` 装配。
- * - E41：增益全默认 ⇒ 全文不含「你特别在意 / 不太吃这套」；8 维全静默时连「你的性格表现：」标题都不出（与修缮前逐字节同形）
- * - E40：有敏感点 ⇒ 该行落在「你的性格表现：」块末尾（8 维行之后）、下一行已是别的段；8 维全静默仍出标题 + 该行
+ * 图纸 2026-09-03 T2-1 / T2-2（E1 / E15 / P2）：敏感点行在 Growth 段的**落位**——真 `PromptBuilder.buildMessages` 装配。
+ * - T2-1：增益全默认 ⇒ 全文不含「你特别在意 / 不太吃这套」；8 维全静默时连「你的性格表现：」标题都不出（回归钉·逐字节同前）；
+ *   有敏感点 ⇒ 平铺行落在「你的性格表现：」块末尾（8 维行之后）、下一行已是别的段；8 维全静默仍出标题 + 该行
+ * - T2-2：命中配对的角色 ⇒ 反差句排在平铺行**之前**（P2·同关系矛盾句「恒排该段最前」先例）
+ *
+ * ⚠️ `line` 字面量随席位/入句变体规格变更而更新（g02 入句变体「被晾着、消息不回」取代原标签「被冷落 · 已读不回」），
+ * 属**预期的规格变更**不是回归。
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "zh-rCN")
@@ -29,9 +33,16 @@ class PersonaGainsLinePlacementTest {
 
     private val zone: ZoneId = ZoneId.systemDefault()
     private val now = LocalDateTime.of(2026, 7, 11, 13, 39).atZone(zone).toInstant()
-    private val line = "- 你特别在意被叫全名、被冷落 · 已读不回，对被夸奖肯定不太吃这套。"
+    private val line = "- 你特别在意被叫全名、被晾着、消息不回，对被夸奖肯定不太吃这套。"
     private val gains = GrowthJson.encode(
         PersonaGains(system = mapOf("g02" to 2, "g04" to 0), custom = listOf(CustomGain(id = "u1", label = "被叫全名", level = 2))),
+    )
+
+    /** J1 命中（g02+g03 双敏感被消费）+ g05 敏感 / g16 无感留给平铺行 ⇒ 反差句 1 行 + 平铺行 1 行。 */
+    private val pairLine = "- 你怕被丢下，可对方一贴近你又想躲——你自己也说不清要哪个。"
+    private val pairFlatLine = "- 你特别在意被批评否定，对收到礼物不太吃这套。"
+    private val pairGains = GrowthJson.encode(
+        PersonaGains(system = mapOf("g02" to 2, "g03" to 2, "g05" to 2, "g16" to 0)),
     )
 
     private fun systemText(spectrum: PersonalitySpectrum, gainsJson: String): String {
@@ -49,7 +60,7 @@ class PersonaGainsLinePlacementTest {
     }
 
     @Test
-    fun defaultGains_rendersNoLine_andNoHeaderWhenAllDimsSilent_E41() {
+    fun defaultGains_rendersNoLine_andNoHeaderWhenAllDimsSilent_E1() {
         val silent = systemText(PersonalitySpectrum.NEUTRAL, "")
         assertFalse(silent.contains("你特别在意"))
         assertFalse(silent.contains("不太吃这套"))
@@ -61,7 +72,7 @@ class PersonaGainsLinePlacementTest {
     }
 
     @Test
-    fun gainsLine_sitsAtEndOfPersonalityBlock_afterTraitLines_E40() {
+    fun gainsLine_sitsAtEndOfPersonalityBlock_afterTraitLines_T2_1() {
         val text = systemText(PersonalitySpectrum(extroversion = 90), gains)
         assertEquals("恰出现一次", 1, Regex(Regex.escape(line)).findAll(text).count())
         val header = text.indexOf("你的性格表现：\n")
@@ -76,8 +87,22 @@ class PersonaGainsLinePlacementTest {
     }
 
     @Test
-    fun allDimsSilent_withGains_stillRendersHeaderPlusLine_E40() {
+    fun allDimsSilent_withGains_stillRendersHeaderPlusLine_E15() {
         val text = systemText(PersonalitySpectrum.NEUTRAL, gains)
         assertTrue(text.contains("你的性格表现：\n$line\n"))
+    }
+
+    /** T2-2（P2）：反差句恒排在平铺行之前——两行都在性格块里，且中间没有别的行。 */
+    @Test
+    fun contrastLine_precedesFlatLine_T2_2() {
+        val text = systemText(PersonalitySpectrum(extroversion = 90), pairGains)
+        val atPair = text.indexOf(pairLine)
+        val atFlat = text.indexOf(pairFlatLine)
+        assertTrue("反差句已上屏", atPair >= 0)
+        assertTrue("平铺行已上屏", atFlat >= 0)
+        assertTrue("反差句在平铺行之前", atPair < atFlat)
+        assertTrue("两行相邻（反差句紧接平铺行）", text.contains("$pairLine\n$pairFlatLine"))
+        val header = text.indexOf("你的性格表现：\n")
+        assertTrue("两行都在性格块内", header in 0 until atPair)
     }
 }

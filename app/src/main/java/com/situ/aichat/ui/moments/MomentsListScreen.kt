@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -32,6 +33,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,6 +64,7 @@ import com.situ.aichat.ui.designsystem.AppMomentIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.appCardSurface
 import com.situ.aichat.ui.designsystem.grainSurface
+import kotlinx.coroutines.delay
 
 /**
  * 朋友圈信息流（M06 7.2.7，对齐 iOS `FriendCircleView`）：下拉刷新触发 AI 发帖检查、未读通知 banner、发布 FAB、
@@ -88,6 +91,7 @@ fun MomentsListScreen(
 
     var deleteTarget by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val listState = rememberLazyListState()
 
     // 刷新结果提示（M-18 + P15·P0-18）：新增 N 条 / 暂无新动态 / 刷新失败（超越 iOS 的失败态）。
     val refreshNewFmt = stringResource(R.string.moment_refresh_new)
@@ -102,6 +106,30 @@ fun MomentsListScreen(
         }
         snackbarHostState.showMessage(msg)
         viewModel.consumeRefreshResult()
+    }
+
+    // 窗口分页（图纸 §4.2·照 ChatScreen:503-524 范式）：滑到接近列表末尾 ⇒ 窗口 +30；
+    // 延迟 200ms 防快速滑动连触。朋友圈是普通列表（index 0 = 最新），故「末尾」= 最旧那头。
+    val hasMoreOlder by viewModel.hasMoreOlderPosts.collectAsStateWithLifecycle()
+    val shouldLoadOlder by remember {
+        derivedStateOf {
+            val layout = listState.layoutInfo
+            shouldLoadOlderPosts(layout.visibleItemsInfo.lastOrNull()?.index, layout.totalItemsCount, hasMoreOlder)
+        }
+    }
+    LaunchedEffect(shouldLoadOlder) {
+        if (shouldLoadOlder) {
+            delay(200)
+            viewModel.loadOlderPosts()
+        }
+    }
+    // 回到顶部（= 最新那头）停 5s ⇒ 缩窗回 30 释放历史（1:1 ChatScreen 的近底缩减；中途离开则取消，不缩）。
+    val isNearTop by remember { derivedStateOf { listState.firstVisibleItemIndex <= 1 } }
+    LaunchedEffect(isNearTop) {
+        if (isNearTop) {
+            delay(5_000)
+            viewModel.shrinkWindow()
+        }
     }
 
     val userName = userProfile?.nickname.orEmpty()
@@ -151,6 +179,7 @@ fun MomentsListScreen(
             modifier = Modifier.fillMaxSize().padding(padding).background(AppTheme.colors.surface.base).grainSurface(),
         ) {
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -320,3 +349,10 @@ private suspend fun SnackbarHostState.showMessage(message: String) {
     currentSnackbarData?.dismiss()
     showSnackbar(message)
 }
+
+/**
+ * 扩窗判据（图纸 §3.2·K4）：还有更早的 ∧ 最后一个可见项已进入列表末尾 4 项之内 ⇒ 该续了。
+ * 抽成纯函数是为了可测（聊天屏同款判据写在屏里、无覆盖）。[lastVisibleIndex] 为 null = 一项都没渲染。
+ */
+internal fun shouldLoadOlderPosts(lastVisibleIndex: Int?, totalItemsCount: Int, hasMoreOlder: Boolean): Boolean =
+    hasMoreOlder && lastVisibleIndex != null && lastVisibleIndex >= totalItemsCount - 4

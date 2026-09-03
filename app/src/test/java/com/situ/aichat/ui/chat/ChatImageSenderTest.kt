@@ -22,6 +22,7 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -40,6 +41,7 @@ import org.junit.Test
  * - 「摘要先落库再嵌」= D-2 的目的（反过来嵌的就是空摘要那版，所有图片向量撞成同一句话）；
  * - 「推迟闸只对常规受理路生效」= 两个入口口径有意不同，谁把它们「统一」了就红。
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class ChatImageSenderTest {
 
     private val appContext = mockk<Context>(relaxed = true)

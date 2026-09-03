@@ -55,9 +55,11 @@ internal object OurDayFactsRenderer {
             }
             lines += "- 约定：$verb「${p.content}」"
         }
+        // 只出关系名、不带 reason（《2026-09-03 关系历程注入根治》件 3·总图纸 §4.2 已同步修订）：
+        // 该段喂手记生成，而手记 system prompt 明令「不要出现『用户』『角色』『AI』『系统』这类词」
+        // （[OurDayNotePrompt]），塞进来的 reason 恰恰含「用户」——指令与素材自相矛盾。
         for (m in facts.milestones) {
-            val because = if (m.reason.isEmpty()) "" else "，因为${m.reason}"
-            lines += "- 里程碑：关系变成「${m.relationshipName}」$because"
+            lines += "- 里程碑：关系变成「${m.relationshipName}」"
         }
         if (facts.momentPosts != 0 || facts.momentInteractions != 0) {
             lines += "- 朋友圈：${characterName}发了 ${facts.momentPosts} 条动态，互动 ${facts.momentInteractions} 次"

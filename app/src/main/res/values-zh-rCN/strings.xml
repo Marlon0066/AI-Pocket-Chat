@@ -2168,6 +2168,12 @@
 	<string name="moment_user_empty_desc">你还没有发布过动态</string>
 	<string name="moment_user_moments_title">我的动态</string>
 	<string name="moment_user_moments_subtitle">查看我发过的朋友圈</string>
+	<!-- 我们的日子 → 那一天的朋友圈（图纸 2026-09-03-那一天的朋友圈 §4.6） -->
+	<string name="moment_day_title">%1$s · 朋友圈</string>
+	<string name="moment_day_group_posted">这一天发的</string>
+	<string name="moment_day_group_earlier">更早发的 · 这一天有来往</string>
+	<string name="moment_day_empty_title">这一天的动态不在了</string>
+	<string name="moment_day_empty_desc">可能后来被删掉了。</string>
 
 	<!-- S3b 结构化工具调用双轨 -->
 	<string name="tool_call_fallback_notice">已切换到工具调用兼容模式</string>

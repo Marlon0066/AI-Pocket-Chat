@@ -316,7 +316,7 @@ class PlanetMathTest {
         assertTrue(c != null)
         assertEquals(0f, c!![0], 1e-4f); assertEquals(0f, c[1], 1e-4f); assertEquals(1f, c[2], 1e-4f)
         val up = PlanetMath.screenToSphere(640f, 800f, 1280f, 2856f, 3.1f)
-        assertTrue(up != null && up!![1] > 0f && up[2] > 0f)
+        assertTrue(up != null && up[1] > 0f && up[2] > 0f)
     }
 
     @Test

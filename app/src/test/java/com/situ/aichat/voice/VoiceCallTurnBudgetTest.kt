@@ -1,6 +1,7 @@
 package com.situ.aichat.voice
 
 import com.situ.aichat.data.model.ThinkingBudgetLevel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.emptyFlow
@@ -21,6 +22,7 @@ import org.junit.Test
  *  - 外部取消原样传播（挂断/思考中打断不得被误报成超时）；空流正常结束不得自爆；
  *  - 思考档钳制：OFF 保持、其余全部只降到 LOW、绝不反向升档。
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class VoiceCallTurnBudgetTest {
 
     @Test

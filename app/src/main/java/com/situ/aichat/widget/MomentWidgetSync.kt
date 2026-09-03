@@ -12,8 +12,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * 最新动态（朋友圈）小组件的响应式同步桥（13.9b，仿 [PetWidgetSync]）：App 级一处观察朋友圈 feed 流，
- * 当**最新角色帖**变化（新帖到达 / 被删）时 nudge 小组件重渲染。
+ * 最新动态（朋友圈）小组件的响应式同步桥（13.9b，仿 [PetWidgetSync]）：App 级一处观察「最新角色帖」单行流
+ * （只观察 moment_post 一张表·图纸 2026-09-03 §3.4），当**最新角色帖**变化（新帖到达 / 被删）时 nudge 小组件重渲染。
  *
  * 只观察「最新角色帖身份」变化（uuid+内容+时间戳），**不**观察相对时间的纯流逝——那交给小组件渲染时按当前时间
  * 重算 + [com.situ.aichat.work.WidgetRefreshWorker] 每 30 分定期兜底（用户拍板的刷新策略：事件驱动 + 现算 + 定期）。
@@ -32,11 +32,8 @@ class MomentWidgetSync @Inject constructor(
         if (started) return
         started = true
         scope.launch {
-            momentRepository.observeFeed()
-                .map { feed ->
-                    val post = MomentWidgetData.pickLatestCharacterPost(feed.map { it.post }) ?: return@map null
-                    Identity(post.uuid, post.content, post.timestamp)
-                }
+            momentRepository.observeLatestCharacterPost()
+                .map { post -> post?.let { Identity(it.uuid, it.content, it.timestamp) } }
                 .distinctUntilChanged()
                 .drop(1)
                 .collect { updater.refresh() }

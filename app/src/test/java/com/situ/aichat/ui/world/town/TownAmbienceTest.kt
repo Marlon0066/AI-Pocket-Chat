@@ -49,8 +49,8 @@ class TownAmbienceTest {
             assertNotNull("$t 应有深夜色板", a.skyColors)
             // 深夜 7 停靠首停 = #070D1E（§3.1 逐值照搬）。
             assertEquals("$t sky[0].r", 7 / 255f, a.skyColors!![0], eps)
-            assertEquals("$t sky[0].g", 13 / 255f, a.skyColors!![1], eps)
-            assertEquals("$t sky[0].b", 30 / 255f, a.skyColors!![2], eps)
+            assertEquals("$t sky[0].g", 13 / 255f, a.skyColors[1], eps)
+            assertEquals("$t sky[0].b", 30 / 255f, a.skyColors[2], eps)
             assertVec("$t sun", floatArrayOf(-0.30f, 0.22f, 0.66f), a.sun)
         }
     }

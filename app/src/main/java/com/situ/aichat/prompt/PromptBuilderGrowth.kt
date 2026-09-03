@@ -1,6 +1,5 @@
 package com.situ.aichat.prompt
 
-import com.situ.aichat.data.local.entity.MilestoneEntity
 import com.situ.aichat.data.model.DynamicInterest
 import com.situ.aichat.data.model.PersonalitySpectrum
 import com.situ.aichat.data.model.RelationshipPressure
@@ -13,10 +12,6 @@ import com.situ.aichat.data.model.relationshipPressure
 import com.situ.aichat.data.model.relationshipQuality
 import com.situ.aichat.prompt.growth.RelationshipArchetype
 import com.situ.aichat.prompt.growth.RelationshipBands
-import com.situ.aichat.util.DateFormatters
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 /**
  * 1:1 port of iOS `Services/PromptBuilder+Growth.swift` — the `characterGrowth` module (M14).
@@ -48,8 +43,9 @@ internal fun buildCharacterGrowthContent(ctx: PromptBuilder.BuildContext): Strin
         sections.add(content)
     }
 
-    // 1. 性格倾向（行为剧本式）+ 修缮卷 §3.7 敏感点行（她吃哪套·增益全默认 ⇒ 空行不出 ⇒ 输出逐字节同前）
-    appendSection(buildPersonalityDescription(spectrum, buildPersonaGainsLine(ctx.character.personaGains)))
+    // 1. 性格倾向（行为剧本式）+ 敏感点行（她吃哪套·图纸 2026-09-03 §3.3：反差句 0–3 行 + 平铺行 0–1 行；
+    //    增益全默认 ⇒ 一行不出 ⇒ 输出逐字节同前）
+    appendSection(buildPersonalityDescription(spectrum, buildPersonaGainsLines(ctx.character.personaGains, userName)))
     // 2. 关系状态——成长原型校准（图纸 2026-07-11 §3.5·D-10 三分支）：识别出原型→二维渲染；
     //    有名分但词表未识别（或存量未扫·archetypeId=null 但有里程碑）→ 八条整段闭嘴（名分句段照常）；
     //    无名分（milestones 空）→ legacy 全局刻度渲染（字节级不变·B-1 回归钉锁定）。
@@ -65,7 +61,7 @@ internal fun buildCharacterGrowthContent(ctx: PromptBuilder.BuildContext): Strin
     // 3. 维度组合洞察
     appendSection(buildDimensionCombinationInsight(quality, userName))
     // 4. 关系里程碑（关系身份 + 历程）
-    appendSection(buildRelationshipMilestoneDescription(ctx.milestones, userName, nowMillis))
+    appendSection(buildRelationshipMilestoneDescription(ctx.milestones, userName, nowMillis, ctx.character.firstMessageDate))
     // 5. 生命阶段提示
     appendSection(buildPhaseHint(currentPhase, userName))
     // 6. 当前兴趣
@@ -76,8 +72,8 @@ internal fun buildCharacterGrowthContent(ctx: PromptBuilder.BuildContext): Strin
 
 // MARK: - 性格描述（行为剧本式）
 
-/** [extraLine]（修缮卷 §3.7）：8 维行之后追加的敏感点行；非空时即使 8 维全静默也仍出标题 + 该行。 */
-private fun buildPersonalityDescription(spectrum: PersonalitySpectrum, extraLine: String = ""): String {
+/** [extraLines]（图纸 2026-09-03 §3.3）：8 维行之后追加的敏感点行（0–4 行）；非空时即使 8 维全静默也仍出标题 + 这些行。 */
+private fun buildPersonalityDescription(spectrum: PersonalitySpectrum, extraLines: List<String> = emptyList()): String {
     val traits = mutableListOf<String>()
     val values = spectrum.values
     val keys = PersonalitySpectrum.DIMENSION_KEYS
@@ -86,7 +82,7 @@ private fun buildPersonalityDescription(spectrum: PersonalitySpectrum, extraLine
         val desc = personalityBehavior(keys[i], values[i])
         if (desc.isNotEmpty()) traits.add(desc)
     }
-    if (extraLine.isNotEmpty()) traits.add(extraLine)
+    traits.addAll(extraLines)
     if (traits.isEmpty()) return ""
     return "你的性格表现：\n" + traits.joinToString("\n")
 }
@@ -299,55 +295,6 @@ private fun buildInterestsDescription(interests: List<DynamicInterest>): String 
         }
     }
     return "你最近的兴趣：" + names.joinToString("、") + "。"
-}
-
-// MARK: - 关系里程碑描述
-
-private val milestoneDateFormatter: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("yyyy年M月d日").withZone(ZoneId.systemDefault())
-
-/** 将关系里程碑列表（升序，= iOS `sortedMilestones`）转为提示词，最多注入最近 10 条。 */
-private fun buildRelationshipMilestoneDescription(
-    milestones: List<MilestoneEntity>,
-    userName: String,
-    nowMillis: Long,
-): String {
-    if (milestones.isEmpty()) return ""
-
-    val parts = mutableListOf<String>()
-    parts.add("## 你和${userName}的关系")
-
-    // 当前关系（最新一条）
-    val current = milestones.last()
-    run {
-        val dateStr = milestoneDateFormatter.format(Instant.ofEpochMilli(current.establishedDate))
-        val relative = DateFormatters.relativeDay(current.establishedDate, nowMillis)
-        if (relative.isEmpty()) {
-            parts.add("当前关系：${current.relationshipName}（${dateStr}确立）")
-        } else {
-            parts.add("当前关系：${current.relationshipName}（${dateStr}确立，$relative）")
-        }
-    }
-
-    // 关系历程（最近 10 条）
-    val recentMilestones = milestones.takeLast(10)
-    if (recentMilestones.isNotEmpty()) {
-        parts.add("关系历程：")
-        for (milestone in recentMilestones) {
-            val dateStr = milestoneDateFormatter.format(Instant.ofEpochMilli(milestone.establishedDate))
-            val relative = DateFormatters.relativeDay(milestone.establishedDate, nowMillis)
-            // iOS triggerType: 仅 "aiAutomatic" → AI 判断分支；"userAdvance"/"userEdit"/未知 → 仅 reason。
-            val triggerInfo = if (milestone.triggerTypeRaw == "aiAutomatic") "AI 判断：${milestone.reason}" else milestone.reason
-            if (relative.isEmpty()) {
-                parts.add("- ${dateStr}：${milestone.relationshipName}（${triggerInfo}）")
-            } else {
-                parts.add("- $dateStr · $relative：${milestone.relationshipName}（${triggerInfo}）")
-            }
-        }
-    }
-
-    parts.add("请根据当前的关系状态来调整你的语气、称呼和互动方式。关系是动态变化的，可能升级也可能降级。")
-    return parts.joinToString("\n")
 }
 
 

@@ -1,7 +1,7 @@
 package com.situ.aichat.ui.settings
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import com.situ.aichat.R
 import com.situ.aichat.prompt.memory.TextEmbedder.LoadState

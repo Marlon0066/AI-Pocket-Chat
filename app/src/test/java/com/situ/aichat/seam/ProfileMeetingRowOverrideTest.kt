@@ -12,6 +12,7 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -31,6 +32,7 @@ import org.junit.Test
  * 必须来自**行**（blob 早已冻结只读、注入宏直读行），骨架仍从 marker 组装；无行 → 保 extractSessions 原值。
  * 与回忆长廊 `OfflineMeetingMemoryViewModel.reload` 同模板。
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class ProfileMeetingRowOverrideTest {
 
     @Before fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())

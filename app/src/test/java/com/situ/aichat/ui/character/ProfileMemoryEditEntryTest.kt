@@ -5,7 +5,7 @@ import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.situ.aichat.R
@@ -99,6 +99,8 @@ class ProfileMemoryEditEntryTest {
         show("【长期事实】\n- 喜欢猫", organizing = true, onEdit = { clicks++ })
         editNode().assertIsDisplayed()
         editNode().assertIsNotEnabled()
+        // 复核 R2 🔵-1：这行原先没配 performClick，clicks 恒 0、断言恒真（消息还写着「点了」）。真点一下才有判别力。
+        editNode().performClick()
         assertEquals("禁用态点了也不该回调", 0, clicks)
     }
 

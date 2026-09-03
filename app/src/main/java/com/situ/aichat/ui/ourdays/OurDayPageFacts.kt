@@ -47,7 +47,7 @@ internal fun OurDayFactsSection(
     dayKey: String,
     onOpenMeetings: (String) -> Unit,
     onOpenPromises: (String) -> Unit,
-    onOpenMoments: () -> Unit,
+    onOpenMoments: (String, String) -> Unit,
     onOpenDiary: (String) -> Unit,
     onOpenSchedule: (String, String) -> Unit,
 ) {
@@ -72,7 +72,7 @@ internal fun OurDayFactsSection(
                 val (label, action) = when (link) {
                     FactLink.MEETINGS -> stringResource(R.string.our_days_link_meeting) to { onOpenMeetings(characterUuid) }
                     FactLink.PROMISES -> stringResource(R.string.our_days_link_promises) to { onOpenPromises(characterUuid) }
-                    FactLink.MOMENTS -> stringResource(R.string.our_days_link_moments) to onOpenMoments
+                    FactLink.MOMENTS -> stringResource(R.string.our_days_link_moments) to { onOpenMoments(characterUuid, dayKey) }
                     is FactLink.DIARY -> stringResource(R.string.our_days_link_diary) to { onOpenDiary(link.uuid) }
                     is FactLink.SCHEDULE -> stringResource(R.string.our_days_link_schedule) to { onOpenSchedule(characterUuid, dayKey) }
                 }

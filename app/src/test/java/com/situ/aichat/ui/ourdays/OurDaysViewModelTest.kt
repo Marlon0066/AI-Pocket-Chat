@@ -222,7 +222,7 @@ class OurDaysViewModelTest {
         val c = content { it.selection == OurDaysSelection.All }
         assertTrue(c.hasAnyRow)
         assertTrue(c.month!!.summary.allMode)
-        assertEquals(1, c.month!!.summary.recordedDays)
+        assertEquals(1, c.month.summary.recordedDays)
     }
 
     /** R1 🟡-2：初见日走全史 MIN——原实现从「当前期的行」里取最早见面 ⇒ 每翻到一个含见面的月份，该月首场见面都被误标「初见」。 */

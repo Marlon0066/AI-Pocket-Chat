@@ -124,7 +124,7 @@ class LlmForegroundNotificationTest {
     @Test
     fun E7_角色无头像_不设largeIcon且不崩() {
         val n = LlmForegroundNotification.build(context, ForegroundActivity.Typing("小夏", avatarPath = null, conversationUuid = "c1"))
-        assertNull(n.extras.getParcelable<android.graphics.Bitmap>(Notification.EXTRA_LARGE_ICON))
+        assertNull("无头像不设 largeIcon", n.getLargeIcon())
         assertEquals("小夏", n.title())
     }
 

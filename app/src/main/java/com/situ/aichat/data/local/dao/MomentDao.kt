@@ -38,20 +38,31 @@ interface MomentDao {
     @Query("SELECT * FROM moment_post WHERE isSoftDeleted = 0 AND authorTypeRaw = 'character' ORDER BY timestamp DESC LIMIT :limit")
     suspend fun latestCharacterPosts(limit: Int): List<MomentPostEntity>
 
+    /**
+     * 最新一条角色帖的**响应式**版（图纸 2026-09-03-朋友圈信息流窗口分页 §3.4）：与 [latestCharacterPosts] 传
+     * `limit = 1` **逐字同口径**（非软删 · 角色作者 · 时间戳倒序），只是把一次性快照换成 `Flow`。
+     *
+     * **只观察 `moment_post` 一张表**——这是它存在的全部理由：小组件同步桥此前订 `observeFeedWithRelations(200)`
+     * （帖 + 评论 + 点赞**三张表**），任何一处点赞 / 评论落库都会把 200 条连同全部关系整体重查重组一次，
+     * 而它只需要「最新角色帖是哪条」。同类修法先例 = [observeUserFeedCount]（K5·2026-07-12·见 `MomentDao.kt:56-60` 的 KDoc）。
+     */
+    @Query("SELECT * FROM moment_post WHERE isSoftDeleted = 0 AND authorTypeRaw = 'character' ORDER BY timestamp DESC LIMIT 1")
+    fun observeLatestCharacterPost(): Flow<MomentPostEntity?>
+
     /** Single post (with comments + likes), reactive — detail page auto-refreshes as AI interacts. */
     @Transaction
     @Query("SELECT * FROM moment_post WHERE uuid = :uuid LIMIT 1")
     fun observePostWithRelations(uuid: String): Flow<MomentPostWithRelations?>
 
-    /** A character's own non-deleted posts, newest first — the character moments page (7.2.8). */
+    /** A character's own non-deleted posts, newest first — the character moments page (7.2.8)；窗口分页（图纸 2026-09-03-作者动态页窗口分页 §3.1）。 */
     @Transaction
-    @Query("SELECT * FROM moment_post WHERE isSoftDeleted = 0 AND authorTypeRaw = 'character' AND characterUuid = :characterUuid ORDER BY timestamp DESC")
-    fun observeCharacterFeedWithRelations(characterUuid: String): Flow<List<MomentPostWithRelations>>
+    @Query("SELECT * FROM moment_post WHERE isSoftDeleted = 0 AND authorTypeRaw = 'character' AND characterUuid = :characterUuid ORDER BY timestamp DESC LIMIT :limit")
+    fun observeCharacterFeedWithRelations(characterUuid: String, limit: Int): Flow<List<MomentPostWithRelations>>
 
-    /** The user's own non-deleted posts, newest first — the "My Posts" page (7.2.8). */
+    /** The user's own non-deleted posts, newest first — the "My Posts" page (7.2.8)；窗口分页（同上）。 */
     @Transaction
-    @Query("SELECT * FROM moment_post WHERE isSoftDeleted = 0 AND authorTypeRaw = 'user' ORDER BY timestamp DESC")
-    fun observeUserFeedWithRelations(): Flow<List<MomentPostWithRelations>>
+    @Query("SELECT * FROM moment_post WHERE isSoftDeleted = 0 AND authorTypeRaw = 'user' ORDER BY timestamp DESC LIMIT :limit")
+    fun observeUserFeedWithRelations(limit: Int): Flow<List<MomentPostWithRelations>>
 
     /**
      * 用户非删帖**计数**（K5·2026-07-12）：仪表盘「我的动态」只要数字——此前订阅 [observeUserFeedWithRelations]
@@ -60,6 +71,15 @@ interface MomentDao {
      */
     @Query("SELECT COUNT(*) FROM moment_post WHERE isSoftDeleted = 0 AND authorTypeRaw = 'user'")
     fun observeUserFeedCount(): Flow<Int>
+
+    /**
+     * 某角色非删帖**计数**（作者动态页头部「N 条动态」·图纸 2026-09-03-作者动态页窗口分页 §3.1）：
+     * WHERE 与 [observeCharacterFeedWithRelations] **逐字相同**（去掉 ORDER / LIMIT），故窗口分页后头部
+     * 仍显示**真实总数**而非窗口条数；且只观察 `moment_post` 一张表 —— 互动写入不惊动它。
+     * 口径锁 = `DashboardCountParityTest`（K5 平价测试同款）。
+     */
+    @Query("SELECT COUNT(*) FROM moment_post WHERE isSoftDeleted = 0 AND authorTypeRaw = 'character' AND characterUuid = :characterUuid")
+    fun observeCharacterFeedCount(characterUuid: String): Flow<Int>
 
     @Transaction
     @Query("SELECT * FROM moment_post WHERE uuid = :uuid LIMIT 1")
@@ -316,7 +336,13 @@ interface MomentDao {
     @Query("SELECT timestamp FROM moment_post WHERE isSoftDeleted = 0 AND authorTypeRaw = 'character' AND characterUuid = :characterUuid")
     suspend fun postTimestampsByCharacter(characterUuid: String): List<Long>
 
-    /** 我们的日子·卷一·只读：该角色的评论 + 点赞，加用户对该角色帖的评论 + 点赞，四路时间戳并集（事实层 momentInteractions 按日计数·总图纸 §3.5）。 */
+    /**
+     * 我们的日子·卷一·只读：该角色的评论 + 点赞，加用户对该角色帖的评论 + 点赞，四路时间戳并集
+     *（事实层 momentInteractions 按日计数·总图纸 §3.5）。
+     *
+     * 本查询的四路口径与 [observeDayMomentsWithRelations] 逐条同源，改此处必须同步那里
+     *（否则「那一天的朋友圈」页列出的动态与事实行「互动 M 次」开始各说各话·图纸 2026-09-03 §6）。
+     */
     @Query(
         "SELECT c.timestamp FROM moment_comment c WHERE c.authorTypeRaw = 'character' AND c.characterUuid = :characterUuid " +
             "UNION ALL SELECT l.timestamp FROM moment_like l WHERE l.authorTypeRaw = 'character' AND l.characterUuid = :characterUuid " +
@@ -324,4 +350,37 @@ interface MomentDao {
             "UNION ALL SELECT l.timestamp FROM moment_like l JOIN moment_post p ON l.postUuid = p.uuid WHERE l.authorTypeRaw = 'user' AND p.characterUuid = :characterUuid",
     )
     suspend fun interactionTimestampsForCharacter(characterUuid: String): List<Long>
+
+    /**
+     * 我们的日子·日页「看动态 ›」→ 那一天的朋友圈（图纸 2026-09-03 §3.1）：**这一天发的**（窗口内发布）
+     * ∪ **这一天有来往的**（窗口内的评论 / 点赞所在的帖，可能是更早发的）。半开窗口 `[startMillis, endMillis)`。
+     *
+     * 四路互动分支与 [interactionTimestampsForCharacter] **逐条同口径**（页面列出来的 = 事实行数字所数的那些事）：
+     * ①角色评论（任意帖）②角色点赞（任意帖）③用户评论该角色的帖 ④用户点赞该角色的帖。
+     * 改任一侧必须同步另一侧，否则页面与「互动 M 次」开始各说各话（锁测试 `DayMomentsDaoTest` 四路各一例）。
+     *
+     * 外层过滤软删（回忆页不复活已删动态）——故本查询条数可少于 [interactionTimestampsForCharacter] 的窗口内计数。
+     */
+    @Transaction
+    @Query(
+        "SELECT * FROM moment_post WHERE isSoftDeleted = 0 AND uuid IN (" +
+            "SELECT uuid FROM moment_post WHERE isSoftDeleted = 0 AND authorTypeRaw = 'character' " +
+            "AND characterUuid = :characterUuid AND timestamp >= :startMillis AND timestamp < :endMillis " +
+            "UNION SELECT c.postUuid FROM moment_comment c WHERE c.authorTypeRaw = 'character' " +
+            "AND c.characterUuid = :characterUuid AND c.timestamp >= :startMillis AND c.timestamp < :endMillis " +
+            "UNION SELECT l.postUuid FROM moment_like l WHERE l.authorTypeRaw = 'character' " +
+            "AND l.characterUuid = :characterUuid AND l.timestamp >= :startMillis AND l.timestamp < :endMillis " +
+            "UNION SELECT c.postUuid FROM moment_comment c JOIN moment_post p ON c.postUuid = p.uuid " +
+            "WHERE c.authorTypeRaw = 'user' AND p.characterUuid = :characterUuid " +
+            "AND c.timestamp >= :startMillis AND c.timestamp < :endMillis " +
+            "UNION SELECT l.postUuid FROM moment_like l JOIN moment_post p ON l.postUuid = p.uuid " +
+            "WHERE l.authorTypeRaw = 'user' AND p.characterUuid = :characterUuid " +
+            "AND l.timestamp >= :startMillis AND l.timestamp < :endMillis" +
+            ") ORDER BY timestamp DESC"
+    )
+    fun observeDayMomentsWithRelations(
+        characterUuid: String,
+        startMillis: Long,
+        endMillis: Long,
+    ): Flow<List<MomentPostWithRelations>>
 }

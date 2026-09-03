@@ -98,7 +98,7 @@ class PerfCollectorTest {
                 thrown = e
             }
             assertEquals("块必须恰跑一次（enabled=$enabledState）", 1, runs)
-            assertEquals("异常必须原样重抛（enabled=$enabledState）", "boom-$enabledState", thrown?.message)
+            assertEquals("异常必须原样重抛（enabled=$enabledState）", "boom-$enabledState", thrown.message)
         }
 
         awaitEnabled(false)

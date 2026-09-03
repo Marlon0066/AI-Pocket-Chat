@@ -73,7 +73,7 @@ fun OurDayPageScreen(
     onOpenDay: (characterUuid: String, dayKey: String) -> Unit,
     onOpenMeetings: (String) -> Unit,
     onOpenPromises: (String) -> Unit,
-    onOpenMoments: () -> Unit,
+    onOpenMoments: (String, String) -> Unit,
     onOpenDiary: (String) -> Unit,
     onOpenSchedule: (characterUuid: String, dayKey: String) -> Unit,
     viewModel: OurDayPageViewModel = hiltViewModel(),

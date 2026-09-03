@@ -2091,6 +2091,12 @@
 	<string name="moment_user_empty_desc">You haven\'t posted yet</string>
 	<string name="moment_user_moments_title">My Posts</string>
 	<string name="moment_user_moments_subtitle">Your moments</string>
+	<!-- Our Days → that day's moments (blueprint 2026-09-03) -->
+	<string name="moment_day_title">%1$s · Moments</string>
+	<string name="moment_day_group_posted">Posted that day</string>
+	<string name="moment_day_group_earlier">Earlier posts · engaged that day</string>
+	<string name="moment_day_empty_title">Nothing left from that day</string>
+	<string name="moment_day_empty_desc">It may have been deleted since.</string>
 
 	<!-- S3b structured tool-calling dual track -->
 	<string name="tool_call_fallback_notice">Tool calling switched to compatibility mode</string>

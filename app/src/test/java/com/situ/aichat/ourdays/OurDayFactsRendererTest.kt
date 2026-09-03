@@ -92,13 +92,18 @@ class OurDayFactsRendererTest {
         assertEquals("- 约定：定下「一起看电影」\n- 约定：兑现「一起看电影」\n- 约定：取消「早起跑步」", render(f))
     }
 
+    /** 里程碑行只出关系名——reason 一律不进来（根治图纸件 3·总图纸 §4.2 2026-09-03 修订）。 */
     @Test
-    fun 里程碑行_reason空省略() {
+    fun 里程碑行_只出关系名_reason不进来() {
         assertEquals(
-            "- 里程碑：关系变成「恋人」，因为她说了喜欢",
+            "- 里程碑：关系变成「恋人」",
             render(OurDayFacts(milestones = listOf(OurDayMilestoneFact("m", "恋人", reason = "她说了喜欢")))),
         )
         assertEquals("- 里程碑：关系变成「朋友」", render(OurDayFacts(milestones = listOf(OurDayMilestoneFact("m", "朋友")))))
+        // reason 非空也不得渗出（旧格式「，因为…」整段作废）。
+        val out = render(OurDayFacts(milestones = listOf(OurDayMilestoneFact("m", "恋人", reason = "用户主动表白"))))
+        assertFalse("不带因为", out.contains("因为"))
+        assertFalse("reason 原文不渗出", out.contains("用户主动表白"))
     }
 
     @Test

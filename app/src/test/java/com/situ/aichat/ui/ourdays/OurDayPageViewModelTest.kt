@@ -213,6 +213,9 @@ class OurDayPageViewModelTest {
         coEvery { coordinator.regenerate(any(), any()) } returns false
         vm.retry()
         await("失败 toast") { toasts == listOf(R.string.our_days_toast_rewrite_failed) }
+        // 与本测试前半段同因（R1 🟡-3）：rewrite() 先 tryEmit(toast) 后在 finally 复位 busy，
+        // 且 busy 还要经 combine 跨回 Main 才进 latest——等到 toast 就断言 busy 是竞态，必须再等复位。
+        await("失败路径 busy 复位") { latest?.busy == false }
         assertFalse(latest!!.busy)
     }
 

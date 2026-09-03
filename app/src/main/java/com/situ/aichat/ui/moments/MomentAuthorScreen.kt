@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -24,7 +25,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.heading
@@ -43,6 +47,7 @@ import com.situ.aichat.ui.designsystem.AppMomentIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.appCardSurface
 import com.situ.aichat.ui.designsystem.grainSurface
+import kotlinx.coroutines.delay
 
 /**
  * 角色 / 用户动态页（M06 7.2.8，对齐 iOS `CharacterMomentsView` / `UserMomentsView`）：封面头（头像 + 名 +
@@ -58,6 +63,8 @@ fun MomentAuthorScreen(
     val posts by viewModel.posts.collectAsStateWithLifecycle()
     val characters by viewModel.characters.collectAsStateWithLifecycle()
     val userProfile by viewModel.userProfile.collectAsStateWithLifecycle()
+    val totalCount by viewModel.totalCount.collectAsStateWithLifecycle()
+    val loaded by viewModel.loaded.collectAsStateWithLifecycle()
 
     val meLabel = stringResource(R.string.moment_author_me)
     val aiLabel = stringResource(R.string.moment_author_ai)
@@ -68,6 +75,31 @@ fun MomentAuthorScreen(
     val title = if (isUser) stringResource(R.string.moment_user_moments_title) else headerName
     val cardUserName = userProfile?.nickname.orEmpty()
     val cardUserAvatar = userProfile?.avatarPath
+
+    val listState = rememberLazyListState()
+
+    // 窗口分页（图纸 §4.2·照 MomentsListScreen 同款）：滑到接近列表末尾 ⇒ 窗口 +30；延迟 200ms 防快速滑动连触。
+    val hasMoreOlder by viewModel.hasMoreOlderPosts.collectAsStateWithLifecycle()
+    val shouldLoadOlder by remember {
+        derivedStateOf {
+            val layout = listState.layoutInfo
+            shouldLoadOlderPosts(layout.visibleItemsInfo.lastOrNull()?.index, layout.totalItemsCount, hasMoreOlder)
+        }
+    }
+    LaunchedEffect(shouldLoadOlder) {
+        if (shouldLoadOlder) {
+            delay(200)
+            viewModel.loadOlderPosts()
+        }
+    }
+    // 回到顶部停 5s ⇒ 缩窗回 30 释放历史（中途离开则取消，不缩）。
+    val isNearTop by remember { derivedStateOf { listState.firstVisibleItemIndex <= 1 } }
+    LaunchedEffect(isNearTop) {
+        if (isNearTop) {
+            delay(5_000)
+            viewModel.shrinkWindow()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -82,15 +114,17 @@ fun MomentAuthorScreen(
         },
     ) { padding ->
         LazyColumn(
+            state = listState,
             // 页底 = surface.base + 纸感 grain（契约 §2.3）。
             modifier = Modifier.fillMaxSize().padding(padding).background(AppTheme.colors.surface.base).grainSurface(),
             contentPadding = PaddingValues(bottom = 20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item(key = "header") {
-                AuthorHeader(name = headerName, avatarPath = headerAvatar, postCount = posts.size)
+                AuthorHeader(name = headerName, avatarPath = headerAvatar, postCount = totalCount)
             }
-            if (posts.isEmpty()) {
+            // 复核 R1 🟡-1：首帧未从 DB 返回前留白——否则计数流先到会出现「N 条动态」压着「还没有动态」。
+            if (loaded && posts.isEmpty()) {
                 item(key = "empty") { AuthorEmptyState(isUser) }
             } else {
                 items(posts, key = { it.post.uuid }) { post ->

@@ -30,6 +30,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowLog
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -400,6 +401,52 @@ class PersonaCompileCoordinatorTest {
         assertEquals(mapOf("g02" to 2, "g25" to 2), decodedGains.system)
         assertEquals(listOf("被叫全名"), decodedGains.custom.map { it.label })
         assertEquals(listOf("c01"), GrowthJson.decodePersonaOperators(operators.captured).map { it.condition })
+    }
+
+    // MARK: - 图纸 2026-09-03 T2-3：编译成功日志**分敏感/无感打点**（§4.4 · E18）
+
+    /**
+     * 混在一个数里（旧口径「增益 N 项」）看不出模型是不是只挑敏感的写；分档打点是把「不吃这套」命中率
+     * 从估算变实测的唯一途径——引导句（§4.3）的效果全靠它验收，所以这行格式是**承诺不是建议**。
+     */
+    @Test
+    fun successLog_countsSensitiveAndNumbSeparately_T2_3() = runBlocking {
+        ShadowLog.clear()
+        coEvery { dao.getByUuid(UUID) } returns character(analysisCount = 0)
+        coEvery { apiConfigRepo.resolveConfigValues(ApiFunction.PERSONA_COMPILE) } returns config
+        coEvery { service.personaHash(any()) } returns HASH
+        coEvery { service.compile(any(), any(), any()) } returns compiled().copy(
+            // 很敏感 2（g02 / g25）· 不吃这套 2（g04 / g16）· 正常档 1（g10·两个数都不该算它）· 专属 1
+            gains = PersonaGains(
+                system = mapOf("g02" to 2, "g25" to 2, "g04" to 0, "g16" to 0, "g10" to 1),
+                custom = listOf(CustomGain(id = "u1", label = "被叫全名", level = 2)),
+            ),
+        )
+
+        coordinator().compileAndPersist(UUID)
+
+        val line = ShadowLog.getLogsForTag("PersonaCompile").map { it.msg }.single { it.startsWith("✓ ") }
+        assertEquals(
+            "✓ 林晚: 锚点 3 维 / 增益 很敏感2 不吃这套2 专属1 / 算子 1 条 / 丢弃 3 条",
+            line,
+        )
+    }
+
+    /** E18：`gains.system` 为空 map ⇒ 打点为「很敏感0 不吃这套0 专属N」，不抛异常。 */
+    @Test
+    fun successLog_emptySystemMap_printsZeros_E18() = runBlocking {
+        ShadowLog.clear()
+        coEvery { dao.getByUuid(UUID) } returns character(analysisCount = 0)
+        coEvery { apiConfigRepo.resolveConfigValues(ApiFunction.PERSONA_COMPILE) } returns config
+        coEvery { service.personaHash(any()) } returns HASH
+        coEvery { service.compile(any(), any(), any()) } returns compiled().copy(
+            gains = PersonaGains(custom = listOf(CustomGain(id = "u1", label = "被叫全名", level = 2))),
+        )
+
+        coordinator().compileAndPersist(UUID)
+
+        val line = ShadowLog.getLogsForTag("PersonaCompile").map { it.msg }.single { it.startsWith("✓ ") }
+        assertTrue(line, line.contains("增益 很敏感0 不吃这套0 专属1 /"))
     }
 
     @Test

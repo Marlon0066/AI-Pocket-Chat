@@ -166,7 +166,9 @@ class PersonaCompileCoordinator @Inject constructor(
             Log.i(
                 TAG,
                 "✓ ${fresh.name}: 锚点 ${compiled.anchors.size} 维${if (preserveAnchor) "（保留手拖）" else ""} / " +
-                    "增益 ${compiled.gains.system.size + compiled.gains.custom.size} 项 / 算子 ${compiled.operators.size} 条 / 丢弃 ${compiled.droppedCount} 条",
+                    "增益 很敏感${compiled.gains.system.count { it.value == PersonaVocab.LEVEL_SENSITIVE }} " +
+                    "不吃这套${compiled.gains.system.count { it.value == PersonaVocab.LEVEL_NUMB }} " +
+                    "专属${compiled.gains.custom.size} / 算子 ${compiled.operators.size} 条 / 丢弃 ${compiled.droppedCount} 条",
             )
             if (compiled.notes.isNotEmpty()) Log.i(TAG, "  ${fresh.name} 编译总结：${compiled.notes}")
             PersonaCompileOutcome.Success(meta = meta, anchor = anchor, syncedCurrentSpectrum = syncCurrent)

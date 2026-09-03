@@ -248,7 +248,7 @@ class PromptLayoutAuditReport {
             sb.appendLine()
         }
         val out = File("build/reports/prompt_layout_audit.txt")
-        out.parentFile.mkdirs()
+        out.parentFile?.mkdirs()
         out.writeText(sb.toString())
         println(sb)
     }

@@ -35,6 +35,8 @@ class DeviceHealthProbeTest {
         assertTrue("取不到必须是 NaN，0 会被读成真的 0℃", sample.batteryTempC.isNaN())
     }
 
+    // 粘性广播无替代 API：本例要复现的正是「系统里已存在 sticky ACTION_BATTERY_CHANGED」这一前提。
+    @Suppress("DEPRECATION")
     @Test
     fun `有电池 sticky 广播时按 0_1℃ 精度换算`() {
         val intent = Intent(Intent.ACTION_BATTERY_CHANGED).putExtra(BatteryManager.EXTRA_TEMPERATURE, 351)

@@ -12,23 +12,28 @@ import com.situ.aichat.data.repository.MomentRepository
 import com.situ.aichat.moments.MomentGenerationService
 import com.situ.aichat.moments.MomentInteractionService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 /**
- * 朋友圈信息流（M06 7.2.7，对齐 iOS `FriendCircleView`）的 ViewModel。响应式观察 feed（≤200 非软删，
+ * 朋友圈信息流（M06 7.2.7，对齐 iOS `FriendCircleView`）的 ViewModel。响应式观察 feed（滑动窗口·非软删，
  * 新→旧）/ 角色字典 / 用户资料 / 未读通知数；下拉刷新触发 [MomentGenerationService.checkAndGeneratePosts]
  * 并按发帖数差报告「N 条新动态」（对齐 iOS 刷新前后比对）。点赞/删除写库在此（界面经回调上抛）。
  *
- * **可逆取舍**（同日记 7.1.4）：iOS 手动 displayCount 分页（20 起步 +20），安卓直接全量响应式观察 feed
- * 上限 200，依赖 LazyColumn 虚拟化只渲染可见项 + 图片按项懒解码；若日后量级需要再上 Paging3。
+ * **窗口分页**（图纸 2026-09-03-朋友圈信息流窗口分页·D-1）：feed 走滑动窗口（30 起步 / 每次 +30 /
+ * 回顶停 5s 缩回 30），取代此前「一次性装最近 200 条、没有下文」；不上 Paging3——照聊天屏手写窗口
+ * 范式（`ChatViewModel` 同款三件套），零新依赖，理由见图纸 §0。
  */
 @HiltViewModel
 class MomentsViewModel @Inject constructor(
@@ -39,8 +44,36 @@ class MomentsViewModel @Inject constructor(
     private val interactionService: MomentInteractionService,
 ) : ViewModel() {
 
+    /**
+     * 显示窗口大小（图纸 2026-09-03-朋友圈信息流窗口分页 §3.1·照 `ChatViewModel.loadedMessageCount` 范式）：
+     * 滑到接近列表末尾 [loadOlderPosts] +30；回到顶部停 5s [shrinkWindow] 缩回 30。
+     * 取代此前「一次性装最近 200 条、没有下文」——正常动态永不删，200 条的窗口只会越来越近视。
+     */
+    private val loadedPostCount = MutableStateFlow(MOMENTS_WINDOW_INITIAL)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
     val feed: StateFlow<List<MomentPostWithRelations>> =
-        momentRepo.observeFeed().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        loadedPostCount
+            .flatMapLatest { limit -> momentRepo.observeFeed(limit) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /**
+     * 是否还有更早的动态可加载（窗口已装满 ⇒ 库里可能还有更老的）。照 `ChatViewModel.hasMoreOlderMessages`
+     * 的 `size >= limit` 口径（K3）：库里恰好等于窗口大小时会多跑一次空续查询，换免掉一条 COUNT 查询。
+     */
+    val hasMoreOlderPosts: StateFlow<Boolean> =
+        combine(feed, loadedPostCount) { posts, limit -> posts.size >= limit }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /** 滑到接近列表末尾：窗口 +30。 */
+    fun loadOlderPosts() {
+        loadedPostCount.update { it + MOMENTS_WINDOW_PAGE }
+    }
+
+    /** 回到列表顶部停留 5s 后：窗口缩回初始 30，释放翻出来的历史（幂等·K5）。 */
+    fun shrinkWindow() {
+        loadedPostCount.update { if (it > MOMENTS_WINDOW_INITIAL) MOMENTS_WINDOW_INITIAL else it }
+    }
 
     val characters: StateFlow<Map<String, CharacterEntity>> =
         characterRepo.observeAll()
@@ -120,5 +153,9 @@ class MomentsViewModel @Inject constructor(
 
     private companion object {
         const val REFRESH_TIMEOUT_MS = 30_000L
+
+        /** 信息流显示窗口初始 / 增量大小（图纸 §3.1·D-1 拍板 30/30·聊天屏是 50/50，朋友圈卡片更重故取 30）。 */
+        const val MOMENTS_WINDOW_INITIAL = 30
+        const val MOMENTS_WINDOW_PAGE = 30
     }
 }

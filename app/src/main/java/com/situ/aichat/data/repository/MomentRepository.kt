@@ -44,20 +44,33 @@ class MomentRepository @Inject constructor(
 
     fun observePost(uuid: String): Flow<MomentPostWithRelations?> = dao.observePostWithRelations(uuid)
 
-    /** A character's own non-deleted posts (character moments page, 7.2.8). */
-    fun observeCharacterFeed(characterUuid: String): Flow<List<MomentPostWithRelations>> =
-        dao.observeCharacterFeedWithRelations(characterUuid)
+    /** A character's own non-deleted posts (character moments page, 7.2.8)；[limit] = 显示窗口（图纸 §3.2·无默认值·K3）。 */
+    fun observeCharacterFeed(characterUuid: String, limit: Int): Flow<List<MomentPostWithRelations>> =
+        dao.observeCharacterFeedWithRelations(characterUuid, limit)
 
-    /** The user's own non-deleted posts ("My Posts" page, 7.2.8). */
-    fun observeUserFeed(): Flow<List<MomentPostWithRelations>> = dao.observeUserFeedWithRelations()
+    /**
+     * 「我们的日子」日页 → 那一天的朋友圈（图纸 2026-09-03 §3.2）：半开窗口 `[startMillis, endMillis)`。
+     * 窗口由调用方从 `OurDayKey.dayBounds(dayKey, zone)` 取（`first` 与 `last + 1`）。
+     */
+    fun observeDayMoments(characterUuid: String, startMillis: Long, endMillis: Long): Flow<List<MomentPostWithRelations>> =
+        dao.observeDayMomentsWithRelations(characterUuid, startMillis, endMillis)
+
+    /** The user's own non-deleted posts ("My Posts" page, 7.2.8)；[limit] = 显示窗口（图纸 §3.2·无默认值·K3）。 */
+    fun observeUserFeed(limit: Int): Flow<List<MomentPostWithRelations>> = dao.observeUserFeedWithRelations(limit)
 
     /** 用户非删帖计数（仪表盘统计·K5）：只要数字时用它，别订全量关系流。 */
     fun observeUserFeedCount(): Flow<Int> = dao.observeUserFeedCount()
+
+    /** 某角色非删帖计数（作者动态页头部·图纸 §3.2）：只观察 `moment_post` 一张表，互动写入不惊动它。 */
+    fun observeCharacterFeedCount(characterUuid: String): Flow<Int> = dao.observeCharacterFeedCount(characterUuid)
     suspend fun getPostWithRelations(uuid: String): MomentPostWithRelations? = dao.getPostWithRelations(uuid)
     suspend fun getPost(uuid: String): MomentPostEntity? = dao.getPost(uuid)
 
     /** 最新角色朋友圈动态快照（桌面小组件 13.9b；across 所有角色，非删，最新优先）。 */
     suspend fun latestCharacterPosts(limit: Int): List<MomentPostEntity> = dao.latestCharacterPosts(limit)
+
+    /** 最新角色帖的响应式版（桌面小组件同步桥专用·图纸 §3.4）：只观察 `moment_post` 一张表，互动写入不惊动它。 */
+    fun observeLatestCharacterPost(): Flow<MomentPostEntity?> = dao.observeLatestCharacterPost()
 
     /** Non-deleted feed size; pull-to-refresh diffs this before/after generation to report new-post count. */
     suspend fun feedCount(): Int = dao.feedCount()

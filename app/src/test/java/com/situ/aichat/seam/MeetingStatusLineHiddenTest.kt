@@ -13,6 +13,7 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.first
@@ -31,6 +32,7 @@ import org.junit.Test
  * 卷一 C12「F5 状态行隐藏」行为测试（图纸 §3.5-F5）：会话正在线下见面 → 聊天列表该行的日程状态串**缺席**
  * （不泄见面地点，也不显早已过时的线上日程）；非见面行照常出状态串（N1 对照）。
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class MeetingStatusLineHiddenTest {
 
     @Before fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
