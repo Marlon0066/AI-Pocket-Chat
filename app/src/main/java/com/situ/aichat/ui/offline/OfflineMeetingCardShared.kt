@@ -72,6 +72,8 @@ internal fun FallbackBadge(isRetrying: Boolean, onRetry: () -> Unit, tint: Color
         horizontalArrangement = Arrangement.spacedBy(3.dp),
     ) {
         if (isRetrying) {
+            // TODO(图纸未覆盖): 这枚转圈的 color 跟 [tint] 走（默认白 / 窗景卡传 spec.textColor / 长廊纸面卡传
+            //  accent 深档），是随卡片底色变的承重色；AppLoadingRing 无 color 槽 → 停手登记（D-13）。
             CircularProgressIndicator(modifier = Modifier.size(11.dp), strokeWidth = 1.5.dp, color = tint)
             Text("生成中", style = MaterialTheme.typography.labelSmall, color = tint.copy(alpha = 0.9f))
         } else {

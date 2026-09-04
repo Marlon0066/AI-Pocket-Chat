@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,6 +37,8 @@ import com.situ.aichat.data.model.PersonaCompileMeta
 import com.situ.aichat.data.model.personaCurrentMarkerVisible
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
+import com.situ.aichat.ui.designsystem.AppLoadingRing
+import com.situ.aichat.ui.designsystem.AppLoadingRingSize
 import com.situ.aichat.ui.designsystem.AppSlider
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
@@ -95,7 +96,7 @@ internal fun PersonaCompileCard(
             enabled = !personaBlank && !compiling,
         ) {
             if (compiling) {
-                CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                AppLoadingRing(size = AppLoadingRingSize.Small)
                 Spacer(Modifier.width(8.dp))
             }
             Text(

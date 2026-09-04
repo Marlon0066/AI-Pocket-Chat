@@ -30,7 +30,7 @@ import org.junit.Test
  * 手法：MockK 假掉 offlineMeetingService/offlineSummaryRetryCoordinator/appContext；infoToast/恢复弹窗用真
  * MutableStateFlow；4 个引擎回调（runAssistantTurn/serialize/cancelActiveTurn/afterOfflineMemorySummary）用计数 spy。
  * serialize spy 在 Unconfined scope 真跑 block（否则 markInviteResponded/触发回合等不会发生）。
- * 覆盖：进页恢复弹窗/摘要重试、接受邀约(有/无 session 门控回合)、拒绝、主动发起、改成邀约不跑回合、取消提示、续场、
+ * 覆盖：进页恢复弹窗/摘要重试、接受邀约(有/无 session 门控回合)、拒绝、主动发起、取消提示、续场、
  * 退出(打断回合+按 finalize 结果补摘要)、异常恢复结束(隐藏弹窗)、关闭弹窗。
  */
 class ChatOfflineControllerTest {
@@ -188,7 +188,7 @@ class ChatOfflineControllerTest {
         assertEquals(1, runAssistantTurnCount)
     }
 
-    // ---- 主动发起 / 改成邀约 / 取消提示 / 续场 ----
+    // ---- 主动发起 / 取消提示 / 续场 ----
 
     @Test
     fun 主动发起_有session_触发回合() {
@@ -196,13 +196,6 @@ class ChatOfflineControllerTest {
         controller.startManualOfflineMeeting("咖啡馆", "喝咖啡")
         coVerify { offlineMeetingService.startManualOfflineMeeting("conv-1", "咖啡馆", "喝咖啡") }
         assertEquals(1, runAssistantTurnCount)
-    }
-
-    @Test
-    fun 改成邀约_纯DB改写不跑回合() {
-        controller.convertMessageToOfflineInvite("msg-1", "公园", "散步")
-        coVerify { offlineMeetingService.convertMessageToOfflineInvite("msg-1", "公园", "散步") }
-        assertEquals(0, runAssistantTurnCount) // 1:1 iOS：不跑 LLM 一轮
     }
 
     @Test

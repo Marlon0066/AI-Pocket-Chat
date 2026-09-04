@@ -18,7 +18,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -38,6 +37,7 @@ import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.CharacterEntity
 import com.situ.aichat.ui.components.CharacterAvatar
 import com.situ.aichat.ui.components.clickableScale
+import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppSheet
 import com.situ.aichat.ui.designsystem.AppTheme
@@ -172,11 +172,7 @@ private fun CharacterPickRow(character: CharacterEntity, onPick: () -> Unit) {
 /** 列表行分隔：发丝细线，缩进对齐到文字起点（让头像列连续）。 */
 @Composable
 private fun RowDivider() {
-    HorizontalDivider(
-        modifier = Modifier.padding(start = 74.dp),
-        thickness = 0.5.dp,
-        color = AppTheme.colors.surface.sunken,
-    )
+    AppListDivider(modifier = Modifier.padding(start = 74.dp), startInset = 0.dp)
 }
 
 /** 无角色空态：陶土圆图标 + 文案 + 深陶「新建角色」按钮（兜底引导）。 */

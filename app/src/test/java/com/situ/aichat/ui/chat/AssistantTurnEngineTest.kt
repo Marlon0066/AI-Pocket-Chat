@@ -8,6 +8,7 @@ import com.situ.aichat.data.local.entity.OpenLoopStatus
 import com.situ.aichat.data.local.entity.OpenLoopType
 import com.situ.aichat.data.model.AppSettings
 import com.situ.aichat.data.model.ApiProviderType
+import com.situ.aichat.data.model.MeetingCandidate
 import com.situ.aichat.data.remote.llm.ApiConfigValues
 import com.situ.aichat.data.calendar.CalendarAction
 import com.situ.aichat.data.calendar.CalendarActionType
@@ -46,6 +47,8 @@ import com.situ.aichat.tts.TtsService
 import com.situ.aichat.util.AudioStore
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.Runs
+import io.mockk.just
 import io.mockk.every
 import io.mockk.slot
 import io.mockk.mockk
@@ -54,12 +57,14 @@ import io.mockk.unmockkObject
 import io.mockk.verify
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -660,5 +665,26 @@ class AssistantTurnEngineTest {
 
         coVerify(exactly = 1) { openLoopRepository.revisitCandidates("c1", any()) } // 确实取了候选
         coVerify(exactly = 0) { openLoopRepository.markRevisited(any(), any()) }     // 但未标记
+    }
+
+    @Test
+    fun 纯见面候选回合_算产出_记账供收尾期免打断() = runBlocking {
+        // 规格（微图纸 §1/§2·🔵-1）：Engine 的「非空回合」四判据 = 全项目对「算不算产出」的权威定义，只要有一条成立
+        // 本回合就算有产出。纯「未来见面候选」回合（正文空 + 无结构化动作 + 只有候选）Deliverer 三处记账全盖不到
+        // （工具来源的候选 Deliverer 根本看不见），必须由 Engine 这一处记账——否则收尾维护期会被 Controller 的
+        // 起步相位判据（job !== lastOutputJob）误判成「还没产出过」，用户此刻插话就把已产出的回合打断了。
+        coEvery {
+            replyDeliverer.deliverAssistantReply(any(), any(), any(), any(), any(), any(), any(), any(), any())
+        } returns DeliveredTurn(emptyList(), false, listOf(MeetingCandidate()))
+        val slot = slot<Job?>()
+        // capture() 要求 CapturingSlot<T : Any>（非空）；setter 参数是 Job? → 用 captureNullable，
+        // 它同时能捕获「真写了 null」的情形，下面 assertNotNull 才有判别力（见图纸 §8 偏差 D-3）。
+        every { replyDeliverer.lastOutputJob = captureNullable(slot) } just Runs
+
+        engine.runAssistantTurn(config, character, settings, userProfile = null, userMessageForEmbed = null)
+
+        verify { replyDeliverer.lastOutputJob = any() }
+        // 记的必须是本回合真实 Job：写进 null 等于没记（打断判据 job !== lastOutputJob 恒成立 = 照旧被打断）。
+        assertNotNull(slot.captured)
     }
 }

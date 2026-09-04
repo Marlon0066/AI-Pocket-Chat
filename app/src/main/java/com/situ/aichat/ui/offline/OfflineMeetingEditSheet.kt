@@ -11,7 +11,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,6 +31,8 @@ import com.situ.aichat.offline.OfflineMeetingSession
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppDialog
+import com.situ.aichat.ui.designsystem.AppLoadingRing
+import com.situ.aichat.ui.designsystem.AppLoadingRingSize
 import com.situ.aichat.ui.designsystem.AppSheet
 import com.situ.aichat.ui.designsystem.AppTextArea
 import com.situ.aichat.ui.designsystem.AppTextField
@@ -117,7 +118,7 @@ fun OfflineMeetingEditSheet(
                 enabled = !isRegenerating,
             ) {
                 if (isRegenerating) {
-                    CircularProgressIndicator(Modifier.padding(end = 6.dp), strokeWidth = 2.dp)
+                    AppLoadingRing(Modifier.padding(end = 6.dp), size = AppLoadingRingSize.Large)
                     Text("正在生成…")
                 } else {
                     Icon(Icons.Filled.AutoAwesome, contentDescription = null, modifier = Modifier.padding(end = 6.dp))

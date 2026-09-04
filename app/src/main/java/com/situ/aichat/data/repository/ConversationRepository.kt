@@ -125,6 +125,11 @@ class ConversationRepository @Inject constructor(
         dao.updateLastMessageSnapshot(conversationUuid, preview, role, timestamp)
     }
 
+    /** 单调版 [recordLastMessage]（仅 AI 递送收尾用·防打断瞬间用旧时刻覆写用户新消息快照）。 */
+    suspend fun recordLastMessageIfNewer(conversationUuid: String, preview: String, role: String, timestamp: Long) {
+        dao.updateLastMessageSnapshotIfNewer(conversationUuid, preview, role, timestamp)
+    }
+
     /**
      * 整会话删空后清「最后一条」快照：lastMessageDate=null → 退出活跃聊天列表（对齐 iOS predicate
      * `lastMessageDate != nil`，= 无消息的会话不在列表占位）。删消息重算路径（[com.situ.aichat.ui.chat.refreshConversationLastMessage]）

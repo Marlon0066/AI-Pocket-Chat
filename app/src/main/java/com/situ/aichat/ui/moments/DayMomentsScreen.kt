@@ -14,22 +14,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -41,6 +36,7 @@ import com.situ.aichat.data.local.entity.MomentPostWithRelations
 import com.situ.aichat.data.model.MomentAuthorType
 import com.situ.aichat.ui.designsystem.AppMomentIcons
 import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.designsystem.grainSurface
 import com.situ.aichat.ui.ourdays.OurDaysFormat
@@ -72,19 +68,18 @@ fun DayMomentsScreen(
     val cardUserName = userProfile?.nickname.orEmpty()
     val cardUserAvatar = userProfile?.avatarPath
 
+    val listState = rememberLazyListState()
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(title, modifier = Modifier.semantics { heading() }) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
-                    }
-                },
+            AppTopBar(
+                title = title,
+                onBack = onBack,
+                lifted = listState.canScrollBackward,
             )
         },
     ) { padding ->
         LazyColumn(
+            state = listState,
             // 页底 = surface.base + 纸感 grain（同范式页 MomentAuthorScreen）。
             modifier = Modifier.fillMaxSize().padding(padding).background(AppTheme.colors.surface.base).grainSurface(),
             contentPadding = PaddingValues(top = 4.dp, bottom = 20.dp),

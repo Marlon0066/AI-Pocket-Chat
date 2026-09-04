@@ -12,7 +12,6 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.data.local.entity.CustomStickerEntity
 import com.situ.aichat.data.local.entity.GiftRecordEntity
-import com.situ.aichat.data.local.entity.MessageEntity
 import com.situ.aichat.data.model.MeetingTimeGranularity
 import com.situ.aichat.data.model.RedPacketData
 import com.situ.aichat.offline.OfflineReturnPolicy
@@ -33,7 +32,7 @@ import com.situ.aichat.ui.sticker.StickerPickerSheet
  *
  * 存活语义：红包（E1#0 拍板）+ 三个表单类弹窗与改期目标（B2 拍板 2026-07-02）跨重建存活——填一半转屏/切深色
  * 不再弹窗消失、输入全丢（表单**内部字段**在各 sheet 文件同步升 saveable）。有意不存活（登记）：贴纸选择器
- * （无输入）、DIY/红包详情查看器与「改成邀约」目标（详情/确认类非表单·复杂对象须按 id 重解析，收益不成比例）。
+ * （无输入）、DIY/红包详情查看器（详情/确认类非表单·复杂对象须按 id 重解析，收益不成比例）。
  */
 internal class ChatSheetsState {
     var showPicker by mutableStateOf(false)
@@ -41,7 +40,6 @@ internal class ChatSheetsState {
     var showRedPacketSheet by mutableStateOf(false)
     var showManualMeetingSheet by mutableStateOf(false)
     var showFutureMeetingSheet by mutableStateOf(false) // 「+」菜单「约见面」手动约未来见面表单
-    var convertTargetMessage by mutableStateOf<MessageEntity?>(null) // chat-ui-3「改成邀约」目标消息
     var rescheduleAppointmentUuid by mutableStateOf<String?>(null) // 确认卡「换个时间」目标约定（8c 改期 sheet 消费）
     var diyDetailRecord by mutableStateOf<GiftRecordEntity?>(null)
     var redPacketDetail by mutableStateOf<RedPacketData?>(null)
@@ -145,20 +143,6 @@ internal fun ChatScreenSheets(
                 onDismiss = { sheets.rescheduleAppointmentUuid = null },
             )
         }
-    }
-    // chat-ui-3「改成邀约」：把选中 AI 消息原文预填进见面表单（导航/确认按钮文案对齐 iOS；
-    // onCancel 留空——此路不发取消提示，仅「+ 发起见面」才通知 AI，1:1 iOS messageToConvertToInvite sheet）。
-    sheets.convertTargetMessage?.let { target ->
-        OfflineManualMeetingSheet(
-            onStart = { location, activity ->
-                viewModel.convertMessageToOfflineInvite(target.messageUUID, location, activity)
-            },
-            onCancel = { },
-            onDismiss = { sheets.convertTargetMessage = null },
-            originalMessageContent = target.content,
-            navTitle = "改成线下见面邀约",
-            confirmButtonTitle = "改成邀约",
-        )
     }
     sheets.diyDetailRecord?.let { record ->
         DIYGiftDetailSheet(record = record, onDismiss = { sheets.diyDetailRecord = null })

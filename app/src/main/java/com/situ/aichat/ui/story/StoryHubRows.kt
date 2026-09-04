@@ -12,7 +12,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.situ.aichat.story.StoryFieldValueLabel
 import com.situ.aichat.story.StoryFieldValueStyle
+import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppSwitch
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.appCardSurface
@@ -72,7 +72,7 @@ internal fun SettingsGroup(header: String, footer: String? = null, content: @Com
 
 @Composable
 internal fun RowDivider() {
-    HorizontalDivider(Modifier.padding(horizontal = 14.dp), color = AppTheme.colors.surface.stroke)
+    AppListDivider(modifier = Modifier.padding(horizontal = 14.dp), startInset = 0.dp)
 }
 
 @Composable

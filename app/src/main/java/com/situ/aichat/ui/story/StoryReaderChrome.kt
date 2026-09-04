@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -206,6 +205,9 @@ internal fun BottomCapsule(
                     modifier = Modifier.padding(horizontal = 8.dp),
                 )
                 if (showContinueArc) {
+                    // TODO(图纸未覆盖): 阅读器 chrome 的胶囊按钮，字色 `capsuleContent` 跟着阅读主题走
+                    //  （§0.5 明文「不动故事阅读器的自研 chrome」）；§4.13 只允许「删 colors」或「改 danger」，
+                    //  这里两者都不对——它既不是装饰也不是危险语义，是承重的主题色 → 停手登记（施工日志 D-15）。
                     TextButton(
                         onClick = onContinueArc,
                         colors = ButtonDefaults.textButtonColors(contentColor = capsuleContent),

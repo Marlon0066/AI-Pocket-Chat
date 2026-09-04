@@ -15,16 +15,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -33,17 +30,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.situ.aichat.R
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppTextField
+import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.pet.PetSpecies
 
 /** 领养答题（5 题；选不佳选项弹教育引导，看后才继续，纯引导不阻塞）。1:1 iOS quizQuestions。 */
@@ -114,10 +108,8 @@ fun PetAdoptionScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("领养宠物", modifier = Modifier.semantics { heading() }) },
-                navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_cancel)) } },
-            )
+            // 滚动源在三个 step 子件内部（各自 rememberScrollState）→ 恒静止（图纸 §11 D-2）。
+            AppTopBar(title = "领养宠物", onBack = onClose)
         },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {

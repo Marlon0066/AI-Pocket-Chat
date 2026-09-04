@@ -10,8 +10,12 @@ import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageShader
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.toArgb
@@ -109,6 +113,50 @@ object AppPorcelain {
     /** squash keyframes：0 →(峰)→ 0，全程与 calm 弹簧的可感行程对齐。 */
     const val SQUASH_DURATION_MS = 360
     const val SQUASH_PEAK_MS = 137
+
+    // ══ 釉烧陶土（主行动钮专用·[Modifier.glazedClay] 与 [AppButton] Primary 档消费·2026-09-05 拍板①②）══
+
+    /** 面三段纵向渐变的中段止点（对版稿 `46%`）——顶段短、腰段长，重心压在下半。 */
+    const val GLAZE_MID_STOP = 0.46f
+    /** 底段派生比例：`gradientEnd` 向影墨（深档向纯黑）混过去这么多，得「积釉压深」的第三段。 */
+    const val GLAZE_BOTTOM_MIX_LIGHT = 0.10f
+    const val GLAZE_BOTTOM_MIX_DARK = 0.12f
+
+    /** 顶沿釉光 / 底沿积釉的带高（各一道 1dp 发丝带·代替 CSS 的 `inset 0 ±1px 0`）。 */
+    val glazeEdgeHeight = 1.dp
+    const val GLAZE_TOP_ALPHA_LIGHT = 0.42f
+    const val GLAZE_TOP_ALPHA_DARK = 0.20f
+    /** 底沿墨：浅档走 [AppAccentColors.deepEnd] 深陶，深档走纯黑（深陶在暗底上看不出来）。 */
+    const val GLAZE_BOTTOM_ALPHA_LIGHT = 0.30f
+    const val GLAZE_BOTTOM_ALPHA_DARK = 0.32f
+
+    // ── 外影：浅档双层（接触 + 软），深档单层 ──
+    val glazeContactY = 1.dp
+    val glazeContactBlur = 2.dp
+    const val GLAZE_CONTACT_ALPHA = 0.16f
+    val glazeSoftY = 3.dp
+    val glazeSoftBlur = 8.dp
+    const val GLAZE_SOFT_ALPHA = 0.18f
+    /** 深档单层影（v2「深色无投影」在此半步保留·处置同 [porcelainThumb]）。 */
+    val glazeShadowYDark = 2.dp
+    val glazeShadowBlurDark = 6.dp
+    const val GLAZE_SHADOW_ALPHA_DARK = 0.42f
+
+    // ── 按下：影全撤、顶沿翻成内陷暗带、底沿翻白（光从下面漏进来）──
+    val glazePressInsetHeight = 3.dp
+    const val GLAZE_PRESS_INSET_ALPHA = 0.34f
+    const val GLAZE_PRESS_BOTTOM_ALPHA = 0.16f
+    /** 按下位移（由调用方 `graphicsLayer` 消费·配 [AppButton] 既有 0.97 缩放，不另立弹簧）。 */
+    val glazePressOffsetY = 1.dp
+
+    /** 釉面颗粒 alpha。**另立常量不复用** [AppGrain.LIGHT_ALPHA]（1.5%）——那一档是给整屏底垫定的，
+     * 按钮面积小得多，1.5% 在 40dp 高的胶囊上完全不可感；6% 为对版稿 `.16` overlay 的等效近似。 */
+    const val GLAZE_GRAIN_ALPHA = 0.06f
+
+    /** 压印字：字下 1dp 处的硬边亮线（`blurRadius = 0f`·等效 CSS `text-shadow: 0 1px 0`）。 */
+    val glazeEmbossOffsetY = 1.dp
+    const val GLAZE_EMBOSS_ALPHA_LIGHT = 0.26f
+    const val GLAZE_EMBOSS_ALPHA_DARK = 0.30f
 }
 
 /**
@@ -241,5 +289,136 @@ fun Modifier.porcelainThumb(pressed: Boolean = false, raised: Boolean = true): M
             }
         }
         .border(AppElevation.hairlineWidth, rim, AppShapes.full)
+        .clip(AppShapes.full)
+}
+
+/**
+ * 釉烧陶土（主行动钮的面·对版稿 `fable5_artifacts/mockups/form_bar_save_button_sketch.html` 方案①
+ * 用户过审 2026-09-05）。取代旧「一道 135° 线性渐变」——同一块陶土，现在**烧过釉**了：
+ * 顶沿一道釉光、底沿一圈积釉、面上三段渐变把重心压向下半、釉里有细颗粒。
+ *
+ * **消费方**：[AppButton] 的 [AppButtonStyle.Primary] 档，**仅此一档**（Tonal 浅陶填充 / Text 透明 /
+ * Warning 深琥珀实底各有已过审语义，不上釉）。改这一处 = 全 App 121 个主钮同时换脸。
+ *
+ * **面色回归 token，不照抄对版稿手调值**：对版稿 CSS 的 `#D0A28E / #C18D78 / #B5806A` 是在浏览器里目测调的，
+ * 比既有 token 亮约 3%。这里回归 [AppAccentColors] 的 `gradientStart`（顶）/ `gradientEnd`（腰）+ 一枚
+ * **派生底段**（`lerp(gradientEnd, 影墨, 10%)`；深档向纯黑混 12%）——理由同 `AppMomentIcons` 先例：
+ * mockup 的 CSS 是近似值，家族 token 一致优先，否则主题切换（青花等）时这三个字面量当场穿帮。
+ *
+ * **越出设计语言 v2 的两处（用户 2026-09-05 拍板 = 语言进化·已回填 `FABLE5_DESIGN_LANGUAGE.md`）**：
+ * ① v2「Primary = 一道线性渐变」→ 三段纵向渐变 + 两道沿 + 两层外影；
+ * ② [AppGrain] 军规「只垫 surface 底层」→ 本件把 6% grain 叠在**按钮面**上（仍在文字/图标**之下**）。
+ *
+ * **实现取舍（诚实登记·风格同 [porcelainThumb]）**：
+ * - 两道沿用**边缘纵向渐变**而非 native inset 阴影 —— 同 [porcelainTrack] 的取舍（渐变零风险、不吃硬件加速
+ *   对 path + maskFilter 的支持差异），1dp 带高下渐变与高斯的差异不可辨。
+ * - 按下态用「**内陷顶沿**」（顶部 3dp 暗带）代替 CSS 的 `inset 0 1px 3px` —— 同上；配调用方的
+ *   `translationY = ` [AppPorcelain.glazePressOffsetY] 与既有 0.97 缩放，合起来是「按进去了」。
+ * - 影层 `BlurMaskFilter` Paint **只在 [drawWithCache] 域构建**，绝不逐帧新建（重对象·范式同 [porcelainThumb]）；
+ *   按下 / 禁用只是换一份 Paint 列表（两档布尔，不逐帧插值）。
+ * - **禁用态本件只负责去影**，不重复降透明 —— 整体 40% 由 [AppButton] 既有 `.alpha(0.4f)` 承担
+ *   （语义同 `porcelainThumb(raised = false)`：禁用的东西不该还浮着）。
+ * - 圆角取 `min(w, h) / 2`：胶囊与正圆都适配（同 [porcelainThumb]）。
+ *
+ * @param pressed 手指按住时 true —— 撤掉全部外影，改画内陷顶沿 + 翻白底沿。
+ * @param enabled false = 禁用态：不画任何影（透明度由调用方管）。
+ */
+@Composable
+fun Modifier.glazedClay(pressed: Boolean = false, enabled: Boolean = true): Modifier {
+    val colors = AppTheme.colors
+    val isDark = colors.isDark
+    val faceTop = colors.accent.gradientStart
+    val faceMid = colors.accent.gradientEnd
+    val faceBottom = lerp(
+        colors.accent.gradientEnd,
+        if (isDark) Color.Black else AppElevation.shadowInk,
+        if (isDark) AppPorcelain.GLAZE_BOTTOM_MIX_DARK else AppPorcelain.GLAZE_BOTTOM_MIX_LIGHT,
+    )
+    val topGlaze = Color.White.copy(
+        alpha = if (isDark) AppPorcelain.GLAZE_TOP_ALPHA_DARK else AppPorcelain.GLAZE_TOP_ALPHA_LIGHT,
+    )
+    val bottomPool = if (isDark) {
+        Color.Black.copy(alpha = AppPorcelain.GLAZE_BOTTOM_ALPHA_DARK)
+    } else {
+        colors.accent.deepEnd.copy(alpha = AppPorcelain.GLAZE_BOTTOM_ALPHA_LIGHT)
+    }
+    val pressInset = colors.accent.deepEnd.copy(alpha = AppPorcelain.GLAZE_PRESS_INSET_ALPHA)
+    val pressBottom = Color.White.copy(alpha = AppPorcelain.GLAZE_PRESS_BOTTOM_ALPHA)
+    return this
+        .drawWithCache {
+            val radius = minOf(size.width, size.height) / 2f
+            // 影层 Paint 在 cache 域一次构建（BlurMaskFilter 属重对象·范式同 porcelainThumb）。
+            fun paintOf(color: Color, alpha: Float, blur: Dp) =
+                android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                    this.color = color.copy(alpha = alpha).toArgb()
+                    maskFilter = android.graphics.BlurMaskFilter(
+                        blur.toPx(), android.graphics.BlurMaskFilter.Blur.NORMAL,
+                    )
+                }
+            val shadowPaints: List<Pair<android.graphics.Paint, Float>> = when {
+                !enabled || pressed -> emptyList()
+                isDark -> listOf(
+                    paintOf(
+                        Color.Black, AppPorcelain.GLAZE_SHADOW_ALPHA_DARK, AppPorcelain.glazeShadowBlurDark,
+                    ) to AppPorcelain.glazeShadowYDark.toPx(),
+                )
+                else -> listOf(
+                    paintOf(
+                        AppElevation.shadowInk, AppPorcelain.GLAZE_CONTACT_ALPHA, AppPorcelain.glazeContactBlur,
+                    ) to AppPorcelain.glazeContactY.toPx(),
+                    paintOf(
+                        AppElevation.shadowInk, AppPorcelain.GLAZE_SOFT_ALPHA, AppPorcelain.glazeSoftBlur,
+                    ) to AppPorcelain.glazeSoftY.toPx(),
+                )
+            }
+            val face = Brush.verticalGradient(
+                0f to faceTop,
+                AppPorcelain.GLAZE_MID_STOP to faceMid,
+                1f to faceBottom,
+                startY = 0f,
+                endY = size.height,
+            )
+            val edgeHeight = AppPorcelain.glazeEdgeHeight.toPx()
+            // 顶沿：常态是釉光（白→透明），按下翻成内陷暗带（深陶→透明·更高更重）。
+            val topBandHeight = if (pressed) AppPorcelain.glazePressInsetHeight.toPx() else edgeHeight
+            val topBrush = Brush.verticalGradient(
+                colors = listOf(if (pressed) pressInset else topGlaze, Color.Transparent),
+                startY = 0f,
+                endY = topBandHeight,
+            )
+            // 底沿：常态积釉（透明→深陶），按下翻白。起止点写**绝对画布坐标**——brush 的坐标系是画布，
+            // 不随 drawRect 的 topLeft 平移（写相对坐标会整条退化成端色）。
+            val bottomBrush = Brush.verticalGradient(
+                colors = listOf(Color.Transparent, if (pressed) pressBottom else bottomPool),
+                startY = size.height - edgeHeight,
+                endY = size.height,
+            )
+            val grainBrush = ShaderBrush(ImageShader(AppGrain.tile, TileMode.Repeated, TileMode.Repeated))
+            val capsule = Path().apply {
+                addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(radius, radius)))
+            }
+            onDrawBehind {
+                shadowPaints.forEach { (paint, dy) ->
+                    drawIntoCanvas { canvas ->
+                        val native = canvas.nativeCanvas
+                        native.save()
+                        native.translate(0f, dy)
+                        native.drawRoundRect(0f, 0f, size.width, size.height, radius, radius, paint)
+                        native.restore()
+                    }
+                }
+                drawRoundRect(brush = face, cornerRadius = CornerRadius(radius, radius))
+                // 两道沿与颗粒都裁进胶囊内（两端弧上下缘自然跟随·同 porcelainTrack）。
+                clipPath(capsule) {
+                    drawRect(brush = topBrush, size = Size(size.width, topBandHeight))
+                    drawRect(
+                        brush = bottomBrush,
+                        topLeft = Offset(0f, size.height - edgeHeight),
+                        size = Size(size.width, edgeHeight),
+                    )
+                    drawRect(brush = grainBrush, alpha = AppPorcelain.GLAZE_GRAIN_ALPHA)
+                }
+            }
+        }
         .clip(AppShapes.full)
 }

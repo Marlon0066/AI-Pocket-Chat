@@ -142,6 +142,7 @@
     <string name="chat_error_empty_reply">消息生成失败，请稍后重试</string>
     <string name="chat_network_disconnected">网络连接已断开</string>
     <string name="chat_network_recovered">网络已恢复</string>
+    <string name="chat_quote_text_only_hint">引用时只能发文字，取消引用后再发</string>
     <string name="api_fn_chat_vision_on">当前模型看得懂图，聊天「+」里可以发照片</string>
     <string name="api_fn_chat_vision_off">当前模型看不懂图，聊天「+」里不会出现「照片」。如果你确定它支持看图，可到该配置里把「图片理解」改成「常开」</string>
     <string name="api_fn_image_vision_on">当前模型看得懂图，你发的照片会自动生成一句文字描述存进记忆，以后还搜得到</string>

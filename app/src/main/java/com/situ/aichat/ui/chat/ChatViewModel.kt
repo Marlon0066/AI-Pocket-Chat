@@ -591,8 +591,6 @@ class ChatViewModel @Inject constructor(
     fun acceptOfflineInvite(messageUuid: String) = offlineController.acceptOfflineInvite(messageUuid)
     fun declineOfflineInvite(messageUuid: String) = offlineController.declineOfflineInvite(messageUuid)
     fun startManualOfflineMeeting(location: String, activity: String) = offlineController.startManualOfflineMeeting(location, activity)
-    fun convertMessageToOfflineInvite(messageUuid: String, location: String, activity: String) =
-        offlineController.convertMessageToOfflineInvite(messageUuid, location, activity)
     fun handleMeetingCancelHint() = offlineController.handleMeetingCancelHint()
     fun continueOfflineMeeting(endCardMessageUuid: String) = offlineController.continueOfflineMeeting(endCardMessageUuid)
     fun exitOfflineMode() = offlineController.exitOfflineMode()

@@ -15,20 +15,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,9 +33,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -57,7 +49,11 @@ import com.situ.aichat.ui.designsystem.AppChoiceChip
 import com.situ.aichat.ui.designsystem.AppDropdownField
 import com.situ.aichat.ui.designsystem.AppDropdownMenuItem
 import com.situ.aichat.ui.designsystem.AppDropdownTextField
+import com.situ.aichat.ui.designsystem.AppLoadingRing
+import com.situ.aichat.ui.designsystem.AppLoadingRingSize
+import com.situ.aichat.ui.designsystem.AppSnackbarHost
 import com.situ.aichat.ui.designsystem.AppTextField
+import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.ui.designsystem.appCardSurface
 import kotlinx.coroutines.launch
 
@@ -120,24 +116,22 @@ fun TtsConfigurationScreen(
         if (c.providerType == TtsProviderType.MINIMAX) viewModel.refreshUsage(c.modelName)
     }
 
+    val scrollState = rememberScrollState()
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("语音 / TTS 设置", modifier = Modifier.semantics { heading() }) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
-                    }
-                },
+            AppTopBar(
+                title = "语音 / TTS 设置",
+                onBack = onBack,
+                lifted = scrollState.value > 0,
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { AppSnackbarHost(snackbarHostState) },
     ) { padding ->
         if (!seeded) {
             Box(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator() }
+            ) { AppLoadingRing(size = AppLoadingRingSize.Large) }
             return@Scaffold
         }
 
@@ -146,7 +140,7 @@ fun TtsConfigurationScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .contentMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -270,7 +264,7 @@ fun TtsConfigurationScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 if (previewBusy) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    AppLoadingRing(size = AppLoadingRingSize.Small)
                     Spacer(Modifier.width(8.dp))
                 }
                 Text("试听")

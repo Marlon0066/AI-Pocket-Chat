@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -20,18 +21,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,8 +37,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -50,6 +46,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
 import com.situ.aichat.ui.designsystem.AppChoiceChip
 import com.situ.aichat.ui.designsystem.AppSheet
+import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.ui.designsystem.appCardSurface
 import com.situ.aichat.data.local.entity.CharacterEntity
 import com.situ.aichat.data.model.GiftCategory
@@ -83,19 +80,21 @@ fun GiftShopScreen(
     var detailItem by remember { mutableStateOf<GiftItem?>(null) }
     var showPicker by remember { mutableStateOf(false) }
 
+    val gridState = rememberLazyGridState()
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("礼物店", modifier = Modifier.semantics { heading() }) },
-                navigationIcon = {
-                    IconButton(onClick = onClose) { Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_close)) }
-                },
+            AppTopBar(
+                title = "礼物店",
+                onBack = onClose,
+                lifted = gridState.canScrollBackward,
                 actions = { BalancePill(balance) },
             )
         },
     ) { padding ->
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
+            state = gridState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
@@ -261,6 +260,8 @@ private fun GiftCharacterPickerSheet(
                 )
             } else {
                 characters.forEach { c ->
+                    // TODO(图纸未覆盖): leading 是 44dp 角色头像（§4.8 点名的 avatar 情形），不是 30dp 陶土
+                    //  瓦片 → 停手登记（施工日志 D-12）。
                     ListItem(
                         modifier = Modifier
                             .fillMaxWidth()

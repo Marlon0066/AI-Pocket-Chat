@@ -29,8 +29,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,8 +39,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -52,6 +48,7 @@ import com.situ.aichat.ui.components.CharacterAvatar
 import com.situ.aichat.ui.components.contentMaxWidth
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
+import com.situ.aichat.ui.designsystem.AppFormBar
 import com.situ.aichat.ui.designsystem.AppTextArea
 import com.situ.aichat.ui.designsystem.AppTextField
 import com.situ.aichat.ui.designsystem.AppTheme
@@ -95,16 +92,16 @@ fun UserProfileEditScreen(
         )
     }
     var showDatePicker by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.profile_edit_title), modifier = Modifier.semantics { heading() }) },
-                navigationIcon = {
-                    AppButton(onClick = onClose, style = AppButtonStyle.Text) { Text(stringResource(R.string.action_cancel)) }
-                },
-                actions = {
-                    AppButton(onClick = { viewModel.save(onClose) }, style = AppButtonStyle.Text, enabled = !saving) {
+            AppFormBar(
+                title = stringResource(R.string.profile_edit_title),
+                lifted = scrollState.value > 0,
+                onCancel = onClose,
+                trailing = {
+                    AppButton(onClick = { viewModel.save(onClose) }, enabled = !saving) {
                         Text(stringResource(R.string.action_save))
                     }
                 },
@@ -116,7 +113,7 @@ fun UserProfileEditScreen(
                 .padding(padding)
                 .fillMaxWidth()
                 .imePadding()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .contentMaxWidth()
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -218,13 +215,13 @@ fun UserProfileEditScreen(
             onDismissRequest = { showDatePicker = false },
             colors = DatePickerDefaults.colors(containerColor = AppTheme.colors.surface.raised),
             confirmButton = {
-                TextButton(onClick = {
+                AppButton(style = AppButtonStyle.Text, onClick = {
                     viewModel.update { it.copy(birthdayMillis = dpState.selectedDateMillis) }
                     showDatePicker = false
                 }) { Text(stringResource(R.string.action_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text(stringResource(R.string.action_cancel)) }
+                AppButton(style = AppButtonStyle.Text, onClick = { showDatePicker = false }) { Text(stringResource(R.string.action_cancel)) }
             },
         ) {
             DatePicker(state = dpState)

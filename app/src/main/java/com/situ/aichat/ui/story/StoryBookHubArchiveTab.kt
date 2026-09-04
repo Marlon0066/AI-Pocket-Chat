@@ -17,8 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,6 +37,9 @@ import com.situ.aichat.data.local.entity.StoryEntity
 import com.situ.aichat.story.StoryArcPlanning
 import com.situ.aichat.story.StoryEditableField
 import com.situ.aichat.ui.designsystem.AppDialog
+import com.situ.aichat.ui.designsystem.AppListDivider
+import com.situ.aichat.ui.designsystem.AppLoadingRing
+import com.situ.aichat.ui.designsystem.AppLoadingRingSize
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.appCardSurface
 
@@ -208,7 +209,7 @@ private fun OutlineAndArcCard(
 private fun OutlineRegenRow(regenerating: Boolean, onClick: () -> Unit) {
     val c = AppTheme.colors
     // 发丝线与卡内容同宽（`RowDivider` 自带 14dp 横向内缩，HubCard 已内缩 14dp，套用会双重内缩·施工日志 D-9）
-    HorizontalDivider(color = c.surface.stroke, modifier = Modifier.padding(top = 10.dp))
+    AppListDivider(modifier = Modifier.padding(top = 10.dp), startInset = 0.dp)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -218,7 +219,7 @@ private fun OutlineRegenRow(regenerating: Boolean, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (regenerating) {
-            CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 1.5.dp, color = c.text.tertiary)
+            AppLoadingRing(size = AppLoadingRingSize.Small)
         } else {
             Icon(
                 Icons.Outlined.Refresh,

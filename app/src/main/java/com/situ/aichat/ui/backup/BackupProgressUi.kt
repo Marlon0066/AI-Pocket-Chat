@@ -3,7 +3,6 @@ package com.situ.aichat.ui.backup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -13,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import com.situ.aichat.R
 import com.situ.aichat.data.backup.BackupProgress
 import com.situ.aichat.data.backup.overallFraction
+import com.situ.aichat.ui.designsystem.AppProgressBar
 
 /**
  * 备份导出/导入的确定性进度行（P1-7，BackupScreen 与 BackupImportPreviewScreen 共用）：
@@ -21,7 +21,7 @@ import com.situ.aichat.data.backup.overallFraction
 @Composable
 internal fun BackupProgressRow(progress: BackupProgress, modifier: Modifier = Modifier) {
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        LinearProgressIndicator(progress = { overallFraction(progress) }, modifier = Modifier.fillMaxWidth())
+        AppProgressBar(progress = overallFraction(progress), modifier = Modifier.fillMaxWidth())
         Text(
             text = progressLabel(progress),
             style = MaterialTheme.typography.bodySmall,

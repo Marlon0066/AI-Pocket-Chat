@@ -1,7 +1,6 @@
 package com.situ.aichat.ui.settings
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,19 +14,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,8 +31,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -52,10 +46,14 @@ import com.situ.aichat.ui.components.SettingsSwitchRow
 import com.situ.aichat.ui.components.contentMaxWidth
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
+import com.situ.aichat.ui.designsystem.AppFormBar
+import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppSegmentedControl
+import com.situ.aichat.ui.designsystem.AppSettingsRow
 import com.situ.aichat.ui.designsystem.AppSwitch
 import com.situ.aichat.ui.designsystem.AppTextArea
 import com.situ.aichat.ui.designsystem.AppTextField
+import com.situ.aichat.ui.designsystem.AppTopBar
 import java.util.UUID
 
 /**
@@ -106,18 +104,13 @@ private fun ContentFilterListScreen(
     onEdit: (ContentFilterRule) -> Unit,
     onDelete: (String) -> Unit,
 ) {
+    val scrollState = rememberScrollState()
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.content_filter_title), modifier = Modifier.semantics { heading() }) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
-                        )
-                    }
-                },
+            AppTopBar(
+                title = stringResource(R.string.content_filter_title),
+                onBack = onBack,
+                lifted = scrollState.value > 0,
             )
         },
     ) { padding ->
@@ -126,7 +119,7 @@ private fun ContentFilterListScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .imePadding() // C4：自定义正则增改时键盘弹起可滚到键盘上方
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .contentMaxWidth(),
         ) {
             Spacer(Modifier.height(8.dp))
@@ -169,14 +162,11 @@ private fun ContentFilterListScreen(
                         )
                     }
                 }
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.content_filter_add_custom)) },
-                    leadingContent = {
-                        Icon(Icons.Filled.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onAdd() },
+                AppSettingsRow(
+                    title = stringResource(R.string.content_filter_add_custom),
+                    icon = Icons.Filled.Add,
+                    onClick = onAdd,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
 
@@ -199,6 +189,9 @@ private fun CustomRuleRow(
     } else {
         rule.pattern
     }
+    // TODO(图纸未覆盖): 本行的副标题是**等宽字体**（正则原文，靠 Monospace 才看得清），AppSettingsRow 的副
+    //  走 settingsRowSubtitle 单一字阶、无字体槽；尾槽还是「开关 + 编辑 + 删除」三件套。按 §4.8「结构不符
+    //  的登记不硬套、也不给组件加参数」停手（施工日志 D-12）。
     ListItem(
         headlineContent = { Text(title) },
         supportingContent = {
@@ -308,25 +301,20 @@ private fun RuleEditScreen(
     val patternValid = pattern.isEmpty() || ContentFilterService.isValidRegex(pattern)
     val canSave = pattern.isNotEmpty() && patternValid
 
+    val editorScrollState = rememberScrollState()
+
     BackHandler(onBack = onCancel)
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        stringResource(
-                            if (editing.isNew) R.string.content_filter_add_title else R.string.content_filter_edit_title,
-                        ),
-                        modifier = Modifier.semantics { heading() },
-                    )
-                },
-                navigationIcon = {
-                    AppButton(onClick = onCancel, style = AppButtonStyle.Text) {
-                        Text(stringResource(R.string.content_filter_action_cancel))
-                    }
-                },
-                actions = {
+            AppFormBar(
+                title = stringResource(
+                    if (editing.isNew) R.string.content_filter_add_title else R.string.content_filter_edit_title,
+                ),
+                lifted = editorScrollState.value > 0,
+                onCancel = onCancel,
+                cancelText = stringResource(R.string.content_filter_action_cancel),
+                trailing = {
                     AppButton(
                         onClick = {
                             onSave(
@@ -338,7 +326,6 @@ private fun RuleEditScreen(
                                 ).toRule(),
                             )
                         },
-                        style = AppButtonStyle.Text,
                         enabled = canSave,
                     ) {
                         Text(stringResource(R.string.content_filter_action_save))
@@ -352,7 +339,7 @@ private fun RuleEditScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .imePadding() // C4：规则编辑屏（名/正则/替换多输入）键盘弹起可滚到键盘上方
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(editorScrollState)
                 .contentMaxWidth()
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -427,7 +414,7 @@ private fun RuleEditScreen(
                 Text(stringResource(R.string.content_filter_test_run))
             }
             if (testRan) {
-                HorizontalDivider()
+                AppListDivider(startInset = 0.dp)
                 Text(
                     stringResource(R.string.content_filter_test_result_label),
                     style = MaterialTheme.typography.bodySmall,

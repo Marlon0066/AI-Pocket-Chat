@@ -15,7 +15,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -48,6 +47,8 @@ import com.situ.aichat.data.local.entity.WorldBookEntity
 import com.situ.aichat.data.worldbook.WorldBookRepository
 import com.situ.aichat.ui.components.clickableScale
 import com.situ.aichat.ui.designsystem.AppFeatureIcons
+import com.situ.aichat.ui.designsystem.AppListDivider
+import com.situ.aichat.ui.designsystem.AppRadio
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppSheet
 import com.situ.aichat.ui.designsystem.AppTheme
@@ -278,7 +279,7 @@ private fun WorldBookBindingSheet(
                 )
             }
             selectableBooks.forEach { summary ->
-                HorizontalDivider(color = colors.surface.stroke, modifier = Modifier.padding(horizontal = 20.dp))
+                AppListDivider(modifier = Modifier.padding(horizontal = 20.dp), startInset = 0.dp)
                 val disabled = !summary.book.enabled
                 BindingRow(
                     title = summary.book.name,
@@ -319,7 +320,7 @@ private fun WorldBookBindingSheet(
                 }
             }
             if (!effectiveMulti) {
-                HorizontalDivider(color = colors.surface.stroke, modifier = Modifier.padding(horizontal = 20.dp))
+                AppListDivider(modifier = Modifier.padding(horizontal = 20.dp), startInset = 0.dp)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -380,7 +381,7 @@ private fun BindingRow(
         if (multi) {
             Checkbox(checked = selected, onCheckedChange = { onPick() })
         } else {
-            RadioButton(selected = selected, onClick = onPick)
+            AppRadio(selected = selected, onClick = onPick)
         }
         Column {
             Text(

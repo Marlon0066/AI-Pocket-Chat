@@ -22,11 +22,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,8 +33,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
@@ -51,6 +47,7 @@ import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppDialogTone
+import com.situ.aichat.ui.designsystem.AppFormBar
 import com.situ.aichat.ui.designsystem.AppTextArea
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.appCardSurface
@@ -78,24 +75,22 @@ fun ComposeMomentScreen(
     val overLimit = charCount > ComposeMomentViewModel.MAX_CHARS
     val canPublish = state.content.isNotBlank() && !overLimit && !state.publishing
     val handleClose = { if (viewModel.hasUnsavedChanges) showDiscard = true else onClose() }
+    val scrollState = rememberScrollState()
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.moment_compose_title), modifier = Modifier.semantics { heading() }) },
-                navigationIcon = {
-                    IconButton(onClick = handleClose) {
-                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_cancel))
-                    }
-                },
-                actions = {
-                    // 发布 = 陶土 Primary 小胶囊（契约 §2.5·D5 拍板）：行动召唤明确；禁用规格由 AppButton 既有口径管。
+            AppFormBar(
+                title = stringResource(R.string.moment_compose_title),
+                lifted = scrollState.value > 0,
+                // ✕ → 文字「取消」（拍板④）；handleClose 的放弃确认逻辑一字不动。
+                onCancel = handleClose,
+                trailing = {
+                    // 发布 = 釉烧 Primary 小胶囊（契约 §2.5·D5 拍板）：行动召唤明确；禁用规格由 AppButton 既有口径管。
                     AppButton(
                         onClick = { viewModel.publish(onClose) },
                         style = AppButtonStyle.Primary,
                         enabled = canPublish,
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                        modifier = Modifier.padding(end = 8.dp),
                     ) {
                         Text(stringResource(R.string.moment_compose_publish))
                     }
@@ -109,7 +104,7 @@ fun ComposeMomentScreen(
                 .fillMaxWidth()
                 .background(AppTheme.colors.surface.base)
                 .grainSurface()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(padding)
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),

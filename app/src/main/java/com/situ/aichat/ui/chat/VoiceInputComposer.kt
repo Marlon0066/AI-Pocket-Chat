@@ -35,7 +35,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -67,6 +66,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.situ.aichat.R
 import com.situ.aichat.ui.components.AppMotion
+import com.situ.aichat.ui.designsystem.AppLoadingRing
+import com.situ.aichat.ui.designsystem.AppLoadingRingSize
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import kotlinx.coroutines.withTimeoutOrNull
@@ -141,11 +142,18 @@ fun rememberMicPermissionState(): MicPermissionState {
 /**
  * 输入栏右侧「按住录音」语音键（输入框为空时显示，1:1 iOS 空文字→波形键）。手势：按下→50ms 防抖（快速点放不录）→
  * 仍按住则开始录音→跟手上滑（位移以 dp 回传，越 80dp 由 VM 置取消态）→松手收尾。无权限时按下先申请、本次不录。
+ *
+ * [blocked]=true（引用一期 E：托盘里挂着引用卡时）按下即拦、本次不录，只回 [onBlocked] 让调用方弹提示。
+ * **拦截排在权限分支之前**——不为一个注定被拒的操作去要麦克风权限。
  */
 @Composable
 fun VoiceRecordButton(
     hasMicPermission: Boolean,
     onRequestPermission: () -> Unit,
+    /** 带引用时不许录音（引用一期 E·图纸 §4.3）；true → 按下即拦，本次手势直接作废。 */
+    blocked: Boolean,
+    /** 被拦那一刻的回调（调用方据此亮「引用时只能发文字」提示条）。 */
+    onBlocked: () -> Unit,
     onStartRecording: () -> Unit,
     onDrag: (draggedUpDp: Float) -> Unit,
     onFinish: () -> Unit,
@@ -156,6 +164,10 @@ fun VoiceRecordButton(
 ) {
     val perm by rememberUpdatedState(hasMicPermission)
     val reqPerm by rememberUpdatedState(onRequestPermission)
+    // pointerInput(Unit) 的手势块只建一次（手势 owner 跨态不卸载铁律）→ 这两个也必须走 rememberUpdatedState，
+    // 否则「有没有引用」会被冻在首帧（Compose 捕获过期·见 PITFALLS §1d）。
+    val blockedNow by rememberUpdatedState(blocked)
+    val onBlockedNow by rememberUpdatedState(onBlocked)
     val start by rememberUpdatedState(onStartRecording)
     val drag by rememberUpdatedState(onDrag)
     val finish by rememberUpdatedState(onFinish)
@@ -188,6 +200,12 @@ fun VoiceRecordButton(
             .pointerInput(Unit) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
+                    // 引用一期 E：带引用时在「意图那一刻」拦下（形状与下面的权限分支同构）。
+                    if (blockedNow) {
+                        onBlockedNow()
+                        waitForUpOrCancellation()
+                        return@awaitEachGesture
+                    }
                     if (!perm) {
                         reqPerm()
                         waitForUpOrCancellation()
@@ -316,7 +334,7 @@ fun VoiceDraftBar(
             )
             if (draft.isTranscriptPending) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 2.dp, color = colors.accent.primary)
+                    AppLoadingRing(size = AppLoadingRingSize.Small)
                     Text(
                         stringResource(R.string.voice_draft_processing),
                         style = AppTypography.secondary,

@@ -21,10 +21,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,8 +30,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,14 +39,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.situ.aichat.R
 import com.situ.aichat.ui.components.SettingsSwitchRow
 import com.situ.aichat.ui.components.contentMaxWidth
+import com.situ.aichat.ui.designsystem.AppButton
+import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppDialogTone
 import com.situ.aichat.ui.designsystem.AppMenu
@@ -60,6 +56,8 @@ import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppTextArea
 import com.situ.aichat.ui.designsystem.AppTextField
 import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTopBar
+import com.situ.aichat.ui.designsystem.AppTopBarIcons
 
 /**
  * 条目编辑器（WB7b·契约 §12.4/§12.10）：常用五件在前（标题 / 触发方式三段 / 关键词 chips /
@@ -85,25 +83,18 @@ fun WorldBookEntryEditScreen(
     val mode = viewModel.triggerMode(entry)
     val requestBack: () -> Unit = { if (viewModel.isDirty) showDiscard = true else onDone() }
 
+    val scrollState = rememberScrollState()
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        stringResource(if (viewModel.isEditing) R.string.wb_entry_edit_title else R.string.wb_entry_new_title),
-                        modifier = Modifier.semantics { heading() },
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = requestBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
-                    }
-                },
+            AppTopBar(
+                title = stringResource(if (viewModel.isEditing) R.string.wb_entry_edit_title else R.string.wb_entry_new_title),
+                onBack = requestBack,
+                lifted = scrollState.value > 0,
                 actions = {
                     if (viewModel.isEditing) {
                         Box {
                             IconButton(onClick = { showMenu = true }) {
-                                Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.wb_cd_more_actions))
+                                Icon(AppTopBarIcons.More, contentDescription = stringResource(R.string.wb_cd_more_actions))
                             }
                             AppMenu(expanded = showMenu, onDismiss = { showMenu = false }) {
                                 AppMenuItem(
@@ -117,7 +108,7 @@ fun WorldBookEntryEditScreen(
                             }
                         }
                     }
-                    TextButton(onClick = { viewModel.save(onDone) }) {
+                    AppButton(style = AppButtonStyle.Text, onClick = { viewModel.save(onDone) }) {
                         Text(stringResource(R.string.action_save))
                     }
                 },
@@ -128,7 +119,7 @@ fun WorldBookEntryEditScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .contentMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp)
                 .imePadding(),

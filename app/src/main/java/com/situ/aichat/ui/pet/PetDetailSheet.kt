@@ -22,12 +22,10 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,6 +49,9 @@ import com.situ.aichat.pet.PetWalkService
 import com.situ.aichat.pet.growthStage
 import com.situ.aichat.pet.metadata
 import com.situ.aichat.pet.petNeedHeadline
+import com.situ.aichat.ui.designsystem.AppButton
+import com.situ.aichat.ui.designsystem.AppButtonStyle
+import com.situ.aichat.ui.designsystem.AppProgressBar
 import com.situ.aichat.ui.designsystem.AppSheet
 import com.situ.aichat.ui.designsystem.AppTheme
 
@@ -108,10 +109,10 @@ internal fun PetDetailSheet(pet: CharacterPetEntity, trends: PetStatusTrends, on
                         Text(if (next != null) "下一阶段: ${next.displayName}" else "已满级", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     if (threshold != null) {
-                        LinearProgressIndicator(progress = { (pet.growthPoints.toFloat() / threshold).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth(), color = AppTheme.colors.accent.text, trackColor = AppTheme.colors.surface.sunken)
+                        AppProgressBar(progress = pet.growthPoints.toFloat() / threshold, modifier = Modifier.fillMaxWidth())
                         Text("${pet.growthPoints} / $threshold", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {
-                        LinearProgressIndicator(progress = { 1f }, modifier = Modifier.fillMaxWidth(), color = AppTheme.colors.accent.text, trackColor = AppTheme.colors.surface.sunken)
+                        AppProgressBar(progress = 1f, modifier = Modifier.fillMaxWidth())
                         Text("特殊形态 · 满级", fontSize = 11.sp, color = AppTheme.colors.accent.text)
                     }
                 }
@@ -127,11 +128,9 @@ internal fun PetDetailSheet(pet: CharacterPetEntity, trends: PetStatusTrends, on
                     val nextTrick = PetTrickMilestones.milestones.firstOrNull { !tricks.contains(it.trickId) }
                     if (nextTrick != null) {
                         // pet-ui-4：下一个技能进度条（= iOS ProgressView(playCount/next.plays)）。
-                        LinearProgressIndicator(
-                            progress = { (playCount.toFloat() / nextTrick.plays).coerceIn(0f, 1f) },
+                        AppProgressBar(
+                            progress = playCount.toFloat() / nextTrick.plays,
                             modifier = Modifier.fillMaxWidth(),
-                            color = AppTheme.colors.accent.text,
-                            trackColor = AppTheme.colors.surface.sunken,
                         )
                         Text("下一个技能：${nextTrick.name}（还需玩耍 ${(nextTrick.plays - playCount).coerceAtLeast(0)} 次）", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else if (learnedNames.isNotEmpty()) {
@@ -181,7 +180,7 @@ internal fun PetDetailSheet(pet: CharacterPetEntity, trends: PetStatusTrends, on
                         }
                     }
                     if (showToggle) {
-                        TextButton(onClick = { souvenirExpanded = !souvenirExpanded }, modifier = Modifier.fillMaxWidth()) {
+                        AppButton(style = AppButtonStyle.Text, onClick = { souvenirExpanded = !souvenirExpanded }, modifier = Modifier.fillMaxWidth()) {
                             Text(if (souvenirExpanded) "收起" else "查看全部", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
                             Icon(
                                 if (souvenirExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
@@ -237,7 +236,7 @@ internal fun PetDetailSheet(pet: CharacterPetEntity, trends: PetStatusTrends, on
                         }
                     }
                     if (milestoneShowToggle) {
-                        TextButton(onClick = { milestonesExpanded = !milestonesExpanded }, modifier = Modifier.fillMaxWidth()) {
+                        AppButton(style = AppButtonStyle.Text, onClick = { milestonesExpanded = !milestonesExpanded }, modifier = Modifier.fillMaxWidth()) {
                             Text(if (milestonesExpanded) "收起" else "查看全部", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
                             Icon(
                                 if (milestonesExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,

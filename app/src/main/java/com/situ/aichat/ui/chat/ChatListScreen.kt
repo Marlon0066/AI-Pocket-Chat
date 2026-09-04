@@ -20,7 +20,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PushPin
@@ -54,6 +53,7 @@ import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppListScreenHeader
 import com.situ.aichat.ui.designsystem.AppSearchField
 import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTopBarIcons
 import com.situ.aichat.util.DateFormatters
 import com.situ.aichat.util.rememberTimeTick
 
@@ -87,7 +87,7 @@ fun ChatListScreen(
             // 大标题 + 右上角「新建对话」圆钮（三边视觉等距·过审 2026-06-19）。取代原 M3 TopAppBar。
             AppListScreenHeader(
                 title = stringResource(R.string.tab_chats),
-                actionIcon = Icons.Filled.Add,
+                actionIcon = AppTopBarIcons.Add,
                 actionContentDescription = stringResource(R.string.chat_list_empty_cta),
                 onAction = { showPicker = true },
             )

@@ -6,15 +6,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -27,6 +22,7 @@ import com.situ.aichat.R
 import com.situ.aichat.ui.components.SettingsSection
 import com.situ.aichat.ui.components.SettingsSwitchRow
 import com.situ.aichat.ui.designsystem.AppSlider
+import com.situ.aichat.ui.designsystem.AppTopBar
 import kotlin.math.roundToInt
 
 /**
@@ -42,15 +38,13 @@ fun MomentSettingsScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val offLabel = stringResource(R.string.moment_settings_off)
 
+    val scrollState = rememberScrollState()
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.moment_settings_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
-                    }
-                },
+            AppTopBar(
+                title = stringResource(R.string.moment_settings_title),
+                onBack = onBack,
+                lifted = scrollState.value > 0,
             )
         },
     ) { padding ->
@@ -58,7 +52,7 @@ fun MomentSettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(vertical = 8.dp),
         ) {
             // AI 互动频率：说明文字改传 footer（V-e·文案不变·位置从组头下方移至卡下脚注位）。

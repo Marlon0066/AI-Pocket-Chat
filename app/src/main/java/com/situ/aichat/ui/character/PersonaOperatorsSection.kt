@@ -12,7 +12,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -22,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.situ.aichat.R
 import com.situ.aichat.data.model.PersonaOperator
 import com.situ.aichat.data.model.PersonaVocab
+import com.situ.aichat.ui.designsystem.AppSwitch
 import com.situ.aichat.ui.designsystem.AppTheme
 
 // 活人感内核·卷一《人设编译器》「她的固定反应」（图纸 §4.4 · D-4b）：
@@ -65,7 +65,7 @@ internal fun PersonaOperatorsSection(operators: List<PersonaOperator>, onChange:
                 )
             }
             Row(horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                Switch(
+                AppSwitch(
                     checked = op.enabled,
                     onCheckedChange = { on ->
                         onChange(operators.map { if (it.id == op.id) it.copy(enabled = on) else it })

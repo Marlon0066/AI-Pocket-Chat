@@ -9,6 +9,7 @@ import com.situ.aichat.ui.offline.SKY_GLOW_BANDS
 import com.situ.aichat.ui.offline.SkyBucket
 import com.situ.aichat.ui.offline.SkySpec
 import com.situ.aichat.ui.offline.SkyWeather
+import androidx.compose.ui.graphics.lerp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -22,6 +23,12 @@ import org.junit.Test
  */
 class ColorContrastTest {
 
+    /** 14sp 字框在 40dp 钮里居中 → glyph 带占钮高这一段（用于釉烧主钮的取样口径·见 [glazeGlyphFloor]）。 */
+    private companion object {
+        const val GLYPH_BAND_TOP = 0.325f
+        const val GLYPH_BAND_BOTTOM = 0.675f
+    }
+
     private fun assertContrast(fg: Color, bg: Color, min: Double, label: String) {
         val r = ColorContrast.ratio(fg, bg)
         assertTrue("$label: 实测 ${"%.2f".format(r)}:1 < 要求 ${"%.1f".format(min)}:1", r >= min)
@@ -33,6 +40,27 @@ class ColorContrastTest {
         green = fg.green * alpha + bg.green * (1 - alpha),
         blue = fg.blue * alpha + bg.blue * (1 - alpha),
     )
+
+    /**
+     * 釉烧主钮上「文字实际接触的最暗背景」——**不是纯底段**。
+     *
+     * 派生底段（`lerp(gradientEnd, 影墨, 10%)`）是胶囊**最下缘那一线**；而 14sp 字框在 40dp 钮里居中，
+     * glyph 带约占钮高 [GLYPH_BAND_TOP]–[GLYPH_BAND_BOTTOM]，其最暗处在带的**下缘**。取该点看门。
+     *
+     * **口径由图纸作者定于 R1 复核（2026-09-05）**：施工期 §9 锁死了混合比例、REDLINES §4 又要求新「文字×底」
+     * 进本测试，两条对撞——施工方无权自造几何取样口径，故当时落值先行、断言后补（施工日志 D-1 / R1 🟡-1）。
+     * 实测最暗点 4.595:1（暖陶浅档·四套主题里最紧的一档），纯底段则是 4.18 —— 差别正来自这个几何。
+     */
+    private fun glazeGlyphFloor(c: AppColors): Color {
+        val mid = c.accent.gradientEnd
+        val bottom = lerp(
+            mid,
+            if (c.isDark) Color.Black else AppElevation.shadowInk,
+            if (c.isDark) AppPorcelain.GLAZE_BOTTOM_MIX_DARK else AppPorcelain.GLAZE_BOTTOM_MIX_LIGHT,
+        )
+        val t = (GLYPH_BAND_BOTTOM - AppPorcelain.GLAZE_MID_STOP) / (1f - AppPorcelain.GLAZE_MID_STOP)
+        return lerp(mid, bottom, t)
+    }
 
     private fun checkScheme(c: AppColors, name: String) {
         val body = 4.5 // 正文/功能文字
@@ -49,9 +77,11 @@ class ColorContrastTest {
         // 气泡上的字（worst case = 渐变两 stop 都验·浅档深墨/深档暖白）
         assertContrast(c.bubble.onUser, c.bubble.userStart, body, "$name bubble.onUser×userStart")
         assertContrast(c.bubble.onUser, c.bubble.userEnd, body, "$name bubble.onUser×userEnd")
-        // 主行动钮渐变（与气泡同源）上的字/图标
+        // 釉烧主行动钮（AppButton Primary·2026-09-05 过审）三段渐变上的字/图标。
+        // 顶段/腰段就是既有的 gradientStart / gradientEnd（与气泡同源）；**第三段是釉烧新增的派生底段**。
         assertContrast(c.text.onAccent, c.accent.gradientStart, body, "$name onAccent×gradientStart")
         assertContrast(c.text.onAccent, c.accent.gradientEnd, body, "$name onAccent×gradientEnd")
+        assertContrast(c.text.onAccent, glazeGlyphFloor(c), body, "$name onAccent×釉烧 glyph 带下缘")
         // 陶土填充上的文字 + 陶土色文字 on 底（功能深档）
         assertContrast(c.accent.onPrimary, c.accent.primary, body, "$name accent.onPrimary×primary")
         assertContrast(c.accent.text, c.surface.base, body, "$name accent.text×base")

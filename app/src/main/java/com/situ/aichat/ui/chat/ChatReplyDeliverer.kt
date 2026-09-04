@@ -85,6 +85,10 @@ internal class ChatReplyDeliverer(
     /** 正在递送的回合 Job（=置 [isDelivering] 的那个协程）。VM 的打断只认它——身份校验防误杀排队后继回合。 */
     internal var deliveringJob: Job? = null
 
+    // 本回合已产出过用户可见内容（消息落库 或 结构化卡分发）的 Job——供 Controller 区分「起步相位」（未产出=可打断）与「收尾相位」（已产出=不打断）：V1 后两者的 typingSlot/isDelivering 输入完全相同，唯一区别就是有没有产出过。
+    // 用 Job 引用而非布尔=天然带身份校验，排队的后继回合不会因前一回合的产出被误判成「已产出」。**绝不清空**（它记的是「产出过没有」不是「正在递送」——后者是 deliveringJob，照旧 finally 清 null；加清空 = 起步/收尾又不可区分）。
+    internal var lastOutputJob: Job? = null
+
     /** 打字点亮起：分配下一段 AI 消息的 uuid 并发布为渲染占位槽。 */
     internal fun openTypingSlot() {
         val uuid = UUID.randomUUID().toString()
@@ -92,7 +96,7 @@ internal class ChatReplyDeliverer(
         pendingAssistantSlot.value = TypingSlot(uuid)
     }
 
-    /** 打字点熄灭 + 清预留（回合终态/空响应/取消的统一清理·与回合 finally 同点调用）。 */
+    /** 打字点熄灭 + 清预留（幂等）：递送层末段落地即调一次，Engine 回合 finally 再兜一次（终态/空响应/取消统一清理）。 */
     internal fun closeTypingSlot() {
         reservedSlotUuid = null
         pendingAssistantSlot.value = null
@@ -157,6 +161,7 @@ internal class ChatReplyDeliverer(
                     }
                 }
             }
+            if (pre.calendarActions.isNotEmpty() || mergedOfflineActions.isNotEmpty()) lastOutputJob = coroutineContext[Job] // J8 第 3 记账点：卡片即回复，正文空也算产出
         }
 
         // 工具调用来源的 suggestMeeting：邀约卡即完整回复，丢弃 LLM 附带正文（文本标记路径不抑制——剩余文字是角色对话）。
@@ -331,9 +336,8 @@ internal class ChatReplyDeliverer(
             if (!immediate) {
                 isDelivering.value = false
                 deliveringJob = null
-                // 末段递送完即同帧收起打字气泡（与 isDelivering 同点落 false）——否则末条到屏后打字三点会在最后一句
-                // 下方多停留整个逐回合维护期（embed/记忆/成长，runAssistantTurn 的 finally 才清 typing），观感是「说完话
-                // 还在打字」。UI 据 isDelivering 让最后一条同帧停止让位→时间戳平滑展开、打字气泡淡出，不重叠不残留。
+                // 末段落地即清打字槽 + 记「本回合已产出」（J8 第 1 记账点）。清槽的意义：否则收尾维护期（embed/记忆/成长）槽仍非空 → 判据 typing 恒真 → 用户此刻发消息会打断维护相位（契约 §3.2-3 未列该相位）；零视觉变化（末段 uuid 已在 messages 里，渲染层 dedup 本就不画占位）。stored 空 = 没递送任何内容 → 槽留给 Engine 回合 finally 兜底（空响应重试期三点须继续显示）、也不算产出。
+                if (stored.isNotEmpty()) { closeTypingSlot(); lastOutputJob = coroutineContext[Job] }
             }
         }
         return stored
@@ -440,8 +444,8 @@ internal class ChatReplyDeliverer(
             if (!immediate) {
                 isDelivering.value = false
                 deliveringJob = null
-                // 同 deliverTextReply：末段递送完即同帧收起打字气泡（与 isDelivering 同点落 false），避免「说完话还在
-                // 打字」残留 + 末条时间戳与打字气泡重叠（UI 据 isDelivering 让位/展开）。
+                // 同 deliverTextReply：末条清槽 + 记产出（J8 第 2 记账点）。**stored 非空条件绝不可去**（J2/E4）：语音 chunk 全失败时本函数返回空表回落文字路，无条件清槽会把预留 uuid 一并清掉 → 回落首段拿随机 uuid = 同 key 变身失效（契约 B1 根因）。
+                if (stored.isNotEmpty()) { closeTypingSlot(); lastOutputJob = coroutineContext[Job] }
             }
         }
         return stored
@@ -495,7 +499,7 @@ internal class ChatReplyDeliverer(
         )
     }
 
-    /** 投递收尾：会话预览（文字/语音两路共用）。日历应用已上移到 deliverAssistantReply（投递前、即使正文空也执行）。 */
+    /** 投递收尾：会话预览（文字/语音两路共用·**单调写**=打断瞬间用户新消息的更晚快照已落库时不用旧 ts 覆写回去）。日历应用已上移到 deliverAssistantReply。 */
     private suspend fun finalizeDelivery(stored: List<MessageEntity>) {
         val last = stored.last()
         // 见面期（线下）AI 叙事回合：正文带 [叙述]/[对话]/[场景:…] 沉浸标签（preserveOfflineTags 落库），绝不外显进
@@ -508,7 +512,7 @@ internal class ChatReplyDeliverer(
             // 入场标记「正在见面中…」直到 recordOfflineExited 收尾覆写。
             conversationRepo.touchLastMessageDate(conversationUuid, last.timestamp)
         } else {
-            conversationRepo.recordLastMessage(conversationUuid, preview, "assistant", last.timestamp)
+            conversationRepo.recordLastMessageIfNewer(conversationUuid, preview, "assistant", last.timestamp)
         }
     }
 

@@ -29,7 +29,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -63,6 +62,8 @@ import com.situ.aichat.R
 import com.situ.aichat.ui.character.AvatarCropScreen
 import com.situ.aichat.ui.components.CharacterAvatar
 import com.situ.aichat.ui.components.LocalAppHaptics
+import com.situ.aichat.ui.designsystem.AppButton
+import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.util.AvatarStore
 import com.situ.aichat.world.cast.CreateResult
 import kotlinx.coroutines.launch
@@ -308,7 +309,7 @@ fun ResidentCreateSheet(
             }
 
             // i) 更多设定（折叠）。
-            TextButton(onClick = { moreExpanded = !moreExpanded }) {
+            AppButton(style = AppButtonStyle.Text, onClick = { moreExpanded = !moreExpanded }) {
                 Text(
                     stringResource(R.string.world_resident_more_label) + if (moreExpanded) " ▴" else " ▾",
                     fontSize = 13.sp, color = ResText2,

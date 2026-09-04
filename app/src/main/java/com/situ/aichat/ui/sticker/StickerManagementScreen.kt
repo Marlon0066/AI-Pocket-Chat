@@ -11,10 +11,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -26,7 +25,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,8 +33,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -53,6 +49,10 @@ import com.situ.aichat.ui.components.SettingsSwitchRow
 import com.situ.aichat.ui.components.contentMaxWidth
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
+import com.situ.aichat.ui.designsystem.AppSettingsRow
+import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTopBar
+import com.situ.aichat.ui.designsystem.AppTopBarIcons
 import com.situ.aichat.ui.designsystem.CardSegment
 import com.situ.aichat.ui.designsystem.appCardSegmentSurface
 import com.situ.aichat.ui.designsystem.appCardSurface
@@ -80,20 +80,20 @@ fun StickerManagementScreen(
     val atLimit = customStickers.size >= StickerService.CUSTOM_STICKER_LIMIT
     var showHidden by remember { mutableStateOf(false) }
 
+    val listState = rememberLazyListState()
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("表情包管理", modifier = Modifier.semantics { heading() }) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back)) }
-                },
+            AppTopBar(
+                title = "表情包管理",
+                onBack = onBack,
+                lifted = listState.canScrollBackward,
                 actions = {
-                    IconButton(onClick = onImport, enabled = !atLimit) { Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.a11y_add_sticker_pack)) }
+                    IconButton(onClick = onImport, enabled = !atLimit) { Icon(AppTopBarIcons.Add, contentDescription = stringResource(R.string.a11y_add_sticker_pack)) }
                 },
             )
         },
     ) { padding ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding).contentMaxWidth()) {
+        LazyColumn(state = listState, modifier = Modifier.fillMaxSize().padding(padding).contentMaxWidth()) {
             // 总开关：无标题卡壳单行（透明底 SettingsSwitchRow·§4.B2）。
             item {
                 Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 16.dp).appCardSurface().padding(vertical = 6.dp)) {
@@ -146,18 +146,18 @@ fun StickerManagementScreen(
                 item {
                     val seg = if (!showHidden) CardSegment.Bottom else CardSegment.Middle
                     Box(Modifier.stickerSegment(seg)) {
-                        ListItem(
-                            headlineContent = { Text("已隐藏的内置表情") },
-                            trailingContent = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("${hiddenStickers.size}", style = MaterialTheme.typography.bodySmall)
-                                    Icon(
-                                        if (showHidden) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                                        contentDescription = null,
-                                    )
-                                }
+                        AppSettingsRow(
+                            title = "已隐藏的内置表情",
+                            value = "${hiddenStickers.size}",
+                            trailing = {
+                                Icon(
+                                    if (showHidden) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                                    contentDescription = null,
+                                    tint = AppTheme.colors.text.tertiary,
+                                )
                             },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            // trailing 是纯装饰（展开箭头），点击照旧由整行承担 —— 这也是本组件
+                            // 「trailing 在场时行自己不吃点击」的设计意图：交互权交给调用方。
                             modifier = Modifier.fillMaxWidth().clickable { showHidden = !showHidden },
                         )
                     }
@@ -241,6 +241,8 @@ private fun CustomStickerRow(
     customStickers: List<CustomStickerEntity>,
     onDelete: () -> Unit,
 ) {
+    // TODO(图纸未覆盖): leading 是 44dp 表情缩略图，不是 AppSettingsRow 的 30dp 陶土瓦片（§4.8 点名的
+    //  「自定义 leading 尺寸」）；尾槽还是「GIF 徽标 + 文字钮」。停手登记（施工日志 D-12）。
     ListItem(
         leadingContent = { StickerThumb { StickerImage(sticker.stickerUuid, customStickers, 44.dp) } },
         headlineContent = { Text(sticker.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
@@ -261,6 +263,7 @@ private fun CustomStickerRow(
 
 @Composable
 private fun BuiltInStickerRow(sticker: StickerInfo, trailingLabel: String, onAction: () -> Unit) {
+    // TODO(图纸未覆盖): 同上一行，44dp 缩略图 leading + 文字钮尾槽 → 停手登记（施工日志 D-12）。
     ListItem(
         leadingContent = { StickerThumb { StickerImage(sticker.id, emptyList(), 44.dp) } },
         headlineContent = { Text(sticker.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },

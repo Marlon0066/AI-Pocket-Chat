@@ -364,21 +364,6 @@ class OfflineMeetingService @Inject constructor(
         messageRepo.upsert(msg.copy(content = OfflineInviteJson.encode(data.copy(responded = responded))))
     }
 
-    /**
-     * chat-ui-3「改成邀约」：把一条 AI 普通文本消息**原地**改写成线下见面邀约卡（1:1 iOS convertMessageToOfflineInvite）——
-     * 不跑 LLM 一轮（用户随后点卡片接受/拒绝），原文作为 invitation 文案，不播种 tension（用户辅助路径）。
-     * location/activity 任一去空白后为空则不改。返回是否成功改写。
-     */
-    suspend fun convertMessageToOfflineInvite(messageUuid: String, location: String, activity: String): Boolean {
-        val loc = location.trim()
-        val act = activity.trim()
-        if (loc.isEmpty() || act.isEmpty()) return false
-        val msg = messageRepo.get(messageUuid) ?: return false
-        val inviteJson = OfflineInviteJson.makeInvite(location = loc, activity = act, invitation = msg.content)
-        messageRepo.upsert(msg.copy(content = inviteJson, messageKindRaw = MessageKind.OFFLINE_INVITE_CARD.raw))
-        return true
-    }
-
     // MARK: - 恢复 / 状态守护
 
     /**

@@ -18,16 +18,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.ClipEntry
-import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import android.content.ClipData
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -68,7 +63,6 @@ import com.situ.aichat.ui.voicecall.CallRecordCardBubble
 import com.situ.aichat.ui.redpacket.RedPacketCardBubble
 import com.situ.aichat.ui.redpacket.RedPacketSystemEventCard
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.launch
 
 /**
  * [MessageRow] 的动作面（审计 S7·33 参收敛）：21 个 on…/observe… 回调收进单个 @Immutable 对象，
@@ -85,7 +79,7 @@ internal class MessageRowActions(
     val onQuote: (MessageEntity) -> Unit,
     val onDelete: (MessageEntity) -> Unit,
     /** M2 沉浸菜单：长按开菜单（消息 + 气泡在窗口内的边界·供覆盖层原位浮起与菜单定位）。 */
-    val onOpenMenu: (MessageEntity, Rect) -> Unit,
+    val onOpenMenu: (message: MessageEntity, bubbleBounds: Rect, canRegenerate: Boolean) -> Unit,
     /** M3b 发送飞入：飞行目标气泡每次布局上报边界（握手就位决议 + 飞行移动靶·仅 flightTracking 行调）。 */
     val onFlightBubblePositioned: (MessageEntity, Rect) -> Unit,
     val onRegenerate: () -> Unit,
@@ -98,7 +92,6 @@ internal class MessageRowActions(
     val onEndMeeting: () -> Unit,
     val onContinueMeeting: (String) -> Unit,
     val onReviewOffline: (String) -> Unit,
-    val onConvertToInvite: (MessageEntity) -> Unit,
     val observeAppointment: (String) -> Flow<MeetingAppointmentEntity?>,
     val onAppointmentAccept: (String) -> Unit,
     val onAppointmentDecline: (String) -> Unit,
@@ -127,7 +120,8 @@ internal fun MessageRow(
     isVoicePlaying: Boolean,
     voiceProgress: () -> Float,
     actions: MessageRowActions,
-    isOfflineModeActive: Boolean,
+    /** 本行是否给「重新生成」（=末尾连续 assistant 段成员 × 当前无在跑回合·算法单源见 ChatMessageList）。 */
+    canRegenerate: Boolean,
     /** chat-ui-5 回执：null=非用户消息（不显）/ true=已读 ✓✓ / false=送达 ✓（1s 后显）。 */
     deliveryRead: Boolean?,
     /** Chunk 3：true=该语音消息新到达一刻，波形从左到右依次长出（门控见 ChatMessageList·复用 entryScalePlayed 记账）。 */
@@ -217,14 +211,11 @@ internal fun MessageRow(
     val hasStickerTags = remember(message.content) {
         !isStickerOnly && StickerTagParser.containsStickerTag(message.content)
     }
-    // （复制文案清洗口径已单源到 messageCopyText()·ChatImmersiveMenu.kt——菜单与行级 customActions 共用。）
-    val clipboard = LocalClipboard.current
-    val copyScope = rememberCoroutineScope()
     // C3-haptics 根因修（契约 §3.5）：长按触觉内联进 onLongClick 即时触发；medium=长按弹菜单（契约 §2），
     // 一个 lambda 覆盖所有气泡类型。M2 沉浸菜单：开合状态外移 ChatScreen 覆盖层，行只上报消息+气泡窗口边界。
     var bubbleBounds by remember { mutableStateOf(Rect.Zero) }
     val rowHaptics = LocalAppHaptics.current
-    val openMenu = { rowHaptics.medium(); actions.onOpenMenu(message, bubbleBounds) }
+    val openMenu = { rowHaptics.medium(); actions.onOpenMenu(message, bubbleBounds, canRegenerate) }
 
     // P1-1（批1·14.7e 登记⑥的分流再设计）：气泡合并朗读句（=iOS MessageBubbleView.swift:315-331
     // accessibilityDescription）——「{你|角色名}在{相对时间.detailed}说：{清洗正文}」/ 语音变体；只对
@@ -273,35 +264,28 @@ internal fun MessageRow(
             horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,
             verticalArrangement = Arrangement.spacedBy(4.dp), // ≈ iOS MessageBubbleContent VStack spacing 4
         ) {
-        // chat-ui-4：右滑引用（仅已显示的气泡可引用，1:1 iOS isContentRevealed；用户/AI 都适用）。
-        SwipeToReplyBox(enabled = message.isContentRevealed, onTriggered = { actions.onQuote(message) }) {
+        // chat-ui-4：右滑引用。两道闸——① 仅已显形的气泡（1:1 iOS isContentRevealed，流式占位不可引用）；
+        // ② 2026-09-04 用户拍板：**正文有话可引的气泡才可引用**（纯文字/贴纸/转写到位的语音），判据与
+        // 长按菜单/读屏动作面共用单源 [messageCanBeQuoted]（图片/卡片的引用仍挂起，做多模态引用时一并重开）。
+        val canQuote = remember(message.messageUUID, message.content) { messageCanBeQuoted(message) }
+        SwipeToReplyBox(
+            enabled = message.isContentRevealed && canQuote,
+            onTriggered = { actions.onQuote(message) },
+        ) {
         // （原「脏消息点击展开」的 animateContentSize 随折叠条一并退役——脏行自 2026-09-01 起彻底不渲染。
         // 常规路径本就不挂 animateContentSize，绝不干扰 AssistantTextBubble 的打字变身。）
         // M2 Y2 收编：常规气泡族（纯文本/纯贴纸·已有合并朗读句）行级 customActions——读屏不开视觉菜单即可
         // 触发动作，条件与沉浸菜单逐字同源（immersiveMenuActions）。语音（播放/转写子控件）与混合贴纸行
         // **有意不并**：mergeDescendants 会吞掉子控件语义（Y3 转写开关等），保持 Y2 onLongClickLabel 现状。
-        val a11yMenuEligible = bubbleSentence != null && !message.isVoiceMessage && !hasStickerTags
-        val a11yMenuActions = if (a11yMenuEligible) {
-            remember(message.messageUUID, isOfflineModeActive, actions) {
-                immersiveMenuActions(isUser, kind, isOfflineModeActive, message.isOfflineMode, message.imageRelativePath != null).map { action ->
-                    CustomAccessibilityAction(immersiveMenuActionLabel(action)) {
-                        when (action) {
-                            ImmersiveMenuAction.COPY -> copyScope.launch {
-                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("message", messageCopyText(message))))
-                            }
-                            ImmersiveMenuAction.SAVE_IMAGE -> actions.onSaveImage(message)
-                            ImmersiveMenuAction.QUOTE -> actions.onQuote(message)
-                            ImmersiveMenuAction.REGENERATE -> actions.onRegenerate()
-                            ImmersiveMenuAction.CONVERT_TO_INVITE -> actions.onConvertToInvite(message)
-                            ImmersiveMenuAction.DELETE -> actions.onDelete(message)
-                        }
-                        true
-                    }
-                }
-            }
-        } else {
-            null
-        }
+        // 复核 R1 🟡-3：补 `isContentRevealed`——占位气泡（content=""·未落库·conversationUuid 空）原先也挂
+        // 动作面，读屏用户能对一条**根本不存在的消息**按「删除」/「引用」。视觉两路早有此闸（长按走
+        // ChatBubbles 的 `if (revealed)`、右滑走 enabled），只有读屏这一路漏了；契约 §3.3「isContentRevealed
+        // == true 且 messageCanBeQuoted()」自此三路兑现一致。
+        val a11yMenuEligible = bubbleSentence != null && message.isContentRevealed &&
+            !message.isVoiceMessage && !hasStickerTags
+        // 动作面构造搬 ChatMessageRowA11y.kt（含「陈旧快照」修：lambda 读最新 entity 而非首帧闭包）。
+        // 恒调用、由 eligible 参数决定给不给（复核 R2 🔵-4：包 if 会让 copyScope 随组丢弃被取消）。
+        val a11yMenuActions = rememberMessageRowA11yActions(message, isUser, canRegenerate, actions, a11yMenuEligible)
         Box(
             modifier = Modifier
                 .onGloballyPositioned {
@@ -310,7 +294,7 @@ internal fun MessageRow(
                     if (flightTracking) actions.onFlightBubblePositioned(message, bubbleBounds)
                 }
                 .then(
-                    if (a11yMenuActions != null) {
+                    if (a11yMenuActions.isNotEmpty()) {
                         Modifier.semantics(mergeDescendants = true) { customActions = a11yMenuActions }
                     } else {
                         Modifier

@@ -1,5 +1,12 @@
 package com.situ.aichat.ui.chat
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -21,6 +28,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.Icon
@@ -28,7 +36,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -41,6 +53,7 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
@@ -49,6 +62,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.situ.aichat.R
+import com.situ.aichat.data.local.entity.MessageEntity
 import com.situ.aichat.ui.components.AppMotion
 import com.situ.aichat.ui.components.CharacterAvatar
 import com.situ.aichat.ui.components.rememberReduceMotion
@@ -238,6 +252,117 @@ internal fun ReplyPreview(senderLabel: String, content: String, onClear: () -> U
                     contentDescription = stringResource(R.string.a11y_cancel_quote),
                     tint = colors.text.secondary,
                 )
+            }
+        }
+    }
+}
+
+/** 「引用时只能发文字」提示的停留时长（毫秒·图纸 §4.1 逐字锁定：重复触发**重新计时**、不叠第二条）。 */
+internal const val QUOTE_HINT_DURATION_MS = 3000L
+
+/**
+ * 「引用时只能发文字」提示的瞬态状态（引用一期 E·图纸 §3.5）。**不进 ViewModel**——三个触发点
+ * （麦克风 / 「照片」/「表情」）都在 [ChatBottomBar] 内，且提示是纯瞬态表现，没有跨屏 / 跨进程语义。
+ */
+@Stable
+internal class QuoteTextOnlyHintState {
+    var visible by mutableStateOf(false)
+        private set
+
+    /** 重启计时用的令牌：每次触发自增，让 3 秒倒计时从头再来（而不是叠出第二条）。 */
+    var token by mutableIntStateOf(0)
+        private set
+
+    /** 三个触发点共用：亮起并重启计时。 */
+    fun trigger() {
+        visible = true
+        token++
+    }
+
+    fun hide() {
+        visible = false
+    }
+}
+
+/**
+ * 提示状态的持有 + 两条自动收场（图纸 §3.5·抽成独立 hook 便于 T2 直接驱动，语义与内联在 [ChatBottomBar]
+ * 里的局部 `remember` 完全一致）：
+ * - 触发后 [QUOTE_HINT_DURATION_MS] 自动消；期间再次触发 → 令牌自增 → 计时重启（B11）。
+ * - [replyTarget] 变 null（点了引用卡的 ✕，或引用被这一次发送消费掉）→ 提示**立即**一起消失（B12/B13）。
+ */
+@Composable
+internal fun rememberQuoteTextOnlyHint(replyTarget: MessageEntity?): QuoteTextOnlyHintState {
+    val state = remember { QuoteTextOnlyHintState() }
+    LaunchedEffect(state.token) {
+        if (state.visible) {
+            kotlinx.coroutines.delay(QUOTE_HINT_DURATION_MS)
+            state.hide()
+        }
+    }
+    LaunchedEffect(replyTarget) { if (replyTarget == null) state.hide() }
+    return state
+}
+
+/**
+ * 「引用时只能发文字」提示条（引用一期 E·图纸 §4.1·mockup 变体 B「陶土玫呼应条」·D-2 用户选定）。
+ *
+ * 长相与引用卡同一套语言——同 `surface.sunken` 底、同 [AppShapes.medium] 圆角、同陶土玫左缘竖条
+ * （仅高度 24→18 以配更矮的行）：一眼读作「这条提示是那张引用卡的话」，而不是「你操作错了」。
+ * **有意不用琥珀**：琥珀在本 App 是警示语义（断网 / 删日程），这里说的是引用状态下的规矩。
+ *
+ * 挂在 [ReplyPreview] 正上方（D-5），壁纸态与它同包一层 `MaybeTrayGlass`。
+ */
+@Composable
+internal fun QuoteTextOnlyHint(
+    visible: Boolean,
+    reduceMotion: Boolean,
+    wallpaperFrosted: ImageBitmap?,
+    wallpaperDark: Boolean,
+) {
+    val colors = AppTheme.colors
+    AnimatedVisibility(
+        visible = visible,
+        // 减弱动画 → 直显直隐（同 ChatCalendarToast 口径）。
+        enter = if (reduceMotion) EnterTransition.None else fadeIn(tween(220)) + slideInVertically { it / 2 },
+        exit = if (reduceMotion) ExitTransition.None else fadeOut(tween(220)) + slideOutVertically { it / 2 },
+    ) {
+        MaybeTrayGlass(wallpaperFrosted, wallpaperDark) {
+            Surface(
+                color = colors.surface.sunken,
+                shape = AppShapes.medium,
+                // 与引用卡同 padding，两条上下贴合成一组。读屏 Polite 播报（同 NetworkStatusBanner）。
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 8.dp, end = 8.dp, top = 8.dp)
+                    .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
+            ) {
+                Row(
+                    modifier = Modifier.padding(start = 10.dp, end = 12.dp, top = 7.dp, bottom = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        Modifier
+                            .width(3.dp)
+                            .height(18.dp)
+                            .clip(AppShapes.full)
+                            .background(colors.accent.primary),
+                    )
+                    Spacer(Modifier.width(2.dp))
+                    Icon(
+                        Icons.Filled.FormatQuote,
+                        contentDescription = null,
+                        tint = colors.accent.text,
+                        modifier = Modifier.size(15.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResource(R.string.chat_quote_text_only_hint),
+                        style = AppTypography.secondary,
+                        color = colors.accent.text,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }

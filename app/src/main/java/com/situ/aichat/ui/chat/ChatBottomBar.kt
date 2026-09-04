@@ -132,6 +132,9 @@ internal fun ChatBottomBar(
     val density = LocalDensity.current
     val imeInsets = WindowInsets.ime
     val navBarInsets = WindowInsets.navigationBars
+    // 引用一期 E（图纸 §3.5/§4）：带引用时点语音 / 照片 / 表情 → 亮一条「只能发文字」提示。纯瞬态局部状态，
+    // 三个触发点都在本组合内；引用一没了（点 ✕ 或被发送消费）提示立即跟着消失。
+    val quoteHint = rememberQuoteTextOnlyHint(replyTarget)
     // 壁纸全屏沉浸重构②：导航栏间距旧由骨架垫付提供，现 NavHost 去 consume → 本栏自管 navigationBarsPadding。
     // 键盘起时面板区高 imePanelPx=ime.exclude(navigationBars)=ime−navBar，叠本栏 navBar 间距 = ime，托盘仍贴键盘（数学恒等）。
     Column(Modifier.navigationBarsPadding()) {
@@ -188,6 +191,13 @@ internal fun ChatBottomBar(
                     if (wpFrosted == null && AppTheme.colors.isDark) {
                         Box(Modifier.fillMaxWidth().height(1.dp).background(AppTheme.colors.surface.stroke))
                     }
+                    // D-5：提示条挂引用卡**正上方**（两条同 padding 上下贴合成一组）。
+                    QuoteTextOnlyHint(
+                        visible = quoteHint.visible,
+                        reduceMotion = reduceMotion,
+                        wallpaperFrosted = wpFrosted,
+                        wallpaperDark = wpBottomDark,
+                    )
                     replyTarget?.let { target ->
                         MaybeTrayGlass(wpFrosted, wpBottomDark) {
                             ReplyPreview(
@@ -335,6 +345,9 @@ internal fun ChatBottomBar(
                                     VoiceRecordButton(
                                         hasMicPermission = micPermission.granted,
                                         onRequestPermission = micPermission.request,
+                                        // 引用一期 E·拦截①：带引用时按住说话不录，只弹提示（D-1「意图那一刻」）。
+                                        blocked = replyTarget != null,
+                                        onBlocked = { quoteHint.trigger() },
                                         onStartRecording = {
                                             haptics.medium() // 录音开始=medium（契约 §2·≈ iOS medium impact）
                                             viewModel.startVoiceRecording()
@@ -369,7 +382,18 @@ internal fun ChatBottomBar(
                 add(ChatPanelItem(AppPanelIcons.Gift, "送礼") { inputPanel.dismiss(reduceMotion); sheets.showGiftSheet = true })
                 add(ChatPanelItem(AppPanelIcons.RedPacket, "红包") { inputPanel.dismiss(reduceMotion); sheets.showRedPacketSheet = true })
             }
-            add(ChatPanelItem(AppPanelIcons.Sticker, "表情") { inputPanel.dismiss(reduceMotion); sheets.showPicker = true })
+            // 引用一期 E·拦截③：带引用时点「表情」不开表情面板，直接弹提示——与「照片」同层级拦，
+            // 让用户先挑完表情再拒绝＝白挑一次（图纸 §4.3 对 D-1 的细化，已登记）。
+            add(
+                ChatPanelItem(AppPanelIcons.Sticker, "表情") {
+                    inputPanel.dismiss(reduceMotion)
+                    if (replyTarget != null) {
+                        quoteHint.trigger()
+                        return@ChatPanelItem
+                    }
+                    sheets.showPicker = true
+                },
+            )
             // 「照片」按**聊天对话模型的视觉能力**显隐（用户 2026-08-29 拍板修订原「入口常开」）：
             // 纯文本模型收到图只会回一句读不懂图的话，与其事后降级不如根本不给按钮。
             // 不随见面态隐藏——见面里给对方看张照片是合理的沉浸内容（与送礼/红包属金路、
@@ -378,6 +402,11 @@ internal fun ChatBottomBar(
                 add(
                     ChatPanelItem(AppPanelIcons.Photo, "照片") {
                         inputPanel.dismiss(reduceMotion)
+                        // 引用一期 E·拦截②：带引用时不拉起系统选图器，只弹提示。
+                        if (replyTarget != null) {
+                            quoteHint.trigger()
+                            return@ChatPanelItem
+                        }
                         photoPicker.launch(
                             PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
                         )

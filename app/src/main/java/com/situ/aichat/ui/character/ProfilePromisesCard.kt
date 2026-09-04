@@ -15,7 +15,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Handshake
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -34,6 +33,7 @@ import com.situ.aichat.data.local.entity.PromiseStatus
 import com.situ.aichat.promise.PromiseInjectionRenderer
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
+import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.promise.PromiseUiFormat
@@ -113,7 +113,7 @@ internal fun ProfilePromisesCard(
         // 最近了结微区（近 7 天窗最新 1 条）。
         state.latestResolved?.let { r ->
             Spacer(Modifier.height(14.dp))
-            HorizontalDivider()
+            AppListDivider(startInset = 0.dp)
             Spacer(Modifier.height(12.dp))
             PromiseResolvedMicroRow(r, mdPattern)
         }

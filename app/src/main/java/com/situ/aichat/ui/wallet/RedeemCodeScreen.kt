@@ -20,7 +20,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.VerifiedUser
@@ -29,12 +28,10 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,7 +45,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -63,6 +59,9 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.ui.components.LocalAppHaptics
 import com.situ.aichat.ui.components.contentMaxWidth
+import com.situ.aichat.ui.designsystem.AppLoadingRing
+import com.situ.aichat.ui.designsystem.AppLoadingRingSize
+import com.situ.aichat.ui.designsystem.AppTopBar
 import kotlinx.coroutines.delay
 import com.situ.aichat.R
 import com.situ.aichat.economy.redeem.RedeemCodeService
@@ -111,13 +110,14 @@ fun RedeemCodeScreen(
     val inputEnabled = phase is RedeemCodeViewModel.Phase.Editing || phase is RedeemCodeViewModel.Phase.Error
     val buttonEnabled = input.isNotBlank() && inputEnabled
 
+    val scrollState = rememberScrollState()
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.redeem_title), modifier = Modifier.semantics { heading() }) },
-                navigationIcon = {
-                    IconButton(onClick = onClose) { Icon(Icons.Filled.Close, contentDescription = null) }
-                },
+            AppTopBar(
+                title = stringResource(R.string.redeem_title),
+                onBack = onClose,
+                lifted = scrollState.value > 0,
             )
         },
     ) { padding ->
@@ -125,7 +125,7 @@ fun RedeemCodeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .contentMaxWidth()
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -148,6 +148,9 @@ fun RedeemCodeScreen(
             )
 
             // 输入框（自动大写·居中等宽）
+            // TODO(图纸未覆盖): 兑换码输入框靠 `textStyle`（等宽 + 居中）把 AIC-XXXXX-XXXXX-XXXXX 排整齐，
+            //  placeholder 也是同样式的 composable；AppTextField 的 placeholder 只收 String、**没有 textStyle 槽**，
+            //  §9 又禁止给组件加参数硬套 → 停手登记（施工日志 D-16）。钱路屏，K-10 只换外壳不改逻辑。
             OutlinedTextField(
                 value = input,
                 onValueChange = {
@@ -187,6 +190,8 @@ fun RedeemCodeScreen(
             ) {
                 when (phase) {
                     is RedeemCodeViewModel.Phase.Redeeming -> {
+                        // TODO(图纸未覆盖): 同 PetShopScreen —— 实心钮里的白色转圈（钱路屏·K-10 只换外壳），
+                        //  AppLoadingRing 无 color 槽 → 停手登记（D-13）。
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
                     }
                     is RedeemCodeViewModel.Phase.Success -> {
@@ -210,7 +215,7 @@ private fun StatusRow(phase: RedeemCodeViewModel.Phase) {
     when (phase) {
         is RedeemCodeViewModel.Phase.Editing -> Spacer(Modifier.height(24.dp))
         is RedeemCodeViewModel.Phase.Redeeming -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+            AppLoadingRing(size = AppLoadingRingSize.Small)
             Text(stringResource(R.string.redeem_redeeming), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         // 无障碍（14.7e）：兑换结果（涉钱）此前不自动播报、图标+文案散读。liveRegion=Polite 让 TalkBack 兑换完即自动念出结果，

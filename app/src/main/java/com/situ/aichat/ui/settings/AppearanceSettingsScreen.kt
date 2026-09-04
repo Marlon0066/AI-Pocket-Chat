@@ -19,18 +19,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,10 +45,13 @@ import com.situ.aichat.data.model.AppearanceMode
 import com.situ.aichat.data.model.ThemePalette
 import com.situ.aichat.ui.components.SettingsSection
 import com.situ.aichat.ui.components.contentMaxWidth
+import com.situ.aichat.ui.designsystem.AppRadio
+import com.situ.aichat.ui.designsystem.AppSettingsRow
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppSlider
 import com.situ.aichat.ui.designsystem.AppSwitch
 import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.ui.designsystem.appCardSurface
 import com.situ.aichat.ui.designsystem.LightAppColors
 import com.situ.aichat.ui.designsystem.QinghuaLightAppColors
@@ -75,15 +73,13 @@ fun AppearanceSettingsScreen(
     val useDynamicColor by viewModel.useDynamicColor.collectAsStateWithLifecycle()
     val bottomNavOpacity by viewModel.bottomNavOpacity.collectAsStateWithLifecycle()
 
+    val scrollState = rememberScrollState()
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.appearance_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
-                    }
-                },
+            AppTopBar(
+                title = stringResource(R.string.appearance_title),
+                onBack = onBack,
+                lifted = scrollState.value > 0,
             )
         },
     ) { padding ->
@@ -91,7 +87,7 @@ fun AppearanceSettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .contentMaxWidth(),
         ) {
             SettingsSection(title = stringResource(R.string.appearance_palette_section)) {
@@ -125,24 +121,18 @@ fun AppearanceSettingsScreen(
                 }
             }
 
-            // 动态取色（Material You）仅 Android 12+ 有意义；无独立分区标题 → 无标题卡壳（ListItem 透明底·§4.B4·§11 D-B4）。
+            // 动态取色（Material You）仅 Android 12+ 有意义；无独立分区标题 → 无标题卡壳（自研设置行自带透明底）。
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 16.dp).appCardSurface().padding(vertical = 6.dp)) {
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.appearance_dynamic_color_title)) },
-                        supportingContent = {
-                            Text(
-                                stringResource(R.string.appearance_dynamic_color_subtitle),
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        },
-                        trailingContent = {
+                    AppSettingsRow(
+                        title = stringResource(R.string.appearance_dynamic_color_title),
+                        subtitle = stringResource(R.string.appearance_dynamic_color_subtitle),
+                        trailing = {
                             AppSwitch(
                                 checked = useDynamicColor,
                                 onCheckedChange = { viewModel.setDynamicColor(it) },
                             )
                         },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     )
                 }
             }
@@ -270,7 +260,7 @@ private fun ModeRow(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        RadioButton(selected = selected, onClick = null)
+        AppRadio(selected = selected, onClick = null)
         Text(label, modifier = Modifier.padding(start = 12.dp))
     }
 }

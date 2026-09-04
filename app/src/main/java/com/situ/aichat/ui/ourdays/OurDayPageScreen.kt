@@ -14,15 +14,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,8 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -57,7 +49,9 @@ import com.situ.aichat.ui.designsystem.AppMenu
 import com.situ.aichat.ui.designsystem.AppMenuItem
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.ui.designsystem.AppTopBarAction
+import com.situ.aichat.ui.designsystem.AppTopBarIcons
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.designsystem.grainSurface
 import java.time.ZoneId
@@ -93,17 +87,17 @@ fun OurDayPageScreen(
     val canEdit = !state.isAll && !state.isToday && !state.isFuture && state.row != null
     val name = state.characterName.orEmpty()
 
+    val scrollState = rememberScrollState()
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(OurDaysFormat.date(state.date, stringResource(R.string.our_days_fmt_md)), modifier = Modifier.semantics { heading() }) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back)) }
-                },
+            AppTopBar(
+                title = OurDaysFormat.date(state.date, stringResource(R.string.our_days_fmt_md)),
+                onBack = onBack,
+                lifted = scrollState.value > 0,
                 actions = {
                     if (canEdit) {
                         Box {
-                            AppTopBarAction(Icons.Filled.MoreVert, stringResource(R.string.our_days_a11y_more), onClick = { menuOpen = true })
+                            AppTopBarAction(AppTopBarIcons.More, stringResource(R.string.our_days_a11y_more), onClick = { menuOpen = true })
                             AppMenu(expanded = menuOpen, onDismiss = { menuOpen = false }) {
                                 AppMenuItem(stringResource(R.string.our_days_action_edit), onClick = { menuOpen = false; viewModel.openSheet() })
                                 AppMenuItem(stringResource(R.string.our_days_action_rewrite), onClick = { menuOpen = false; rewriteOpen = true })
@@ -121,7 +115,7 @@ fun OurDayPageScreen(
                 .fillMaxSize()
                 .background(colors.surface.base)
                 .grainSurface()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(start = 20.dp, end = 20.dp, bottom = 32.dp),
         ) {
             DayHead(state, name)

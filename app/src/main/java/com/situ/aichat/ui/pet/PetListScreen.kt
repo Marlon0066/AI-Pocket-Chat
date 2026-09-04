@@ -11,24 +11,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,6 +31,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
 import com.situ.aichat.pet.growthStage
+import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.ui.designsystem.appCardSurface
 
 /**
@@ -50,11 +46,13 @@ fun PetListScreen(
     viewModel: PetListViewModel = hiltViewModel(),
 ) {
     val cards by viewModel.cards.collectAsStateWithLifecycle()
+    val gridState = rememberLazyGridState()
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("宠物", modifier = Modifier.semantics { heading() }) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back)) } },
+            AppTopBar(
+                title = "宠物",
+                onBack = onBack,
+                lifted = gridState.canScrollBackward,
             )
         },
     ) { padding ->
@@ -64,6 +62,7 @@ fun PetListScreen(
             }
         } else {
             LazyVerticalGrid(
+                state = gridState,
                 columns = GridCells.Fixed(2),
                 modifier = Modifier.fillMaxSize().padding(padding),
                 contentPadding = PaddingValues(16.dp),
@@ -101,6 +100,8 @@ private fun PetCard(card: PetCardItem, onClick: () -> Unit) {
             }
             is PetCardItem.Locked -> {
                 Box(contentAlignment = Alignment.Center) {
+                    // TODO(图纸未覆盖): 这是**确定进度**的 56dp 环（宠物成长百分比），不是不确定态转圈；
+                    //  §0.5 明文「不做陶环确定进度（确定进度归条形件）」，而条形件在这里换不了长相 → 停手登记（D-13）。
                     CircularProgressIndicator(
                         progress = { card.progress.overallPercent },
                         modifier = Modifier.size(56.dp),

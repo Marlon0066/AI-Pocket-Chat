@@ -15,22 +15,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -38,8 +34,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -53,8 +47,11 @@ import com.situ.aichat.ui.components.CharacterAvatar
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppElevation
+import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppMomentIcons
+import com.situ.aichat.ui.designsystem.AppSnackbarHost
 import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.ui.designsystem.grainSurface
 import com.situ.aichat.util.DateFormatters
 import com.situ.aichat.util.rememberTimeTick
@@ -86,15 +83,13 @@ fun MomentNotificationListScreen(
     )
     val nowMillis = rememberTimeTick() // moments-ui-10：通知列表相对时间每 60s 自动刷新（= iOS MomentNotificationListView 读 TimeTick）
 
+    val listState = rememberLazyListState()
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.moment_notif_list_title), modifier = Modifier.semantics { heading() }) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
-                    }
-                },
+            AppTopBar(
+                title = stringResource(R.string.moment_notif_list_title),
+                onBack = onBack,
+                lifted = listState.canScrollBackward,
                 actions = {
                     if (notifications.isNotEmpty()) {
                         AppButton(onClick = viewModel::markAllRead, style = AppButtonStyle.Text) {
@@ -104,7 +99,7 @@ fun MomentNotificationListScreen(
                 },
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { AppSnackbarHost(snackbarHostState) },
     ) { padding ->
         if (notifications.isEmpty()) {
             val colors = AppTheme.colors
@@ -127,7 +122,7 @@ fun MomentNotificationListScreen(
             }
         } else {
             // 页底 = surface.base + 纸感 grain（契约 §2.6·行自身画 base 保滑动揭示不透底）。
-            LazyColumn(modifier = Modifier.fillMaxSize().padding(padding).background(AppTheme.colors.surface.base).grainSurface()) {
+            LazyColumn(state = listState, modifier = Modifier.fillMaxSize().padding(padding).background(AppTheme.colors.surface.base).grainSurface()) {
                 items(notifications, key = { it.id }) { notification ->
                     // confirmValueChange 在 material3（compose BOM 2026.06）被弃用且官方未给替代 API。
                     // 此处沿用以保持「左滑标记已读」的现有手感字节级不变（铁律：本次升级不改行为）；
@@ -166,11 +161,7 @@ fun MomentNotificationListScreen(
                     }
                     // 行间发丝分隔（契约 §2.6·D6 拍板：透明行不卡片化）：inset 68 = 行首距 16 + 头像 40 + 间距 12；
                     // 放在 SwipeToDismissBox 之外，滑动时分隔线不跟行位移。
-                    HorizontalDivider(
-                        thickness = AppElevation.hairlineWidth,
-                        color = AppTheme.colors.surface.stroke,
-                        modifier = Modifier.padding(start = 68.dp),
-                    )
+                    AppListDivider(modifier = Modifier.padding(start = 68.dp), startInset = 0.dp)
                 }
             }
         }

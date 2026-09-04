@@ -111,6 +111,7 @@
     <string name="chat_error_empty_reply">Reply generation failed. Please try again later</string>
     <string name="chat_network_disconnected">Network disconnected</string>
     <string name="chat_network_recovered">Network restored</string>
+    <string name="chat_quote_text_only_hint">Quoted replies can only be text — cancel the quote first</string>
     <string name="api_fn_chat_vision_on">This model can read images — the “Photo” button is available in chat.</string>
     <string name="api_fn_chat_vision_off">This model cannot read images, so chat has no “Photo” button. If you know it does support images, open that config and set “Image understanding” to “Always on”.</string>
     <string name="api_fn_image_vision_on">This model can read images — photos you send get a short text description saved to memory, so they stay searchable later.</string>

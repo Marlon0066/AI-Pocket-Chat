@@ -150,14 +150,16 @@ internal class AssistantTurnController(
      * AI 话没说完——流式生成期（typing 槽亮）或分段递送期（[deliveringJob] 身份校验防误杀后继·对抗复核 MED 保留）
      * ——用户再发 → 取消回合。健康线 2-5 后取消语义全局统一=丢弃：递送层丢未递送段（已插段=定局保留）、
      * 引擎不再持久化流式半截 = 未出现内容不落库、不进下一轮上下文（旧 interruptDropRemaining 旗标随之退役）。
-     * 其余相位（起步装配 / 收尾维护·三点未亮）不打断——窗到期回合 join 旧回合自然串行。
+     * **起步相位**（窗到期 → 打字槽亮起）同样打断（V3·用户 2026-09-04 拍板）：那一段全是读操作、取消零损失，不取消则角色会拿着不含新消息的材料自说自话答完整轮。收尾维护相位（已产出过内容·三点未亮）不打断。
      */
     private fun interruptUndisplayedReplyIfAny() {
         val job = assistantTurnJob ?: return
         if (!job.isActive) return
         val delivering = isDelivering.value && job === replyDeliverer.deliveringJob
         val typing = typingSlot.value != null
-        if (!delivering && !typing) return
+        // 起步相位（窗到期 → 打字槽亮起）：三点未亮、未在递送、且本回合从未产出过内容。取消零损失——该相位只有读操作（读历史 / 附件预取 / 向量检索 / 组装提示词），未落库、未上屏、未调用模型（图纸 F19/F20/F21）。
+        val starting = !typing && !delivering && job !== replyDeliverer.lastOutputJob
+        if (!delivering && !typing && !starting) return
         job.cancel()
     }
 
@@ -429,7 +431,16 @@ internal class AssistantTurnController(
         scope.launch { imageSender.send(scope, uris) }
     }
 
-    /** 重新生成：删除最后一轮 assistant 消息（连续尾段），用当前历史重跑助手回合。 */
+    /**
+     * 重新生成：删除最后一轮 assistant 消息（连续尾段），用当前历史重跑助手回合。
+     *
+     * **范围判据与菜单同源（2026-09-04 用户拍板根治·复核 R2 🔴-1）**：删哪些由 [RegenerableTurn] 单源决定，
+     * 菜单给不给这一项用的是同一个对象、同一份可见流——**改判据只改 [RegenerableTurn]，两侧自动一致**。
+     * 这里读 `recentVisibleChronological`（可见流）而非 `getRecent`（DB 全量）：全量里夹着用户看不见的
+     * 系统旁白（`roleRaw="user"` 的 SYSTEM_HINT）、通话逐轮转写、见面期叙事，按全量算会删到「长按的那条」
+     * 之外的东西——根治前的两类事故即由此而来（假选项静默 return / 误删通话记录卡与见面结束条）。
+     * 重跑本身仍用全量上下文（[AssistantTurnEngine] 内部取数不变）。
+     */
     fun regenerate() {
         if (isSending.value || assistantTurnJob?.isActive == true) return // 复核 MED#4：同 send 的同步并发门。
         assistantTurnJob = scope.launch {
@@ -444,9 +455,15 @@ internal class AssistantTurnController(
                 errorFlow.value = ERROR_CHARACTER_MISSING
                 return@launch
             }
-            val history = messageRepo.recentChronological(conversationUuid, HISTORY_FETCH_LIMIT)
-            val trailing = history.takeLastWhile { it.roleRaw == "assistant" }
-            if (trailing.isEmpty()) return@launch
+            // 与菜单判据**同源**（RegenerableTurn·2026-09-04 根治）：取【可见流】而非 DB 全量——全量里夹着
+            // 用户看不见的系统旁白 / 通话转写 / 见面叙事，按它算会删到用户长按的那条之外的东西（见上方 KDoc）。
+            val visible = messageRepo.recentVisibleChronological(conversationUuid, HISTORY_FETCH_LIMIT)
+            val trailing = RegenerableTurn.trailing(visible)
+            if (trailing.isEmpty()) {
+                // 菜单已按同一判据不给这一项 → 走到这里说明两侧漂了（或竞态：点击与新消息同帧）。留痕而非纯静默。
+                android.util.Log.w("ChatVM", "重新生成：可见流末尾无可重来的一轮，本次不做")
+                return@launch
+            }
             // 审计 R1：删除循环 + 快照重算包 NonCancellable（镜像 ChatViewModel.deleteMessage）——点「重新生成」后
             // 立刻退出会话（VM 清理取消本 scope）时，绝不留下「删一半 + 预览停在已删消息」的半截状态；
             // 新回合本身仍可取消（用户已离开，无需重新生成）。

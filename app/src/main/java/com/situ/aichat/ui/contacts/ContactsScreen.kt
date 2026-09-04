@@ -22,7 +22,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.PeopleAlt
 import androidx.compose.material.icons.filled.SearchOff
@@ -65,6 +64,7 @@ import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppListScreenHeader
 import com.situ.aichat.ui.designsystem.AppSearchField
 import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTopBarIcons
 import com.situ.aichat.util.DateFormatters
 import com.situ.aichat.util.StreakManager
 
@@ -105,7 +105,7 @@ fun ContactsScreen(
             // 大标题 + 右上角「新建角色」圆钮（三边视觉等距·过审 2026-06-19）。取代原 M3 TopAppBar。
             AppListScreenHeader(
                 title = stringResource(R.string.tab_contacts),
-                actionIcon = Icons.Filled.Add,
+                actionIcon = AppTopBarIcons.Add,
                 actionContentDescription = stringResource(R.string.contacts_create),
                 onAction = onCreateCharacter,
             )

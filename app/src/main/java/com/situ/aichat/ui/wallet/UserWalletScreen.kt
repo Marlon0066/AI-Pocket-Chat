@@ -17,10 +17,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ArrowCircleDown
 import androidx.compose.material.icons.filled.ArrowCircleUp
@@ -38,15 +38,11 @@ import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -55,8 +51,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.graphics.Brush
@@ -72,7 +66,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
+import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppSegmentedControl
+import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.ui.designsystem.CardSegment
 import com.situ.aichat.ui.designsystem.appCardSegmentSurface
 import com.situ.aichat.ui.designsystem.appCardSurface
@@ -108,15 +105,13 @@ fun UserWalletScreen(
     // P1-40 浏览即清：进「我的钱包」清全部角色钱包卡的「新变动」高亮。
     LaunchedEffect(Unit) { viewModel.markAllWalletNewsViewed() }
 
+    val listState = rememberLazyListState()
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.wallet_title), modifier = Modifier.semantics { heading() }) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                    }
-                },
+            AppTopBar(
+                title = stringResource(R.string.wallet_title),
+                onBack = onBack,
+                lifted = listState.canScrollBackward,
                 actions = {
                     AppButton(onClick = onOpenGiftShop, style = AppButtonStyle.Text) {
                         Icon(Icons.Filled.CardGiftcard, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -130,6 +125,7 @@ fun UserWalletScreen(
         val filtered = remember(s.transactions, filter) { WalletLedger.applyFilter(s.transactions, filter) }
         // contentPadding 顶 16/底 36 = 原 Spacer(4/24) 与 spacedBy(12) 的精确合成。
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
@@ -174,7 +170,7 @@ fun UserWalletScreen(
                             LedgerRow(tx, nowMillis)
                             if (!isLast) {
                                 // start 52 相对卡内 20 缩进 = 原卡内 divider 同位（屏侧 16+20+52）。
-                                HorizontalDivider(Modifier.padding(start = 52.dp))
+                                AppListDivider(modifier = Modifier.padding(start = 52.dp), startInset = 0.dp)
                             }
                         }
                     }
@@ -276,10 +272,17 @@ private fun BalanceCard(balance: Int, monthlyEarn: Int, monthlySpend: Int, balan
             }
             WalletIcon()
         }
-        HorizontalDivider()
+        AppListDivider(startInset = 0.dp)
         Row(verticalAlignment = Alignment.CenterVertically) {
             MonthlyStatColumn(stringResource(R.string.wallet_month_income), monthlyEarn, isEarn = true, Modifier.weight(1f))
-            VerticalDivider(Modifier.height(30.dp).padding(horizontal = 16.dp))
+            // 竖分隔：AppListDivider 只做横线，竖线按 §4.12 就地画（0.5dp × 原高 30dp × surface.stroke）。
+            Box(
+                Modifier
+                    .padding(horizontal = 16.dp)
+                    .width(0.5.dp)
+                    .height(30.dp)
+                    .background(AppTheme.colors.surface.stroke),
+            )
             MonthlyStatColumn(stringResource(R.string.wallet_month_expense), monthlySpend, isEarn = false, Modifier.weight(1f))
         }
     }

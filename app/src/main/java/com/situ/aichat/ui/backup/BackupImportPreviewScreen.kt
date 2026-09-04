@@ -17,29 +17,23 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -58,6 +52,8 @@ import androidx.compose.runtime.produceState
 import com.situ.aichat.R
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
+import com.situ.aichat.ui.designsystem.AppLoadingRing
+import com.situ.aichat.ui.designsystem.AppLoadingRingSize
 import com.situ.aichat.ui.designsystem.AppSegmentedControl
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.data.backup.BackupPreview
@@ -67,6 +63,9 @@ import com.situ.aichat.data.backup.ImportResult
 import com.situ.aichat.data.backup.ImportStrategy
 import com.situ.aichat.ui.components.AvatarColor
 import com.situ.aichat.ui.components.contentMaxWidth
+import com.situ.aichat.ui.designsystem.AppTopBar
+import com.situ.aichat.ui.designsystem.appCardSurface
+import com.situ.aichat.ui.designsystem.grainSurface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -114,15 +113,16 @@ fun BackupImportPreviewScreen(
         conflicts.all { (strategies[it.uuid] ?: ImportStrategy.DUPLICATE) == ImportStrategy.SKIP }
     val canConfirm = !busy && !done && preview.characters.isNotEmpty() && !allSkipped
 
+    val listState = rememberLazyListState()
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.backup_preview_title), modifier = Modifier.semantics { heading() }) },
-                navigationIcon = {
-                    IconButton(onClick = onDismiss, enabled = !busy) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_cancel))
-                    }
-                },
+            AppTopBar(
+                title = stringResource(R.string.backup_preview_title),
+                onBack = onDismiss,
+                // 导入进行中禁止退出：钮灰掉但仍在原位（图纸 §4.6）。
+                backEnabled = !busy,
+                lifted = listState.canScrollBackward,
             )
         },
         bottomBar = {
@@ -152,7 +152,7 @@ fun BackupImportPreviewScreen(
                         progress?.let { BackupProgressRow(it) }
                         AppButton(onClick = onConfirm, style = AppButtonStyle.Primary, enabled = canConfirm, modifier = Modifier.fillMaxWidth()) {
                             if (busy) {
-                                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                                AppLoadingRing(size = AppLoadingRingSize.Small)
                                 Spacer(Modifier.width(8.dp))
                                 Text(stringResource(R.string.backup_preview_importing))
                             } else {
@@ -174,6 +174,7 @@ fun BackupImportPreviewScreen(
         },
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
@@ -212,7 +213,7 @@ private fun CharacterPreviewRowView(
     // P1-19 a11y（iOS 此屏零 a11y 修饰 = 安卓超越）：头行/冲突行/新建行各自合并为一停；图标保 cd=null
     // （状态进文本 = iOS Label 语义，CharacterBackupImportPreviewView.swift:106-131）；Card 级绝不合并
     // （会吞掉三个分段钮的独立焦点）；SegmentedButtonRow 零改动（M3 1.3 自带 selectableGroup+RadioButton 角色）。
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+    Box(Modifier.appCardSurface(raised = true, cornerRadius = 16.dp).grainSurface()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
                 Modifier.semantics(mergeDescendants = true) {},

@@ -27,7 +27,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,8 +36,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -58,6 +55,7 @@ import com.situ.aichat.ui.components.clickableScale
 import com.situ.aichat.ui.components.contentMaxWidth
 import com.situ.aichat.ui.designsystem.AppFeatureIcons
 import com.situ.aichat.ui.designsystem.AppShapes
+import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.ui.ourdays.OurDaysStrip
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.EmotionTileAlpha
@@ -93,8 +91,9 @@ fun MomentsHubScreen(
     val apiMissing by viewModel.apiMissing.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { viewModel.refreshApiMissing() }
 
+    val scrollState = rememberScrollState()
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.moment_hub_title), modifier = Modifier.semantics { heading() }) }) },
+        topBar = { AppTopBar(title = stringResource(R.string.moment_hub_title), lifted = scrollState.value > 0) },
     ) { padding ->
         Column(
             modifier = Modifier
@@ -102,7 +101,7 @@ fun MomentsHubScreen(
                 .fillMaxSize()
                 .background(AppTheme.colors.surface.base)
                 .grainSurface()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .contentMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 12.dp), // v2 军规：屏 gutter 恒 20
             verticalArrangement = Arrangement.spacedBy(12.dp),

@@ -29,7 +29,7 @@ import java.time.ZoneId
 
 /**
  * 线下见面生命周期协作者——从 ChatViewModel 抽出（对齐 iOS ChatViewModel+ToolCalling/+Offline），方法体字节级不变。
- * 管用户面的见面动作：进页修脏状态/恢复弹窗、接受/拒绝邀约、主动发起/改成邀约、取消提示、续场、退出/异常恢复结束、退出后摘要重试。
+ * 管用户面的见面动作：进页修脏状态/恢复弹窗、接受/拒绝邀约、主动发起、取消提示、续场、退出/异常恢复结束、退出后摘要重试。
  *
  * **引擎相关一律经回调注入**（保持本协作者不碰助手回合引擎内部）：
  * [runAssistantTurn] = VM runAssistantTurnForCurrentConversation；[serialize] = VM launchSerializedTurn（串行化防并发回合）；
@@ -194,16 +194,6 @@ internal class ChatOfflineController(
     private suspend fun honorDueAppointmentsSafely(sessionId: String) {
         runCatching { meetingFulfillmentService.honorDueAppointmentsOnMeetingStart(conversationUuid, sessionId) }
             .onFailure { Log.w(TAG_INSTANT_GIST, "进见面核销约定失败（不影响见面）：${it.message}") }
-    }
-
-    /**
-     * chat-ui-3「改成邀约」：把一条 AI 普通文本消息原地改写成线下邀约卡（1:1 iOS convertMessageToOfflineInvite）。
-     * 纯 DB 改写、**不跑 LLM 一轮**（iOS 同样不跑；用户随后点卡片接受/拒绝走既有邀约流）。
-     */
-    fun convertMessageToOfflineInvite(messageUuid: String, location: String, activity: String) {
-        scope.launch {
-            offlineMeetingService.convertMessageToOfflineInvite(messageUuid, location, activity)
-        }
     }
 
     /** 用户打开发起见面界面又取消：插用户不可见的取消提示 + 触发 AI 回复（1:1 iOS handleMeetingCancelHint）。 */

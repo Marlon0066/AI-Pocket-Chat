@@ -18,7 +18,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,8 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
@@ -46,10 +43,13 @@ import com.situ.aichat.prompt.buildOfflineCoreRulesContent
 import com.situ.aichat.ui.designsystem.AppActionChip
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
+import com.situ.aichat.ui.designsystem.AppFormBar
 import com.situ.aichat.ui.designsystem.AppSegmentedControl
 import com.situ.aichat.ui.designsystem.AppSwitch
 import com.situ.aichat.ui.designsystem.AppTextArea
 import com.situ.aichat.ui.designsystem.AppTextField
+import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTypography
 import kotlinx.coroutines.delay
 
 /**
@@ -138,24 +138,29 @@ internal fun ModuleEditForm(
         if (!isNew) onAutoSave(snapshot())
         onClose()
     }
+    val scrollState = rememberScrollState()
+
     BackHandler { closeAndFlush() }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(if (isNew) R.string.pm_add_title else R.string.pm_edit_title), modifier = Modifier.semantics { heading() }) },
-                navigationIcon = { AppButton(onClick = closeAndFlush, style = AppButtonStyle.Text) { Text(stringResource(if (isNew) R.string.action_cancel else R.string.action_back)) } },
-                actions = {
+            AppFormBar(
+                title = stringResource(if (isNew) R.string.pm_add_title else R.string.pm_edit_title),
+                lifted = scrollState.value > 0,
+                onCancel = closeAndFlush,
+                cancelText = stringResource(if (isNew) R.string.action_cancel else R.string.action_back),
+                trailing = {
                     if (isNew) {
-                        AppButton(enabled = canSave, onClick = { onCreate(snapshot()) }, style = AppButtonStyle.Text) {
+                        AppButton(enabled = canSave, onClick = { onCreate(snapshot()) }) {
                             Text(stringResource(R.string.action_save))
                         }
                     } else {
+                        // 状态槽（拍板⑤）：低调灰字、不可点、不做成钮——它是「已经存好了」的告知，不是行动。
                         Text(
                             stringResource(R.string.pm_autosaved),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(end = 16.dp),
+                            style = AppTypography.settingsRowValue,
+                            color = AppTheme.colors.text.secondary,
+                            modifier = Modifier.padding(end = 12.dp),
                         )
                     }
                 },
@@ -167,7 +172,7 @@ internal fun ModuleEditForm(
                 .padding(padding)
                 .fillMaxWidth()
                 .imePadding()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {

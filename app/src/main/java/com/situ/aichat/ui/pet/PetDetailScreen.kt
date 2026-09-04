@@ -41,7 +41,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shower
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Toys
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -59,7 +58,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -85,6 +83,8 @@ import com.situ.aichat.pet.personalityType
 import com.situ.aichat.pet.species
 import com.situ.aichat.ui.components.LocalAppHaptics
 import com.situ.aichat.ui.components.clickableScale
+import com.situ.aichat.ui.designsystem.AppLoadingRing
+import com.situ.aichat.ui.designsystem.AppLoadingRingSize
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppTheme
 import kotlinx.coroutines.delay
@@ -129,7 +129,7 @@ fun PetDetailScreen(
 
     Box(Modifier.fillMaxSize()) {
         when {
-            state.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            state.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { AppLoadingRing(size = AppLoadingRingSize.Large) }
             pet != null -> PetContent(pet, state, viewModel, onBack, onOpenShop, onOpenInventory)
             else -> NoPetView(state.adoptionProgress, state.canAdopt, onBack, onAdopt)
         }

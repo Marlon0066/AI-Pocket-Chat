@@ -24,17 +24,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,11 +40,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -60,6 +53,9 @@ import com.situ.aichat.ui.components.LocalAppHaptics
 import com.situ.aichat.ui.components.rememberReduceMotion
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
+import com.situ.aichat.ui.designsystem.AppLoadingRing
+import com.situ.aichat.ui.designsystem.AppLoadingRingSize
+import com.situ.aichat.ui.designsystem.AppTopBar
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
@@ -103,17 +99,14 @@ fun GiftReactionScreen(
     // loading 期禁止返回（1:1 iOS interactiveDismissDisabled，防扣钱后反应未写回就退出；配 15s 超时兜底）
     BackHandler(enabled = isSendFlow && loading) { /* 吞掉返回 */ }
 
+    val scrollState = rememberScrollState()
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(if (isSendFlow) "送出" else "礼物详情", modifier = Modifier.semantics { heading() }) },
-                navigationIcon = {
-                    if (!isSendFlow) {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
-                        }
-                    }
-                },
+            AppTopBar(
+                title = if (isSendFlow) "送出" else "礼物详情",
+                // 送出流程里原本就不渲染返回钮（原 navigationIcon 外包一层 if）——onBack = null 与之等价。
+                onBack = onBack.takeIf { !isSendFlow },
+                lifted = scrollState.value > 0,
                 actions = {
                     if (isSendFlow) {
                         AppButton(onClick = onFinish, style = AppButtonStyle.Text, enabled = !loading) { Text("完成") }
@@ -126,7 +119,7 @@ fun GiftReactionScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(horizontal = 20.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(28.dp),
         ) {
@@ -225,7 +218,7 @@ private fun ReactionBubble(state: GiftReactionViewModel.UiState, loading: Boolea
                     Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
                         if (isLoading) {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                AppLoadingRing(size = AppLoadingRingSize.Small)
                                 Text(
                                     text = loadingText(state.characterName),
                                     style = MaterialTheme.typography.bodyMedium,

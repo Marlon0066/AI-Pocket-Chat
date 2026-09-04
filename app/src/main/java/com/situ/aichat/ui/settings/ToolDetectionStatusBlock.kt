@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,6 +27,8 @@ import com.situ.aichat.data.model.ToolCallingMode
 import com.situ.aichat.ui.chat.rememberRelativeTimeStrings
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
+import com.situ.aichat.ui.designsystem.AppLoadingRing
+import com.situ.aichat.ui.designsystem.AppLoadingRingSize
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.util.DateFormatters
 
@@ -134,11 +135,7 @@ private fun toolStatusText(kind: ToolDetectionStatusKind): String = stringResour
 private fun ToolStatusDot(kind: ToolDetectionStatusKind) {
     val colors = AppTheme.colors
     if (kind == ToolDetectionStatusKind.Detecting) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(12.dp),
-            strokeWidth = 2.dp,
-            color = colors.accent.primary,
-        )
+        AppLoadingRing(size = AppLoadingRingSize.Small)
         return
     }
     val hollow = kind == ToolDetectionStatusKind.NotDetected

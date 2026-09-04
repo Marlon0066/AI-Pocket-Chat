@@ -1,6 +1,5 @@
 package com.situ.aichat.ui.settings
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -9,29 +8,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.situ.aichat.BuildConfig
 import com.situ.aichat.R
 import com.situ.aichat.ui.components.SettingsSection
 import com.situ.aichat.ui.components.contentMaxWidth
+import com.situ.aichat.ui.designsystem.AppSettingsRow
+import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.ui.onboarding.agreementContent
 
 /**
@@ -46,18 +39,13 @@ fun AboutScreen(
     onBack: () -> Unit,
     onOpenAgreement: () -> Unit,
 ) {
+    val scrollState = rememberScrollState()
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.about_title), modifier = Modifier.semantics { heading() }) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
-                        )
-                    }
-                },
+            AppTopBar(
+                title = stringResource(R.string.about_title),
+                onBack = onBack,
+                lifted = scrollState.value > 0,
             )
         },
     ) { padding ->
@@ -65,31 +53,22 @@ fun AboutScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .contentMaxWidth(),
         ) {
             SettingsSection(
                 title = stringResource(R.string.about_section_info),
                 footer = stringResource(R.string.about_disclaimer),
             ) {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.about_version)) },
-                    trailingContent = {
-                        Text(
-                            BuildConfig.VERSION_NAME,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    },
+                AppSettingsRow(
+                    title = stringResource(R.string.about_version),
+                    value = BuildConfig.VERSION_NAME,
                 )
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.about_agreement)) },
-                    trailingContent = {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onOpenAgreement() },
+                AppSettingsRow(
+                    title = stringResource(R.string.about_agreement),
+                    showChevron = true,
+                    onClick = onOpenAgreement,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
 
@@ -111,22 +90,18 @@ fun AboutScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AgreementViewScreen(onBack: () -> Unit) {
+    val listState = rememberLazyListState()
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.about_agreement), modifier = Modifier.semantics { heading() }) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.action_back),
-                        )
-                    }
-                },
+            AppTopBar(
+                title = stringResource(R.string.about_agreement),
+                onBack = onBack,
+                lifted = listState.canScrollBackward,
             )
         },
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)

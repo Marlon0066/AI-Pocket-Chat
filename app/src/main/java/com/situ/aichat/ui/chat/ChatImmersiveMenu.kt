@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Delete
@@ -82,6 +81,7 @@ import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.MessageEntity
 import com.situ.aichat.data.model.MessageKind
 import com.situ.aichat.prompt.CalendarItemParser
+import com.situ.aichat.prompt.PromptBuilder
 import com.situ.aichat.ui.components.AppMotion
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppTheme
@@ -116,7 +116,17 @@ private const val SCRIM_FADE_MS = 320
 private const val MENU_CLOSE_MS = 220
 private const val MENU_APPEAR_BASE_MS = 150
 private const val MENU_APPEAR_PER_ITEM_MS = 16
-private const val CASCADE_WAVE = 4f
+/**
+ * 项级联波长（Telegram `AndroidUtilities.cascade` 的 waveLength）：窗口=wave/n、起点按序错峰；
+ * **wave ≥ n 时窗口钳到 1 = 全项同步**（错峰消失）。2026-09-04 由 4f 调 3f：菜单最大项数随「改成邀约」
+ * 删除从 5 掉到 4，4f 恰好踩上退化线——独立复核揪出「删一个菜单项把入场级联一并清零」，用户拍板恢复。
+ * 现 n=4（AI 最后一轮的纯文字）：窗口 0.75、起点 0/0.0625/0.125/0.1875 → 首尾差 ≈40ms（原 5 项 4f 时
+ * ≈37ms，观感等同）。**n≤3 仍全同步**——2026-09-04 两次收紧（重新生成限最后一轮、引用限纯文字）后
+ * 落在这一档的不只是用户消息：**非最后一轮的 AI 消息（长按的大头）也是 3 项**、用户图片消息只有 2 项。
+ * 即真机上只有「最后一轮」看得到波浪感，翻历史长按都是整卡同步淡入（复核 R2 🟡-2 如实登记·非缺陷，
+ * 但若观感上要救，须再降 wave 或改公式）。**改动作项数时必须回来重算这个常量。**
+ */
+private const val CASCADE_WAVE = 3f
 private const val A11Y_FOCUS_DELAY_MS = 420L
 private val MenuItemRise = 6.dp
 private val MenuCloseRise = 5.dp
@@ -150,14 +160,24 @@ internal class ChatImmersiveMenuState {
         private set
     var closing by mutableStateOf(false)
         private set
+    /** 目标消息是否落在「重新生成」有效范围内——长按那一刻由行上报（判据单源见 [RegenerableTurn]）。 */
+    var canRegenerate by mutableStateOf(false)
+        private set
 
     val isOpen: Boolean get() = target != null
 
-    fun open(message: MessageEntity, bounds: Rect, snapshot: ImageBitmap?, frosted: ImageBitmap?) {
+    fun open(
+        message: MessageEntity,
+        bounds: Rect,
+        snapshot: ImageBitmap?,
+        frosted: ImageBitmap?,
+        canRegenerate: Boolean,
+    ) {
         this.bubbleBounds = bounds
         this.snapshot = snapshot
         this.frosted = frosted
         this.closing = false
+        this.canRegenerate = canRegenerate
         this.target = message
     }
 
@@ -173,33 +193,76 @@ internal class ChatImmersiveMenuState {
         snapshot = null
         frosted = null
         closing = false
+        canRegenerate = false
     }
 }
 
 /** 菜单动作枚举（壳换、动作面冻结）。 */
-internal enum class ImmersiveMenuAction { COPY, SAVE_IMAGE, QUOTE, REGENERATE, CONVERT_TO_INVITE, DELETE }
+internal enum class ImmersiveMenuAction { COPY, SAVE_IMAGE, QUOTE, REGENERATE, DELETE }
 
 /**
- * 动作显示条件——自旧 DropdownMenu（ChatMessageRow）**逐字冻结**：复制/引用/删除=所有可开菜单的消息；
- * 重新生成=仅 AI；改成邀约=仅 AI 普通文本、会话非线下、该消息非线下（1:1 iOS showsConvertToInvite）。
+ * 动作显示条件——除 2026-09-04 三项用户拍板变更外，自旧 DropdownMenu（ChatMessageRow）**逐字冻结**：
+ * 复制/删除=所有可开菜单的消息；重新生成=AI 消息**且落在最后一轮**（[canRegenerate]）；
+ * 引用=**正文有话可引的气泡**（[canQuote]·判据单源 [messageCanBeQuoted]）。
+ *
+ * 2026-09-04 变更：① 原「改成邀约」整条去掉——与「+ 发起见面」表单完全重复、还多一步点接受，进见面已有
+ * 「角色自发邀约卡 / + 发起见面 / 约未来见面」三条正门；② 重新生成由「仅 AI」收紧为「AI 且落在最后一轮」；
+ * ③ 引用由「所有消息」收紧为「仅纯文字」（理由见 [messageCanBeQuoted]）；
+ * 2026-09-04 引用一期又放开语音（转写到位的）与表情——喂 LLM 那侧已接住它们，详见同函数 KDoc。
  */
 internal fun immersiveMenuActions(
     isUser: Boolean,
-    kind: MessageKind,
-    isOfflineModeActive: Boolean,
-    messageIsOffline: Boolean,
     /** 图片消息（PLAIN_TEXT + 侧车 imageRelativePath）：换掉「复制」、给「保存到相册」（契约 §B7）。 */
     hasImage: Boolean = false,
+    /**
+     * 本条是否落在「重新生成」的有效范围内（2026-09-04 拍板·治「菜单里有、点了没反应」）：引擎删的是
+     * **末尾连续 assistant 段**并重跑整轮（AssistantTurnController.regenerate），长按更早的历史消息点它
+     * 只会误删最后一轮；回合进行中点它又被并发门静默挡下。两种情况都不给这一项——菜单里出现=点了一定有效。
+     * 判据单源 [RegenerableTurn]（× 非生成中），由 ChatMessageList 逐行算好传入——引擎删的就是它算出的那一段。
+     */
+    canRegenerate: Boolean = false,
+    /**
+     * 本条是否可被引用（2026-09-04 拍板·判据单源 [messageCanBeQuoted]）：正文有话可引的气泡才给这一项。
+     *
+     * **有意不给默认值**（复核 R1 🟡-2）：同函数另两参的默认都是限制性的（`hasImage=false` / `canRegenerate=false`），
+     * 而「可引用」的宽松默认会让将来新增的调用点**静默漏掉门控且全套测试仍绿**。去掉默认 = 让编译器逼每个
+     * 调用点表态，比补一条 T2 更硬。
+     */
+    canQuote: Boolean,
 ): List<ImmersiveMenuAction> = buildList {
     // 图片消息不给「复制」——它的正文是内部哨兵 `[图片]`，复制过去是三个没用的字符。
     if (hasImage) add(ImmersiveMenuAction.SAVE_IMAGE) else add(ImmersiveMenuAction.COPY)
-    add(ImmersiveMenuAction.QUOTE)
-    if (!isUser) add(ImmersiveMenuAction.REGENERATE)
-    if (!isUser && kind == MessageKind.PLAIN_TEXT && !isOfflineModeActive && !messageIsOffline) {
-        add(ImmersiveMenuAction.CONVERT_TO_INVITE)
-    }
+    if (canQuote) add(ImmersiveMenuAction.QUOTE)
+    if (!isUser && canRegenerate) add(ImmersiveMenuAction.REGENERATE)
     add(ImmersiveMenuAction.DELETE)
 }
+
+/**
+ * 「可引用」判据（纯函数·T1·**长按菜单 / 右滑引用 / 读屏动作面三路共用单源**）：**正文有话可引**的气泡
+ * 才给引用——纯文字、纯贴纸、文字+贴纸混合、以及**转写已到位**的语音，都算。
+ *
+ * 排除项与理由（图纸 2026-09-04 §3.3）：
+ * - **图片 / 一切非 PLAIN_TEXT 卡片**（日程卡·红包·礼物·邀约·约定·变更·系统事件·通话记录·线下结束）：
+ *   图片正文是内部哨兵 `[图片]`、卡片正文是原始 JSON，托盘预览 [ReplyPreview] 直读 `content` 会把它们
+ *   照原样显给用户。**多模态引用整体挂起、将来单独立项**（重开时三处口径一并设计：预览脱敏走
+ *   [MessagePreviewText]、被引用媒体要不要重新挂进 prompt）。
+ * - **占位转写的语音**（STT 未完成 / 失败，正文 = `[语音消息]` / `[Voice Message]`）：占位不是内容，
+ *   引用过去零信息。判据单源 [com.situ.aichat.prompt.PromptBuilder.isVoicePlaceholderTranscript]。
+ * - **空白正文**：流式占位气泡（`ChatMessageGrouping` 合成·content=""·未落库）引用过去是一条不存在的消息。
+ *
+ * 2026-09-04 引用一期放开语音 + 表情（此前二者与图片/卡片一起被一刀切禁）：喂 LLM 那侧此时已经接住了它们——
+ * 语音的转写本就是正文，表情经引用行注入 → `StickerService.convertStickerTagsToDescription` 变成
+ * `[非语言情绪：…]`（图纸 §0.2 决策三），引用它们不再产生怪结果。
+ */
+internal fun messageCanBeQuoted(message: MessageEntity): Boolean {
+    if (MessageKind.fromRaw(message.messageKindRaw) != MessageKind.PLAIN_TEXT) return false
+    if (message.imageRelativePath != null) return false
+    if (message.content.isBlank()) return false
+    // 语音：转写就是正文，可引用；但占位转写没有信息量，不给。
+    if (message.isVoiceMessage) return !PromptBuilder.isVoicePlaceholderTranscript(message.content)
+    return true
+}
+
 
 /**
  * 复制文案按类型清洗（自 ChatMessageRow **原样搬迁**·口径冻结）：日程卡剥 [#E1] 标签；结构化卡（礼物/
@@ -220,7 +283,6 @@ internal fun immersiveMenuActionLabel(action: ImmersiveMenuAction): String = whe
     ImmersiveMenuAction.SAVE_IMAGE -> "保存到相册"
     ImmersiveMenuAction.QUOTE -> "引用"
     ImmersiveMenuAction.REGENERATE -> "重新生成"
-    ImmersiveMenuAction.CONVERT_TO_INVITE -> "改成邀约"
     ImmersiveMenuAction.DELETE -> "删除"
 }
 
@@ -303,18 +365,16 @@ private tailrec fun Context.findWindow(): Window? = when (this) {
 @Composable
 internal fun ChatImmersiveMenuOverlay(
     state: ChatImmersiveMenuState,
-    isOfflineModeActive: Boolean,
     actions: MessageRowActions,
     reduceMotion: Boolean,
 ) {
     val message = state.target ?: return
-    val entries = remember(message.messageUUID, isOfflineModeActive) {
+    val entries = remember(message.messageUUID, state.canRegenerate) {
         immersiveMenuActions(
             isUser = message.roleRaw == "user",
-            kind = MessageKind.fromRaw(message.messageKindRaw),
-            isOfflineModeActive = isOfflineModeActive,
-            messageIsOffline = message.isOfflineMode,
             hasImage = message.imageRelativePath != null,
+            canRegenerate = state.canRegenerate,
+            canQuote = messageCanBeQuoted(message),
         )
     }
 
@@ -401,7 +461,6 @@ internal fun ChatImmersiveMenuOverlay(
                     ImmersiveMenuAction.SAVE_IMAGE -> actions.onSaveImage(message)
                     ImmersiveMenuAction.QUOTE -> actions.onQuote(message)
                     ImmersiveMenuAction.REGENERATE -> actions.onRegenerate()
-                    ImmersiveMenuAction.CONVERT_TO_INVITE -> actions.onConvertToInvite(message)
                     ImmersiveMenuAction.DELETE -> actions.onDelete(message)
                 }
                 close()
@@ -458,7 +517,6 @@ private fun ImmersiveMenuCard(
                         ImmersiveMenuAction.SAVE_IMAGE -> Icons.Filled.FileDownload
                         ImmersiveMenuAction.QUOTE -> Icons.Filled.FormatQuote
                         ImmersiveMenuAction.REGENERATE -> Icons.Filled.Refresh
-                        ImmersiveMenuAction.CONVERT_TO_INVITE -> Icons.AutoMirrored.Filled.DirectionsWalk
                         ImmersiveMenuAction.DELETE -> Icons.Filled.Delete
                     }
                     // 语义色冻结（契约 §3.3）：重新生成=陶土玫品牌动作、删除=error 功能深档、其余中性。

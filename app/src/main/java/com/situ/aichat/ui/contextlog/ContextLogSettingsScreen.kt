@@ -15,14 +15,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,8 +28,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -45,6 +40,7 @@ import com.situ.aichat.ui.components.SettingsSwitchRow
 import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppDialogTone
 import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTopBar
 import kotlin.math.roundToInt
 
 /** 日志保留设置屏（批 D·D-3）：保留条数滑块（10–500·可手填超限）+ detail 开关 + 清全文 + 清空全部 + 隐私脚注。 */
@@ -58,21 +54,19 @@ fun ContextLogSettingsScreen(
     var confirmPurge by remember { mutableStateOf(false) }
     var confirmClear by remember { mutableStateOf(false) }
 
+    val scrollState = rememberScrollState()
     Scaffold(
         containerColor = AppTheme.colors.surface.base,
         topBar = {
-            TopAppBar(
-                title = { Text("日志设置", modifier = Modifier.semantics { heading() }) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }
-                },
+            AppTopBar(
+                title = "日志设置",
+                onBack = onBack,
+                lifted = scrollState.value > 0,
             )
         },
     ) { padding ->
         Column(
-            Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()),
+            Modifier.fillMaxSize().padding(padding).verticalScroll(scrollState),
         ) {
             SettingsSection(title = "容量") {
                 RetentionSliderRow(

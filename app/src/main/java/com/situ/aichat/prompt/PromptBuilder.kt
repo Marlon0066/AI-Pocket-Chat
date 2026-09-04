@@ -208,13 +208,19 @@ object PromptBuilder {
      */
     internal fun buildAudioPrompt(transcript: String, promptPrefix: String, noTranscriptMarker: String): String {
         val trimmed = transcript.trim()
-        val reference =
-            if (trimmed.isEmpty() || trimmed == VOICE_MESSAGE_PLACEHOLDER || trimmed == VOICE_MESSAGE_PLACEHOLDER_EN) {
-                noTranscriptMarker
-            } else {
-                trimmed
-            }
+        val reference = if (trimmed.isEmpty() || isVoicePlaceholderTranscript(trimmed)) noTranscriptMarker else trimmed
         return promptPrefix + reference
+    }
+
+    /**
+     * 这段「转写」是不是 STT 未完成 / 失败时写下的占位（中英任一）——**占位不是内容**，没有任何信息量。
+     * 判据单源：`buildAudioPrompt` 的降级分支与「语音消息能不能被引用」
+     * （`ui/chat/ChatImmersiveMenu.messageCanBeQuoted`）都问这一个函数，两处口径永不漂移。
+     * 两个常量的**值与录音侧逐字耦合，一个字都不许改**（REDLINES）。
+     */
+    internal fun isVoicePlaceholderTranscript(text: String): Boolean {
+        val trimmed = text.trim()
+        return trimmed == VOICE_MESSAGE_PLACEHOLDER || trimmed == VOICE_MESSAGE_PLACEHOLDER_EN
     }
 
     /** WAV 字节 → base64（裸 base64、无 data: 前缀，1:1 iOS 音频 `Data.base64EncodedString()`）。 */
@@ -296,6 +302,9 @@ object PromptBuilder {
         /** 记忆改造二期·部件④ 见面时间线注记（图纸 §3.1）：调用方经 `OfflineMeetingMemoryRepository.byCharacter` 预取
          *  该角色全部见面档案行（注记端自筛跨度 + 上限 5）；空 = 不注记·仅普通在线聊天（now 非空）时生效·照 promises 透传路径。 */
         meetingTimeline: List<OfflineMeetingMemoryEntity> = emptyList(),
+        /** 引用一期（图纸 §3.1）：调用方经 `MessageRepository.quotedRefs(history)` 预取的
+         *  quotedMessageUUID → 被引用消息时间戳 + 原始正文；空 = 引用行走无锚形态 + 回退落库快照（行为同接线前）。 */
+        quotedRefs: Map<String, com.situ.aichat.data.repository.QuotedMessageRef> = emptyMap(),
         /** 记忆改造二期·部件⑤ 场内前情提要（图纸 §3.2-D/E）：调用方**门控式**传本场提要正文（见面/通话 key 校验通过才传·
          *  否则 null）；非空 → 注入在截断提示之后（2.15）。普通聊天 / 忙碌回复永不注入（缺省 null）。 */
         inSceneRecap: String? = null,
@@ -446,6 +455,8 @@ object PromptBuilder {
             now = if (effectiveScene == PromptScene.ONLINE_CHAT) now else null,
             // 记忆改造二期·部件④ 见面时间线注记（§3.1）：与分割线共用上面的 now 门控（now=null 时零注记）。
             meetingTimeline = meetingTimeline,
+            // 引用一期：被引用消息的预取对照表（时间锚 + 原始正文）原样透传。
+            quotedRefs = quotedRefs,
         )
         val historyEnd = chatMessages.size
 
@@ -695,6 +706,8 @@ object PromptBuilder {
         now: Instant = Instant.now(),
         /** 记忆改造二期·部件④ 见面时间线注记（图纸 §3.1）：透传给 [buildMessages]（见其同名参数）。 */
         meetingTimeline: List<OfflineMeetingMemoryEntity> = emptyList(),
+        /** 引用一期：被引用消息预取对照表，透传给 [buildMessages]（见其同名参数）。 */
+        quotedRefs: Map<String, com.situ.aichat.data.repository.QuotedMessageRef> = emptyMap(),
         /** 记忆改造二期·部件⑤ 场内前情提要（图纸 §3.2-D/E）：门控式透传给 [buildMessages]（见其同名参数）。 */
         inSceneRecap: String? = null,
         /** 「我们的日子」卷二：透传给 [buildMessages]（见其同名参数·语音路走本包装·W-10 只加此一参）。 */
@@ -737,6 +750,7 @@ object PromptBuilder {
             worldInfo = worldInfo,
             now = now,
             meetingTimeline = meetingTimeline,
+            quotedRefs = quotedRefs,
             inSceneRecap = inSceneRecap,
             ourDays = ourDays,
             segmentSink = segments,

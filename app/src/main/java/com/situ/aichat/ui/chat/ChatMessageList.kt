@@ -84,7 +84,8 @@ internal fun ChatMessageList(
     userName: String,
     userAvatarPath: String?,
     customStickers: List<CustomStickerEntity>,
-    isOfflineModeActive: Boolean,
+    /** 助手回合进行中（VM `isSending`）：期间全列不给「重新生成」——引擎有并发门，点了必静默无效。 */
+    isSending: Boolean,
     networkConnected: Boolean,
     networkStatusChanged: Boolean?,
     showScrollDown: Boolean,
@@ -107,6 +108,10 @@ internal fun ChatMessageList(
             }
             set
         }
+        // 「重新生成」有效范围（2026-09-04 拍板·判据单源 RegenerableTurn，引擎删的就是它算出的那一段）：
+        // 只有最后一轮的 AI 文字消息给这一项——长按更早的历史点它只会误删最后一轮（菜单里有、点了却不是
+        // 那条=撒谎）；事件卡（通话记录/见面结束/红包/礼物…）遇到即停，不给也不删。`messages` 本就是可见流。
+        val regenerableUuids = remember(messages) { RegenerableTurn.trailingUuids(messages) }
         // M3a/M3b ④握手+飞行：单点读（变化只失效本 lambda 一次，不订阅到每行）。
         val flightPending = sendFlight.pending
         val flightUuid = sendFlight.flightUuid
@@ -231,7 +236,7 @@ internal fun ChatMessageList(
                                 // 审计 P3：只有播放中那一行拿到真 progress lambda；其余拿零常量（无快照依赖=绝不失效）。
                                 voiceProgress = if (voicePlaying) voiceProgress else ZeroProgress,
                                 actions = actions,
-                                isOfflineModeActive = isOfflineModeActive,
+                                canRegenerate = RegenerableTurn.canRegenerate(msg.messageUUID, regenerableUuids, isSending),
                                 deliveryRead = if (msg.roleRaw == "user") msg.messageUUID in readUserMessageUuids else null,
                                 voiceCascadePlay = voiceCascadePlay,
                                 flightTracking = flightRow,

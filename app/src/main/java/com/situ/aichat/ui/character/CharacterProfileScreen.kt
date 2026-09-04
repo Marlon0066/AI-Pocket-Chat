@@ -10,14 +10,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -27,8 +24,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
@@ -37,6 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
 import com.situ.aichat.economy.SalaryEditWarningFlag
 import com.situ.aichat.ui.designsystem.AppDialog
+import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.ui.meeting.MeetingCountdownChip
 import com.situ.aichat.ui.ourdays.ProfileOurDaysCard
 import com.situ.aichat.ui.starfield.StarfieldEntryCard
@@ -44,7 +40,7 @@ import com.situ.aichat.ui.starfield.StarfieldEntryCard
 /**
  * 角色资料页（14.1，只读展示）：折叠头（Hero+统计条）+ 吸顶三 Tab（近况/故事/资料）。
  * 结构 = 单 LazyColumn + stickyHeader（图纸 2026-07-15-资料页三Tab重构 D-A）：Hero/Stats 作前两 item 随滚
- * 自然离场，Tab 栏 stickyHeader 吸顶到 TopAppBar 下沿。切 Tab 用点击（AppSegmentedControl·禁横滑/Pager·D-C）；
+ * 自然离场，Tab 栏 stickyHeader 吸顶到门楣（[com.situ.aichat.ui.designsystem.AppTopBar]）下沿。切 Tab 用点击（AppSegmentedControl·禁横滑/Pager·D-C）；
  * 系统返回直接退屏（不加 BackHandler·D-C）。除共同记忆卡的「记忆原文」外，13 张卡只搬不改（§2「只搬不改」）。
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -108,13 +104,10 @@ fun CharacterProfileScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(character?.name.orEmpty(), modifier = Modifier.semantics { heading() }) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
-                    }
-                },
+            AppTopBar(
+                title = character?.name.orEmpty(),
+                onBack = onBack,
+                lifted = listState.canScrollBackward,
                 actions = {
                     character?.let { c ->
                         IconButton(onClick = { onEditCharacter(c.uuid) }) {

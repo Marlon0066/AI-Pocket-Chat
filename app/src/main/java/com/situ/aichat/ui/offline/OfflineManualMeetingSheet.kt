@@ -12,7 +12,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -23,7 +22,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
@@ -31,19 +29,16 @@ import com.situ.aichat.ui.designsystem.AppSheet
 import com.situ.aichat.ui.designsystem.AppTextField
 
 /**
- * 手动发起线下见面表单（1:1 iOS `OfflineManualMeetingSheet`，medium detent → ModalBottomSheet）：
- * 地点 + 活动，两者均非空才可提交。[originalMessageContent] 非空 = 长按消息「改成邀约」路径，顶部显示
- * 原文做参考（提交后该消息变邀约卡片）；nil = 「+ 入口发起」路径。
+ * 手动发起线下见面表单（「+」入口·medium detent → ModalBottomSheet）：地点 + 活动，两者均非空才可提交。
+ * （原「改成邀约」路径的原文预览三参数随该功能于 2026-09-04 一并去掉——用户拍板：与本表单完全重复。）
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OfflineManualMeetingSheet(
     onStart: (location: String, activity: String) -> Unit,
     onDismiss: () -> Unit,
-    onCancel: () -> Unit = {},
-    originalMessageContent: String? = null,
-    navTitle: String = "发起线下见面",
-    confirmButtonTitle: String = "见面！",
+    /** 未提交就取消/下滑关闭 → 通知 AI（1:1 iOS .sheet onCancel）·无默认值=调用方必须显式表态。 */
+    onCancel: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState()
     // 审计 B2（拍板 2026-07-02）：表单字段跨重建存活——填一半转屏/切深色不丢（弹窗开合旗标在 ChatSheetsState 同升）。
@@ -67,30 +62,7 @@ fun OfflineManualMeetingSheet(
                 .navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text(navTitle, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold))
-
-            if (!originalMessageContent.isNullOrEmpty()) {
-                Text("原消息（将作为邀约台词）", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    shape = MaterialTheme.shapes.medium,
-                ) {
-                    Text(
-                        originalMessageContent,
-                        modifier = Modifier.padding(12.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        // 原文仅作语境参考：限 4 行防长消息把下方输入框/确认按钮顶出弹层（2026-07-31 修缮拍板）。
-                        maxLines = 4,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                Text(
-                    "根据这条消息的语境，填入地点和活动。提交后这条消息会变成一张邀约卡片。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            Text("发起线下见面", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold))
 
             AppTextField(
                 value = location,
@@ -118,7 +90,7 @@ fun OfflineManualMeetingSheet(
                     style = AppButtonStyle.Primary,
                     enabled = canStart,
                     modifier = Modifier.weight(1f),
-                ) { Text(confirmButtonTitle) }
+                ) { Text("见面！") }
             }
         }
     }

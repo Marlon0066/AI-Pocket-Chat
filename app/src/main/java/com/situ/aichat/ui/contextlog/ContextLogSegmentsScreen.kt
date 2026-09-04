@@ -13,14 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -32,6 +27,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.diagnostics.LogTokenFormat
 import com.situ.aichat.prompt.ContextSegment
 import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTopBar
 
 /** 上下文结构（分段占比）屏（批 D·D-3）：汇总卡 + 各模块行（名/位置徽标/token+占比/占比条·按 position 着色）。 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,16 +41,14 @@ fun ContextLogSegmentsScreen(
     val totalToken = segments.sumOf { it.estimatedTokens }
     val totalChar = segments.sumOf { it.charCount }
 
+    val scrollState = rememberScrollState()
     Scaffold(
         containerColor = AppTheme.colors.surface.base,
         topBar = {
-            TopAppBar(
-                title = { Text("上下文结构") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }
-                },
+            AppTopBar(
+                title = "上下文结构",
+                onBack = onBack,
+                lifted = scrollState.value > 0,
             )
         },
     ) { padding ->
@@ -62,7 +56,7 @@ fun ContextLogSegmentsScreen(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(horizontal = 14.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {

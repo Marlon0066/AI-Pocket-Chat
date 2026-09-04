@@ -25,7 +25,12 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -123,6 +128,7 @@ class ChatReplyDelivererTest {
 
     @Test
     fun 文字happy_落库一条_写会话预览_递送旗标归位() = runBlocking {
+        deliverer.openTypingSlot() // F15 修假绿：不开槽则下方 assertNull 恒真（本用例此前从未验过清理行为）
         val slot = mutableListOf<MessageEntity>()
         val result = deliverer.deliverAssistantReply(
             "你好呀今天过得怎么样", character, settings(), dotsAppearMillis = 0L, immediate = false, voicePlan = null,
@@ -132,7 +138,7 @@ class ChatReplyDelivererTest {
         assertEquals("你好呀今天过得怎么样", slot[0].content)
         assertEquals("assistant", slot[0].roleRaw)
         assertEquals(1, result.messages.size)
-        coVerify { conversationRepo.recordLastMessage("conv-1", any(), "assistant", any()) }
+        coVerify { conversationRepo.recordLastMessageIfNewer("conv-1", any(), "assistant", any()) } // V2：收尾走单调口
         assertFalse(isDelivering.value)
         assertNull(pendingAssistantSlot.value) // 打字占位=渲染层唯一「打字中」信号（S4：旧布尔链已删）
         coVerify(exactly = 0) { conversationRepo.recordMood(any(), any(), any(), any()) } // 无情绪标签 → 不记心情
@@ -140,12 +146,17 @@ class ChatReplyDelivererTest {
 
     @Test
     fun 空正文_返回空_不落库() = runBlocking {
+        deliverer.openTypingSlot()
         val result = deliverer.deliverAssistantReply(
             "", character, settings(), dotsAppearMillis = 0L, immediate = false, voicePlan = null,
         )
         assertTrue(result.messages.isEmpty())
         assertFalse(result.deliveredStructuredAction)
         coVerify(exactly = 0) { messageRepo.upsert(any()) }
+        // E3：正文清洗后为空 = 提前 return，不进 deliverTextReply 的 try/finally → 槽不清，留给 Engine 兜底
+        //（空响应重试期间打字三点须继续显示）。
+        assertNotNull(pendingAssistantSlot.value)
+        assertNull(deliverer.lastOutputJob) // 负向锚：零产出的回合绝不记账，否则起步相位又变回打不断
     }
 
     @Test
@@ -162,6 +173,7 @@ class ChatReplyDelivererTest {
         assertEquals("sess-1", slot[0].offlineSessionId)
         coVerify { conversationRepo.touchLastMessageDate("conv-1", any()) }
         coVerify(exactly = 0) { conversationRepo.recordLastMessage(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { conversationRepo.recordLastMessageIfNewer(any(), any(), any(), any()) } // E13：线下不经预览口
     }
 
     @Test
@@ -191,6 +203,7 @@ class ChatReplyDelivererTest {
         // VoiceResponseChunker 内部用 android.icu（真 Android 框架），纯 JVM 跑不动 → mockkObject 隔离（chunker 自有测试覆盖）。
         mockkObject(AudioStore)
         mockkObject(VoiceResponseChunker)
+        deliverer.openTypingSlot()
         try {
             every { VoiceResponseChunker.chunkForVoice(any(), any(), any()) } returns listOf("用语音说句话")
             coEvery { ttsService.synthesize(any(), any(), any(), any(), any()) } returns ByteArray(10)
@@ -205,6 +218,8 @@ class ChatReplyDelivererTest {
             assertEquals("audio/x.mp3", voiceMsg.audioRelativePath)
             assertEquals(3.0, voiceMsg.audioDuration!!, 0.0001)
             coVerify { conversationRepo.updateVoiceRounds("conv-1", 0, any()) } // 语音发出 → 轮次清 0
+            assertNull(pendingAssistantSlot.value) // E5：语音末条落地即清槽（开槽见用例首行，非假绿）
+            assertNotNull(deliverer.lastOutputJob) // J8 第 2 记账点：语音路同样记「已产出」
         } finally {
             unmockkObject(AudioStore)
             unmockkObject(VoiceResponseChunker)
@@ -214,6 +229,8 @@ class ChatReplyDelivererTest {
     @Test
     fun 语音合成失败_退回文字_置错误提示() = runBlocking {
         mockkObject(VoiceResponseChunker)
+        deliverer.openTypingSlot()
+        val reservedUuid = pendingAssistantSlot.value!!.uuid
         try {
             every { VoiceResponseChunker.chunkForVoice(any(), any(), any()) } returns listOf("用语音说句话")
             coEvery { ttsService.synthesize(any(), any(), any(), any(), any()) } returns null // 合成失败
@@ -224,9 +241,67 @@ class ChatReplyDelivererTest {
             coVerify { messageRepo.upsert(capture(slot)) }
             assertTrue(slot.none { it.isVoiceMessage }) // 退回纯文字
             assertEquals("语音合成失败", errorFlow.value)
+            // E4/J2：回落路径上预留 uuid 必须还在（清槽带 stored 非空条件的意义）——首条取的就是开槽时那个 uuid，
+            // 否则同 key 原地变身失效，退回「删一行插一行」跳动（契约 B1 根因）。
+            assertEquals(reservedUuid, slot.first().messageUUID)
         } finally {
             unmockkObject(VoiceResponseChunker)
         }
+    }
+
+    /** T2-1（E1）：末段落地即清打字槽——不再等整个回合 finally，收尾维护期的 typing 判据因此为假（V1）。 */
+    @Test
+    fun 末段落地即清打字槽_落库uuid取自开槽预留() = runBlocking {
+        deliverer.openTypingSlot()
+        val reservedUuid = pendingAssistantSlot.value!!.uuid
+        val slot = mutableListOf<MessageEntity>()
+        deliverer.deliverAssistantReply(
+            "今天天气真好", character, settings(), dotsAppearMillis = 0L, immediate = false, voicePlan = null,
+        )
+        coVerify { messageRepo.upsert(capture(slot)) }
+        assertEquals(1, slot.size)
+        assertEquals(reservedUuid, slot[0].messageUUID) // 变身链未断：末段用的就是打字槽预留的 uuid
+        assertNull(pendingAssistantSlot.value) // 槽已清（改前要等 AssistantTurnEngine 的回合 finally）
+        assertNotNull(deliverer.lastOutputJob) // J8 第 1 记账点：本回合已产出 → 收尾相位不再被误判成起步相位
+    }
+
+    /**
+     * T2-2（E2）：递送中途被取消——已插段定局保留、余段丢弃不落库，且仍翻转会话预览
+     * （否则 last 停在 user，恢复系统会把已答会话再答一轮）。
+     * 手法：dotsAppearMillis 传 5 秒前 → 首段延迟落到 `maxOf(0.3, minTyping - elapsed)` 的 0.3s 分支，
+     * 段间「阅读停顿」2~3s → 700ms 时必然停在「已插 1 段、还在停顿里」，取消点确定。
+     */
+    @Test
+    fun 递送中途取消_已插段保留_余段丢弃_仍翻转预览() = runBlocking {
+        isViewVisible.value = true // 可见才有打字延迟；不可见路径 3 段会瞬间落完
+        val slot = mutableListOf<MessageEntity>()
+        val scope = CoroutineScope(Dispatchers.Default)
+        val job = scope.launch {
+            deliverer.deliverAssistantReply(
+                "第一句。第二句。第三句。", character, settings(min = 3, max = 3),
+                dotsAppearMillis = System.currentTimeMillis() - 5000L, immediate = false, voicePlan = null,
+            )
+        }
+        delay(700)
+        job.cancelAndJoin()
+
+        coVerify { messageRepo.upsert(capture(slot)) }
+        assertTrue("已插段定局保留", slot.size >= 1)
+        assertTrue("未递送段彻底丢弃不落库（REDLINES 三点态打断语义）", slot.size < 3)
+        coVerify { conversationRepo.recordLastMessageIfNewer("conv-1", any(), "assistant", any()) }
+    }
+
+    /**
+     * T2-10/T2-11（E10/E11）：AI 递送收尾的预览写入走**单调**方法——打断瞬间用户新消息（ts 更晚）
+     * 的快照可能已落库，绝不用已插段的旧时刻覆写回去。条件真值由真 SQLite 的 T3 覆盖（本层只钉「走哪个口」）。
+     */
+    @Test
+    fun AI递送收尾_预览走单调方法_不走无条件覆写() = runBlocking {
+        deliverer.deliverAssistantReply(
+            "今天真不错", character, settings(), dotsAppearMillis = 0L, immediate = false, voicePlan = null,
+        )
+        coVerify(exactly = 1) { conversationRepo.recordLastMessageIfNewer("conv-1", any(), "assistant", any()) }
+        coVerify(exactly = 0) { conversationRepo.recordLastMessage(any(), any(), any(), any()) }
     }
 
     @Test
@@ -250,5 +325,8 @@ class ChatReplyDelivererTest {
         assertTrue(result.messages.isEmpty())
         coVerify { offlineMeetingService.handleSuggestMeeting("conv-1", action, emotionTag = null) }
         coVerify(exactly = 0) { messageRepo.upsert(any()) }
+        // T2-14（E18）：卡片即回复——正文空也要记「本回合已产出」（J8 第 3 记账点），
+        // 否则纯卡片回合的收尾维护期会被误判成起步相位而被用户下一句打断。
+        assertNotNull(deliverer.lastOutputJob)
     }
 }

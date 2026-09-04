@@ -87,6 +87,37 @@ class MessageRepository @Inject constructor(
     suspend fun conversationUuidForOfflineSession(sessionId: String): String? =
         dao.conversationUuidForSession(sessionId, MessageKind.OFFLINE_MARKER_START.raw)
 
+    /**
+     * 引用一期：为提示词窗口 [window] 预取「被引用消息」的时间戳 + 原始正文（图纸 §3.1）。
+     *
+     * 键集合 = 窗口里**真会产出引用行**的那些消息的 `quotedMessageUUID`（与 `PromptBuilderHistory` 的注入守卫
+     * 同口径：`quotedContent` 非空才算），所以窗口里一条引用都没有时**零次查库**。命中窗口自身的消息直接复用
+     * （被引用的多半就在窗口里），只有窗口外的才逐条 `getByUuid`；查不到（用户已删原消息）的 uuid **不进表**，
+     * 由调用方走无锚降级 + 回退落库快照。
+     */
+    suspend fun quotedRefs(window: List<MessageEntity>): Map<String, QuotedMessageRef> {
+        val needed = window.mapNotNullTo(LinkedHashSet()) { m ->
+            m.quotedMessageUUID?.takeIf { it.isNotEmpty() && !m.quotedContent.isNullOrEmpty() }
+        }
+        if (needed.isEmpty()) return emptyMap()
+        val inWindow = window.associateBy { it.messageUUID }
+        val refs = LinkedHashMap<String, QuotedMessageRef>(needed.size)
+        for (uuid in needed) {
+            val target = inWindow[uuid] ?: dao.getByUuid(uuid) ?: continue
+            // 复核 R1 🔴：只有「正文即人话」的目标才端原文。结构化卡的 content 是 JSON（红包 amount /
+            // 礼物 cost），图片的是内部哨兵——2026-09-04 收紧之前这些都能被右滑引用，库里存得下老行；
+            // 端回去等于拆掉 AssistantTurnController 落库侧那道脱敏。这类目标 rawContent=null，
+            // 调用方回退落库快照；时间戳照给，老引用一样有时间锚。
+            val plainText = MessageKind.fromRaw(target.messageKindRaw) == MessageKind.PLAIN_TEXT &&
+                target.imageRelativePath == null
+            refs[uuid] = QuotedMessageRef(
+                timestampMillis = target.timestamp,
+                rawContent = target.content.takeIf { plainText },
+            )
+        }
+        return refs
+    }
+
     suspend fun get(uuid: String): MessageEntity? = dao.getByUuid(uuid)
     suspend fun upsert(message: MessageEntity) = dao.upsert(message)
 

@@ -20,17 +20,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,7 +40,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -59,6 +56,8 @@ import com.situ.aichat.ui.designsystem.AppDialogTone
 import com.situ.aichat.ui.designsystem.AppMenu
 import com.situ.aichat.ui.designsystem.AppMenuItem
 import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTopBar
+import com.situ.aichat.ui.designsystem.AppTopBarIcons
 
 /**
  * 上下文日志列表屏（批 D·D-3）。顶部分类 chip 横滚 + 卡片列表（状态/角色/来源徽标/模型/时间/消息数/token/失败红条）
@@ -76,19 +75,17 @@ fun ContextLogListScreen(
     var menuOpen by remember { mutableStateOf(false) }
     var confirmClear by remember { mutableStateOf(false) }
 
+    val listState = rememberLazyListState()
     Scaffold(
         containerColor = AppTheme.colors.surface.base,
         topBar = {
-            TopAppBar(
-                title = { Text("上下文日志", modifier = Modifier.semantics { heading() }) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }
-                },
+            AppTopBar(
+                title = "上下文日志",
+                onBack = onBack,
+                lifted = listState.canScrollBackward,
                 actions = {
                     IconButton(onClick = { menuOpen = true }) {
-                        Icon(Icons.Filled.MoreVert, contentDescription = "更多")
+                        Icon(AppTopBarIcons.More, contentDescription = "更多")
                     }
                     AppMenu(expanded = menuOpen, onDismiss = { menuOpen = false }) {
                         AppMenuItem(text = "保留设置", onClick = { menuOpen = false; onOpenSettings() })
@@ -114,6 +111,7 @@ fun ContextLogListScreen(
                 EmptyState(loaded = state.loaded, category = state.category, detailEnabled = state.detailEnabled)
             } else {
                 LazyColumn(
+                    state = listState,
                     contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 2.dp, bottom = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {

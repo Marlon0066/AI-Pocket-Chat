@@ -114,6 +114,7 @@ fun WallpaperCropScreen(
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             val src = source
             if (src == null) {
+                // TODO(图纸未覆盖): 同 AvatarCropScreen —— 画在用户壁纸照片上的白色转圈，换 accent 会糊掉（D-13）。
                 CircularProgressIndicator(Modifier.align(Alignment.Center), color = Color.White)
             } else {
                 CropEditor(src, onCancel, onConfirm)

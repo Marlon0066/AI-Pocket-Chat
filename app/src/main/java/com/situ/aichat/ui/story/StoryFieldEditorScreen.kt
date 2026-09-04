@@ -19,14 +19,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,8 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,6 +47,8 @@ import com.situ.aichat.ui.designsystem.AppDialogTone
 import com.situ.aichat.ui.designsystem.AppSegmentedControl
 import com.situ.aichat.ui.designsystem.AppTextArea
 import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTopBar
+import com.situ.aichat.ui.designsystem.AppTypography
 import kotlinx.coroutines.launch
 
 /** 计数行转警示色的阈值（图纸 §4.4：超 280 变色，300 拒收）。`internal` = 创建屏同一口径复用（卷四）。 */
@@ -90,31 +85,16 @@ fun StoryFieldEditorScreen(
     }
     BackHandler { leave() }
 
+    val scrollState = rememberScrollState()
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        // 标题走 VM 的 titleRes 单源（本书字段读注册表 / 三个全局哨兵各自的词条·装载中也已就位）。
-                        Text(
-                            stringResource(viewModel.titleRes),
-                            modifier = Modifier.semantics { heading() },
-                        )
-                        val subtitle = when {
-                            s == null || s.field == null -> null
-                            s.isArchive -> s.bookTitle
-                            else -> stringResource(R.string.story_field_editor_sub_book)
-                        }
-                        subtitle?.takeIf { it.isNotBlank() }?.let {
-                            Text(it, style = AppTheme.typography.caption, color = AppTheme.colors.text.secondary)
-                        }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { leave() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
-                    }
-                },
+            // 标题走 VM 的 titleRes 单源（本书字段读注册表 / 三个全局哨兵各自的词条·装载中也已就位）；
+            // 副标题移进内容区顶部第一行（图纸 §4.7）——门楣的 title 槽只收单行居中标题。
+            AppTopBar(
+                title = stringResource(viewModel.titleRes),
+                onBack = { leave() },
+                lifted = scrollState.value > 0,
             )
         },
     ) { padding ->
@@ -123,9 +103,24 @@ fun StoryFieldEditorScreen(
             modifier = Modifier.fillMaxSize().padding(padding).imePadding(),
         ) {
             Column(
-                modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                modifier = Modifier.weight(1f).verticalScroll(scrollState).padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                // 副标题（原在顶栏 title 槽第二行·取值表达式原样搬含空白守卫）：横向内边距由外层 Column
+                // 已给的 16dp 承担，这里只补竖向 8dp（图纸 §4.7·落值登记 §11 D-5）。
+                val subtitle = when {
+                    s.field == null -> null
+                    s.isArchive -> s.bookTitle
+                    else -> stringResource(R.string.story_field_editor_sub_book)
+                }
+                subtitle?.takeIf { it.isNotBlank() }?.let {
+                    Text(
+                        it,
+                        style = AppTypography.settingsRowSubtitle,
+                        color = AppTheme.colors.text.secondary,
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    )
+                }
                 if (s.showModeSegment) ModeSegment(s.mode, viewModel::setMode)
                 when {
                     s.mode == StoryFieldMode.FOLLOW -> InheritedPreview(s.inheritedText)

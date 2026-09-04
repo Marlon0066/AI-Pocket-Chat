@@ -44,7 +44,9 @@ private val SWIPE_REVEAL = 4.dp      // 越此距离才显回弹箭头。
  * 与纵向滚动共存：`detectHorizontalDragGestures` 仅在水平 slop 越过后才认领指针，纵向滚动自然胜出（= iOS
  * `abs(vx)>abs(vy)` 判定）。与 Android 预测式返回共存：气泡从不贴屏幕左右缘（AI 缩进 ~52dp、用户右对齐），系统
  * 边缘手势在到达气泡 pointerInput 前已被系统接管，故无需显式避让左缘（iOS 因 inverted scrollview 才需 30pt 守卫）。
- * [enabled]=message.isContentRevealed（流式占位气泡不可引用，1:1 iOS）。用户与 AI 气泡都适用。
+ * [enabled]=`message.isContentRevealed && messageCanBeQuoted(message)`——流式占位气泡不可引用（1:1 iOS），
+ * 且自 2026-09-04 用户拍板起**只有正文有话可引的气泡可引用**（纯文字/贴纸/转写到位的语音；图片、各类卡片、
+ * 占位转写的语音一律滑不动·判据单源见 [com.situ.aichat.ui.chat.messageCanBeQuoted]）。用户与 AI 两侧同等适用。
  *
  * ⚠️ 结构恒定铁律（2026-07-08 V9 根因修复）：禁用态**只关手势，绝不换子树**——旧写法 `if (!enabled) { content();
  * return }` 让 content 在 enabled 翻转时落到不同调用点 → Compose 视为全新子树整体重建 → 「占位→显形」瞬间

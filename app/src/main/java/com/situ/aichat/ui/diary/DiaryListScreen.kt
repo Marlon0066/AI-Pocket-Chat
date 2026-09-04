@@ -17,20 +17,19 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -50,7 +49,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -71,6 +69,7 @@ import com.situ.aichat.ui.designsystem.AppMenu
 import com.situ.aichat.ui.designsystem.AppMenuItem
 import com.situ.aichat.ui.designsystem.AppSegmentedControl
 import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTopBar
 import java.time.Instant
 import java.time.YearMonth
 import java.time.ZoneId
@@ -80,7 +79,7 @@ import java.time.ZoneId
  * 三视图切换 + 胶囊「写一笔」+ API 缺失横幅 + 空状态 + 长按删除。响应式观察全部日记（VM），
  * 异步落地的自动日记/AI 评论自动刷新。
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DiaryListScreen(
     onBack: () -> Unit,
@@ -113,15 +112,20 @@ fun DiaryListScreen(
         onDispose { viewModel.markDiaryAsRead() }
     }
 
+    // 门楣升起态的滚动源：三视图各有各的列表，按当前视图取（日历视图不吃升起态）。
+    val timelineState = rememberLazyListState()
+    val compactState = rememberLazyListState()
+    val lifted = when (viewMode) {
+        DiaryViewMode.TIMELINE -> timelineState.canScrollBackward
+        DiaryViewMode.LIST -> compactState.canScrollBackward
+        else -> false
+    }
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.diary_nav_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
-                    }
-                },
+            AppTopBar(
+                title = stringResource(R.string.diary_nav_title),
+                onBack = onBack,
+                lifted = lifted,
                 actions = {
                     // R5 连续记录印章（发布才算·O4）：>0 才现身。
                     if (insights.streakDays > 0) {
@@ -181,6 +185,7 @@ fun DiaryListScreen(
                     filtered.isEmpty() -> DiaryFilterEmptyState(entryFilter)
                     viewMode == DiaryViewMode.TIMELINE ->
                         DiaryTimeline(
+                            listState = timelineState,
                             entries = filtered,
                             charactersByUuid = charactersByUuid,
                             exchangeUi = exchangeUi,
@@ -197,7 +202,7 @@ fun DiaryListScreen(
                             onOpenReview = { shownReview = it },
                             onGenerateReview = viewModel::generateMonthlyReview,
                         ) { deleteTarget = it }
-                    viewMode == DiaryViewMode.LIST -> DiaryCompactList(filtered, onOpenEntry) { deleteTarget = it }
+                    viewMode == DiaryViewMode.LIST -> DiaryCompactList(compactState, filtered, onOpenEntry) { deleteTarget = it }
                     else -> DiaryCalendarSection(filtered, charactersByUuid, onOpenEntry, viewModel::publishDraft) { deleteTarget = it }
                 }
             }
@@ -348,6 +353,7 @@ private fun DiaryFilterEmptyState(filter: DiaryEntryFilter) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DiaryTimeline(
+    listState: LazyListState,
     entries: List<DiaryEntryWithComments>,
     charactersByUuid: Map<String, com.situ.aichat.data.local.entity.CharacterEntity>,
     exchangeUi: DiaryExchangeUiState,
@@ -374,6 +380,7 @@ private fun DiaryTimeline(
             .atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
     }
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
         // 底部留胶囊「写一笔」的悬浮净空。
         contentPadding = PaddingValues(top = 4.dp, bottom = 88.dp),
@@ -440,11 +447,12 @@ private fun DiaryTimeline(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DiaryCompactList(
+    listState: LazyListState,
     entries: List<DiaryEntryWithComments>,
     onOpenEntry: (String) -> Unit,
     onLongPress: (String) -> Unit,
 ) {
-    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 88.dp)) {
+    LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 88.dp)) {
         items(entries, key = { it.entry.uuid }) { ewc ->
             DiaryEntryRowCompact(
                 entry = ewc.entry,

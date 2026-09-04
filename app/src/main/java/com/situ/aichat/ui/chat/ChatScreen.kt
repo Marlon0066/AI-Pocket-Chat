@@ -56,7 +56,6 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -85,6 +84,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.situ.aichat.ui.designsystem.AppSnackbarHost
 import com.situ.aichat.ui.offline.OfflineImmersiveInputView
 import com.situ.aichat.ui.offline.OfflineBackgroundView
 import com.situ.aichat.ui.offline.OfflineModeView
@@ -400,13 +400,13 @@ fun ChatScreen(
                 deleteArm.value++ // V9：先于删除帧武装位移弹簧窗（收拢动画）
                 viewModel.deleteMessage(msg) // 即删——删除窗内 placementSpec 负责收拢
             },
-            onOpenMenu = { msg, boundsInWindow ->
+            onOpenMenu = { msg, boundsInWindow, canRegenerate ->
                 menuScope.launch {
                     val backdrop = captureImmersiveBackdrop(chatRootView)
                     val bounds = backdrop?.let {
                         boundsInWindow.translate(-it.viewOffsetInWindow.x.toFloat(), -it.viewOffsetInWindow.y.toFloat())
                     } ?: boundsInWindow
-                    immersiveMenu.open(msg, bounds, backdrop?.snapshot, backdrop?.frosted)
+                    immersiveMenu.open(msg, bounds, backdrop?.snapshot, backdrop?.frosted, canRegenerate)
                 }
             },
             onFlightBubblePositioned = { msg, bounds ->
@@ -425,7 +425,6 @@ fun ChatScreen(
             onEndMeeting = { viewModel.exitOfflineMode() },
             onContinueMeeting = { viewModel.continueOfflineMeeting(it) },
             onReviewOffline = { viewModel.openOfflineReview(it) },
-            onConvertToInvite = { sheets.convertTargetMessage = it },
             observeAppointment = { viewModel.observeAppointment(it) },
             onAppointmentAccept = { viewModel.acceptAppointment(it) },
             onAppointmentDecline = { viewModel.declineAppointment(it) },
@@ -601,7 +600,7 @@ fun ChatScreen(
                 },
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHost) },
+        snackbarHost = { AppSnackbarHost(snackbarHost) },
         bottomBar = {
             // 审计刀C（2026-07-02 到期执行·文件破 ⛔800 触发）：输入托盘+面板宿主+弹层管家整块只搬不改
             // 抽 ChatBottomBar.kt；input 状态仍归本屏（saveable 语义不变），经 onInputChange 回写。
@@ -742,7 +741,7 @@ fun ChatScreen(
                         userName = userName,
                         userAvatarPath = userAvatarPath,
                         customStickers = customStickers,
-                        isOfflineModeActive = conversation?.isInOfflineMode == true,
+                        isSending = isSending,
                         networkConnected = networkConnected,
                         networkStatusChanged = networkStatusChanged,
                         showScrollDown = showScrollDown,
@@ -772,7 +771,6 @@ fun ChatScreen(
         // 见面回顾覆盖层声明在后=仍居其上（二者不并存：菜单只在常规列表长按开启）。
         ChatImmersiveMenuOverlay(
             state = immersiveMenu,
-            isOfflineModeActive = conversation?.isInOfflineMode == true,
             actions = actions,
             reduceMotion = reduceMotion,
         )

@@ -17,9 +17,7 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SelectableDates
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -141,10 +139,6 @@ fun FutureMeetingFormSheet(
                 AppSwitch(
                     checked = useExactTime,
                     onCheckedChange = { useExactTime = it },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = colors.surface.base,
-                        checkedTrackColor = colors.accent.primary,
-                    ),
                 )
             }
             if (useExactTime) {
@@ -258,11 +252,11 @@ private fun FutureMeetingDatePickerDialog(
         onDismissRequest = onDismiss,
         colors = DatePickerDefaults.colors(containerColor = AppTheme.colors.surface.raised),
         confirmButton = {
-            TextButton(onClick = {
+            AppButton(style = AppButtonStyle.Text, onClick = {
                 state.selectedDateMillis?.let { onConfirm(utcToLocalDate(it)) }
             }) { Text("确定") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+        dismissButton = { AppButton(style = AppButtonStyle.Text, onClick = onDismiss) { Text("取消") } },
     ) {
         DatePicker(state = state)
     }

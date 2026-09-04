@@ -7,7 +7,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,9 +21,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Chat
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Backup
@@ -54,12 +51,9 @@ import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -86,7 +80,10 @@ import com.situ.aichat.ui.components.rememberReduceMotion
 import com.situ.aichat.ui.designsystem.AppColors
 import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppFeatureIcons
+import com.situ.aichat.ui.designsystem.AppRadio
+import com.situ.aichat.ui.designsystem.AppSettingsRow
 import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.ui.designsystem.appCardSurface
 import com.situ.aichat.ui.profile.UserProfileViewModel
 import com.situ.aichat.util.LocaleManager
@@ -146,15 +143,13 @@ fun SettingsScreen(
     val currentTag = LocaleManager.currentTag(context)
     val advancedBadge = stringResource(R.string.settings_advanced_badge)
 
+    val scrollState = rememberScrollState()
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.settings_screen_title), modifier = Modifier.semantics { heading() }) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
-                    }
-                },
+            AppTopBar(
+                title = stringResource(R.string.settings_screen_title),
+                onBack = onBack,
+                lifted = scrollState.value > 0,
             )
         },
     ) { padding ->
@@ -162,7 +157,7 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .contentMaxWidth()
                 .padding(vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -323,9 +318,15 @@ internal fun SettingsGroupCard(title: String, content: @Composable () -> Unit) {
 }
 
 /**
- * 分组卡内的单条设置入口（D7 紧凑自绘行，替代 M3 ListItem 默认高度）：
- * 图标 + 标题（+ 可选副标题）+ 行尾回显值（D6）/「高级」徽标 + 箭头，整行可点（clickable 合并子语义）。
- * `internal`（卷四）：同包的 [StoryGlobalSettingsScreen] 直接复用同一份长相，绝不复刻第二份。
+ * 分组卡内的单条设置入口——**委托 [AppSettingsRow]**（R1 复核 🟡-1 返工 2026-09-04）。
+ *
+ * 原为一份私有自绘行（22dp 裸图标 + M3 `bodyLarge` + 16dp padding + 52dp 行高）。C9 把同屏的
+ * [com.situ.aichat.ui.components.SettingsSwitchRow] 换成 [AppSettingsRow]（30dp 陶土瓦片 + 13sp 题 +
+ * 18dp padding + 56dp 行高）之后，**同一张分组卡里出现两种行语言**——图标左缘、文字左缘、题字号三处对不齐
+ * （收编前两者都走 M3 列表行，观感反而是齐的）。故本函数改为薄委托：长相单源收归 [AppSettingsRow]，
+ * 本层只保留「导航行恒有 chevron」这一条语义默认。
+ *
+ * `internal`：同包的 [StoryGlobalSettingsScreen] 复用同一份长相，绝不复刻第二份。
  */
 @Composable
 internal fun SettingsRow(
@@ -336,42 +337,16 @@ internal fun SettingsRow(
     value: String? = null,
     badge: String? = null,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .heightIn(min = 52.dp)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            if (subtitle != null) {
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        if (value != null) {
-            Text(value, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-        }
-        if (badge != null) {
-            Text(
-                badge,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape)
-                    .padding(horizontal = 8.dp, vertical = 2.dp),
-            )
-        }
-        Icon(
-            Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp),
-        )
-    }
+    AppSettingsRow(
+        title = title,
+        modifier = Modifier.fillMaxWidth(),
+        subtitle = subtitle,
+        icon = icon,
+        value = value,
+        badge = badge,
+        showChevron = true,
+        onClick = onClick,
+    )
 }
 
 /**
@@ -478,7 +453,7 @@ private fun LanguageDialog(
                             .padding(vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        RadioButton(selected = tag == current, onClick = { onSelect(tag) })
+                        AppRadio(selected = tag == current, onClick = { onSelect(tag) })
                         Text(
                             stringResource(labelRes),
                             modifier = Modifier.padding(start = 8.dp),

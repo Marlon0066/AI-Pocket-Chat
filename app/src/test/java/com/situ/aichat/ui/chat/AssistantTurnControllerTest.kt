@@ -7,6 +7,7 @@ import com.situ.aichat.data.local.AppDatabase
 import com.situ.aichat.data.local.entity.CharacterEntity
 import com.situ.aichat.data.local.entity.ConversationEntity
 import com.situ.aichat.data.local.entity.MessageEntity
+import com.situ.aichat.data.model.MessageKind
 import com.situ.aichat.data.model.ApiFunction
 import com.situ.aichat.data.model.AppSettings
 import com.situ.aichat.data.remote.llm.ApiConfigValues
@@ -452,7 +453,8 @@ class AssistantTurnControllerTest {
 
     @Test
     fun 重新生成_删尾段assistant_重跑回合() = runBlocking {
-        coEvery { messageRepo.recentChronological("conv-1", any()) } returns
+        // 2026-09-04 根治：取【可见流】而非 DB 全量——与菜单判据 RegenerableTurn 同源。
+        coEvery { messageRepo.recentVisibleChronological("conv-1", any()) } returns
             listOf(userMsg(), assistantMsg("a1"), assistantMsg("a2"))
         controller.regenerate()
         coVerify { messageRepo.deleteByUuid("a1") }
@@ -468,7 +470,7 @@ class AssistantTurnControllerTest {
         val scopeJob = Job()
         val cancellable = buildController(CoroutineScope(scopeJob + Dispatchers.Unconfined))
         val gate = CompletableDeferred<Unit>()
-        coEvery { messageRepo.recentChronological("conv-1", any()) } returns
+        coEvery { messageRepo.recentVisibleChronological("conv-1", any()) } returns
             listOf(userMsg(), assistantMsg("a1"), assistantMsg("a2"))
         coEvery { messageRepo.deleteByUuid("a1") } coAnswers { gate.await() }
 
@@ -484,8 +486,27 @@ class AssistantTurnControllerTest {
 
     @Test
     fun 重新生成_无尾段assistant_不删不跑() = runBlocking {
-        coEvery { messageRepo.recentChronological("conv-1", any()) } returns
+        coEvery { messageRepo.recentVisibleChronological("conv-1", any()) } returns
             listOf(assistantMsg("a1"), userMsg()) // 末条是 user
+        controller.regenerate()
+        coVerify(exactly = 0) { messageRepo.deleteByUuid(any()) }
+        coVerify(exactly = 0) { assistantTurnEngine.runAssistantTurn(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun 重新生成_末尾是事件卡_不删不跑() = runBlocking {
+        // 复核 R2 🔴-1 根治：通话记录卡 / 见面结束条 / 红包礼物是「事件凭证」不是「AI 说的一句话」——
+        // 遇到即停，既不给菜单项也绝不删（此前按 DB 全量算会把通话记录卡与见面结束条误删，
+        // 而它们各自是回看通话 / 见面回顾的唯一入口）。
+        val rows = listOf(
+            userMsg(),
+            assistantMsg("a1"),
+            assistantMsg("card").copy(messageKindRaw = MessageKind.CALL_RECORD_CARD.raw),
+        )
+        // 两条取数都 stub 成同一份**才有判别力**：只 stub 可见流的话，退回旧写法（读全量 getRecent）时
+        // mock 返回空列表 → 照样「不删不跑」→ 用例假绿。同源之后两边内容本就该一致。
+        coEvery { messageRepo.recentVisibleChronological("conv-1", any()) } returns rows
+        coEvery { messageRepo.recentChronological("conv-1", any()) } returns rows
         controller.regenerate()
         coVerify(exactly = 0) { messageRepo.deleteByUuid(any()) }
         coVerify(exactly = 0) { assistantTurnEngine.runAssistantTurn(any(), any(), any(), any(), any()) }

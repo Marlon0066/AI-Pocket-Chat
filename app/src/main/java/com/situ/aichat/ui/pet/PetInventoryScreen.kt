@@ -20,18 +20,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Backpack
 import androidx.compose.material.icons.filled.Checkroom
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,21 +36,19 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.situ.aichat.R
 import com.situ.aichat.ui.designsystem.AppSegmentedControl
 import com.situ.aichat.pet.PetInventoryService
 import com.situ.aichat.pet.PetItem
 import com.situ.aichat.pet.PetItemCategory
 import com.situ.aichat.pet.PetItemKind
 import com.situ.aichat.ui.components.LocalAppHaptics
+import com.situ.aichat.ui.designsystem.AppSnackbarHost
+import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.ui.gift.GiftColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -85,15 +79,10 @@ fun PetInventoryScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("背包", modifier = Modifier.semantics { heading() }) },
-                navigationIcon = {
-                    IconButton(onClick = onClose) { Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_close)) }
-                },
-                actions = { CountPill(foodCount + costumeCount) },
-            )
+            // 顶栏正下方是恒定不动的分段控件（列表在它之下）→ 内容永不滚到栏下，恒静止（图纸 §11 D-2）。
+            AppTopBar(title = "背包", onBack = onClose, actions = { CountPill(foodCount + costumeCount) })
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { AppSnackbarHost(snackbarHostState) },
     ) { padding ->
         Column(
             Modifier

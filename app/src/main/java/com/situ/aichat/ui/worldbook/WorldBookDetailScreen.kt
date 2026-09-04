@@ -17,22 +17,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,7 +43,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,6 +56,7 @@ import com.situ.aichat.ui.components.CharacterAvatar
 import com.situ.aichat.ui.components.SettingsSwitchRow
 import com.situ.aichat.ui.components.clickableScale
 import com.situ.aichat.ui.components.contentMaxWidth
+import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppMenu
 import com.situ.aichat.ui.designsystem.AppMenuItem
 import com.situ.aichat.ui.designsystem.AppSearchField
@@ -67,6 +64,8 @@ import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppSheet
 import com.situ.aichat.ui.designsystem.AppSwitch
 import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTopBar
+import com.situ.aichat.ui.designsystem.AppTopBarIcons
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -125,26 +124,17 @@ fun WorldBookDetailScreen(
 
     val b = book ?: return
 
+    val listState = rememberLazyListState()
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        b.name.ifBlank { stringResource(R.string.wb_shelf_title) },
-                        modifier = Modifier.semantics { heading() },
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
-                    }
-                },
+            AppTopBar(
+                title = b.name.ifBlank { stringResource(R.string.wb_shelf_title) },
+                onBack = onBack,
+                lifted = listState.canScrollBackward,
                 actions = {
                     Box {
                         IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.wb_cd_more_actions))
+                            Icon(AppTopBarIcons.More, contentDescription = stringResource(R.string.wb_cd_more_actions))
                         }
                         AppMenu(expanded = showMenu, onDismiss = { showMenu = false }) {
                             AppMenuItem(
@@ -176,6 +166,7 @@ fun WorldBookDetailScreen(
         },
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier.padding(padding).fillMaxSize().contentMaxWidth(),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -193,7 +184,7 @@ fun WorldBookDetailScreen(
                                 color = colors.text.secondary,
                             )
                         }
-                        HorizontalDivider(color = colors.surface.stroke)
+                        AppListDivider(startInset = 0.dp)
                         SettingsSwitchRow(
                             title = stringResource(R.string.wb_enable_book),
                             checked = b.enabled,
@@ -206,7 +197,7 @@ fun WorldBookDetailScreen(
                             onCheckedChange = { viewModel.setBookGlobal(it) },
                         )
                         if (!b.isGlobal) {
-                            HorizontalDivider(color = colors.surface.stroke)
+                            AppListDivider(startInset = 0.dp)
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()

@@ -14,7 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Handshake
 import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.situ.aichat.R
 import com.situ.aichat.ui.designsystem.AppFeatureIcons
+import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppNavIcons
 import com.situ.aichat.ui.designsystem.AppPanelIcons
 import com.situ.aichat.ui.designsystem.AppProfileIcons
@@ -58,7 +58,7 @@ internal fun OurDayFactsSection(
         modifier = Modifier.padding(top = 16.dp, start = 2.dp, bottom = 8.dp),
     )
     facts.forEachIndexed { index, item ->
-        if (index > 0) HorizontalDivider(color = colors.surface.stroke, thickness = 0.5.dp)
+        if (index > 0) AppListDivider(startInset = 0.dp)
         val (icon, tile, tint) = factIcon(item.kind)
         Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
             Box(Modifier.size(28.dp).clip(RoundedCornerShape(9.dp)).background(tile), contentAlignment = Alignment.Center) {

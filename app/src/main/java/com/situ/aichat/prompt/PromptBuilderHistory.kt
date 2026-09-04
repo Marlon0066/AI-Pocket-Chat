@@ -19,6 +19,7 @@ import com.situ.aichat.data.model.buildRedPacketLLMRepresentation
 import com.situ.aichat.data.model.systemEventTargetIsAssistant
 import com.situ.aichat.data.remote.llm.ChatContentPart
 import com.situ.aichat.data.remote.llm.ChatMessageDto
+import com.situ.aichat.data.repository.QuotedMessageRef
 import com.situ.aichat.gift.FestivalCalendar
 import com.situ.aichat.offline.OfflineMarkerEndPayload
 import com.situ.aichat.prompt.memory.MemoryService
@@ -75,6 +76,10 @@ internal fun appendConversationMessages(
     /** 记忆改造二期·部件④ 见面时间线注记（图纸 §3.1）：该角色全部见面档案行（注记端自筛跨度 + 上限 5）；
      *  空 / now=null → 零注记。与分割线共用 now 门控（见面 / 通话 / 忙碌场景 now=null → 不产注记）。 */
     meetingTimeline: List<OfflineMeetingMemoryEntity> = emptyList(),
+    /** 引用一期（图纸 §3.1）：quotedMessageUUID → 被引用消息的时间戳 + 原始正文，调用方经
+     *  `MessageRepository.quotedRefs` 预取一次。缺席（含默认空表）→ 引用行走无锚形态 + 回退落库快照，
+     *  行为与接线前逐字相同，故不接预取的路径零改动。 */
+    quotedRefs: Map<String, QuotedMessageRef> = emptyMap(),
 ) {
     var pendingAssistant = mutableListOf<String>()
     var pendingUser = mutableListOf<String>()
@@ -217,13 +222,21 @@ internal fun appendConversationMessages(
             normalizedContent = OfflineMarkerEndPayload.parse(message.content)?.llmRepresentation() ?: ""
         }
 
-        // 引用消息：user 消息前注入引用上下文
+        // 引用消息：user 消息前注入引用上下文（引用一期·措辞与截断规格单源 [PromptQuoteLine]）。
+        // 正文用**预取到的原始 content**（含 `[sticker:xxx]`），原消息已删则回退落库的显示串；时间锚与
+        // 分割线共用 now 门控（now=null 的线下/通话/忙碌场景 → 无锚形态）。**本步必须排在下面的表情标签
+        // 转语义之前**：引用到的表情靠那一步自动变成 `[非语言情绪：…]`（图纸 §0.2 决策三）。
         if (message.roleRaw == PromptBuilder.ROLE_USER && !message.quotedContent.isNullOrEmpty()) {
-            val userName = userProfile?.nickname?.takeIf { it.isNotEmpty() } ?: strings.s(R.string.pb_user_fallback)
-            val charName = character.name
-            val senderLabel = if (message.quotedSenderRole == "user") userName else charName
-            val truncated = message.quotedContent.take(80)
-            normalizedContent = "【回复\"$senderLabel\"说的：「$truncated」】\n$normalizedContent"
+            val ref = message.quotedMessageUUID?.let { quotedRefs[it] }
+            val quoteLine = PromptQuoteLine.build(
+                userName = resolvedUserName,
+                quotedContent = ref?.rawContent ?: message.quotedContent,
+                quotedSenderRole = message.quotedSenderRole,
+                quotedTimestampMillis = ref?.timestampMillis,
+                now = now,
+                zone = dividerZone,
+            )
+            normalizedContent = "$quoteLine\n$normalizedContent"
         }
         // 用户消息中的表情包标签转 AI 可理解的语义（1:1 iOS PromptBuilder.swift:566-568，无条件）。
         if (message.roleRaw == PromptBuilder.ROLE_USER) {

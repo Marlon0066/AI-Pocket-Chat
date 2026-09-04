@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Place
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -56,6 +55,7 @@ import com.situ.aichat.gift.GiftHistoryPromptService
 import com.situ.aichat.offline.OfflineMeetingSession
 import com.situ.aichat.profile.CharacterWalletActivity
 import com.situ.aichat.ui.components.AnimatedCoinText
+import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.appCardSurface
 import com.situ.aichat.ui.gift.GiftSymbolMapping
 import com.situ.aichat.ui.offline.MeetingSkyHeroCard
@@ -117,7 +117,7 @@ internal fun RelationshipAccountCard(
 
         if (gifts.isNotEmpty()) {
             Spacer(Modifier.size(12.dp))
-            HorizontalDivider()
+            AppListDivider(startInset = 0.dp)
             Spacer(Modifier.size(12.dp))
             Text(
                 stringResource(R.string.profile_account_gifts_subtitle, characterName),
@@ -139,7 +139,7 @@ internal fun RelationshipAccountCard(
             }
 
             Spacer(Modifier.size(12.dp))
-            HorizontalDivider()
+            AppListDivider(startInset = 0.dp)
             Spacer(Modifier.size(12.dp))
             Text(
                 stringResource(R.string.profile_account_gift_count, characterName, gifts.size),
@@ -258,7 +258,7 @@ internal fun CharacterWalletCard(
         }
 
         Spacer(Modifier.size(12.dp))
-        HorizontalDivider()
+        AppListDivider(startInset = 0.dp)
         Spacer(Modifier.size(12.dp))
 
         // 月薪 / 发薪日
@@ -277,7 +277,7 @@ internal fun CharacterWalletCard(
 
         if (activity.recent.isNotEmpty()) {
             Spacer(Modifier.size(12.dp))
-            HorizontalDivider()
+            AppListDivider(startInset = 0.dp)
             Spacer(Modifier.size(12.dp))
             Text(stringResource(R.string.profile_wallet_recent), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.size(8.dp))

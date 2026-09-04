@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
@@ -29,7 +30,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,7 +37,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
@@ -51,13 +50,12 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
 import com.situ.aichat.ui.designsystem.AppActionChip
-import com.situ.aichat.ui.designsystem.AppButton
-import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppChoiceChip
 import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppMenu
 import com.situ.aichat.ui.designsystem.AppMenuItem
 import com.situ.aichat.ui.designsystem.AppTextField
+import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.prompt.PromptModule
 import com.situ.aichat.prompt.PromptModulePosition
 import com.situ.aichat.prompt.PromptScene
@@ -126,13 +124,14 @@ fun PromptModuleSettingsScreen(
         .filter { m -> sceneFilter?.let { (m.enabledScenes ?: PromptScene.entries.toSet()).contains(it) } ?: true }
         .sortedBy { it.sortOrder }
 
+    val listState = rememberLazyListState()
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.pm_title), modifier = Modifier.semantics { heading() }) },
-                navigationIcon = {
-                    AppButton(onClick = onBack, style = AppButtonStyle.Text) { Text(stringResource(R.string.action_cancel)) }
-                },
+            AppTopBar(
+                title = stringResource(R.string.pm_title),
+                onBack = onBack,
+                lifted = listState.canScrollBackward,
             )
         },
         floatingActionButton = {
@@ -146,6 +145,7 @@ fun PromptModuleSettingsScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(padding),
+            state = listState,
             contentPadding = PaddingValues(bottom = 88.dp),
         ) {
             item {

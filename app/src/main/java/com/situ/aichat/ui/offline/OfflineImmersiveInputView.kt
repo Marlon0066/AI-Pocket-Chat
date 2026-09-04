@@ -27,7 +27,6 @@ import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,6 +47,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.situ.aichat.ui.components.LocalAppHaptics
+import com.situ.aichat.ui.designsystem.AppButton
+import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppTextArea
 import com.situ.aichat.ui.designsystem.OnGlass
 
@@ -152,21 +153,21 @@ fun OfflineImmersiveInputView(
         ) {
             // §4.6「上一步」= 中性主色 OnGlass.PrimaryOnDark（禁用态 @0.4f 保留原 M3 dim 观感）。
             val backColor = OnGlass.PrimaryOnDark.copy(alpha = if (isFirstStep) 0.4f else 1f)
-            TextButton(onClick = { if (!isFirstStep) currentStep -= 1 }, enabled = !isFirstStep) {
+            AppButton(style = AppButtonStyle.Text, onClick = { if (!isFirstStep) currentStep -= 1 }, enabled = !isFirstStep) {
                 Icon(Icons.Filled.ChevronLeft, contentDescription = null, tint = backColor, modifier = Modifier.width(16.dp))
                 Text("上一步", style = MaterialTheme.typography.titleSmall, color = backColor)
             }
             Spacer(Modifier.weight(1f))
             // #8·J5：有内容即出「发送」（最后一步保留灰态占位=现状字节级）；发送在左、下一步恒最右（推进键不因发送出现挪位）。
             if (hasAnyContent || isLastStep) {
-                TextButton(onClick = { send() }, enabled = hasAnyContent) {
+                AppButton(style = AppButtonStyle.Text, onClick = { send() }, enabled = hasAnyContent) {
                     Text("发送", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold), color = if (hasAnyContent) themeColor else themeColor.copy(alpha = 0.4f))
                     Spacer(Modifier.width(4.dp))
                     Icon(Icons.Filled.ArrowUpward, contentDescription = null, tint = if (hasAnyContent) themeColor else themeColor.copy(alpha = 0.4f), modifier = Modifier.width(18.dp))
                 }
             }
             if (!isLastStep) {
-                TextButton(onClick = { currentStep += 1 }) {
+                AppButton(style = AppButtonStyle.Text, onClick = { currentStep += 1 }) {
                     Text("下一步", style = MaterialTheme.typography.titleSmall, color = themeColor)
                     Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = themeColor, modifier = Modifier.width(16.dp))
                 }

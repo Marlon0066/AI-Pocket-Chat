@@ -36,7 +36,6 @@ import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -68,6 +67,8 @@ import com.situ.aichat.ui.components.rememberReduceMotion
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppTypography
+import com.situ.aichat.ui.designsystem.appCardSurface
+import com.situ.aichat.ui.designsystem.grainSurface
 import com.situ.aichat.ui.settings.BackgroundReliabilityScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -233,7 +234,7 @@ private fun GrowthPage() {
     OnboardingPage {
         PageTitle(R.string.onboarding_growth_title, R.string.onboarding_growth_subtitle)
         Spacer(Modifier.height(24.dp))
-        Card(Modifier.fillMaxWidth()) {
+        Box(Modifier.fillMaxWidth().appCardSurface(raised = true, cornerRadius = 16.dp).grainSurface()) {
             Column(
                 modifier = Modifier.padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -254,7 +255,7 @@ private fun StartPage(onContinue: () -> Unit) {
     OnboardingPage {
         PageTitle(R.string.onboarding_start_title, R.string.onboarding_start_subtitle)
         Spacer(Modifier.height(24.dp))
-        Card(Modifier.fillMaxWidth()) {
+        Box(Modifier.fillMaxWidth().appCardSurface(raised = true, cornerRadius = 16.dp).grainSurface()) {
             Column(
                 modifier = Modifier.padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -293,7 +294,7 @@ private fun ReliabilityPage(onGoToSettings: () -> Unit, onLater: () -> Unit) {
     OnboardingPage {
         PageTitle(R.string.onboarding_reliability_title, R.string.onboarding_reliability_subtitle)
         Spacer(Modifier.height(24.dp))
-        Card(Modifier.fillMaxWidth()) {
+        Box(Modifier.fillMaxWidth().appCardSurface(raised = true, cornerRadius = 16.dp).grainSurface()) {
             Column(
                 modifier = Modifier.padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -349,7 +350,7 @@ private fun ColumnScope.PageTitle(titleRes: Int, subtitleRes: Int) {
 
 @Composable
 private fun FeatureCard(icon: ImageVector, tint: Color, titleRes: Int, detailRes: Int) {
-    Card(Modifier.fillMaxWidth()) {
+    Box(Modifier.fillMaxWidth().appCardSurface(raised = true, cornerRadius = 16.dp).grainSurface()) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,

@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -38,6 +37,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.situ.aichat.R
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
+import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppSwitch
 import com.situ.aichat.ui.designsystem.appCardSurface
 import com.situ.aichat.data.model.AutoBackupConfig
@@ -93,7 +93,7 @@ fun AutoBackupSection(
     }
 
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        HorizontalDivider()
+        AppListDivider(startInset = 0.dp)
         Text(stringResource(R.string.auto_backup_section_title), style = MaterialTheme.typography.titleMedium)
         Text(
             stringResource(R.string.auto_backup_section_desc),

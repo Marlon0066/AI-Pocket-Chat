@@ -3,7 +3,6 @@ package com.situ.aichat.ui
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -13,6 +12,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.ui.components.LocalAppHaptics
 import com.situ.aichat.ui.components.rememberAppHaptics
+import com.situ.aichat.ui.designsystem.AppLoadingRing
+import com.situ.aichat.ui.designsystem.AppLoadingRingSize
 import com.situ.aichat.ui.onboarding.EulaScreen
 import com.situ.aichat.ui.onboarding.OnboardingScreen
 import com.situ.aichat.ui.theme.AIPocketChatTheme
@@ -74,6 +75,6 @@ fun AppRoot(viewModel: AppViewModel = hiltViewModel()) {
 @Composable
 private fun LoadingGate() {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator()
+        AppLoadingRing(size = AppLoadingRingSize.Large)
     }
 }

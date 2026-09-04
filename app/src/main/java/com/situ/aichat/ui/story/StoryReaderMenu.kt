@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -183,7 +184,12 @@ private fun MenuToggleRow(
             Text(title, fontSize = 15.sp, color = contentColor)
             Text(hint, fontSize = 11.sp, color = secondaryColor)
         }
-        AppSwitch(
+        // TODO(图纸未覆盖): 阅读器沉浸菜单是「自研 chrome」（§0.5 明文不动），它这枚开关的六个颜色全部
+        //  跟着阅读器主题走（深底 + menuSwitchTrack），换成白瓷陶土开关会在深色阅读浮层上突兀。
+        //  AppSwitch 自绘后按 §3 删掉了 colors 形参，故本站从「AppSwitch 透传 colors」退回直接用 M3 Switch
+        //  ——onCheckedChange 本就是 null（整行 clickable 接管），AppSwitch 在这里原本也只是零逻辑透传，
+        //  像素与语义逐字不变。收编与否留复核裁决（施工日志 D-11）。
+        Switch(
             checked = checked,
             onCheckedChange = null,
             modifier = Modifier.scale(0.8f),

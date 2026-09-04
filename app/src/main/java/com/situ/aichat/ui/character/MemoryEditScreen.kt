@@ -15,15 +15,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -33,8 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,8 +37,8 @@ import com.situ.aichat.prompt.memory.MemoryEditMode
 import com.situ.aichat.prompt.memory.MemorySummarySections
 import com.situ.aichat.ui.components.contentMaxWidth
 import com.situ.aichat.ui.designsystem.AppButton
-import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppDialog
+import com.situ.aichat.ui.designsystem.AppFormBar
 import com.situ.aichat.ui.designsystem.AppTextArea
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
@@ -73,33 +66,23 @@ fun MemoryEditScreen(
     }
 
     // 保存中一律忽略返回（预测性返回审计 F3 教训：写入途中被撕会留半份状态）。
+    val scrollState = rememberScrollState()
+
     BackHandler(enabled = !state.saving) { viewModel.requestClose() }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        stringResource(R.string.memory_edit_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.semantics { heading() },
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { viewModel.requestClose() }) {
-                        Icon(
-                            Icons.Filled.Close,
-                            contentDescription = stringResource(R.string.memory_edit_discard_confirm),
-                        )
-                    }
-                },
-                actions = {
+            AppFormBar(
+                title = stringResource(R.string.memory_edit_title),
+                lifted = scrollState.value > 0,
+                // ✕ → 文字「取消」（拍板④）；原 cd 挂的 memory_edit_discard_confirm 由确认弹窗继续使用。
+                onCancel = { viewModel.requestClose() },
+                trailing = {
                     AppButton(
                         onClick = { viewModel.save() },
-                        style = AppButtonStyle.Text,
                         enabled = state.canSave,
                     ) {
-                        Text(stringResource(R.string.memory_edit_save), style = MaterialTheme.typography.labelMedium)
+                        Text(stringResource(R.string.memory_edit_save))
                     }
                 },
             )
@@ -111,7 +94,7 @@ fun MemoryEditScreen(
                 .padding(padding)
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
-                .verticalScroll(rememberScrollState()) // 滚动承重在此（弹层键盘遮挡战役教训）
+                .verticalScroll(scrollState) // 滚动承重在此（弹层键盘遮挡战役教训）
                 .contentMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp)
                 .imePadding(),

@@ -31,8 +31,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
@@ -47,10 +45,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.situ.aichat.ui.designsystem.AppFormBar
 import com.situ.aichat.ui.designsystem.AppTheme
 import kotlin.math.roundToInt
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -130,17 +127,15 @@ fun CharacterEditScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(stringResource(if (viewModel.isEditing) R.string.char_title_edit else R.string.char_title_create), modifier = Modifier.semantics { heading() })
-                },
-                navigationIcon = {
-                    AppButton(onClick = onCancel, style = AppButtonStyle.Text) { Text(stringResource(R.string.action_cancel)) }
-                },
-                actions = {
+            AppFormBar(
+                title = stringResource(
+                    if (viewModel.isEditing) R.string.char_title_edit else R.string.char_title_create,
+                ),
+                lifted = scrollState.value > 0,
+                onCancel = onCancel,
+                trailing = {
                     AppButton(
                         onClick = { viewModel.save(onSaved) },
-                        style = AppButtonStyle.Text,
                         enabled = state.canSave && !saving,
                     ) { Text(stringResource(R.string.action_save)) }
                 },
@@ -511,13 +506,13 @@ fun CharacterEditScreen(
             onDismissRequest = { showDatePicker = false },
             colors = DatePickerDefaults.colors(containerColor = AppTheme.colors.surface.raised),
             confirmButton = {
-                TextButton(onClick = {
+                AppButton(style = AppButtonStyle.Text, onClick = {
                     viewModel.update { it.copy(birthdayMillis = dpState.selectedDateMillis) }
                     showDatePicker = false
                 }) { Text(stringResource(R.string.action_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text(stringResource(R.string.action_cancel)) }
+                AppButton(style = AppButtonStyle.Text, onClick = { showDatePicker = false }) { Text(stringResource(R.string.action_cancel)) }
             },
         ) {
             DatePicker(state = dpState)

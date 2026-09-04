@@ -23,7 +23,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -268,11 +267,7 @@ fun AppDropdownTextField(
                         }
                         Spacer(Modifier.width(8.dp))
                         if (loading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
-                                color = colors.accent.text,
-                            )
+                            AppLoadingRing(size = AppLoadingRingSize.Small)
                         } else {
                             Icon(
                                 imageVector = Icons.Filled.KeyboardArrowDown,

@@ -110,6 +110,17 @@ interface ConversationDao {
     @Query("UPDATE conversations SET lastMessagePreview = :preview, lastMessageRole = :role, lastMessageDate = :timestamp WHERE uuid = :uuid")
     suspend fun updateLastMessageSnapshot(uuid: String, preview: String, role: String, timestamp: Long?)
 
+    /**
+     * 仅当「库中现有时间戳不晚于本次」时才覆写快照（定向三列 UPDATE 同 [updateLastMessageSnapshot]）。
+     * 用于 AI 递送收尾——打断瞬间用户新消息可能已写入更晚的快照，此时不得用已插段的旧时刻覆写回去。
+     * timestamp 单调：`<=` 放行同毫秒（正常路径不因并列写入被静默丢弃）。
+     */
+    @Query(
+        "UPDATE conversations SET lastMessagePreview = :preview, lastMessageRole = :role, lastMessageDate = :timestamp " +
+            "WHERE uuid = :uuid AND (lastMessageDate IS NULL OR lastMessageDate <= :timestamp)",
+    )
+    suspend fun updateLastMessageSnapshotIfNewer(uuid: String, preview: String, role: String, timestamp: Long)
+
     /** 摘要游标推进（批1修复）——定向单列更新，替代原「getByCharacter 快照→整行 upsert」（陈旧快照会覆写并发列）。 */
     @Query("UPDATE conversations SET lastSummarizedMessageDate = :cursor WHERE uuid = :uuid")
     suspend fun updateSummaryCursor(uuid: String, cursor: Long)

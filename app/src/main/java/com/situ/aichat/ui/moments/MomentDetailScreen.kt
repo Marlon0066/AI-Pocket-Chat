@@ -21,17 +21,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,8 +36,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
@@ -61,12 +55,14 @@ import com.situ.aichat.ui.components.CharacterAvatar
 import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppDialogTone
 import com.situ.aichat.ui.designsystem.AppElevation
+import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppMenu
 import com.situ.aichat.ui.designsystem.AppMenuItem
 import com.situ.aichat.ui.designsystem.AppMomentIcons
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppTextArea
 import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.ui.designsystem.appCardSurface
 import com.situ.aichat.ui.designsystem.grainSurface
 import com.situ.aichat.util.DateFormatters
@@ -102,15 +98,14 @@ fun MomentDetailScreen(
     val userName = userProfile?.nickname?.ifBlank { null } ?: meLabel
     val userAvatarPath = userProfile?.avatarPath
 
+    // 门楣升起态要读滚动位置，故 listState 从内容 lambda 提到屏级（顶栏在 Scaffold 参数里，看不见 lambda 内的局部量）。
+    val listState = rememberLazyListState()
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.moment_detail_title), modifier = Modifier.semantics { heading() }) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
-                    }
-                },
+            AppTopBar(
+                title = stringResource(R.string.moment_detail_title),
+                onBack = onBack,
+                lifted = listState.canScrollBackward,
             )
         },
         bottomBar = {
@@ -140,7 +135,6 @@ fun MomentDetailScreen(
         }
         val flat = remember(p.comments) { MomentCommentTreeBuilder.flatten(p.comments) }
         val postByUser = MomentAuthorType.fromRaw(p.post.authorTypeRaw) == MomentAuthorType.USER
-        val listState = rememberLazyListState()
         // moments-ui-2：新评论到达后自动滚到底部（1:1 iOS MomentDetailView 评论追加滚动）。
         // 过渡丝滑化·C：仅在评论数「增长」时才滚（=iOS 追加语义）；打开帖子不再因首帧 size 0→N 误滚到底，
         // 让用户落在帖子正文顶部、而非被动滚到最后一条评论。
@@ -360,7 +354,7 @@ private fun CommentInputBar(
     val colors = AppTheme.colors
     Surface(modifier = modifier, color = colors.surface.raised) {
         Column {
-            HorizontalDivider(thickness = AppElevation.hairlineWidth, color = colors.surface.stroke)
+            AppListDivider(startInset = 0.dp)
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,

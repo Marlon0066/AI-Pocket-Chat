@@ -6,16 +6,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -30,6 +29,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
 import com.situ.aichat.diagnostics.LogShareFormat
 import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTopBar
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -52,16 +52,14 @@ fun ContextLogTextScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    val listState = rememberLazyListState()
     Scaffold(
         containerColor = AppTheme.colors.surface.base,
         topBar = {
-            TopAppBar(
-                title = { Text(if (isContext) "完整上下文" else "回复全文") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }
-                },
+            AppTopBar(
+                title = if (isContext) "完整上下文" else "回复全文",
+                onBack = onBack,
+                lifted = listState.canScrollBackward,
                 actions = {
                     if (text.isNotEmpty()) {
                         val copyLabel = stringResource(R.string.contextlog_viewer_copy)
@@ -83,7 +81,7 @@ fun ContextLogTextScreen(
         },
     ) { padding ->
         SelectionContainer(Modifier.fillMaxSize().padding(padding)) {
-            LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
+            LazyColumn(state = listState, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
                 if (text.isEmpty()) {
                     item {
                         Text("（无内容）", style = AppTheme.typography.secondary, color = AppTheme.colors.text.primary)

@@ -25,7 +25,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -50,6 +49,7 @@ import com.situ.aichat.ui.components.rememberReduceMotion
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppDialog
+import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppSheet
 import com.situ.aichat.ui.designsystem.AppSwitch
@@ -122,7 +122,7 @@ fun CharacterWorldSection(viewModel: CharacterWorldViewModel = hiltViewModel()) 
                 exit = if (reduceMotion) ExitTransition.None else shrinkVertically() + fadeOut(),
             ) {
                 Column {
-                    HorizontalDivider(thickness = 1.dp, color = colors.surface.stroke)
+                    AppListDivider(startInset = 0.dp)
                     val addrTail = when {
                         native -> stringResource(R.string.char_world_addr_native)
                         state.sameCityAsUser -> stringResource(R.string.char_world_addr_same_city)

@@ -57,6 +57,7 @@ import com.situ.aichat.profile.StructuredMemoryStats
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppDialog
+import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppTheme
 import java.time.Instant
 import java.time.ZoneId
@@ -142,7 +143,7 @@ internal fun SharedMemoryCard(
         if (display.isNotEmpty()) {
             if (chips.isNotEmpty()) {
                 Spacer(Modifier.size(12.dp))
-                androidx.compose.material3.HorizontalDivider()
+                AppListDivider(startInset = 0.dp)
                 Spacer(Modifier.size(12.dp))
             }
             Row(

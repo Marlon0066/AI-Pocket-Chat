@@ -108,6 +108,9 @@ class RecoveryReplyGenerator @Inject constructor(
         val zone = ZoneId.systemDefault()
         val todayStart = nowInstant.atZone(zone).toLocalDate().atStartOfDay(zone).toInstant().toEpochMilli()
         val history = messageRepo.recentChronological(conversationUuid, HISTORY_FETCH_LIMIT)
+        // 引用一期：与主引擎同一跳——被引用消息的时间戳 + 原始正文预取一次，进程死亡恢复补生成的引用行
+        // 才与主聊天路一致（有时间锚、被引用的表情带语义）。图纸 §3.1 / B17。
+        val quotedRefs = messageRepo.quotedRefs(history)
         // 向量检索查询 = 待回复的最后一条【真实】用户消息（与主引擎批3 3-6 同口径：跳耳语/结构化卡·渲染同源）。
         val queryMessage = history.lastOrNull {
             val kind = com.situ.aichat.data.model.MessageKind.fromRaw(it.messageKindRaw)
@@ -194,6 +197,7 @@ class RecoveryReplyGenerator @Inject constructor(
             scene = PromptScene.ONLINE_CHAT,
             worldInfo = worldInfo,
             now = nowInstant,
+            quotedRefs = quotedRefs,
         )
 
         val rawReply = contextLog.completion(

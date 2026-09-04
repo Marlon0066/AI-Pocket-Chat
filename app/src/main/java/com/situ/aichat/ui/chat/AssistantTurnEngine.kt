@@ -73,10 +73,10 @@ import com.situ.aichat.prompt.memory.VectorMemoryService
 import com.situ.aichat.worldbook.toWorldInfoSettings
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlin.coroutines.coroutineContext
 
 /**
  * 助手回合编排引擎（刀8·从 ChatViewModel 抽出·只搬不改）：构建 prompt → 流式（工具调用降级 + 空响应重试 +
@@ -174,6 +174,9 @@ internal class AssistantTurnEngine(
         }
         val promptStrings = PromptStrings(appContext)
         val history = messageRepo.recentChronological(conversationUuid, HISTORY_FETCH_LIMIT)
+        // 引用一期：窗口内带引用的消息，其「被引用那条」的时间戳 + 原始正文预取一次（窗口内命中零查库、
+        // 一条引用都没有时零查库）——引用行的时间锚与表情语义都靠它（图纸 §3.1）。
+        val quotedRefs = messageRepo.quotedRefs(history)
 
         // 多模态附件预取（音频 P13.4b / 图片一期）：读盘 + base64 全在 Default 线程，细节见 TurnMediaAttachments。
         val audioAttachments = TurnMediaAttachments.audio(history, config, convo.isInOfflineMode, convo.currentOfflineSessionId)
@@ -362,6 +365,7 @@ internal class AssistantTurnEngine(
             worldInfo = worldInfo,
             now = nowInstant,
             meetingTimeline = meetingRows,
+            quotedRefs = quotedRefs,
             // 记忆改造二期·部件⑤ 前情提要门控（§3.2-E 见面）：本场（key==currentOfflineSessionId）且提要非空才注入。
             inSceneRecap = convo.inSceneRecapText.takeIf {
                 convo.isInOfflineMode &&
@@ -460,6 +464,9 @@ internal class AssistantTurnEngine(
                 errorFlow.value = appContext.getString(R.string.chat_error_empty_reply)
             } else {
                 delivered = true
+                // 第 4 记账点（🔵-1）：挂在 Engine 的「非空回合」四判据上=全项目对「算不算产出」的权威定义，
+                // 覆盖 Deliverer 三处盖不到的纯「未来见面候选」回合（正文空 + 无卡片，将冒确认卡）。无条件写=幂等。
+                replyDeliverer.lastOutputJob = coroutineContext[Job]
                 // P13.4b：媒体降级重试成功投递 → 提示用户语音已转文字发送（1:1 iOS showToast(.audioInputFallback)，仅成功路径）。
                 if (mediaFellBackToText) {
                     // 只在**这一轮真的挂过**对应媒体时才那样说。图片名额恒取最近 3 张 → hasAttachedImage 近乎常真，
