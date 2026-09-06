@@ -51,6 +51,12 @@ data class MomentsHubState(
     val latestStory: StoryEntity? = null,
     /** 宠物横条卡：最需照顾的一只（[pickNeediestPet]）。UI 经 [com.situ.aichat.ui.pet.PetMoodType] 派生状态文案。null=无宠物。 */
     val petGlance: CharacterPetEntity? = null,
+    /** 宠物条总数（图纸 D-2：头行报总数·0=空态）。**不受家内站位 MAX_PETS=3 限**——这是全量。 */
+    val petCount: Int = 0,
+    /** 宠物条精灵排：adoptedDate 升序前 [PET_STRIP_SPRITE_MAX] 只。 */
+    val petSprites: List<CharacterPetEntity> = emptyList(),
+    /** 有宠物且无一「需要你」→ 尾行显「都好着呢」。 */
+    val petAllWell: Boolean = false,
 )
 
 /**
@@ -123,9 +129,16 @@ class MomentsHubViewModel @Inject constructor(
             // 图纸卷二 §3.2：上游换「最近一本的轻列投影 + LIMIT 1」（原为全表宽行取 firstOrNull）。
             storyRepo.observeLatestStoryLite(),
             petRepo.observeAll(),
-        ) { story, pets -> story to pickNeediestPet(pets) }
+        ) { story, pets -> story to petStripGlance(pets) }
         combine(base, storyPet) { hub, sp ->
-            hub.copy(latestStory = sp.first, petGlance = sp.second)
+            val g = sp.second
+            hub.copy(
+                latestStory = sp.first,
+                petGlance = g.neediest,
+                petCount = g.count,
+                petSprites = g.sprites,
+                petAllWell = g.allWell,
+            )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MomentsHubState())
     }
 

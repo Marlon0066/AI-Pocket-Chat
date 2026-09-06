@@ -1,7 +1,6 @@
 package com.situ.aichat.ui.designsystem
 
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
@@ -44,13 +43,4 @@ object AppShapes {
      * M3 清零总契约 §1。
      */
     val sheet = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp, bottomEnd = 0.dp, bottomStart = 0.dp)
-}
-
-/** 间距节奏 token：4 / 8 / 12 / 14 / 16（段内连发 4·段间 12·通用 8/16·卡内 14）。 */
-object AppSpacing {
-    val xs: Dp = 4.dp
-    val sm: Dp = 8.dp
-    val md: Dp = 12.dp
-    val lg: Dp = 14.dp
-    val xl: Dp = 16.dp
 }

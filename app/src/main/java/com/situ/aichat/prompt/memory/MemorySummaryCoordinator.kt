@@ -94,9 +94,13 @@ class MemorySummaryCoordinator @Inject constructor(
         var trimmed = newMemory.trim()
         // 验证1：新记忆不能为空
         if (trimmed.isEmpty()) throw MemorySummaryError.EmptyResponse
-        // 验证2：旧记忆有内容时，新记忆不能低于旧记忆长度的 5%（疑似截断/废话覆盖）
+        // 验证2：旧记忆有内容时，新记忆不能短于 [suspiciouslyShortFloor]（疑似截断/废话覆盖）
         if (existingMemory.isNotEmpty() &&
-            MemoryService.cjkLength(trimmed) < MemoryService.cjkLength(existingMemory) / 20
+            MemoryService.cjkLength(trimmed) < suspiciouslyShortFloor(
+                existingLength = MemoryService.cjkLength(existingMemory),
+                maxLength = maxLength,
+                hasCustomPrompt = customPrompt.isNotEmpty(),
+            )
         ) {
             throw MemorySummaryError.SuspiciouslyShort
         }
@@ -204,14 +208,27 @@ class MemorySummaryCoordinator @Inject constructor(
         ManualEditResult.Saved
     }
 
-    private companion object {
+    companion object {
+        /**
+         * 校验 2 的长度下限（提案 FABLE5_MEMORY_SETTINGS_UX_PROPOSAL D·拍板 2026-09-05）：
+         * 默认模板 = 1/3 × min(旧长, [maxLength])（[maxLength] ≤ 0 = 用户关了上限，只看旧长）；
+         * 自定义模板让位仍 1/20——自定义模板可能故意产短记忆，收紧会把用户永久锁死在拒收里
+         * （与 resolveCompressionMode(hasCustomPrompt → NONE) 同一让位原则）。整数除法。
+         *
+         * 注意：本闸只管「新稿是否短得可疑」；压缩自救/自愈链里的三处 `≥ 旧/20` 是另一回事
+         * （「垃圾短输出不采纳」），语义无关，逐字不动。
+         */
+        internal fun suspiciouslyShortFloor(existingLength: Int, maxLength: Int, hasCustomPrompt: Boolean): Int =
+            if (hasCustomPrompt) existingLength / 20
+            else (if (maxLength > 0) minOf(existingLength, maxLength) else existingLength) / 3
+
         /** 软目标溢出容忍（避免 3050/3000 这类轻微超标白烧一次压缩调用）。 */
-        const val OVERFLOW_TRIGGER = 1.2
+        private const val OVERFLOW_TRIGGER = 1.2
 
         /** 常态硬上限倍数：压缩自救/自愈后仍超此线 → 进泄压阀判定（拍板 2026-07-11：此线不放宽）。 */
-        const val OVERFLOW_HARD = 1.5
+        private const val OVERFLOW_HARD = 1.5
 
         /** 泄压阀上限倍数（拍板 2026-07-11·微图纸锁定）：(1.5×, 2.0×] 放行一次打破死锁，超 2.0× 终败。 */
-        const val RELIEF_CAP = 2.0
+        private const val RELIEF_CAP = 2.0
     }
 }

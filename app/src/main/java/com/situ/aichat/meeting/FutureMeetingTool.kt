@@ -9,6 +9,7 @@ import com.situ.aichat.data.remote.llm.FunctionDefinitionDto
 import com.situ.aichat.data.remote.llm.FunctionParametersDto
 import com.situ.aichat.data.remote.llm.ParameterPropertyDto
 import com.situ.aichat.data.remote.llm.ToolDefinitionDto
+import com.situ.aichat.tooling.MarkerJson
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -124,31 +125,10 @@ object FutureMeetingTool {
     private val MARKER_REGEX = Regex("""\[future_meeting\]""")
 
     /**
-     * 从 [open]（须指向 `{`）起找**配平**的 `}`，跳过 JSON 字符串字面量内的花括号与 `\` 转义；找不到（不配平）返回 -1。
-     * 让 `{"activity":"吃饭}聊天"}` 这类值内含 `}` 的合法 JSON 被完整提取，而非在串内 `}` 处误截断。
+     * 配平花括号扫描（算法单源 [MarkerJson.matchingBraceEnd]·2026-09-06 与 `[promise]` 暗号共用后抽出，行为不变）。
+     * 保留本私有转发，[parseProposalMarkers] 的两处调用与 KDoc 引用零改。
      */
-    private fun matchingBraceEnd(s: String, open: Int): Int {
-        var depth = 0
-        var inString = false
-        var escaped = false
-        for (i in open until s.length) {
-            val c = s[i]
-            if (inString) {
-                when {
-                    escaped -> escaped = false
-                    c == '\\' -> escaped = true
-                    c == '"' -> inString = false
-                }
-                continue
-            }
-            when (c) {
-                '"' -> inString = true
-                '{' -> depth++
-                '}' -> if (--depth == 0) return i
-            }
-        }
-        return -1
-    }
+    private fun matchingBraceEnd(s: String, open: Int): Int = MarkerJson.matchingBraceEnd(s, open)
 
     /** 工具参数 / 文本暗号 JSON → 候选（共用）。至少要有「时间或活动」，否则空壳 → null。 */
     private fun candidateFrom(args: FutureMeetingArgs, source: MeetingSource): MeetingCandidate? {

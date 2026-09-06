@@ -122,6 +122,7 @@ fun ChatScreen(
     onOpenCharacterVoiceSettings: (String) -> Unit,
     onOpenTtsConfig: () -> Unit,
     onOpenWorldAt: (String) -> Unit = {},
+    onOpenPromises: (String) -> Unit = {},
     viewModel: ChatViewModel = hiltViewModel(),
 ) {
     val messages by viewModel.messages.collectAsStateWithLifecycle()
@@ -144,6 +145,7 @@ fun ChatScreen(
     val error by viewModel.error.collectAsStateWithLifecycle()
     val pendingCalendarActions by viewModel.pendingCalendarActions.collectAsStateWithLifecycle()
     val calendarToast by viewModel.calendarToast.collectAsStateWithLifecycle()
+    val promiseHint by viewModel.promiseHint.collectAsStateWithLifecycle() // 约定记账当场提示（图纸 2026-09-06）
     // 审计 P3：播放态只持句柄不整读——「正在播放的 uuid」经 derivedStateOf 派生（起停/切换才变），
     // progress 以 lambda 下传、只有播放中那一行读高频值（80ms tick 不再整屏波及）。
     val playbackState = viewModel.playbackState.collectAsStateWithLifecycle()
@@ -745,6 +747,7 @@ fun ChatScreen(
                         networkConnected = networkConnected,
                         networkStatusChanged = networkStatusChanged,
                         showScrollDown = showScrollDown,
+                        promiseHintVisible = promiseHint != null,
                         wallpaper = chatWallpaper,
                         voiceSetupNeeded = voiceSetupNeed != null, // VU3：当前仍缺可用音色 → 失败通话卡长琥珀尾巴
                     )
@@ -758,6 +761,15 @@ fun ChatScreen(
                 isDelete = calendarToast?.isDelete == true,
                 reduceMotion = reduceMotion,
                 onDismiss = { viewModel.dismissCalendarToast() },
+            )
+
+            // 约定记账当场提示（图纸 2026-09-06 §4.1）：同槽排队由 VM 的 promiseHintBlocked 保证，此处只渲染。
+            ChatPromiseHint(
+                hint = promiseHint,
+                reduceMotion = reduceMotion,
+                onOpenLedger = { character?.uuid?.let(onOpenPromises) },
+                onUndo = viewModel::undoPromiseHint,
+                onDismiss = viewModel::dismissPromiseHint,
             )
             } // W13：闭合 content Box(weight 1f)（原 Box 子树只降一层·图纸 §4.6）
         }

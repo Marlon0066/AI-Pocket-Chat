@@ -42,6 +42,7 @@ import com.situ.aichat.ui.designsystem.AppDropdownField
 import com.situ.aichat.ui.designsystem.AppDropdownMenuItem
 import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppSnackbarHost
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTextField
 import com.situ.aichat.ui.designsystem.AppTopBar
 
@@ -134,7 +135,7 @@ fun ApiConfigEditScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .imePadding() // C4：键盘弹起时 API key 等字段可滚到键盘上方
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = AppSpacing.screenGutter) // 屏 gutter 恒 20（设计语言 §2.5 军规）
                 .verticalScroll(scrollState)
                 .contentMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(12.dp),

@@ -40,7 +40,7 @@ object PromiseInjectionRenderer {
      */
     fun render(rows: List<PromiseEntity>, now: Long, zone: ZoneId = ZoneId.systemDefault()): String {
         // open 组：dueAtMillis 非空者在前按 dueAtMillis 升序，其后 null-due 按 createdAtMillis 升序；软上限取前 20。
-        val open = sortedOpen(rows).take(OPEN_CAP)
+        val open = numberedOpen(rows)
 
         // 已结组：statusRaw != open 且 resolvedAtMillis ≥ now − 7 天，按 resolvedAtMillis 降序取前 5。
         val cutoff = now - RESOLVED_WINDOW_MS
@@ -53,7 +53,7 @@ object PromiseInjectionRenderer {
 
         val lines = mutableListOf<String>()
         lines.add("【我们的约定】")
-        for (p in open) lines.add(renderOpenLine(p, now, zone))
+        open.forEachIndexed { i, p -> lines.add("${i + 1}. " + renderOpenLine(p, now, zone)) }
         if (resolved.isNotEmpty()) {
             lines.add("（最近了结）")
             for (p in resolved) lines.add(renderResolvedLine(p, zone))
@@ -62,13 +62,17 @@ object PromiseInjectionRenderer {
         return lines.joinToString("\n")
     }
 
-    /** open 行：`- {yyyy-MM-dd}（{age}·{src}）定下：{content}{dueSuffix}`。 */
+    /**
+     * open 行**行首编号之后**的部分：`{yyyy-MM-dd}（{age}·{src}）定下：{content}{dueSuffix}`。
+     * 编号前缀 `{n}. ` 由 [render] 按 [numberedOpen] 的顺序拼（2026-09-06 约定工具调用化：编号是
+     * [com.situ.aichat.promise.PromiseChatTool] `resolve_promise.no` 的语义来源）。
+     */
     private fun renderOpenLine(p: PromiseEntity, now: Long, zone: ZoneId): String {
         val date = Instant.ofEpochMilli(p.createdAtMillis).atZone(zone).format(ymdFormatter)
         val age = ageLabel(p.createdAtMillis, now, zone)
         val src = if (p.sourceRaw == PromiseSource.CHAT) "聊天中" else "见面时"
         val dueSuffix = dueSuffix(p.dueAtMillis, now, zone)
-        return "- $date（$age·$src）定下：${p.content}$dueSuffix"
+        return "$date（$age·$src）定下：${p.content}$dueSuffix"
     }
 
     /** 已结行：`- 已兑现（{M月d日}）：{content}` / `- 已取消（{M月d日}）：{content}`（日期取 resolvedAtMillis）。 */
@@ -95,6 +99,13 @@ object PromiseInjectionRenderer {
         val md = Instant.ofEpochMilli(dueMillis).atZone(zone).format(monthDayFormatter)
         return if (isDueUpcoming(dueMillis, nowMillis, zone)) "（约在$md）" else "（原定$md，已过）"
     }
+
+    /**
+     * 本轮注入块里**带编号的 open 清单单源**（图纸 2026-09-06 约定工具调用化 §0.②-3）：`resolve_promise.no`
+     * 的 no（1-based）即此列表下标 +1——渲染端（[render]）与映射端（`ChatPromiseToolHandler`）同一函数、
+     * 同一份快照，不存在两处排序漂移。改这里的排序 / 上限即改工具语义。
+     */
+    fun numberedOpen(rows: List<PromiseEntity>): List<PromiseEntity> = sortedOpen(rows).take(OPEN_CAP)
 
     /** 进行中排序（单源·三期 UI 与注入共用）：due 非空在前按 due 升序，其后按 createdAtMillis 升序。 */
     fun sortedOpen(rows: List<PromiseEntity>): List<PromiseEntity> {

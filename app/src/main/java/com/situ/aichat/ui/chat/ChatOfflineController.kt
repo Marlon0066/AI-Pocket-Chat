@@ -203,7 +203,7 @@ internal class ChatOfflineController(
         }
     }
 
-    /** 用户点结束确认卡「再待一会儿」：置卡片 responded=continued + allow_end→false + 续场 hint + 触发 AI 回复。 */
+    /** 用户点结束确认卡「再待一会儿」：置卡片 responded=continued + 散场硬闸 3 轮（图纸 2026-09-06 七件 §3.E）+ 续场 hint + 触发 AI 回复。 */
     fun continueOfflineMeeting(endCardMessageUuid: String) {
         serialize {
             offlineMeetingService.markInviteResponded(endCardMessageUuid, "continued")

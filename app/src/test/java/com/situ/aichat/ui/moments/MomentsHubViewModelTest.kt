@@ -257,4 +257,71 @@ class MomentsHubViewModelTest {
             assertEquals(7, vm.state.value.latestStory?.cachedLatestChapterNumber)
         }
     }
+
+    // ── 宠物条状态（图纸 2026-09-06-宠物总览页复活 V4） ──
+
+    /**
+     * 4 只宠物全量进 state —— 本卷缺口的核心断言：家内站位 `MAX_PETS = 3` 只摆前 3 只，
+     * 动态页宠物条与总览页必须**不设上限**，否则第 4 只起仍旧够不着（图纸 §0.2）。
+     */
+    @Test
+    fun `四只宠物_petCount为4_精灵排按adoptedDate升序`() {
+        val vm = newVm()
+        withSubscriptions(vm) {
+            await("state 就绪") { vm.state.value.unreadCount == 0 }
+            // 倒序喂入，验证排序由派生函数负责
+            pets.value = (4 downTo 1).map {
+                CharacterPetEntity(name = "宠$it", characterUuid = "c$it", adoptedDate = it * 1000L)
+            }
+            await("宠物位回流") { vm.state.value.petCount == 4 }
+            assertEquals(4, vm.state.value.petCount)
+            assertEquals(listOf("宠1", "宠2", "宠3", "宠4"), vm.state.value.petSprites.map { it.name })
+            assertTrue("默认构造 happiness=80 → 全 HAPPY", vm.state.value.petAllWell)
+        }
+    }
+
+    /** 六只 → 总数照报 6，精灵排截 5（头行报门后有几只，排面只放得下 5 个）。 */
+    @Test
+    fun `六只宠物_总数6_精灵排截5`() {
+        val vm = newVm()
+        withSubscriptions(vm) {
+            await("state 就绪") { vm.state.value.unreadCount == 0 }
+            pets.value = (1..6).map {
+                CharacterPetEntity(name = "宠$it", characterUuid = "c$it", adoptedDate = it * 1000L)
+            }
+            await("宠物位回流") { vm.state.value.petCount == 6 }
+            assertEquals(6, vm.state.value.petCount)
+            assertEquals(5, vm.state.value.petSprites.size)
+        }
+    }
+
+    /** 有饿宠 → petAllWell 为假、petGlance 指向那一只（尾行报它）。 */
+    @Test
+    fun `有饿宠_petAllWell为假_petGlance指向它`() {
+        val vm = newVm()
+        withSubscriptions(vm) {
+            await("state 就绪") { vm.state.value.unreadCount == 0 }
+            pets.value = listOf(
+                CharacterPetEntity(name = "开开", characterUuid = "c1"),
+                CharacterPetEntity(name = "饿饿", characterUuid = "c2", hunger = 90),
+            )
+            await("宠物位回流") { vm.state.value.petCount == 2 }
+            assertEquals(false, vm.state.value.petAllWell)
+            assertEquals("饿饿", vm.state.value.petGlance?.name)
+        }
+    }
+
+    /** 无宠物 → 空态三件：count 0 / 精灵排空 / allWell 假（空态不是「都好着呢」）。 */
+    @Test
+    fun `无宠物_空态三件`() {
+        val vm = newVm()
+        withSubscriptions(vm) {
+            await("state 就绪") { vm.state.value.unreadCount == 0 }
+            idle()
+            assertEquals(0, vm.state.value.petCount)
+            assertTrue(vm.state.value.petSprites.isEmpty())
+            assertEquals(false, vm.state.value.petAllWell)
+            assertNull(vm.state.value.petGlance)
+        }
+    }
 }

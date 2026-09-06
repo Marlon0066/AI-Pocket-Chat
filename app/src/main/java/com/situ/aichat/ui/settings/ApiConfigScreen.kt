@@ -75,6 +75,7 @@ import com.situ.aichat.ui.designsystem.AppLoadingRingSize
 import com.situ.aichat.ui.designsystem.AppMenu
 import com.situ.aichat.ui.designsystem.AppMenuItem
 import com.situ.aichat.ui.designsystem.AppSnackbarHost
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTextField
 import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.ui.designsystem.appCardSurface
@@ -169,7 +170,7 @@ fun ApiConfigScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .contentMaxWidth()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = AppSpacing.screenGutter),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // 表单区（服务商→保存并启用）合并为一个 item 内的无标题卡壳（§4.B1·操作页 16 gutter 由 LazyColumn

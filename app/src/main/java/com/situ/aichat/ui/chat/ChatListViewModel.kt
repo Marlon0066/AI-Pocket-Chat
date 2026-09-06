@@ -108,11 +108,6 @@ class ChatListViewModel @Inject constructor(
             orderCharactersForPicker(byUuid.values.toList()) { lastByCharacter[it.uuid] }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** 归档会话数（>0 才显示归档入口；COUNT 直查不搬全量实体，K5）。 */
-    val archivedCount: StateFlow<Int> =
-        conversationRepo.observeArchivedCount()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
-
     private val scheduleEnabled: StateFlow<Boolean> =
         settingsRepository.appSettings
             .map { it.scheduleSystemEnabled }
@@ -168,10 +163,6 @@ class ChatListViewModel @Inject constructor(
 
     fun setPinned(conversationUuid: String, pinned: Boolean) {
         viewModelScope.launch { conversationRepo.setPinned(conversationUuid, pinned) }
-    }
-
-    fun archive(conversationUuid: String) {
-        viewModelScope.launch { conversationRepo.setArchived(conversationUuid, true) }
     }
 
     /** 删会话：走 app 级 [ConversationDeletionService]（先清磁盘媒体再删库行），不随本页离屏中断。 */

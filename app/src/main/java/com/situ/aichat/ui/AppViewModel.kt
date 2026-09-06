@@ -138,14 +138,19 @@ class AppViewModel @Inject constructor(
         .map { !it }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    /** 根部主题外观（主题配色 + 深浅模式 + 动态取色，11.4a）。初值=默认（跟随系统+默认暖陶）→ 无首帧闪烁。 */
+    /** 根部主题外观（脸 + 深浅模式 + 动态取色 + 玻璃档，11.4a）。初值=默认（跟随系统+默认暖陶+清透）→ 无首帧闪烁。 */
     val appearance: StateFlow<AppearanceState> =
-        combine(settings.appearanceMode, settings.useDynamicColor, settings.themePalette) { mode, dynamic, palette ->
-            AppearanceState(mode, dynamic, palette)
+        combine(
+            settings.appearanceMode,
+            settings.useDynamicColor,
+            settings.appSkin,
+            settings.glassTier,
+        ) { mode, dynamic, skin, tier ->
+            AppearanceState(mode, dynamic, skin, tier)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppearanceState.DEFAULT)
 
     /**
-     * Splash 释放门控（P1-9+28）：协议门控 + 外观偏好（深浅 + 配色）均已从 DataStore 读出才放首帧
+     * Splash 释放门控（P1-9+28）：协议门控 + 外观偏好（深浅 + 脸）均已从 DataStore 读出才放首帧
      * （防 LoadingGate 转圈闪一下 + 主题错档首帧）。SharingStarted.Eagerly：VM 创建即预热——
      * splash 正挡着绘制，组合订阅（WhileSubscribed）此时不可靠；combine 只看「都发过一次值」，不读具体值。
      */
@@ -154,7 +159,7 @@ class AppViewModel @Inject constructor(
             settings.needsAgreement,
             settings.appearanceMode,
             settings.useDynamicColor,
-            settings.themePalette,
+            settings.appSkin,
         ) { _, _, _, _ -> true }
             .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 

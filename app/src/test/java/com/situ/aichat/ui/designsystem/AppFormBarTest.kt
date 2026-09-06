@@ -29,8 +29,8 @@ import org.robolectric.annotation.Config
  * T2-F：编辑页门楣 [AppFormBar] 的行为（Robolectric·图纸
  * `2026-09-05-釉烧主钮与编辑页门楣.md` §7）。
  *
- * 升起态的底色 / 发丝、标题 76dp 双侧内边距的像素落值属像素域（由「几何与 [AppTopBar] 同源单源
- * [BarScaffold]」+ 装机担保）；本测钉行为面：三槽按传参渲染、左右回调各自触发、超长标题不把两侧钮
+ * 升起态的底色 / 发丝、标题 88dp 双侧内边距的像素落值属像素域（由「几何与 [AppTopBar] 同源单源
+ * [BarScaffold]」+ 装机担保；贴边槽的 gutter 几何另由 [GutterAlignmentTest] 机器钉）；本测钉行为面：三槽按传参渲染、左右回调各自触发、超长标题不把两侧钮
  * 挤到点不着、**纯文字状态槽零可点节点**（拍板⑤「已自动保存」不做成钮）、`onCancel = null` 零左槽、
  * lifted × reduceMotion 组合不崩。
  *

@@ -5,6 +5,8 @@ import com.situ.aichat.data.model.MeetingCandidate
 import com.situ.aichat.meeting.FutureMeetingTool
 import com.situ.aichat.offline.OfflineMeetingAction
 import com.situ.aichat.offline.OfflineMeetingActionType
+import com.situ.aichat.promise.PromiseChatTool
+import com.situ.aichat.promise.PromiseToolAction
 
 /**
  * 结构化 + 文本标记双轨的**汇合**纯逻辑（1:1 iOS `ChatViewModel+StreamReceiver.preprocessAssistantResponse`
@@ -28,6 +30,8 @@ object AssistantResponsePreprocessor {
         val hasOfflineMeetingAction: Boolean,
         /** 文本暗号路解析出的未来约定候选（intent=new·source=fallback）；标记已从正文剥离。 */
         val futureMeetingCandidates: List<MeetingCandidate> = emptyList(),
+        /** 文本暗号路解析出的约定记账动作（图纸 2026-09-06）；`[promise]` 标记已从正文剥离，闸门在 handler。 */
+        val promiseMarkerActions: List<PromiseToolAction> = emptyList(),
     )
 
     /**
@@ -77,7 +81,17 @@ object AssistantResponsePreprocessor {
         // ── 未来约定见面文本暗号：无条件剥 [future_meeting]{...}（防泄露成气泡，与日历/线下标记同口径）+ 收候选 ──
         val (responseAfterMeeting, futureMeetingCandidates) = FutureMeetingTool.parseProposalMarkers(responseAfterOffline)
 
-        return Result(responseAfterMeeting, calendarActions, offlineActions, hasOfflineMeetingAction, futureMeetingCandidates)
+        // ── 约定记账文本暗号：同口径无条件剥 [promise]{...}（图纸 2026-09-06 §3.3-A）+ 收动作 ──
+        val (responseAfterPromise, promiseMarkerActions) = PromiseChatTool.parseMarkers(responseAfterMeeting)
+
+        return Result(
+            responseAfterPromise,
+            calendarActions,
+            offlineActions,
+            hasOfflineMeetingAction,
+            futureMeetingCandidates,
+            promiseMarkerActions,
+        )
     }
 
     /**
@@ -98,15 +112,20 @@ object AssistantResponsePreprocessor {
 
     /**
      * 模型只回 tool_calls 没文本时，是否需要发工具结果取一段文字回复（1:1 iOS needsTextFollowUp，StreamReceiver:307-310）：
-     * (有日历动作 || 有线下动作) 且 **非「只有线下动作」**。线下邀约/结束卡本身就是完整回复 → 不 follow-up
-     * （否则 LLM 会抄 llmRepresentation 描述文字，卡片旁多出重复气泡）。
+     * (有日历动作 || 有线下动作 || **有约定动作**) 且 **非「只有线下动作」**。线下邀约/结束卡本身就是完整回复 →
+     * 不 follow-up（否则 LLM 会抄 llmRepresentation 描述文字，卡片旁多出重复气泡）。
+     * [promiseActions] 为空时与旧公式**逐字节等价**（图纸 2026-09-06 §3.3-B·既有用例全保）：只调了约定工具、
+     * 正文空的回合要去取一段正文，否则会变成没有气泡的空回合。
      */
     fun needsTextFollowUp(
         calendarActions: List<CalendarAction>,
         offlineActions: List<OfflineMeetingAction>,
+        promiseActions: List<PromiseToolAction> = emptyList(),
     ): Boolean {
         val hasCalendar = calendarActions.isNotEmpty()
-        val hasOnlyOffline = offlineActions.isNotEmpty() && calendarActions.isEmpty()
-        return (hasCalendar || offlineActions.isNotEmpty()) && !hasOnlyOffline
+        val hasPromise = promiseActions.isNotEmpty()
+        // 线下卡在场且无日历 → 卡即回复（约定动作静默记账，不因它多要一段文字）。
+        val hasOnlyOfflineLike = offlineActions.isNotEmpty() && calendarActions.isEmpty()
+        return (hasCalendar || offlineActions.isNotEmpty() || hasPromise) && !hasOnlyOfflineLike
     }
 }

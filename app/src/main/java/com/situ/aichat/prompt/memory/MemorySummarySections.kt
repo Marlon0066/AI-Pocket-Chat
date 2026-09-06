@@ -8,7 +8,7 @@ package com.situ.aichat.prompt.memory
  * 模型偶发丢标题时优雅回退：全部行入 [Sections.unparsed]、[Sections.hasSections] = false（资料页回退现状渲染·E1）。
  *
  * ⚠️ **强耦合（图纸 §6 第四个只读引用点）**：[LONG_TERM_HEADER]/[RECENT_HEADER] 两常量字面必须与
- * [MemoryService] 生成模板（`DEFAULT_EXTRACTION_PROMPT`·:389-425）逐字节一致；改标题须**四处同步**——
+ * [MemoryService] 生成模板（`DEFAULT_EXTRACTION_PROMPT` 常量）逐字节一致；改标题须**四处同步**——
  * 生成模板 / `DirtyMessageDetector` / `pb_mem_format_ban` / 本处。本处**只读引用**，绝不反向修改前三处。
  */
 object MemorySummarySections {

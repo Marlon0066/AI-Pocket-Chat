@@ -46,6 +46,11 @@ class PromiseReconciliationTest {
         // 四期 dueMark：openList 两条均无日期 → ·未定日期。
         assertTrue(p.contains("进行中的约定清单：\n1. 一起去看画展（2026-07-01 定下·未定日期）\n2. 帮忙改简历（2026-07-02 定下·未定日期）"))
         assertTrue(p.contains("金钱类承诺（发红包、转账、给多少钱、送多贵的礼物）不算约定"))
+        // 2026-09-06 约定工具调用化 §3.4：工具路先记下的，攒批对账不许再当新约定重复输出（E25·逐字锁定）。
+        assertTrue(
+            "去重指令句",
+            p.contains("清单上已经有的事（哪怕措辞不同）不要再当新约定输出。"),
+        )
         assertTrue("四期 dates schema 行", p.contains("\"dates\":[{\"no\":1,\"due\":\"yyyy-MM-dd\",\"evidence\":\"素材原话逐字引用\"}]}"))
         assertTrue(
             "四期规则行（补日期 3 条）",

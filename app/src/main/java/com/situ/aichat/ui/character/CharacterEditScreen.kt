@@ -48,6 +48,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.situ.aichat.ui.designsystem.AppFormBar
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTheme
 import kotlin.math.roundToInt
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -148,7 +149,7 @@ fun CharacterEditScreen(
                 .imePadding() // C4：键盘弹起时滚动视口让位，下半部字段可滚到键盘上方（国行 IME 高达屏 40%+）
                 .fillMaxWidth()
                 .verticalScroll(scrollState)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = AppSpacing.screenGutter),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // ---- Avatar ----

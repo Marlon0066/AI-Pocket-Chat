@@ -29,13 +29,15 @@ internal fun buildCoreRulesContent(s: PromptStrings, charName: String, userName:
         s.s(R.string.pb_core_r1),
         s.s(R.string.pb_core_r2, userName),
         s.s(R.string.pb_core_r3),
-        s.s(R.string.pb_core_r4),
+        s.s(R.string.pb_core_r4, userName),
+        s.s(R.string.pb_core_r4b, userName),
         s.s(R.string.pb_core_r5),
     ).joinToString("\n")
 
 /**
  * 线下见面版核心规则（两语境模型 2026-07-12·用户过审文案）：身份句换「面对面相处」、删纯文字
  * 禁描写（r4）与孤立引号（r5）两条冲突禁令；r1/r2/r3 与普通版共享资源键（同一段逻辑只写一处）。
+ * r4 / r4b（「隔屏互相看不见」两条事实）面对面时不成立，故不进线下版。
  * 消费点：[PromptBuilder.buildModuleContent] 线下分流（用户 offlineContent 优先）+ 编辑表单线下版预填锚。
  * 不进 defaultEditableTemplate；格式禁令由末尾 OfflineNarrativePreset 独家看守，此处零重复。
  */
@@ -91,7 +93,9 @@ internal fun buildCharacterIdentityContent(ctx: PromptBuilder.BuildContext): Str
     PromptBuilder.applyPromptMacros(c.backstory, ctx.macros).takeIf { it.isNotEmpty() }?.let { parts.add(s.s(R.string.pb_ident_backstory, it)) }
     PromptBuilder.applyPromptMacros(c.speakingStyle, ctx.macros).takeIf { it.isNotEmpty() }?.let { parts.add(s.s(R.string.pb_ident_speaking, it)) }
     PromptBuilder.applyPromptMacros(c.catchphrases, ctx.macros).takeIf { it.isNotEmpty() }?.let { parts.add(s.s(R.string.pb_ident_catchphrases, it)) }
-    PromptBuilder.applyPromptMacros(c.exampleDialogues, ctx.macros).takeIf { it.isNotEmpty() }?.let { parts.add(s.s(R.string.pb_ident_examples, it)) }
+    // 示例段头线下版（场景感小批 2026-09-06）：线下装配时限定句改指末尾标签规则，不再指线上【聊天格式】。
+    val examplesHeader = if (ctx.scene == PromptScene.OFFLINE_MEETING) R.string.pb_ident_examples_offline else R.string.pb_ident_examples
+    PromptBuilder.applyPromptMacros(c.exampleDialogues, ctx.macros).takeIf { it.isNotEmpty() }?.let { parts.add(s.s(examplesHeader, it)) }
     PromptBuilder.applyPromptMacros(c.initialInterests, ctx.macros).takeIf { it.isNotEmpty() }?.let { parts.add(s.s(R.string.pb_ident_interests, it)) }
     PromptBuilder.applyPromptMacros(c.systemPrompt, ctx.macros).takeIf { it.isNotEmpty() }?.let { parts.add(s.s(R.string.pb_ident_setup, it)) }
 

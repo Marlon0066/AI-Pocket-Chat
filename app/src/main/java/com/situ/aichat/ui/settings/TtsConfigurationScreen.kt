@@ -52,6 +52,7 @@ import com.situ.aichat.ui.designsystem.AppDropdownTextField
 import com.situ.aichat.ui.designsystem.AppLoadingRing
 import com.situ.aichat.ui.designsystem.AppLoadingRingSize
 import com.situ.aichat.ui.designsystem.AppSnackbarHost
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTextField
 import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.ui.designsystem.appCardSurface
@@ -139,7 +140,7 @@ fun TtsConfigurationScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = AppSpacing.screenGutter) // 屏 gutter 恒 20（设计语言 §2.5 军规）
                 .verticalScroll(scrollState)
                 .contentMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -456,7 +457,8 @@ private fun TtsProviderTutorial(provider: TtsProviderType) {
     }
 }
 
-private fun tutorialContent(provider: TtsProviderType): Pair<String, String> = when (provider) {
+/** 琉璃卷五复用（`ui/liuli` 树借同一份实现·改这里两张脸同时变）。 */
+internal fun tutorialContent(provider: TtsProviderType): Pair<String, String> = when (provider) {
     TtsProviderType.SYSTEM -> "关于系统 TTS" to
         "本机系统语音引擎，免 key、免费、纯本地。国行 HyperOS 多为小米语音引擎（部分功能需联网、各机型质量参差），无 Google TTS。追求自然度与情绪表现，建议改用 MiniMax 云。"
     TtsProviderType.MINIMAX -> "如何获取 MiniMax key" to

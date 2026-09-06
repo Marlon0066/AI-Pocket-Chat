@@ -22,7 +22,6 @@ import com.situ.aichat.data.model.MeetingTimeGranularity
 import com.situ.aichat.data.remote.llm.ChatMessageDto
 import com.situ.aichat.meeting.MeetingDisplayFormatter
 import com.situ.aichat.offline.NarrativeDirectiveService
-import com.situ.aichat.offline.OfflineMarkerStartPayload
 import com.situ.aichat.offline.OfflineNarrativePreset
 import com.situ.aichat.pet.OtherPetInfo
 import com.situ.aichat.prompt.memory.InSceneRecapCoordinator
@@ -545,17 +544,17 @@ object PromptBuilder {
                 NarrativeDirectiveService.analyzeRecentBlockUsage(filteredMessages),
                 preset,
             )
-            // 心事种子：从 filteredMessages 里当前 session 的入场标记 payload 提取（已剥离的其他 session 标记不会误匹配）。
-            val tensionSeed = extractTensionSeedFromSessionMessages(filteredMessages)
+            // 入场标记 payload（地点 / 活动 / 心事种子）：从全量历史取当前 session 的标记——窗口截断后
+            // filteredMessages 里可能已无标记（默认 30 轮 = 本场 120 条后即丢），末位说明书的地点必须每轮都在。
+            val startPayload = currentOfflineSessionStartPayload(sortedMessages, conversation?.currentOfflineSessionId)
+            val offlineUserName = promptMacros(character, userProfile, strings)[PromptMacros.USER]
+                ?: strings.s(R.string.pb_user_fallback)
             val offlinePrompt = OfflineNarrativePreset.buildPrompt(
                 currentTimeText = MemoryService.formatTimestamp(now.toEpochMilli()),
-                characterCity = character.cityName,
-                // TODO(P11): 天气模块落地后映射 OfflineWeatherSnapshot（角色今日天气 / 用户当前天气）。
-                characterWeather = null,
-                userCity = userProfile?.cityName,
-                userWeather = null,
-                tensionSeed = tensionSeed,
-                sceneProgress = conversation?.currentSceneProgress,
+                userName = offlineUserName,
+                meetingLocation = startPayload?.location,
+                meetingActivity = startPayload?.activity,
+                tensionSeed = startPayload?.tensionSeed?.takeIf { it.isNotEmpty() },
                 perTurnDirective = narrativeDirective,
                 preset = preset,
             )
@@ -589,6 +588,7 @@ object PromptBuilder {
                 toolCallingEnabled = toolCallingEnabled,
                 includeCalendarTool = appSettings.calendarIntegrationEnabled,
                 canInitiateOffline = appSettings.characterCanInitiateOfflineMeeting,
+                voiceCall = isCurrentlyInVoiceCall, // 通话回合无人解析暗号 → 约定暗号规则不注入（图纸 2026-09-06 §0.②-7）
             )
             val guardParts = mutableListOf(buildAntiMetaCognitiveGuard(character.name, userProfile?.nickname))
             for (tool in chatToolRegistry) {
@@ -972,21 +972,6 @@ object PromptBuilder {
     private fun isOfflineModeHealthy(conversation: ConversationEntity?): Boolean {
         if (conversation == null || !conversation.isInOfflineMode) return false
         return !conversation.currentOfflineSessionId.isNullOrBlank()
-    }
-
-    /**
-     * 从过滤后消息里提取心事种子（1:1 iOS `extractTensionSeedFromSessionMessages`）：倒序找首个入场标记，
-     * 解析 payload 取非空 tensionSeed。filteredMessages 只含当前 session 的 markerStart（其他 session 已剥离），
-     * 不会误匹配。
-     */
-    internal fun extractTensionSeedFromSessionMessages(messages: List<MessageEntity>): String? {
-        for (msg in messages.asReversed()) {
-            if (msg.kind() == MessageKind.OFFLINE_MARKER_START) {
-                val seed = OfflineMarkerStartPayload.parse(msg.content)?.tensionSeed
-                if (!seed.isNullOrEmpty()) return seed
-            }
-        }
-        return null
     }
 
     /**

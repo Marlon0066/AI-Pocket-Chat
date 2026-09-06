@@ -301,6 +301,10 @@ interface MessageDao {
     @Query("SELECT timestamp FROM messages WHERE conversationUuid = :conversationUuid AND roleRaw = 'user' AND content != '' ORDER BY timestamp DESC LIMIT :limit")
     suspend fun recentUserTimestamps(conversationUuid: String, limit: Int): List<Long>
 
+    /** 线上短期窗口切点专用：与 [recentUserTimestamps] 同谓词再加 `isOfflineMode = 0`——见面中用户消息不推动线上窗口切点（图纸 2026-09-06 七件 §3.A·J1）。 */
+    @Query("SELECT timestamp FROM messages WHERE conversationUuid = :conversationUuid AND roleRaw = 'user' AND content != '' AND isOfflineMode = 0 ORDER BY timestamp DESC LIMIT :limit")
+    suspend fun recentOnlineUserTimestamps(conversationUuid: String, limit: Int): List<Long>
+
     /** 一批会话中最后一条非系统非空消息的 (timestamp, roleRaw, messageUUID)（对话状态判定 + 竞态终查共用）。 */
     @Query("SELECT timestamp, roleRaw, messageUUID FROM messages WHERE conversationUuid IN (:conversationUuids) AND roleRaw != 'system' AND content != '' ORDER BY timestamp DESC LIMIT 1")
     suspend fun latestNonSystemAcross(conversationUuids: List<String>): LatestMessageMeta?

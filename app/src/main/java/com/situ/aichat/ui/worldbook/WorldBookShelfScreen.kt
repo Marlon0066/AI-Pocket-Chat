@@ -66,6 +66,7 @@ import com.situ.aichat.ui.designsystem.AppFeatureIcons
 import com.situ.aichat.ui.designsystem.AppMenu
 import com.situ.aichat.ui.designsystem.AppMenuItem
 import com.situ.aichat.ui.designsystem.AppShapes
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppSwitch
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
@@ -155,7 +156,7 @@ fun WorldBookShelfScreen(
         LazyColumn(
             state = listState,
             modifier = Modifier.padding(padding).fillMaxSize().contentMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+            contentPadding = PaddingValues(horizontal = AppSpacing.screenGutter, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             item(key = "actions") {

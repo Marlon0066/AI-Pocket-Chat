@@ -134,6 +134,7 @@ class VoiceCallPostReplyRounds @Inject constructor(
                 val decision = MemoryService.summaryTriggerDecision(
                     outsideRoundCount = outsideRoundCount,
                     interval = interval,
+                    successCooldownMinutes = settings.memorySummaryCooldownMinutes,
                     lastSuccessDate = conversation.lastMemorySummarySuccessDate,
                     lastFailureDate = conversation.lastMemorySummaryFailureDate,
                     now = System.currentTimeMillis(),

@@ -114,7 +114,8 @@ fun AppSheetHandle() {
 private fun AppSheetTitleRow(title: String, onClose: (() -> Unit)?) {
     val colors = AppTheme.colors
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        // 屏 gutter 恒 20（设计语言 §2.5 军规）：弹层横跨全宽，题头的标题与关闭钮即贴屏缘元素。
+        modifier = Modifier.fillMaxWidth().padding(horizontal = AppSpacing.screenGutter),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(title, style = AppTypography.titleSmall, color = colors.text.primary)

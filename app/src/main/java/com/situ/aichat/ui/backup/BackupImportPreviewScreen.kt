@@ -55,6 +55,7 @@ import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppLoadingRing
 import com.situ.aichat.ui.designsystem.AppLoadingRingSize
 import com.situ.aichat.ui.designsystem.AppSegmentedControl
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.data.backup.BackupPreview
 import com.situ.aichat.data.backup.BackupProgress
@@ -179,7 +180,8 @@ fun BackupImportPreviewScreen(
                 .padding(padding)
                 .fillMaxSize()
                 .contentMaxWidth(),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            // 屏 gutter 恒 20（设计语言 §2.5 军规）
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = AppSpacing.screenGutter, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (preview.hasGlobalData) {

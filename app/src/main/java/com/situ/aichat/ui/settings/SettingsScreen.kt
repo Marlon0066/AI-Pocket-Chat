@@ -132,7 +132,7 @@ fun SettingsScreen(
     val emotionAnimEnabled by profileViewModel.emotionAnimationEnabled.collectAsStateWithLifecycle()
     val textingToneEnabled by profileViewModel.textingToneEnabled.collectAsStateWithLifecycle()
     // D6 行尾回显：外观（配色+深浅）/ TTS 提供商 / 通知总开关。
-    val palette by overviewViewModel.themePalette.collectAsStateWithLifecycle()
+    val skin by overviewViewModel.appSkin.collectAsStateWithLifecycle()
     val appearanceMode by overviewViewModel.appearanceMode.collectAsStateWithLifecycle()
     val ttsProvider by overviewViewModel.ttsProvider.collectAsStateWithLifecycle()
     val notifEnabled by overviewViewModel.notificationsEnabled.collectAsStateWithLifecycle()
@@ -167,7 +167,7 @@ fun SettingsScreen(
                 SettingsRow(
                     Icons.Filled.Palette,
                     stringResource(R.string.appearance_title),
-                    value = "${stringResource(palette.labelRes())} · ${stringResource(appearanceMode.labelRes())}",
+                    value = "${stringResource(skin.labelRes())} · ${stringResource(appearanceMode.labelRes())}",
                     onClick = onOpenAppearance,
                 )
                 SettingsRow(Icons.Filled.Mood, stringResource(R.string.settings_sticker_title), onClick = onOpenStickerManagement)
@@ -322,7 +322,7 @@ internal fun SettingsGroupCard(title: String, content: @Composable () -> Unit) {
  *
  * 原为一份私有自绘行（22dp 裸图标 + M3 `bodyLarge` + 16dp padding + 52dp 行高）。C9 把同屏的
  * [com.situ.aichat.ui.components.SettingsSwitchRow] 换成 [AppSettingsRow]（30dp 陶土瓦片 + 13sp 题 +
- * 18dp padding + 56dp 行高）之后，**同一张分组卡里出现两种行语言**——图标左缘、文字左缘、题字号三处对不齐
+ * 18dp padding —— 2026-09-06 间距规范落地后已改为 16dp + 56dp 行高）之后，**同一张分组卡里出现两种行语言**——图标左缘、文字左缘、题字号三处对不齐
  * （收编前两者都走 M3 列表行，观感反而是齐的）。故本函数改为薄委托：长相单源收归 [AppSettingsRow]，
  * 本层只保留「导航行恒有 chevron」这一条语义默认。
  *

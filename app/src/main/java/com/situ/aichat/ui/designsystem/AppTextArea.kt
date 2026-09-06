@@ -48,8 +48,8 @@ internal val MacroRegex = Regex("""\{\{[^{}]+\}\}""")
 internal fun findMacroRanges(text: String): List<IntRange> =
     MacroRegex.findAll(text).map { it.range }.toList()
 
-/** 给 `{{...}}` 着 [color] + Medium 字重；等长替换故 [OffsetMapping.Identity]（光标/选择行为不变）。 */
-private class MacroHighlightTransformation(private val color: Color) : VisualTransformation {
+/** 给 `{{...}}` 着 [color] + Medium 字重；等长替换故 [OffsetMapping.Identity]（光标/选择行为不变）。琉璃卷五复用（`ui/liuli` 树借同一份实现·改这里两张脸同时变）。 */
+internal class MacroHighlightTransformation(private val color: Color) : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
         val annotated = buildAnnotatedString {
             append(text.text)

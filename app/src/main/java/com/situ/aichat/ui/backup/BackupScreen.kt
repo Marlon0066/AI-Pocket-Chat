@@ -252,5 +252,6 @@ fun BackupScreen(
 }
 
 // .zip 容器（manifest.json + media/）：用户可在电脑上直接解压检视/挑拣（超越 iOS 的 Base64 内嵌单文件，13.6）。
-private fun exportFileName(): String =
+/** 琉璃卷五复用（`ui/liuli` 树借同一份实现·改这里两张脸同时变）。 */
+internal fun exportFileName(): String =
     "AIChat_backup_${SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(Date())}.zip"

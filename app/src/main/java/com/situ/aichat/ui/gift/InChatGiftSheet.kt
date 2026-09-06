@@ -52,6 +52,7 @@ import com.situ.aichat.ui.components.AnimatedCoinText
 import com.situ.aichat.ui.components.CharacterAvatar
 import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppSheet
+import com.situ.aichat.ui.designsystem.AppSpacing
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -126,7 +127,7 @@ fun InChatGiftSheet(
             }
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                modifier = Modifier.fillMaxSize().padding(horizontal = AppSpacing.screenGutter),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {

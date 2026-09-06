@@ -65,7 +65,10 @@ import com.situ.aichat.ui.designsystem.grainSurface
 /**
  * 动态页内容（动态 Tab·W11 契约 §16 方案①）：hero 位 = **世界卡**（活星球窗景·信息条活文案·整卡点进世界）；
  * 原「圈子」深陶 hero 降级为**动态条**（横幅·点进朋友圈·未读徽标保留）；日记 / 故事两网格卡零碰。
- * W9a 临时「世界」入口行与宠物宽卡已撤（宠物入世界·状态进世界卡信息条·决策 34②）。配色：世界卡恒暗自包含，
+ * W9a 临时「世界」入口行已撤。宠物宽卡曾随 W11 撤（决策 34②），2026-09-06 按图纸
+ * `docs/handoff/2026-09-06-宠物总览页复活.md` **归位为页底 [PetHubStrip]**——因家内站位硬上限 3 只，
+ * 第 4 只起的宠物在世界侧够不着（图纸 §0.2），决策 42⑤「职能全覆盖后再议退役」的前提未成立。
+ * 配色：世界卡恒暗自包含，
  * 动态条 / 网格卡 / 页面走 [AppTheme] token。
  *
  * **卡片外衣 = 「我」页 v2 同款**（2026-07-12 用户拍板「样式复刻」·MOMENTS_HUB 契约 §11）：动态条与网格卡
@@ -84,6 +87,7 @@ fun MomentsHubScreen(
     onOpenWorld: () -> Unit,
     bottomContentPadding: Dp = 0.dp,
     onOpenPet: (String) -> Unit = {}, // W12.5（§4.4）：世界卡信息条宠物段 → petDetail
+    onOpenPetHub: () -> Unit = {}, // 图纸 2026-09-06 D-1：宠物条 → momentsPet 总览页
     viewModel: MomentsHubViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -118,6 +122,9 @@ fun MomentsHubScreen(
                 DiaryCard(state = state, onClick = onOpenDiary, modifier = Modifier.weight(1f))
                 StoryCard(state = state, onClick = onOpenStory, modifier = Modifier.weight(1f))
             }
+
+            PetHubStrip(state = state, onClick = onOpenPetHub)
+
             Spacer(Modifier.height(bottomContentPadding))
         }
     }

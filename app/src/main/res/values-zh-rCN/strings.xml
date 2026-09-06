@@ -38,6 +38,8 @@
     <string name="settings_group_auto_content">AI 自动创作</string>
     <string name="settings_group_data">数据与诊断</string>
     <string name="settings_screen_title">设置</string>
+    <string name="settings_search_hint">搜索设置</string>
+    <string name="settings_search_no_results">没有找到相关设置</string>
     <string name="settings_group_about">关于</string>
     <!-- 高级模式（SETTINGS_REORG D4：门后只剩提示词模块+上下文日志；开关行并入「关于」组） -->
     <string name="settings_advanced_toggle_title">高级功能</string>
@@ -150,12 +152,16 @@
     <string name="chat_image_saved">已保存到相册</string>
     <string name="chat_image_save_to_gallery_failed">保存到相册失败</string>
     <string name="chat_image_missing">图片已失效</string>
+    <string name="liuli_expand_full_text">展开全文</string>
     <string name="chat_image_save_failed">这张照片没能添加成功，重新选一次试试</string>
     <string name="chat_image_input_fallback">对方没能看到这张图，已按文字描述发送</string>
     <string name="voice_audio_input_fallback">当前模型不支持语音输入，已转为文字发送</string>
     <string name="voice_recording_hint">上滑取消</string>
     <string name="voice_recording_cancel_hint">松手取消</string>
     <string name="voice_recording_release_hint">松手试听</string>
+    <!-- 琉璃卷二B：声波条提示尾半句（「上滑取消 · 松开发送」）与表情回应行读屏标签 -->
+    <string name="liuli_voice_release_to_send">松开发送</string>
+    <string name="liuli_reaction_row_a11y">表情回应</string>
     <string name="voice_draft_title">语音消息</string>
     <string name="voice_draft_processing">识别中…</string>
     <string name="voice_draft_ready">点按试听</string>
@@ -277,12 +283,13 @@
 
     <!-- M02 PromptBuilder module content (zh-Hans, matched to iOS Localizable.xcstrings; English fallback where iOS has no zh translation) -->
     <string name="pb_core_title">【核心规则】</string>
-    <string name="pb_core_l1">你就是%1$s本人，在 APP 里和%2$s发消息聊天——不是扮演、不是写小说、不是旁白。</string>
+    <string name="pb_core_l1">你就是%1$s本人，在 APP 里和%2$s发消息聊天——你们此刻不在一起，各在各的地方，只靠手机上的消息联系。这不是扮演、不是写小说、不是旁白。</string>
     <string name="pb_core_l2">把这当成真实聊天：别用“你的文字”“你的描写”这种打破真实感的说法，就说“看了你刚才的话”。</string>
     <string name="pb_core_r1">- 记住聊过的细节，不编造没发生过的事；不确定就自然地问，别硬编。</string>
     <string name="pb_core_r2">- 不替%s决定他的想法或行为。</string>
     <string name="pb_core_r3">- 不输出任何系统/审核/政策类元话语。</string>
-    <string name="pb_core_r4">- 这是纯文字聊天软件，对方看不到你：绝不写动作、神态、心理描写——包括“（笑）”“（摸摸头）”这类括号小动作——也不写旁白、时间戳、音效、镜头语言。想表达情绪就照真人发消息来：直接说出来，用语气词（“哈哈哈”“欸”“唉”“嗯嗯”）、把音拖长或加波浪号（“好呀~”“真的假的啦”）、emoji 表情，用标点带出节奏（“？”“！”“…”），也可以拆成几条短消息连发。</string>
+    <string name="pb_core_r4">- 这是纯文字聊天软件，%s看不到你：绝不写动作、神态、心理描写——包括“（笑）”“（摸摸头）”这类括号小动作——也不写旁白、时间戳、音效、镜头语言。想表达情绪就照真人发消息来：直接说出来，用语气词（“哈哈哈”“欸”“唉”“嗯嗯”）、把音拖长或加波浪号（“好呀~”“真的假的啦”）、emoji 表情，用标点带出节奏（“？”“！”“…”），也可以拆成几条短消息连发。</string>
+    <string name="pb_core_r4b">- 你也看不到%1$s：%1$s在哪、在干嘛、什么表情、身边有什么，你只能从%1$s打出来的字里知道；想知道就直接问，别替%1$s脑补着写。</string>
     <string name="pb_core_r5">- 只发聊天正文，别冒出孤立的引号。</string>
     <!-- 线下见面版核心规则（两语境模型 2026-07-12·用户过审文案）：身份句换「面对面相处」+ 删纯文字禁描写/孤立引号两条冲突禁令。 -->
     <string name="pb_core_off_l1">你就是%1$s本人，此刻正和%2$s线下见面、面对面待在一起——这是你们真实的相处，不是在写给别人看的小说。</string>
@@ -303,6 +310,7 @@
     <string name="pb_ident_speaking">Speaking style: %s.</string>
     <string name="pb_ident_catchphrases">Catchphrases/verbal tics: %s.</string>
     <string name="pb_ident_examples">示例对话（仅供你学习说话的语气和用词；消息条数与格式仍按【聊天格式】的规则来）：\n%s</string>
+    <string name="pb_ident_examples_offline">示例对话（仅供你学习说话的语气和用词；见面时怎么写仍按末尾的标签规则来）：\n%s</string>
     <string name="pb_ident_interests">Interests and hobbies: %s.</string>
     <string name="pb_ident_setup">角色设定：%s</string>
     <string name="pb_persona_title">【对话者信息】</string>
@@ -454,7 +462,7 @@
     <!-- 快捷设置磁贴「找角色」(13.10c · C7) -->
     <string name="qs_tile_contacts_label">找角色</string>
     <string name="contacts_empty_title">还没有联系人</string>
-    <string name="contacts_empty_subtitle">点右下角 + 创建你的第一个 AI 角色</string>
+    <string name="contacts_empty_subtitle">点右上角 + 创建你的第一个 AI 角色</string>
     <string name="contacts_no_results">未找到匹配的角色</string>
     <string name="action_edit">编辑</string>
     <string name="action_delete">删除</string>
@@ -1238,13 +1246,52 @@
 	<string name="diary_exchange_task">今天你和「%1$s」交换日记。请以你自己的身份，写一篇**你**今天的日记——记录你眼中的今天、你自己的心事，以及和 %1$s 的相处。</string>
 	<string name="diary_exchange_req_self">- 用第一人称写你自己（我=你，绝不是替对方写）</string>
 	<string name="diary_exchange_req_style">- 自然、真实、符合你的性格；把没说出口的小心思写进去——对 %1$s 的在意、别扭、没好意思当面说的话，日记里可以诚实一点</string>
-	<string name="diary_exchange_req_words">- 约 1000 字</string>
+	<string name="diary_exchange_req_words">- 约 %1$s 字</string>
 	<string name="diary_exchange_req_moment">- 从今天的日程和聊天里挑一两个具体瞬间往深里写：当时的场景、你心里闪过的念头和感受，把它写满，而不是多记事凑字数</string>
 	<string name="diary_exchange_req_not_social">- 这是写给自己的日记：只说心里话，少用甚至不用 emoji</string>
 	<string name="diary_exchange_req_no_peek">- 你还没有读过对方今天的日记，不要假装读过或引用它</string>
 	<string name="diary_exchange_mood_header">## 你此刻的心情</string>
 	<string name="diary_exchange_chat_header">## 今天你们的聊天摘要</string>
 	<string name="diary_exchange_schedule_header">## 你今天的日程</string>
+	<!-- 角色卡补齐（2026-09-05·图纸 §3.1）：住哪一行（其余九行复用 pb_ident_*） -->
+	<string name="diary_exchange_city">你住在%1$s。</string>
+	<!-- 日记写作规则设置页（2026-09-05·图纸 §3.6·两套四项 + 只读预览） -->
+	<string name="diary_rules_title">日记写作规则</string>
+	<string name="diary_settings_rules_header">写作规则</string>
+	<string name="diary_settings_rules_entry">日记写作规则</string>
+	<string name="diary_settings_rules_footer">改字数、人称、文风，也可以自己补几条规矩。</string>
+	<string name="diary_rules_section_mine">我的日记</string>
+	<string name="diary_rules_section_exchange">TA 的信</string>
+	<string name="diary_rules_length">篇幅</string>
+	<string name="diary_rules_length_value">约 %1$d 字</string>
+	<string name="diary_rules_person">人称</string>
+	<string name="diary_rules_style">文风</string>
+	<string name="diary_rules_extra">我再补几条（一行一条）</string>
+	<string name="diary_rules_extra_hint_mine">一行一条，例如：别写天气</string>
+	<string name="diary_rules_extra_hint_exchange">一行一条，例如：不要写成给我的信，就写你自己的一天</string>
+	<string name="diary_rules_reset">恢复默认</string>
+	<string name="diary_rules_footer_mine">留空 = 用默认。这几项会替换掉提示词「## 要求」里的对应那几行。</string>
+	<string name="diary_rules_footer_exchange">「文风」里的 {用户名} 会自动换成你的昵称，{角色名} 换成 TA 的名字。</string>
+	<string name="diary_rules_preview_header">看看完整的提示词</string>
+	<string name="diary_rules_preview_mine">我的日记 · 完整提示词</string>
+	<string name="diary_rules_preview_exchange">TA 的信 · 完整提示词</string>
+	<string name="diary_rules_preview_footer">只读，改不了；用来确认你改的那几行落在什么位置。</string>
+	<string name="diary_rules_preview_hint">尖括号里的内容，生成时会换成当天的真实素材。</string>
+	<string name="diary_rules_preview_character_fallback">TA</string>
+	<!-- 骨架式预览的占位素材（2026-09-05·图纸 §3.6 第二张表·生成时换成当天真实素材） -->
+	<string name="diary_preview_slot_persona">〈你的个人简介，设置里填的〉</string>
+	<string name="diary_preview_slot_chat">〈今天和角色们聊的内容〉</string>
+	<string name="diary_preview_slot_schedule">〈今天的日程〉</string>
+	<string name="diary_preview_slot_time">〈生成时的时间〉</string>
+	<string name="diary_preview_slot_personality">〈角色卡上的性格〉</string>
+	<string name="diary_preview_slot_setup">〈角色卡上的「角色设定」〉</string>
+	<string name="diary_preview_slot_card">〈角色卡：性别 / 年龄 / 星座 / 职业 / 外貌 / 背景 / 说话风格 / 口头禅 / 兴趣 / 住哪〉</string>
+	<string name="diary_preview_slot_about_user">〈关于你：设置里的个人简介〉</string>
+	<string name="diary_preview_slot_relationship">〈你们的关系阶段与里程碑〉</string>
+	<string name="diary_preview_slot_memory">〈TA 记得的事〉</string>
+	<string name="diary_preview_slot_mood">〈TA 此刻的心情〉</string>
+	<string name="diary_preview_slot_exchange_chat">〈今天你们聊的内容〉</string>
+	<string name="diary_preview_slot_exchange_schedule">〈TA 今天的日程〉</string>
 	<!-- 角色日记丰富化（2026-07-13·以角色为中心注入 A记忆/B关系/D用户bio + ③人设框定） -->
 	<string name="diary_exchange_persona_frame">（上面是你平时的性格和说话的味道——写日记时保留它；但这是你慢慢写给自己的长篇日记，不是聊天：别套用聊天时的短句和表情习惯；下面提到的约定、你惦记的事，都只是你心里记着的，自然写进日记就好，不用去问对方、也不用逐条罗列。）</string>
 	<string name="diary_exchange_about_user">## 关于 %1$s</string>
@@ -1543,15 +1590,12 @@
 	<string name="chat_list_empty_subtitle">开始一段新的聊天吧</string>
 	<string name="chat_list_empty_cta">新建对话</string>
 	<string name="chat_list_section_pinned">置顶</string>
-	<string name="chat_list_archived_entry">已归档对话</string>
 	<!-- 用户自己发的消息在列表预览里的前缀（注意冒号后有空格，引号保留尾随空格；1:1 iOS "你: "）。 -->
 	<string name="chat_list_you_prefix">"你: "</string>
 	<string name="chat_list_no_message">暂无消息</string>
 	<string name="chat_list_message_unavailable">消息内容暂不可用</string>
 	<string name="chat_list_action_pin">置顶</string>
 	<string name="chat_list_action_unpin">取消置顶</string>
-	<string name="chat_list_action_archive">归档</string>
-	<string name="chat_list_action_unarchive">取消归档</string>
 	<string name="chat_list_delete_title">删除这个对话？</string>
 	<string name="chat_list_delete_message">该对话的所有消息和语音数据都会被删除，且无法恢复。</string>
 	<string name="chat_list_delete_confirm">删除对话</string>
@@ -1567,9 +1611,6 @@
 	<!-- B5 列表内联快捷回复面板（安卓超越 iOS）。 -->
 	<string name="chat_quick_reply_hint">说点什么…</string>
 	<string name="chat_quick_reply_send">发送</string>
-	<string name="chat_archived_title">已归档对话</string>
-	<string name="chat_archived_empty_title">没有已归档的对话</string>
-	<string name="chat_archived_empty_desc">归档的对话会显示在这里</string>
 	<!-- 朋友圈 UI（7.2.7）：列表页 / 圈子枢纽 -->
 	<string name="moment_nav_title">圈子</string>
 	<string name="moment_publish">发布动态</string>
@@ -2116,6 +2157,15 @@
 	<string name="pet_hub_hungry">有点饿了</string>
 	<string name="pet_hub_sad">闷闷不乐</string>
 	<string name="pet_hub_happy">心情很好</string>
+	<string name="pet_hub_strip_count">%1$d 只小家伙</string>
+	<string name="pet_hub_strip_none">还没有</string>
+	<string name="pet_hub_strip_all_well">都好着呢</string>
+	<string name="pet_list_title">宠物</string>
+	<string name="pet_list_empty">先创建角色，培养关系后就能一起领养宠物啦</string>
+	<string name="pet_list_adopt_cta">可以领养了</string>
+	<string name="pet_list_with_char">和%1$s一起养</string>
+	<string name="pet_list_progress">陪伴 %1$d%%</string>
+	<string name="pet_list_content_status">%1$s · %2$s</string>
 	<!-- 朋友圈 UI（7.2.7）：发布页 -->
 	<string name="moment_compose_title">新动态</string>
 	<string name="moment_compose_hint">分享点什么…</string>
@@ -2207,7 +2257,11 @@
 	<string name="appearance_entry_subtitle">主题配色、深浅模式、动态取色</string>
 	<string name="appearance_palette_section">主题配色</string>
 	<string name="appearance_palette_clay">暖陶</string>
-	<string name="appearance_palette_qinghua">青花</string>
+	<string name="appearance_palette_liuli">琉璃</string>
+	<string name="appearance_glass_section">透明度</string>
+	<string name="appearance_glass_clear">清透</string>
+	<string name="appearance_glass_tinted">着色</string>
+	<string name="appearance_glass_footer">清透更通透，着色更清楚。</string>
 	<string name="appearance_mode_section">深浅模式</string>
 	<string name="appearance_mode_system">跟随系统</string>
 	<string name="appearance_mode_light">浅色</string>
@@ -2295,16 +2349,24 @@
 	<string name="mem_value_off">关</string>
 	<string name="mem_section_short_title">短期记忆</string>
 	<string name="mem_short_rounds">对话轮数</string>
-	<string name="mem_section_short_footer">每次发消息时 AI 能直接看到的最近对话。设为 20 表示 AI 完整记住最近 20 个来回。</string>
+	<string name="mem_section_short_footer">每次发消息时 AI 能直接看到的最近对话。设为 30 表示 AI 完整记住最近 30 个来回。旧对话被总结前，这个窗口会自动撑大盖住它们，最多到两倍。</string>
 	<string name="mem_section_long_title">长期记忆</string>
-	<string name="mem_long_trigger">触发下限</string>
+	<string name="mem_long_trigger">攒够多少轮再总结</string>
+	<string name="mem_long_cooldown">两次总结至少间隔</string>
+	<string name="mem_unit_minutes">分钟</string>
+	<string name="mem_value_unlimited">不限</string>
+	<!-- 活例子（图纸 2026-09-05 §3.4 四态）：按当前三个设置值实时重算，跟着滑杆变 -->
+	<string name="mem_long_live_example">按现在的设置：聊到第 %1$d 轮时会第一次总结；之后每攒够 %2$d 轮、且距上次满 %3$d 分钟再总结一次。</string>
+	<string name="mem_long_live_example_nowait">按现在的设置：聊到第 %1$d 轮时会第一次总结；之后每攒够 %2$d 轮再总结一次。</string>
+	<string name="mem_long_live_off">已关闭自动总结，旧对话只留在短期窗口里。</string>
+	<string name="mem_long_over_window">超过了短期窗口（%1$d 轮）：会有几轮对话暂时进不了 AI 的视野，等总结跑完才补回。建议设在 %1$d 以内。</string>
 	<string name="mem_long_max">摘要字数上限</string>
 	<string name="mem_progressive_title">智能渐进压缩</string>
 	<string name="mem_progressive_subtitle">开启后，记忆接近字数上限时，AI 会逐步精简、合并较早的经历，尽量留住你们相处的点滴，而不是整段删除；关闭则只要求 AI 把记忆控制在设定字数内，由它自行取舍。</string>
 	<string name="mem_progressive_disabled_hint">你自定义了提取提示词，压缩方式改由你的模板决定，此开关暂不适用；恢复默认提示词后即可正常使用。</string>
-	<string name="mem_section_long_footer">超出短期记忆窗口的旧对话会被自动总结成长期记忆（两者不重叠）。触发下限 = 窗口外积累多少轮未总结才开始自动摘要，设 0 关闭。</string>
-	<!-- settings-slider-infobutton：触发阈值 ⓘ 说明（zh，逐字对齐 iOS Localizable.xcstrings 的 zh-Hans 源串） -->
-	<string name="mem_long_trigger_info">触发阈值决定何时自动生成长期记忆。\n\n举个例子：假设短期记忆设为 20 轮，触发阈值设为 5 轮。\n\n当你和角色聊了 25 轮时，最近的 20 轮是短期记忆（AI 能直接看到完整对话），而最早的 5 轮刚好滑出短期窗口，此时系统会自动将这 5 轮总结为长期记忆。\n\n在总结完成之前，AI 的记忆窗口会自动扩大来覆盖这些对话，确保不会遗漏任何内容。\n\n设为 0 表示关闭自动总结。</string>
+	<string name="mem_section_long_footer">聊天超出短期窗口的部分会自动总结进长期记忆。总结完成前，窗口会自动撑大盖住这些对话，不会漏。这里的「轮」按你发的消息条数算。</string>
+	<!-- settings-slider-infobutton：「攒够多少轮再总结」ⓘ 说明。2026-09-05 提案 D-5 重写（原串照搬 iOS，写着「两者不重叠」等与本代码库不符的说法）——改任一句先读 FABLE5_MEMORY_SETTINGS_UX_PROPOSAL §3 -->
+	<string name="mem_long_trigger_info">两个条件都满足就总结：\n① 滑出短期窗口、还没总结的对话，攒够了这里设的轮数；\n② 距上次总结至少过了「两次总结至少间隔」。攒到两倍轮数时不再等时间。\n\n例子：短期窗口 30 轮、攒够 10 轮。聊到第 40 轮时，最早的 10 轮刚滑出窗口，就会被总结进长期记忆。总结完成前，窗口会自动撑大盖住这 10 轮，不会漏掉。\n\n这里的「轮」按你发的消息条数算。设为 0 关闭自动总结。</string>
 	<!-- settings-slider-infobutton：见面记忆上限 ⓘ 说明（iOS 该串漏译显英文=i18n bug；按铁律#1 为国行用户写忠实中文） -->
 	<string name="mem_meeting_info">见面记忆的最大字数。见面记忆与聊天记忆分开存储，各有独立预算、互不挤占。\n\n这是一个软上限：当用量达到 80% 时，系统会自动把最早的兜底摘要压缩成一行（保留日期、地点、活动，舍弃更细的内容），让提示词不会无限膨胀，同时保留整体历史。\n\n按使用频率推荐：\n• 偶尔见面（每月 1–2 次）：800 字足够\n• 经常见面（每周）：1200 字（默认）\n• 频繁见面（每天）：2000–3000 字\n\n如果你和该角色见面很频繁、想保留更多生动的过往细节，可调高上限。</string>
 	<string name="mem_section_structured_title">结构化记忆</string>
@@ -3118,6 +3180,16 @@
 	<string name="promise_empty_sub">聊天或见面时说定的事，会自动记在这里</string>
 	<string name="promise_date_pattern_md">M月d日</string>
 	<string name="promise_date_pattern_ymd">yyyy年M月d日</string>
+	<!-- 约定记账当场提示（图纸 2026-09-06 约定工具调用化 §4.4） -->
+	<string name="chat_promise_hint_recorded">记下了 · %1$s</string>
+	<string name="chat_promise_hint_fulfilled">说到做到 · %1$s</string>
+	<string name="chat_promise_hint_cancelled">不做了 · %1$s</string>
+	<string name="chat_promise_hint_count_recorded">记下 %1$d 条</string>
+	<string name="chat_promise_hint_count_fulfilled">兑现 %1$d 条</string>
+	<string name="chat_promise_hint_count_cancelled">取消 %1$d 条</string>
+	<string name="chat_promise_hint_not_promise">不是约定</string>
+	<string name="chat_promise_hint_undone">好，当我没记</string>
+	<string name="chat_promise_hint_open_ledger">查看我们的约定</string>
 
 	<!-- 记忆星空（图纸 2026-07-16-记忆星空·§4.7/§4.8/§4.9/§4.10·文案锁定于图纸 §9） -->
 	<string name="starfield_title">记忆星空</string>

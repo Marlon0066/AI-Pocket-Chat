@@ -47,6 +47,7 @@ import com.situ.aichat.ui.designsystem.AppSegmentedControl
 import com.situ.aichat.sticker.toStickerInfo
 import com.situ.aichat.ui.chat.StickerImage
 import com.situ.aichat.ui.designsystem.AppSheet
+import com.situ.aichat.ui.designsystem.AppSpacing
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -100,7 +101,7 @@ fun StickerPickerSheet(
                 options = stickerTabs.indices.toList(),
                 selected = tab,
                 onSelect = { tab = it },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = AppSpacing.screenGutter),
                 label = { stickerTabs[it] },
             )
 
@@ -133,7 +134,7 @@ fun StickerPickerSheet(
             } else {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(4),
-                    modifier = Modifier.fillMaxWidth().height(320.dp).padding(horizontal = 16.dp),
+                    modifier = Modifier.fillMaxWidth().height(320.dp).padding(horizontal = AppSpacing.screenGutter),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {

@@ -211,7 +211,8 @@ fun ImmersiveSettingsScreen(
     }
 }
 
-private fun narrativeDetailFooter(raw: String): String = when (raw) {
+/** 琉璃卷五复用（`ui/liuli` 树借同一份实现·改这里两张脸同时变）。 */
+internal fun narrativeDetailFooter(raw: String): String = when (raw) {
     "normal" -> "像真人约会的自然对话风格，偶尔有环境描写和心理活动。"
     "detailed" -> "文学化叙事风格，丰富的感官描写、情绪渲染和叙事技巧。"
     "custom" -> "你可以自己编辑下方的三个模块来控制 AI 的写作方式。"

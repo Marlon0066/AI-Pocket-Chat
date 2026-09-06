@@ -21,19 +21,17 @@ class LogCategoryTest {
         }
     }
 
-    /** ★ 回归钉子：iOS 原版漏映射的三个 source，本移植的修正归属。 */
+    /** ★ 回归钉子：iOS 原版漏映射的 source，本移植的修正归属（第三个「节拍状态」随节拍卡 2026-09-06 整体退役）。 */
     @Test
     fun iosOrphanedSourcesNowCovered() {
-        assertEquals(listOf(LogCategory.STORY), LogCategory.sourceFilterCategoriesFor(LogSource.SCENE_PROGRESS))
         assertEquals(listOf(LogCategory.GIFT), LogCategory.sourceFilterCategoriesFor(LogSource.PROACTIVE_GIFT))
         assertEquals(listOf(LogCategory.GIFT), LogCategory.sourceFilterCategoriesFor(LogSource.GIFT_REACTION))
     }
 
-    /** 故事类目同时含「故事生成」与「节拍状态」（修复点）。 */
+    /** 故事类目只含「故事生成」（G 件退役后不再有第二项）。 */
     @Test
-    fun storyCategoryContainsGenerationAndSceneProgress() {
-        assertTrue(LogSource.STORY_GENERATION in LogCategory.STORY.sources)
-        assertTrue(LogSource.SCENE_PROGRESS in LogCategory.STORY.sources)
+    fun storyCategoryContainsOnlyGeneration() {
+        assertEquals(listOf(LogSource.STORY_GENERATION), LogCategory.STORY.sources)
     }
 
     /** 安卓特有路径的归属（忙碌/恢复回复→对话；月薪/红包决策→分析；好感→礼物；见面记忆→记忆；宠物日记→日记）。 */

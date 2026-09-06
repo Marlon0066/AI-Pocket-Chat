@@ -35,7 +35,10 @@ class ToolCallingPromptAssemblyGoldenTest {
     private val events = "[#E1] 开会（5月31日 14:00~15:00 · A会议室）"
 
     /** 装配出的系统消息内容列表（保留消息边界·供结构断言）。 */
-    private fun assembledSystemMessages(toolCalling: Boolean): List<String> {
+    private fun assembledSystemMessages(
+        toolCalling: Boolean,
+        deliveryMode: PromptBuilder.AssistantDeliveryMode = PromptBuilder.AssistantDeliveryMode.TEXT,
+    ): List<String> {
         val strings = PromptStrings(RuntimeEnvironment.getApplication())
         val character = CharacterEntity(uuid = "c1", name = "小雨", creationDate = 0L)
         val user = UserProfileEntity(nickname = "阿哲")
@@ -51,6 +54,7 @@ class ToolCallingPromptAssemblyGoldenTest {
             calendarUpcomingEvents = events,
             toolCallingEnabled = toolCalling,
             now = Instant.ofEpochMilli(1_700_000_000_000L),
+            assistantDeliveryMode = deliveryMode,
         )
         return messages.filter { it.role == "system" }.map { it.content.orEmpty() }
     }
@@ -74,6 +78,27 @@ class ToolCallingPromptAssemblyGoldenTest {
         assertTrue("缺日历感知段(暗号版)：\n$s", s.contains(GoldenResources.read("calendar_awareness_marker.txt")))
         assertTrue("缺线下暗号版提示词", s.contains(GoldenResources.read("offline_fallback.txt")))
         assertTrue("缺约定未来见面文本规则", s.contains(GoldenResources.read("future_rule.txt")))
+        assertTrue("缺约定记账文本规则", s.contains(GoldenResources.read("promise_rule.txt")))
+    }
+
+    // ── T1-9（图纸 2026-09-06 约定工具调用化·E6）：约定暗号规则的三态门 ──
+
+    @Test fun promise_rule_onlyInMarkerMode_andNeverInVoiceCall() {
+        val rule = GoldenResources.read("promise_rule.txt")
+        // 暗号模式（文字回合）：恰一次，且排在约见面规则之后（registry 顺序 线下 → 约见 → 约定）。
+        val markerMsgs = assembledSystemMessages(toolCalling = false)
+        assertEquals("约定记账规则应在且仅一条系统消息里", 1, markerMsgs.count { it.contains(rule) })
+        val guardCard = markerMsgs.single { it.contains(rule) }
+        val future = GoldenResources.read("future_rule.txt")
+        assertTrue("约定记账规则应与约见面规则同在守卫卡", guardCard.contains(future))
+        assertTrue("卡内顺序：约见面在约定记账之前", guardCard.indexOf(future) < guardCard.indexOf(rule))
+        // 工具模式：0 次（schema 已在 tools 数组下发·双登广告 H4）。
+        assertEquals("工具模式不该有约定记账规则", 0, assembledSystemMessages(toolCalling = true).count { it.contains(rule) })
+        // 语音通话回合（暗号模式）：0 次——通话侧无人解析暗号，注入只会让 JSON 被念出来。
+        val voiceMsgs = assembledSystemMessages(toolCalling = false, deliveryMode = PromptBuilder.AssistantDeliveryMode.VOICE)
+        assertEquals("通话回合不该有约定记账规则", 0, voiceMsgs.count { it.contains(rule) })
+        // 正向锚（防「守卫卡整段没装配」的假绿）：同一通话回合里约见面规则照旧在。
+        assertEquals("通话回合守卫卡本身应存在（约见面规则仍在）", 1, voiceMsgs.count { it.contains(future) })
     }
 
     // ── 结构看门（消息边界 + 顺序·堵 contains 看不住的「合并/改序/重复」缝·尤为 C-5 接线护栏） ──

@@ -64,4 +64,18 @@ class ToolFollowUpResultTextTest {
         assertFalse(s.contains("操作已执行"))
         assertTrue(s.contains("没能执行"))
     }
+
+    // ── T1-13（图纸 2026-09-06 约定工具调用化·§3.3-C·H3 不谎报） ──
+
+    @Test fun promise_tools_use_pending_wording_never_claim_recorded() {
+        // 锁定文本在测试里「重新打字」为字面量 + 与实现常量双保险 pin（PITFALLS §1e）。
+        val expected = "已收到这条约定记账请求，App 会在你回复之后据实处理（当前尚未写入账本）。"
+        assertEquals(expected, toolFollowUpResultText(null, "record_promise", calendarNeedsConfirmation = false))
+        assertEquals(expected, toolFollowUpResultText(null, "resolve_promise", calendarNeedsConfirmation = true))
+        assertEquals(expected, PROMISE_FOLLOW_UP_TEXT)
+        // 绝不预报「已记下 / 已写入」。
+        assertFalse(expected.contains("已记下"))
+        assertFalse(expected.contains("已写入"))
+        assertFalse(expected.contains("操作已执行"))
+    }
 }

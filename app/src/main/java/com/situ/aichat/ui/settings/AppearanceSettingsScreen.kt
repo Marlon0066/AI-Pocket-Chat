@@ -42,7 +42,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
 import com.situ.aichat.data.model.AppearanceMode
-import com.situ.aichat.data.model.ThemePalette
+import com.situ.aichat.data.model.AppSkin
+import com.situ.aichat.data.model.GlassTier
 import com.situ.aichat.ui.components.SettingsSection
 import com.situ.aichat.ui.components.contentMaxWidth
 import com.situ.aichat.ui.designsystem.AppRadio
@@ -54,13 +55,14 @@ import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.ui.designsystem.appCardSurface
 import com.situ.aichat.ui.designsystem.LightAppColors
-import com.situ.aichat.ui.designsystem.QinghuaLightAppColors
+import com.situ.aichat.ui.designsystem.LiuliLightAppColors
+import com.situ.aichat.ui.liuli.glass.realtimeBlurSupported
 import kotlin.math.roundToInt
 
 /**
- * 外观设置页（11.4a + 主题配色 2026-06-30）：主题配色（暖陶/青花·多主题 opt-in，反转旧「不做多主题换肤」）
- * + 深浅模式（对齐 iOS `AppearanceMode`：浅色/深色/跟随系统·与配色正交）+ Material You 动态取色（安卓特有·
- * 仅 Android 12+ 显示）。读写走 DataStore，根部主题即时生效。见 FABLE5_THEME_QINGHUA_PROPOSAL.md。
+ * 外观设置页（11.4a + 主题配色 2026-06-30 + 琉璃第二张脸 2026-09-04）：脸（暖陶 / 琉璃·两张脸一个大脑）
+ * + 深浅模式（对齐 iOS `AppearanceMode`：浅色/深色/跟随系统·与脸正交）+ Material You 动态取色（安卓特有·
+ * 仅 Android 12+ 显示）。读写走 DataStore，根部主题即时生效。见 FABLE5_THEME_LIULI_PROPOSAL.md §7.1。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,7 +70,8 @@ fun AppearanceSettingsScreen(
     onBack: () -> Unit,
     viewModel: AppearanceSettingsViewModel = hiltViewModel(),
 ) {
-    val palette by viewModel.palette.collectAsStateWithLifecycle()
+    val skin by viewModel.skin.collectAsStateWithLifecycle()
+    val glassTier by viewModel.glassTier.collectAsStateWithLifecycle()
     val mode by viewModel.mode.collectAsStateWithLifecycle()
     val useDynamicColor by viewModel.useDynamicColor.collectAsStateWithLifecycle()
     val bottomNavOpacity by viewModel.bottomNavOpacity.collectAsStateWithLifecycle()
@@ -98,13 +101,40 @@ fun AppearanceSettingsScreen(
                         .selectableGroup(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    ThemePalette.entries.forEach { option ->
-                        PaletteOptionCard(
-                            palette = option,
-                            selected = option == palette,
-                            onSelect = { viewModel.setPalette(option) },
+                    AppSkin.entries.forEach { option ->
+                        OptionCard(
+                            label = stringResource(option.labelRes()),
+                            selected = option == skin,
+                            onSelect = { viewModel.setSkin(option) },
                             modifier = Modifier.weight(1f),
+                            leading = { SkinSwatch(option) },
                         )
+                    }
+                }
+            }
+
+            // 琉璃「透明度」两档（契约 D-7）：只在琉璃 + 有实时模糊能力时给选——API 29–30 强制着色，
+            // 没有可选项就不给选项（图纸 §0 ② 8）。与主题节同一 Row 几何。
+            if (skin == AppSkin.LIULI && realtimeBlurSupported) {
+                SettingsSection(
+                    title = stringResource(R.string.appearance_glass_section),
+                    footer = stringResource(R.string.appearance_glass_footer),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .selectableGroup(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        GlassTier.entries.forEach { option ->
+                            OptionCard(
+                                label = stringResource(option.labelRes()),
+                                selected = option == glassTier,
+                                onSelect = { viewModel.setGlassTier(option) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                     }
                 }
             }
@@ -138,11 +168,14 @@ fun AppearanceSettingsScreen(
             }
 
             // 过渡丝滑化·A1：悬浮底栏背景不透明度（默认 0.88）+ 实时预览。
-            SettingsSection(title = stringResource(R.string.appearance_bottom_nav_section)) {
-                BottomNavOpacityControl(
-                    opacity = bottomNavOpacity,
-                    onCommit = { viewModel.setBottomNavOpacity(it) },
-                )
+            // 琉璃下整节隐藏（契约 D-7：琉璃底栏是玻璃片，不读这个偏好；暖陶底栏照旧读）。
+            if (skin != AppSkin.LIULI) {
+                SettingsSection(title = stringResource(R.string.appearance_bottom_nav_section)) {
+                    BottomNavOpacityControl(
+                        opacity = bottomNavOpacity,
+                        onCommit = { viewModel.setBottomNavOpacity(it) },
+                    )
+                }
             }
         }
     }
@@ -266,18 +299,19 @@ private fun ModeRow(
 }
 
 /**
- * 主题配色选项卡（两色样：底 + 强调叠放 + 名 + 选中勾）。选中=2dp 强调描边 + 勾；未选=0.5dp 表面分隔。
- * a11y=selectable Role.RadioButton（外层 selectableGroup）。色样直接读对应 AppColors 浅档代表色，随主题色定义自动跟随。
+ * 二选一选项卡（可选前导槽 + 名 + 选中勾）。选中=2dp 强调描边 + 勾；未选=0.5dp 表面分隔。
+ * a11y=selectable Role.RadioButton（外层 selectableGroup）。主题节传 [SkinSwatch] 当前导，透明度节不传前导
+ * （`leading == null` 时只少那只 30×18 色样盒，其余像素与主题卡一致）。
  */
 @Composable
-private fun PaletteOptionCard(
-    palette: ThemePalette,
+private fun OptionCard(
+    label: String,
     selected: Boolean,
     onSelect: () -> Unit,
     modifier: Modifier = Modifier,
+    leading: (@Composable () -> Unit)? = null,
 ) {
     val colors = AppTheme.colors
-    val (swatchBase, swatchAccent) = palette.swatchColors()
     Row(
         modifier = modifier
             .clip(AppShapes.medium)
@@ -291,15 +325,9 @@ private fun PaletteOptionCard(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Box(Modifier.size(width = 30.dp, height = 18.dp)) {
-            Box(
-                Modifier.size(18.dp).clip(CircleShape).background(swatchBase)
-                    .border(0.5.dp, colors.surface.stroke, CircleShape),
-            )
-            Box(Modifier.size(18.dp).align(Alignment.CenterEnd).clip(CircleShape).background(swatchAccent))
-        }
+        leading?.invoke()
         Text(
-            stringResource(palette.labelRes()),
+            label,
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodyMedium,
         )
@@ -309,16 +337,36 @@ private fun PaletteOptionCard(
     }
 }
 
-/** 配色色样（底色 + 强调色·读对应 AppColors 浅档代表色，不复制色值）。 */
-private fun ThemePalette.swatchColors(): Pair<Color, Color> = when (this) {
-    ThemePalette.CLAY -> LightAppColors.surface.base to LightAppColors.accent.primary
-    ThemePalette.QINGHUA -> QinghuaLightAppColors.surface.base to QinghuaLightAppColors.bubble.userEnd
+/** 脸的色样（底 + 强调两圆叠放·30×18）。色样直接读对应 AppColors 昼档代表色，随色板定义自动跟随。 */
+@Composable
+private fun SkinSwatch(skin: AppSkin) {
+    val colors = AppTheme.colors
+    val (swatchBase, swatchAccent) = skin.swatchColors()
+    Box(Modifier.size(width = 30.dp, height = 18.dp)) {
+        Box(
+            Modifier.size(18.dp).clip(CircleShape).background(swatchBase)
+                .border(0.5.dp, colors.surface.stroke, CircleShape),
+        )
+        Box(Modifier.size(18.dp).align(Alignment.CenterEnd).clip(CircleShape).background(swatchAccent))
+    }
 }
 
-/** 配色 → 显示文案资源。 */
-internal fun ThemePalette.labelRes(): Int = when (this) {
-    ThemePalette.CLAY -> R.string.appearance_palette_clay
-    ThemePalette.QINGHUA -> R.string.appearance_palette_qinghua
+/** 脸的色样（底色 + 强调色·读对应 AppColors 浅档代表色，不复制色值）。 */
+private fun AppSkin.swatchColors(): Pair<Color, Color> = when (this) {
+    AppSkin.CLAY -> LightAppColors.surface.base to LightAppColors.accent.primary
+    AppSkin.LIULI -> LiuliLightAppColors.surface.base to LiuliLightAppColors.bubble.userEnd
+}
+
+/** 脸 → 显示文案资源。 */
+internal fun AppSkin.labelRes(): Int = when (this) {
+    AppSkin.CLAY -> R.string.appearance_palette_clay
+    AppSkin.LIULI -> R.string.appearance_palette_liuli
+}
+
+/** 玻璃透明度档 → 显示文案资源。 */
+internal fun GlassTier.labelRes(): Int = when (this) {
+    GlassTier.CLEAR -> R.string.appearance_glass_clear
+    GlassTier.TINTED -> R.string.appearance_glass_tinted
 }
 
 /** 深浅模式 → 显示文案资源（与 iOS `AppearanceMode.displayName` 对齐）。 */

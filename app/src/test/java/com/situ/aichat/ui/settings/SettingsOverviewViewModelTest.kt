@@ -4,7 +4,7 @@ import android.os.Looper
 import com.situ.aichat.data.local.SettingsPreferences
 import com.situ.aichat.data.model.AppSettings
 import com.situ.aichat.data.model.AppearanceMode
-import com.situ.aichat.data.model.ThemePalette
+import com.situ.aichat.data.model.AppSkin
 import com.situ.aichat.data.repository.SettingsRepository
 import com.situ.aichat.prompt.memory.TextEmbedder
 import com.situ.aichat.tts.TtsConfiguration
@@ -40,14 +40,14 @@ class SettingsOverviewViewModelTest {
     private fun idle() = shadowOf(Looper.getMainLooper()).idle()
 
     private fun buildVm(
-        palette: ThemePalette,
+        skin: AppSkin,
         mode: AppearanceMode,
         provider: TtsProviderType,
         notifications: Boolean,
         embedderState: TextEmbedder.LoadState = TextEmbedder.LoadState.LOADED,
     ): SettingsOverviewViewModel {
         val prefs = mockk<SettingsPreferences> {
-            every { themePalette } returns flowOf(palette)
+            every { appSkin } returns flowOf(skin)
             every { appearanceMode } returns flowOf(mode)
         }
         val appSettings = mockk<AppSettings> {
@@ -72,7 +72,7 @@ class SettingsOverviewViewModelTest {
     private fun <T> withSubscriptions(vm: SettingsOverviewViewModel, block: () -> T): T {
         val scope = CoroutineScope(Dispatchers.Main + Job())
         val flows: List<StateFlow<*>> = listOf(
-            vm.themePalette, vm.appearanceMode, vm.ttsProvider, vm.notificationsEnabled,
+            vm.appSkin, vm.appearanceMode, vm.ttsProvider, vm.notificationsEnabled,
         )
         flows.forEach { flow -> scope.launch { flow.collect {} } }
         idle()
@@ -86,13 +86,13 @@ class SettingsOverviewViewModelTest {
     @Test
     fun `五路回显按规格映射·组合一`() {
         val vm = buildVm(
-            palette = ThemePalette.QINGHUA,
+            skin = AppSkin.LIULI,
             mode = AppearanceMode.DARK,
             provider = TtsProviderType.MINIMAX,
             notifications = false,
         )
         withSubscriptions(vm) {
-            assertEquals(ThemePalette.QINGHUA, vm.themePalette.value)
+            assertEquals(AppSkin.LIULI, vm.appSkin.value)
             assertEquals(AppearanceMode.DARK, vm.appearanceMode.value)
             assertEquals(TtsProviderType.MINIMAX, vm.ttsProvider.value)
             assertFalse(vm.notificationsEnabled.value)
@@ -103,14 +103,14 @@ class SettingsOverviewViewModelTest {
     @Test
     fun `五路回显按规格映射·组合二（反向值防对称写错）`() {
         val vm = buildVm(
-            palette = ThemePalette.CLAY,
+            skin = AppSkin.CLAY,
             mode = AppearanceMode.LIGHT,
             provider = TtsProviderType.VOLINK,
             notifications = true,
             embedderState = TextEmbedder.LoadState.FAILED,
         )
         withSubscriptions(vm) {
-            assertEquals(ThemePalette.CLAY, vm.themePalette.value)
+            assertEquals(AppSkin.CLAY, vm.appSkin.value)
             assertEquals(AppearanceMode.LIGHT, vm.appearanceMode.value)
             assertEquals(TtsProviderType.VOLINK, vm.ttsProvider.value)
             assertTrue(vm.notificationsEnabled.value)

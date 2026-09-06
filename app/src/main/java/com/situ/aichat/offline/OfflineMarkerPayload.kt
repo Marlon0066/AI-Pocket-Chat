@@ -4,8 +4,8 @@ package com.situ.aichat.offline
  * 线下见面入场/离场**标记消息**的结构化 payload（1:1 iOS `OfflineMarkerStartPayload`/`OfflineMarkerEndPayload`，
  * `MessageContent.swift`）。标记消息 AI 可见、用户不可见（[com.situ.aichat.data.model.MessageKind] 的
  * OFFLINE_MARKER_START / OFFLINE_MARKER_END），content 存的是 [makeContent] 产出的**人读文本**（非 JSON），
- * 字节级对齐 iOS——LLM 直接读这段文本理解「进入/退出线下模式」。[parse] 反解析回 payload（供 SceneProgress
- * 提取心事种子/地点、PromptBuilder 注入 tensionSeed、状态机校验）。
+ * 字节级对齐 iOS——LLM 直接读这段文本理解「进入/退出线下模式」。[parse] 反解析回 payload（供 PromptBuilder
+ * 提取地点/活动、注入 tensionSeed、状态机校验）。
  */
 data class OfflineMarkerStartPayload(
     val location: String,

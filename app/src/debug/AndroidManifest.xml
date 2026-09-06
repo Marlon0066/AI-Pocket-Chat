@@ -8,5 +8,11 @@
     xmlns:tools="http://schemas.android.com/tools">
     <application
         android:usesCleartextTraffic="true"
-        tools:ignore="MissingApplicationIcon" />
+        tools:ignore="MissingApplicationIcon">
+        <!-- 琉璃 L0 实时背景模糊试验台（仅 debug·不接正式屏·adb am start 启动·见 docs/handoff/2026-09-04-琉璃L0-实时背景模糊试验.md） -->
+        <activity
+            android:name="com.situ.aichat.ui.liuli.glass.LiuliGlassLabActivity"
+            android:exported="true"
+            android:theme="@style/Theme.AIPocketChat" />
+    </application>
 </manifest>

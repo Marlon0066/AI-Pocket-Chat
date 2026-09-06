@@ -48,6 +48,7 @@ import com.situ.aichat.pet.PetItemCategory
 import com.situ.aichat.pet.PetItemKind
 import com.situ.aichat.ui.components.LocalAppHaptics
 import com.situ.aichat.ui.designsystem.AppSnackbarHost
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.ui.gift.GiftColors
 import kotlinx.coroutines.delay
@@ -95,7 +96,7 @@ fun PetInventoryScreen(
                 onSelect = { viewModel.selectCategory(it) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = AppSpacing.screenGutter, vertical = 8.dp),
                 label = { cat ->
                     val count = if (cat == PetItemCategory.FOOD) foodCount else costumeCount
                     if (count > 0) "${cat.displayName} ×$count" else cat.displayName
@@ -107,7 +108,7 @@ fun PetInventoryScreen(
             } else {
                 LazyColumn(
                     Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
+                    contentPadding = PaddingValues(start = AppSpacing.screenGutter, end = AppSpacing.screenGutter, bottom = 32.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(items, key = { it.id }) { item ->

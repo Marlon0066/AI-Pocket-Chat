@@ -49,6 +49,7 @@ import com.situ.aichat.ui.components.contentMaxWidth
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppFormBar
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTextArea
 import com.situ.aichat.ui.designsystem.AppTextField
 import com.situ.aichat.ui.designsystem.AppTheme
@@ -115,7 +116,7 @@ fun UserProfileEditScreen(
                 .imePadding()
                 .verticalScroll(scrollState)
                 .contentMaxWidth()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = AppSpacing.screenGutter),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Avatar

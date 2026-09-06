@@ -1,6 +1,8 @@
 package com.situ.aichat.ui.designsystem
 
 import androidx.compose.ui.graphics.Color
+import com.situ.aichat.data.model.GlassTier
+import com.situ.aichat.ui.liuli.glass.LiuliGlassSpec
 import com.situ.aichat.ui.diary.toneColor
 import com.situ.aichat.ui.offline.MeetingSky
 import com.situ.aichat.ui.offline.MeetingSkyTextBands
@@ -13,6 +15,10 @@ import androidx.compose.ui.graphics.lerp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.situ.aichat.ui.liuli.designsystem.LiuliOnGlassLight
+import com.situ.aichat.ui.liuli.designsystem.LiuliOnGlassDark
+import com.situ.aichat.ui.liuli.designsystem.LiuliPalette
+import com.situ.aichat.ui.components.AvatarColor
 
 /**
  * Fable-5 配色对比度看门（设计语言 §1.4·WCAG 2.2 唯一 gate·正文 4.5:1）。枚举所有「文字×底」组合，
@@ -27,6 +33,9 @@ class ColorContrastTest {
     private companion object {
         const val GLYPH_BAND_TOP = 0.325f
         const val GLYPH_BAND_BOTTOM = 0.675f
+
+        /** WCAG 1.4.11 非文字对比门槛（纯装饰图形 / 图标压实色底）。 */
+        const val NON_TEXT = 3.0
     }
 
     private fun assertContrast(fg: Color, bg: Color, min: Double, label: String) {
@@ -83,7 +92,9 @@ class ColorContrastTest {
         assertContrast(c.text.onAccent, c.accent.gradientEnd, body, "$name onAccent×gradientEnd")
         assertContrast(c.text.onAccent, glazeGlyphFloor(c), body, "$name onAccent×釉烧 glyph 带下缘")
         // 陶土填充上的文字 + 陶土色文字 on 底（功能深档）
-        assertContrast(c.accent.onPrimary, c.accent.primary, body, "$name accent.onPrimary×primary")
+        // 也是琉璃卷三底栏徽章 / 列表未读丸的字底对（A-16：accent.primary 实底 + 昼白夜墨的 onPrimary 字；
+        // 图纸点名的 text.onAccent 两档都是白，夜档只有 3.48 —— 见卷三图纸 §11 D-2）。
+        assertContrast(c.accent.onPrimary, c.accent.primary, body, "$name accent.onPrimary×primary（含徽章 / 未读丸字）")
         assertContrast(c.accent.text, c.surface.base, body, "$name accent.text×base")
         assertContrast(c.accent.text, c.surface.raised, body, "$name accent.text×raised")
         // 选中态软填充容器上的字（= M3 primaryContainer↔onPrimaryContainer 对·按钮族重构 2026-06-19）
@@ -172,9 +183,9 @@ class ColorContrastTest {
 
     @Test fun darkScheme_meetsWcag() = checkScheme(DarkAppColors, "dark")
 
-    @Test fun qinghuaLightScheme_meetsWcag() = checkScheme(QinghuaLightAppColors, "qinghua-light")
+    @Test fun liuliLightScheme_meetsWcag() = checkScheme(LiuliLightAppColors, "liuli-light")
 
-    @Test fun qinghuaDarkScheme_meetsWcag() = checkScheme(QinghuaDarkAppColors, "qinghua-dark")
+    @Test fun liuliDarkScheme_meetsWcag() = checkScheme(LiuliDarkAppColors, "liuli-dark")
 
     /**
      * 故事阅读器**纸面** feature token（D8·契约 §6.4；2026-08-03 心情视觉层退役后只剩中性双档）：
@@ -360,10 +371,10 @@ class ColorContrastTest {
         val lightGold = com.situ.aichat.ui.story.StoryReaderLayout.suggestGoldColor(isDark = false)
         val darkGold = com.situ.aichat.ui.story.StoryReaderLayout.suggestGoldColor(isDark = true)
         listOf(
-            "warm-light" to LightAppColors, "qinghua-light" to QinghuaLightAppColors,
+            "warm-light" to LightAppColors, "liuli-light" to LiuliLightAppColors,
         ).forEach { (name, c) -> assertEquals("$name 的 economy.gold 应 = 建议卡浅纸金", lightGold, c.economy.gold) }
         listOf(
-            "warm-dark" to DarkAppColors, "qinghua-dark" to QinghuaDarkAppColors,
+            "warm-dark" to DarkAppColors, "liuli-dark" to LiuliDarkAppColors,
         ).forEach { (name, c) -> assertEquals("$name 的 economy.gold 应 = 建议卡深纸金", darkGold, c.economy.gold) }
     }
 
@@ -507,14 +518,100 @@ class ColorContrastTest {
         listOf(
             LightAppColors to "light",
             DarkAppColors to "dark",
-            QinghuaLightAppColors to "qinghua-light",
-            QinghuaDarkAppColors to "qinghua-dark",
+            LiuliLightAppColors to "liuli-light",
+            LiuliDarkAppColors to "liuli-dark",
         ).forEach { (c, name) ->
             val scrimmedBase = over(Color.Black, 0.10f, c.surface.base)
             val menuSurface = over(c.surface.raised, 0.94f, scrimmedBase)
             assertContrast(c.text.primary, menuSurface, body, "$name shelfMenu 动作文字×玻璃垫底")
             assertContrast(c.status.onError, menuSurface, body, "$name shelfMenu 删除红×玻璃垫底")
             assertContrast(c.accent.text, menuSurface, icon, "$name shelfMenu 陶土图标×玻璃垫底")
+        }
+    }
+
+    /**
+     * T1-4（图纸 2026-09-05 卷二C §7）：草稿条识别失败的红字落在**玻璃合成底**上（不是任何 surface token）。
+     *
+     * 合成口径 = 玻璃五要素里真正决定底色的那两步：`tint` 以 `tintAlpha` 覆在页面 `surface.base` 上
+     * （模糊 / 饱和只搬运身后像素、不改平均明度；顶沿迎光是 1px 硬线不覆盖字带）。清透 / 着色两档 ×
+     * 琉璃昼夜两方案全测——用户在外观页随时切档，任何一档掉下 4.5 都算红线。
+     */
+    @Test fun liuliGlass_errorText_compositedContrast() {
+        val body = 4.5
+        listOf(
+            Triple(LiuliLightAppColors, false, "liuli-light"),
+            Triple(LiuliDarkAppColors, true, "liuli-dark"),
+        ).forEach { (c, dark, name) ->
+            listOf(GlassTier.CLEAR, GlassTier.TINTED).forEach { tier ->
+                val (tint, alpha) = LiuliGlassSpec.tint(dark, tier)
+                val glassBg = over(tint, alpha, c.surface.base)
+                assertContrast(c.status.onError, glassBg, body, "$name 草稿条失败红×玻璃合成底($tier)")
+                // R2 P-1（用户选①·2026-09-05）：独立 window 的三壳（弹层 / 对话框 / 菜单）在玻璃层里铺 `surface.raised`
+                // 纸面——真底 = 纸面本身；此处按「纸面上再覆一层染色」的最坏情况算，壳内文字（onGlass 主 / 次 /
+                // 错误红）对它同样要过 4.5（纸面本身的对更松，一并被此例盖住）。
+                val shellBg = over(tint, alpha, c.surface.raised)
+                val onGlass = if (dark) LiuliOnGlassDark else LiuliOnGlassLight
+                assertContrast(onGlass.primary, shellBg, body, "$name 壳内主文字×纸面玻璃底($tier)")
+                assertContrast(onGlass.secondary, shellBg, body, "$name 壳内次文字×纸面玻璃底($tier)")
+                assertContrast(c.status.onError, shellBg, body, "$name 壳内错误红×纸面玻璃底($tier)")
+                // 圆钮甲（用户 2026-09-06）：按钮档在染色上再覆一层透镜白（顶半区最亮处），钴蓝图标 accent.text 压它必须 ≥ 4.5。
+                val lens = if (dark) LiuliGlassSpec.buttonLensDark else LiuliGlassSpec.buttonLensLight
+                val buttonBg = over(lens, lens.alpha, glassBg)
+                assertContrast(c.accent.text, buttonBg, body, "$name 圆钮钴蓝图标×按钮档透镜顶($tier)")
+                // 药丸玻璃钮（LiuliButton Glass 档）也走按钮档：字 onGlass.primary / danger 红字压同一透镜顶（独立复核 🔵-7）。
+                assertContrast(onGlass.primary, buttonBg, body, "$name 药丸玻璃钮字×按钮档透镜顶($tier)")
+                assertContrast(c.status.onError, buttonBg, body, "$name 药丸玻璃钮危险红字×按钮档透镜顶($tier)")
+            }
+        }
+    }
+
+    /**
+     * 卷四二级屏新增的「文字 / 图标 × 底」（图纸 2026-09-06 卷四 §8 C2 · 契约 §6.5）：
+     * ① 十枚图标砖上的**白图标**（一组一色·夜档同色，故只算一遍）；
+     * ② 分组纸面 `surface.raised` 上的正文两档（主 / 次）与钴蓝值字 `accent.text`；
+     * ③ 危险行红字 `status.onError` × 分组纸面；
+     * ④ 选项卡选中态 `accent.onContainer` × `accent.container`（A-6）。
+     *
+     * 砖上白图标按 **WCAG 1.4.11 非文字对比 3:1** 钉，不按正文 4.5：砖是**分类装饰**（`contentDescription = null`，
+     * 行的语义全由标题文字承载），且十色由契约 §6.5 锁死不得改——实测最紧的一档是天蓝 #3A8DDE 的 3.47:1
+     * （另有琥珀 3.64 / 橙 3.63 也在 4.5 之下）。这一条在施工日志 §11 D-4 留了记录，供复核裁决要不要回头调色板。
+     *
+     * **不入本例的一对**：组标题 / 脚注按契约 §6.5 走 13sp `text.tertiary`，压 `surface.raised` 实测 2.65:1。
+     * 那是契约锁死的落值、且与卷三已 SHIP 的 `LiuliSectionHeader`（同色压 `surface.base`）同源，施工方无权
+     * 改过审长相，故此处**不断言**、只在 §11 D-4 登记留给复核 / 用户裁决。
+     */
+    @Test fun liuliSecondaryPageSurfaces_meetWcag() {
+        val body = 4.5
+        LiuliPalette.tileColors.forEachIndexed { i, brick ->
+            assertContrast(Palette.White, brick, NON_TEXT, "琉璃图标砖#$i 白图标×砖底")
+        }
+        listOf(
+            LiuliLightAppColors to "liuli-light",
+            LiuliDarkAppColors to "liuli-dark",
+        ).forEach { (c, name) ->
+            val paper = c.surface.raised
+            assertContrast(c.text.primary, paper, body, "$name 行标题×分组纸面")
+            assertContrast(c.text.secondary, paper, body, "$name 行副标 / 右值×分组纸面")
+            assertContrast(c.accent.text, paper, body, "$name 统计值钴蓝×分组纸面")
+            assertContrast(c.status.onError, paper, body, "$name 危险行红字×分组纸面")
+            assertContrast(c.status.onWarning, paper, body, "$name 「未配置」警示值×分组纸面")
+            // 外观页选项卡选中态（A-6）。
+            assertContrast(c.accent.onContainer, c.accent.container, body, "$name 选项卡选中字×accent.container")
+            // 分段条纸面态：选中段落在 surface.raised、未选段落在 surface.sunken。
+            assertContrast(c.text.primary, paper, body, "$name 分段选中字×选中片")
+            assertContrast(c.text.secondary, c.surface.sunken, body, "$name 分段未选字×轨底")
+        }
+        // 头图无照片态（§6.5「头图」·复核 R1 🔵-9 补）：白名 28/700 与 85% 白副行压「AvatarColor 渐变底 + 底 130 遮罩」。
+        // 名的中心离底 ≈ 33dp、副行 ≈ 24dp → 遮罩在那一高度的墨浓度 = 0.55 × (130 − h) / 130；渐变底取 base（底端不提亮 = 最浅处在上、字在下压的是 base）。
+        val nameInk = 0.55f * (130f - 33f) / 130f
+        val subInk = 0.55f * (130f - 24f) / 130f
+        val avatarBases = (0 until 64).map { AvatarColor.color("角色$it") }.distinct()
+        assert(avatarBases.size >= 6) { "AvatarColor 采样应覆盖大部分色板（实得 ${avatarBases.size}）" }
+        avatarBases.forEachIndexed { i, base ->
+            val nameBg = over(LiuliPalette.heroScrimInk, nameInk, base)
+            val subBg = over(LiuliPalette.heroScrimInk, subInk, base)
+            assertContrast(Palette.White, nameBg, body, "头图白名×渐变底#$i+遮罩")
+            assertContrast(over(Palette.White, 0.85f, subBg), subBg, body, "头图副行 85% 白×渐变底#$i+遮罩")
         }
     }
 

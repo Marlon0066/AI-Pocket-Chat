@@ -104,7 +104,6 @@ internal fun ConversationEntity.toExport(messages: List<MessageExport>) = Conver
     lastMemorySummaryFailureDate = lastMemorySummaryFailureDate,
     lastMemorySummaryAttemptDate = lastMemorySummaryAttemptDate,
     isPinned = isPinned,
-    isArchived = isArchived,
     isReservedForNotifications = isReservedForNotifications,
     lastReadDate = lastReadDate,
     lastMessageDate = lastMessageDate,

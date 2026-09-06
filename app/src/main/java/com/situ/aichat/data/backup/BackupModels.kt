@@ -199,7 +199,6 @@ data class ConversationExport(
     val lastMemorySummaryFailureDate: Long? = null,
     val lastMemorySummaryAttemptDate: Long? = null,
     val isPinned: Boolean = false,
-    val isArchived: Boolean = false,
     val isReservedForNotifications: Boolean = false,
     val lastReadDate: Long? = null,
     val lastMessageDate: Long? = null,

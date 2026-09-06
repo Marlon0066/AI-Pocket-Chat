@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.situ.aichat.data.local.SettingsPreferences
 import com.situ.aichat.data.model.AppearanceMode
-import com.situ.aichat.data.model.ThemePalette
+import com.situ.aichat.data.model.AppSkin
 import com.situ.aichat.data.repository.SettingsRepository
 import com.situ.aichat.prompt.memory.TextEmbedder
 import com.situ.aichat.tts.TtsConfigurationRepository
@@ -35,8 +35,8 @@ class SettingsOverviewViewModel @Inject constructor(
      */
     val embedderLoadState: StateFlow<TextEmbedder.LoadState> = embedder.loadState
 
-    val themePalette: StateFlow<ThemePalette> = settingsPreferences.themePalette
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ThemePalette.CLAY)
+    val appSkin: StateFlow<AppSkin> = settingsPreferences.appSkin
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppSkin.CLAY)
 
     val appearanceMode: StateFlow<AppearanceMode> = settingsPreferences.appearanceMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppearanceMode.SYSTEM)

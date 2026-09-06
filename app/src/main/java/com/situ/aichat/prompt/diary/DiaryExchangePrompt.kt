@@ -90,12 +90,19 @@ data class DiaryExchangeEnrichment(
 /**
  * 交换日记 system prompt 装配（纯函数·T1 哨兵测试）。section 顺序（2026-07-13：**要求段移到底部**·
  * recency 让写作指令最后落地；丰富化上下文在任务之后、今日素材之前）：
- * 身份、设定、[人设框定] → 任务 → [## 关于TA] → [## 你和TA的关系] → [## 你还记得的] → [约定块] → [惦记块] →
+ * 身份、[角色卡]、设定、[人设框定] → 任务 → [## 关于TA] → [## 你和TA的关系] → [## 你还记得的] → [约定块] → [惦记块] →
  * [此刻心情] → [今日聊天摘要] → [你今天的日程] → 当前时间(含周几) →
  * ## 要求（自称、风格[对{用户名}的在意]、字数、具体瞬间、非社交动态、不偷看对方日记、自己的口吻）→
  * 只输出正文 + MOOD 尾行。可选段空则整段省略。
  */
 object DiaryExchangePromptBuilder {
+
+    /**
+     * 交换日记字数默认值（与 [DiaryPromptBuilder.DEFAULT_WORD_COUNT_RANGE] 对称）。改动前 `reqWords`
+     * 资源里写死「约 1000 字」，2026-09-05 起改带 `%1$s` 占位由本常量/用户设置填。
+     */
+    const val DEFAULT_EXCHANGE_WORD_COUNT = "1000"
+
     fun build(
         strings: DiaryExchangePromptStrings,
         characterName: String,
@@ -108,9 +115,20 @@ object DiaryExchangePromptBuilder {
         chatSummary: String,
         scheduleSummary: String,
         enrichment: DiaryExchangeEnrichment = DiaryExchangeEnrichment(),
+        /** 角色卡块（[DiaryCharacterCardBlock] 预渲染·空 = 与本参数引入前逐字节相同）。 */
+        characterCard: String = "",
+        /**
+         * 写作规则覆盖（[DiaryRuleOverrides.toOverrides] 产出·键 = [DiaryPromptField.raw]）。
+         * 只作用于要求段的**人称行 / 文风行 / 字数行 + 段末追加行**；其余要求行、只输出正文、
+         * MOOD 尾行**绝不**进入可覆盖面（图纸 §9 机制锁 / REDLINES §1）。空 map = 全默认。
+         */
+        overrides: Map<String, String> = emptyMap(),
     ): String {
         val parts = mutableListOf<String>()
         parts.add(strings.intro.format(characterName, personality))
+        // 角色卡（2026-09-05）：性别/年龄/星座/职业/外貌/背景/说话风格/口头禅/兴趣/住哪——过去只有聊天和日程
+        // 看得到，写日记时角色是盲的、只好自编设定。示例对话有意不进（那是聊天格式样本·会带成短句聊天腔）。
+        if (characterCard.isNotEmpty()) parts.add(characterCard)
         if (systemPrompt.isNotEmpty()) parts.add(strings.setup.format(systemPrompt))
         // ③ 人设框定（紧跟身份/设定·保留声音但别套聊天短句/表情）。
         if (enrichment.personaFrame.isNotEmpty()) parts.add(enrichment.personaFrame)
@@ -167,13 +185,18 @@ object DiaryExchangePromptBuilder {
         parts.add("")
         // ## 要求（**底部**·recency）。reqStyle 现填「对{用户名}的在意」（%1$s ← userName）。
         parts.add(strings.reqHeader)
-        parts.add(strings.reqSelf)
-        parts.add(strings.reqStyle.format(userName))
-        parts.add(strings.reqWords)
+        parts.add(overrides[DiaryPromptField.NARRATIVE_PERSON.raw]?.let { "- $it" } ?: strings.reqSelf)
+        parts.add(overrides[DiaryPromptField.STYLE_HINT.raw]?.let { "- $it" } ?: strings.reqStyle.format(userName))
+        parts.add(strings.reqWords.format(overrides[DiaryPromptField.WORD_COUNT_RANGE.raw] ?: DEFAULT_EXCHANGE_WORD_COUNT))
         parts.add(strings.reqMoment)
         parts.add(strings.reqNotSocial)
         parts.add(strings.reqNoPeek)
         parts.add(strings.reqNoAi)
+        // 追加用户补充规则（每行一条，自动加 - 前缀·空行跳过）。
+        for (line in (overrides[DiaryPromptField.EXTRA_RULES.raw] ?: "").split("\n")) {
+            val trimmed = line.trim()
+            if (trimmed.isNotEmpty()) parts.add("- $trimmed")
+        }
         parts.add("")
         parts.add(strings.outputOnly)
         parts.add(strings.moodOutputRule)

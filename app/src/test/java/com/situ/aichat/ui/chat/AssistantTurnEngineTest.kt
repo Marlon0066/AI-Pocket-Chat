@@ -21,6 +21,7 @@ import com.situ.aichat.diagnostics.ContextLogService
 import com.situ.aichat.diagnostics.LogToolInfo
 import com.situ.aichat.offline.OfflineMeetingAction
 import com.situ.aichat.offline.OfflineMeetingActionType
+import com.situ.aichat.promise.PromiseToolAction
 import com.situ.aichat.data.repository.ApiConfigRepository
 import com.situ.aichat.data.repository.CharacterRepository
 import com.situ.aichat.data.repository.ConversationRepository
@@ -81,8 +82,8 @@ import org.robolectric.annotation.Config
  * 字符串资源，纯 JVM 跑不动。手法：instance 依赖全 MockK relaxed；打字/递送/error/info 流用真 MutableStateFlow；
  * **mock replyDeliverer.deliverAssistantReply 的返回值直接驱动编排结果**（非空=投递成功 / 空=空响应），llmClient
  * relaxed 返空流即可（投递结果由 deliverer mock 决定，不依赖真流式内容）；mockkObject(TtsService) 钉 hasAvailableVoice
- * =false 强制文字计划（只 unmockkObject 自己·不 unmockkAll 污染同 JVM）。incrementSceneProgress 回调用计数 spy。
- * 覆盖：断网快速失败 / 会话不存在静默返回 / happy（投递+逐回合维护[记忆/成长/关系/通知/补帖/节拍]+打字槽开关+旗标归位）/
+ * =false 强制文字计划（只 unmockkObject 自己·不 unmockkAll 污染同 JVM）。
+ * 覆盖：断网快速失败 / 会话不存在静默返回 / happy（投递+逐回合维护[记忆/成长/关系/通知/补帖]+打字槽开关+旗标归位）/
  * 空响应（报可重试错 + 不跑逐回合维护）。
  */
 @RunWith(RobolectricTestRunner::class)
@@ -119,11 +120,11 @@ class AssistantTurnEngineTest {
     private lateinit var openLoopDetectionTrigger: OpenLoopDetectionTrigger
     private lateinit var openLoopRepository: OpenLoopRepository
     private lateinit var promiseRepository: com.situ.aichat.data.repository.PromiseRepository
+    private lateinit var promiseToolHandler: ChatPromiseToolHandler
     private lateinit var ourDayRepository: com.situ.aichat.data.repository.OurDayRepository
     private lateinit var errorFlow: MutableStateFlow<String?>
     private lateinit var infoToastFlow: MutableStateFlow<String?>
     private lateinit var isDelivering: MutableStateFlow<Boolean>
-    private var sceneProgressCalls = 0
     private lateinit var engine: AssistantTurnEngine
 
     private val character = CharacterEntity(uuid = "c1", name = "小雨", creationDate = 0L)
@@ -176,12 +177,12 @@ class AssistantTurnEngineTest {
         openLoopDetectionTrigger = mockk(relaxed = true)
         openLoopRepository = mockk(relaxed = true)
         promiseRepository = mockk(relaxed = true)
+        promiseToolHandler = mockk(relaxed = true) // 约定记账（图纸 2026-09-06）：本族只验「引擎交给它什么」，闸门/落库有自己的测试
         ourDayRepository = mockk(relaxed = true)
         coEvery { ourDayRepository.injectableForCharacter(any()) } returns emptyList() // 卷二：默认无行 = 装配零变化
         errorFlow = MutableStateFlow(null)
         infoToastFlow = MutableStateFlow(null)
         isDelivering = MutableStateFlow(false)
-        sceneProgressCalls = 0
 
         // 默认：联网 + 会话存在 + 历史为空 + 文字计划（无可用语音）。
         every { networkMonitor.isConnected } returns MutableStateFlow(true)
@@ -229,6 +230,7 @@ class AssistantTurnEngineTest {
             openLoopDetectionTrigger = openLoopDetectionTrigger,
             openLoopRepository = openLoopRepository,
             promiseRepository = promiseRepository,
+            promiseToolHandler = promiseToolHandler,
             ourDayRepository = ourDayRepository, // 我们的日子·卷二 T2-4
             meetingAppointmentStore = mockk(relaxed = true),
             // WB4：本测试族不测世界书——stub 成「无书」保持既有断言语义（activateForTurn 恒 null = 装配零变化）。
@@ -240,7 +242,6 @@ class AssistantTurnEngineTest {
             errorFlow = errorFlow,
             infoToastFlow = infoToastFlow,
             isDelivering = isDelivering,
-            incrementSceneProgress = { sceneProgressCalls++ },
         )
     }
 
@@ -277,14 +278,13 @@ class AssistantTurnEngineTest {
         coVerify { replyDeliverer.deliverAssistantReply(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
         verify { replyDeliverer.openTypingSlot() }
         verify { replyDeliverer.closeTypingSlot() }
-        // 逐回合维护（仅成功投递才跑）：记忆 / 成长 / 关系 / 通知 / 补帖 / 节拍。
+        // 逐回合维护（仅成功投递才跑）：记忆 / 成长 / 关系 / 通知 / 补帖。
         coVerify { memoryAnalysisTrigger.checkAndTriggerMemorySummary("c1", any(), any(), any()) }
         // 卷四层 ①：引擎多传本轮 userText / replyText（图纸 §2.2 AssistantTurnEngine +1 行）；MockK 对省略的默认参按 eq("") 匹配会误红，故显式 any()。
         coVerify { relationshipAnalysisTrigger.incrementGrowthRoundAndCheck("c1", any(), any(), any(), any()) }
         coVerify { relationshipAnalysisTrigger.incrementRelationshipRoundAndCheck("c1", any(), any()) }
         coVerify { notificationScheduler.schedule(character) }
         coVerify { momentGenerationService.triggerCatchUpPostIfNeeded("c1", any(), any()) } // now/zone 带默认 → any()
-        assertEquals(1, sceneProgressCalls)
         // 前台保活 acquire/release 成对；终态旗标归位。
         verify { llmForegroundController.acquire() }
         verify { llmForegroundController.release() }
@@ -316,7 +316,6 @@ class AssistantTurnEngineTest {
         assertEquals(RuntimeEnvironment.getApplication().getString(com.situ.aichat.R.string.chat_error_empty_reply), errorFlow.value)
         coVerify(exactly = 0) { notificationScheduler.schedule(any()) }
         coVerify(exactly = 0) { momentGenerationService.triggerCatchUpPostIfNeeded(any(), any(), any()) }
-        assertEquals(0, sceneProgressCalls)
         verify { replyDeliverer.closeTypingSlot() } // 终态仍清打字槽
     }
 
@@ -465,6 +464,100 @@ class AssistantTurnEngineTest {
         assertTrue("好日历=待确认尚未执行: $joined", toolContents.any { it.contains("尚未执行") || it.contains("确认卡") })
         assertTrue("坏日历=据实没能执行: $joined", toolContents.any { it.contains("没能执行") })
         assertTrue("约见面=待定提案: $joined", toolContents.any { it.contains("提案") || it.contains("尚未落定") })
+    }
+
+    // ── 约定记账双轨端到端（图纸 2026-09-06 约定工具调用化·T2-5/6） ──
+
+    @Test
+    fun 工具路_约定记账调用_合并两来源交给handler() = runBlocking {
+        // 工具路一条 record_promise + 正文 → 引擎回合尾把动作交 handler（落库与闸门在 handler 自己的测试里）。
+        every { llmClient.streamChat(any(), any(), any(), any(), any(), any(), any(), any()) } returns flowOf<StreamToken>(
+            StreamToken.ToolCallDelta(
+                ToolCallChunk(
+                    index = 0, id = "p1", functionName = "record_promise",
+                    argumentChunk = """{"content":"周六一起去看展","evidence":"那就周六一起去看展吧"}""",
+                ),
+            ),
+            StreamToken.Content("好呀，说定啦~"),
+        )
+        coEvery {
+            replyDeliverer.deliverAssistantReply(any(), any(), any(), any(), any(), any(), any(), any(), any())
+        } returns deliveredTurn(empty = false)
+
+        engine.runAssistantTurn(
+            config.copy(toolCallingEnabled = true), character, settings, userProfile = null, userMessageForEmbed = null,
+        )
+
+        coVerify(exactly = 1) {
+            promiseToolHandler.applyAndShow(
+                match { it.size == 1 && (it[0] as? PromiseToolAction.Record)?.content == "周六一起去看展" },
+                any(), "c1", any(), any(),
+            )
+        }
+    }
+
+    @Test
+    fun 工具路_只回约定工具无正文_触发回喂且文案不谎报已记() = runBlocking {
+        // needsTextFollowUp 扩展：只调了约定工具、正文空 → 去取一段正文（否则回合没有气泡）；回喂据实「尚未写入」。
+        every { llmClient.streamChat(any(), any(), any(), any(), any(), any(), any(), any()) } returns flowOf<StreamToken>(
+            StreamToken.ToolCallDelta(
+                ToolCallChunk(
+                    index = 0, id = "p1", functionName = "record_promise",
+                    argumentChunk = """{"content":"周六一起去看展","evidence":"那就周六一起去看展吧"}""",
+                ),
+            ),
+        )
+        val followUpSlot = slot<List<ChatMessageDto>>()
+        coEvery { llmClient.completion(capture(followUpSlot), any(), any(), any(), any(), any()) } returns "嗯，记住啦~"
+        coEvery {
+            replyDeliverer.deliverAssistantReply(any(), any(), any(), any(), any(), any(), any(), any(), any())
+        } returns deliveredTurn(empty = false)
+
+        engine.runAssistantTurn(
+            config.copy(toolCallingEnabled = true), character, settings, userProfile = null, userMessageForEmbed = null,
+        )
+
+        assertTrue("只回约定工具、正文空 → 必须发 follow-up", followUpSlot.isCaptured)
+        val toolContents = followUpSlot.captured.filter { it.role == "tool" }.mapNotNull { it.content }
+        assertEquals(listOf(PROMISE_FOLLOW_UP_TEXT), toolContents)
+        assertFalse("绝不预报已记下", toolContents.first().contains("已记下"))
+    }
+
+    @Test
+    fun 暗号轨_首次仅标记正文空_重试后只交最终尝试的动作() = runBlocking {
+        // E15：首次尝试正文只有 [promise] 暗号 → 剥完为空 → 判空重试；handler 只该收到**最终尝试**的动作。
+        val first = "[promise]{\"action\":\"record\",\"content\":\"第一次的约定\",\"evidence\":\"那就周六一起去看展吧\"}"
+        val second = "好呀，说定啦~[promise]{\"action\":\"record\",\"content\":\"第二次的约定\",\"evidence\":\"那就周六一起去看展吧\"}"
+        var call = 0
+        every { llmClient.streamChat(any(), any(), any(), any(), any(), any(), any(), any()) } answers {
+            call++
+            flowOf<StreamToken>(StreamToken.Content(if (call == 1) first else second))
+        }
+        // 真实 preprocess 的效果由 deliverer 决定；这里按「首次空、次次非空」造投递结果并回带各自的暗号动作。
+        var delivered = 0
+        coEvery {
+            replyDeliverer.deliverAssistantReply(any(), any(), any(), any(), any(), any(), any(), any(), any())
+        } answers {
+            delivered++
+            if (delivered == 1) {
+                DeliveredTurn(emptyList(), false, emptyList(), listOf(PromiseToolAction.Record("第一次的约定", null, "那就周六一起去看展吧")))
+            } else {
+                DeliveredTurn(
+                    listOf(MessageEntity(messageUUID = "m1", conversationUuid = "conv-1", roleRaw = "assistant", content = "好呀，说定啦~", timestamp = 1L)),
+                    false, emptyList(), listOf(PromiseToolAction.Record("第二次的约定", null, "那就周六一起去看展吧")),
+                )
+            }
+        }
+
+        engine.runAssistantTurn(config, character, settings, userProfile = null, userMessageForEmbed = null)
+
+        assertEquals("应发生一次空响应重试", 2, delivered)
+        coVerify(exactly = 1) {
+            promiseToolHandler.applyAndShow(
+                match { it.size == 1 && (it[0] as? PromiseToolAction.Record)?.content == "第二次的约定" },
+                any(), any(), any(), any(),
+            )
+        }
     }
 
     @Test

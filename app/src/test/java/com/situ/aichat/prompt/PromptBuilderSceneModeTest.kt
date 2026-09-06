@@ -4,7 +4,10 @@ import android.content.res.Configuration
 import com.situ.aichat.data.local.entity.CharacterEntity
 import com.situ.aichat.data.local.entity.ConversationEntity
 import com.situ.aichat.data.local.entity.MessageEntity
+import com.situ.aichat.data.local.entity.UserProfileEntity
 import com.situ.aichat.data.model.AppSettings
+import com.situ.aichat.data.model.MessageKind
+import com.situ.aichat.offline.OfflineMarkerStartPayload
 import com.situ.aichat.data.remote.llm.ChatMessageDto
 import org.junit.After
 import org.junit.Assert.assertFalse
@@ -93,8 +96,9 @@ class PromptBuilderSceneModeTest {
         scene: PromptScene = PromptScene.ONLINE_CHAT,
         history: List<MessageEntity> = plainHistory(),
         conv: ConversationEntity? = null,
+        profile: UserProfileEntity? = null,
     ) = PromptBuilder.buildMessages(
-        character = character(), conversation = conv, sortedMessages = history, userProfile = null,
+        character = character(), conversation = conv, sortedMessages = history, userProfile = profile,
         appSettings = appSettings, strings = strings, now = fixedNow, scene = scene,
     )
 
@@ -103,10 +107,34 @@ class PromptBuilderSceneModeTest {
         strings: PromptStrings = strings(),
         scene: PromptScene = PromptScene.OFFLINE_MEETING,
         conv: ConversationEntity = offlineConv(),
+        history: List<MessageEntity> = offlineHistory(),
+        profile: UserProfileEntity? = null,
     ) = PromptBuilder.buildMessages(
-        character = character(), conversation = conv, sortedMessages = offlineHistory(), userProfile = null,
+        character = character(), conversation = conv, sortedMessages = history, userProfile = profile,
         appSettings = appSettings, strings = strings, now = fixedNow, scene = scene,
     )
+
+    /** 入场标记消息（公园 / 散步 / 心事种子）——本场第一条。 */
+    private fun startMarker(seed: String? = "她有心事", ts: Long = fixedNow.toEpochMilli() - 600_000) = MessageEntity(
+        messageUUID = "mk1", conversationUuid = "conv1", roleRaw = "assistant",
+        content = OfflineMarkerStartPayload("公园", "散步", "下午3:30", seed).makeContent(),
+        timestamp = ts, isOfflineMode = true, offlineSessionId = "sess1",
+        messageKindRaw = MessageKind.OFFLINE_MARKER_START.raw,
+    )
+
+    /**
+     * 本场叙事消息（user / assistant 交替），用于把入场标记挤出短期窗口。
+     * [filler] = 每条正文里多塞的字数（见面块 2026-09-06 起按 CJK 字符预算保留，条数多但字少不再触发截断）。
+     */
+    private fun offlineNarratives(count: Int, startTs: Long, filler: Int = 0): List<MessageEntity> = (0 until count).map { i ->
+        val pad = "啊".repeat(filler)
+        MessageEntity(
+            messageUUID = "on$i", conversationUuid = "conv1",
+            roleRaw = if (i % 2 == 0) "user" else "assistant",
+            content = if (i % 2 == 0) "嗯嗯$pad" else "[对话]走这边$pad[/对话]",
+            timestamp = startTs + i * 1_000L, isOfflineMode = true, offlineSessionId = "sess1",
+        )
+    }
 
     // MARK: - T2-1 普通装配
 
@@ -143,6 +171,114 @@ class PromptBuilderSceneModeTest {
         assertFalse("情绪表达退场（模块标题）", all.contains("【情绪表达】"))
         // 注：不断言「[mood:」缺席——线下沉浸预设规则 3 明文点名禁 [mood:]（F8·OfflineNarrativePreset:229），
         // 该禁令文案本就含子串「[mood:」；情绪表达模块退场由上面【情绪表达】标题缺席钉死。
+    }
+
+    // MARK: - 场景感小批（2026-09-06 图纸 §7 T2-1）：线上「不在一起 / 你也看不到{名字}」
+
+    @Test
+    fun 线上核心规则_身份句与r4r4b四处均用用户昵称() {
+        // 图纸 §4-M1/M2/M3 物料在此「重新打字」为字面量（不引实现常量·PITFALLS 1e）。
+        val all = allText(
+            buildOnline(
+                AppSettings(characterCanInitiateOfflineMeeting = false),
+                profile = UserProfileEntity(nickname = "小美"),
+            ),
+        )
+        assertTrue("l1 补『你们此刻不在一起』", all.contains("在 APP 里和小美发消息聊天——你们此刻不在一起，各在各的地方，只靠手机上的消息联系。"))
+        assertTrue("r4 名字位 = 昵称", all.contains("这是纯文字聊天软件，小美看不到你："))
+        assertTrue("r4b 前两处名字位", all.contains("- 你也看不到小美：小美在哪、在干嘛、什么表情、身边有什么，"))
+        assertTrue("r4b 第三处名字位", all.contains("你只能从小美打出来的字里知道；"))
+        assertTrue("r4b 第四处名字位", all.contains("想知道就直接问，别替小美脑补着写。"))
+        assertFalse("r4 不再写「对方」", all.contains("对方看不到你"))
+        // 「禁 ta」范围 = 核心规则块本身（§11 D-1）：全文级别的 contains("ta") 会被成长模块既有
+        // 「你还在观察ta」「你对ta没有依恋」与邀约 schema 的 "tension_hint" 命中，那些是本批零碰的存量文案。
+        val coreRules = all.substring(all.indexOf("【核心规则】"), all.indexOf("- 只发聊天正文"))
+        assertFalse("核心规则块内不写「ta」（用户拍板①）", coreRules.contains("ta"))
+        assertFalse("核心规则块内不写「TA」", coreRules.contains("TA"))
+        // 顺序：r4b 紧跟 r4、r5 在 r4b 之后（条目序 title/l1/l2/r1/r2/r3/r4/r4b/r5）。
+        assertTrue("r4b 排在 r4 之后", all.indexOf("小美看不到你") < all.indexOf("- 你也看不到小美"))
+        assertTrue("r5 排在 r4b 之后", all.indexOf("- 你也看不到小美") < all.indexOf("- 只发聊天正文"))
+    }
+
+    @Test
+    fun 线上核心规则_昵称为空时四处名字位落回用户() {
+        val all = allText(buildOnline(AppSettings(characterCanInitiateOfflineMeeting = false), profile = null))
+        assertTrue("r4 落回「用户」", all.contains("这是纯文字聊天软件，用户看不到你："))
+        assertTrue("r4b 落回「用户」", all.contains("- 你也看不到用户：用户在哪、在干嘛"))
+    }
+
+    @Test
+    fun 线上核心规则_英文资源同步补两句() {
+        val all = allText(
+            buildOnline(AppSettings(characterCanInitiateOfflineMeeting = false), strings = enStrings()),
+        )
+        assertTrue("en l1 补句", all.contains("the two of you are not together right now"))
+        assertTrue("en r4 名字位", all.contains("and User cannot see you:"))
+        assertTrue("en r4b", all.contains("- You can't see User either: where User is, what User is doing"))
+    }
+
+    // MARK: - 场景感小批（2026-09-06 图纸 §7 T2-1 ③④）：线下末位说明书钉见面地点
+
+    @Test
+    fun 线下末位说明书首句带地点与种子块() {
+        val marker = startMarker()
+        val msgs = buildOffline(
+            history = listOf(marker) + offlineNarratives(2, marker.timestamp + 1_000L),
+            profile = UserProfileEntity(nickname = "小美"),
+        )
+        // 说明书恒为**物理最末**一条 system（B5）。
+        val last = msgs.last()
+        assertTrue("末条是 system", last.role == "system")
+        val lastText = last.content.orEmpty()
+        assertTrue("末条是线下说明书", lastText.startsWith("【当前处于线下见面模式】"))
+        assertTrue(
+            "首句 = M6 第一形态",
+            lastText.contains("你现在和小美面对面在一起，这次是在公园，散步；中途换了地方，以对话里最近一个 [场景] 标签为准。请用沉浸式叙事风格输出内容。"),
+        )
+        assertTrue("种子块在", lastText.contains("【今日场景种子】\n她有心事"))
+        // 长见面用例「标记已被截掉」的正向对照：短历史时标记确实注入在窗口里（PITFALLS 1e 全否定断言配正向证据）。
+        assertTrue("短历史时入场标记在窗口内", msgs.any { it.content.orEmpty().contains("【线下见面开始") })
+        val all = allText(msgs)
+        assertFalse("线下不注入 r4b", all.contains("你也看不到"))
+        assertFalse("线下不注入 l1 补句", all.contains("你们此刻不在一起"))
+        assertFalse("位置天气块已整块退役", all.contains("【双方位置和天气】"))
+        assertFalse("不再让模型自行决定地点", all.contains("自然决定见面地点"))
+    }
+
+    @Test
+    fun 长见面_入场标记被窗口挤掉后地点与种子仍在() {
+        // 见面块按 CJK 字符预算保留（图纸 2026-09-06 见面窗口与节拍卡七件 §3.B/F）：预算 20,000 字、最少保 8 条。
+        // 130 条各 ~400 字 = 52,000 字 → 由新到旧只留得下 ~50 条，最旧的入场标记必被挤出窗口。
+        val marker = startMarker()
+        val msgs = buildOffline(
+            history = listOf(marker) + offlineNarratives(130, marker.timestamp + 1_000L, filler = 400),
+            profile = UserProfileEntity(nickname = "小美"),
+        )
+        // 判别力前提：标记确实已不在注入的历史里（否则本例退化成上一条）。
+        assertTrue(
+            "入场标记已被窗口截掉",
+            msgs.none { it.content.orEmpty().contains("【线下见面开始") },
+        )
+        val lastText = msgs.last().content.orEmpty()
+        assertTrue(
+            "地点仍钉在首句（V5）",
+            lastText.contains("你现在和小美面对面在一起，这次是在公园，散步；中途换了地方，以对话里最近一个 [场景] 标签为准。"),
+        )
+        assertTrue("心事种子仍在（V5）", lastText.contains("【今日场景种子】\n她有心事"))
+    }
+
+    @Test
+    fun 线下无入场标记时首句退回无地点形态() {
+        val lastText = buildOffline(profile = UserProfileEntity(nickname = "小美")).last().content.orEmpty()
+        assertTrue("M6 第三形态", lastText.contains("你现在和小美面对面在一起。请用沉浸式叙事风格输出内容。"))
+        assertFalse("无地点分句", lastText.contains("这次是在"))
+        assertFalse("无种子块", lastText.contains("【今日场景种子】"))
+    }
+
+    @Test
+    fun 线下昵称为空时首句落回用户() {
+        val lastText = buildOffline().last().content.orEmpty()
+        assertTrue(lastText.contains("你现在和用户面对面在一起。"))
     }
 
     // MARK: - T2-3 脏状态 → 普通装配（V-3）

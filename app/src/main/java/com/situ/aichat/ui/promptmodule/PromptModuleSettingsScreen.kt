@@ -54,6 +54,7 @@ import com.situ.aichat.ui.designsystem.AppChoiceChip
 import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppMenu
 import com.situ.aichat.ui.designsystem.AppMenuItem
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTextField
 import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.prompt.PromptModule
@@ -149,7 +150,8 @@ fun PromptModuleSettingsScreen(
             contentPadding = PaddingValues(bottom = 88.dp),
         ) {
             item {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                // 屏 gutter 恒 20（设计语言 §2.5 军规）
+                Column(Modifier.padding(horizontal = AppSpacing.screenGutter, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(stringResource(R.string.pm_tip_1), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(stringResource(R.string.pm_tip_2), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(stringResource(R.string.pm_tip_3), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -160,7 +162,7 @@ fun PromptModuleSettingsScreen(
                     Modifier
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = AppSpacing.screenGutter), // 屏 gutter 恒 20（设计语言 §2.5 军规）
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     SCENE_FILTERS.forEach { scene ->
@@ -174,7 +176,8 @@ fun PromptModuleSettingsScreen(
             }
             item {
                 Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    // 屏 gutter 恒 20（设计语言 §2.5 军规）
+                    Modifier.fillMaxWidth().padding(horizontal = AppSpacing.screenGutter, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Box {
@@ -229,7 +232,9 @@ private fun LazyListScope.sectionHeader(titleRes: Int) {
             stringResource(titleRes),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
+            // 屏 gutter 恒 20（设计语言 §2.5 军规）——本行是 LazyColumn 的裸 item，与 A8–A12 五处同为屏级兄弟，
+            // 必须共线（R1 复核补：图纸三 §4.1 漏列本处，改完前段标题比它统辖的行左 4dp）。
+            modifier = Modifier.padding(start = AppSpacing.screenGutter, end = AppSpacing.screenGutter, top = 16.dp, bottom = 4.dp),
         )
     }
 }
@@ -249,7 +254,8 @@ private fun LazyListScope.moduleSection(
                 stringResource(emptyRes),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                // 屏 gutter 恒 20（设计语言 §2.5 军规）
+                modifier = Modifier.padding(horizontal = AppSpacing.screenGutter, vertical = 8.dp),
             )
         }
         return
@@ -382,9 +388,9 @@ private fun SceneBadge(module: PromptModule, sceneFilter: PromptScene?) {
     TinyBadge(text = stringResource(textRes), color = color)
 }
 
-/** 叙事档位 raw → 显示名（§4-U5）。未知 raw 回退平淡（照 DetailLevel.fromRaw 语义·plain/normal/detailed/custom）。 */
+/** 叙事档位 raw → 显示名（§4-U5）。未知 raw 回退平淡（照 DetailLevel.fromRaw 语义·plain/normal/detailed/custom）。琉璃卷五复用（`ui/liuli` 树借同一份实现·改这里两张脸同时变）。 */
 @Composable
-private fun narrativeLevelName(raw: String): String = stringResource(
+internal fun narrativeLevelName(raw: String): String = stringResource(
     when (raw) {
         "normal" -> R.string.pm_narrative_level_normal
         "detailed" -> R.string.pm_narrative_level_detailed
@@ -400,7 +406,7 @@ private fun NarrativePresetCard(levelRaw: String, onClick: () -> Unit) {
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = AppSpacing.screenGutter) // 屏 gutter 恒 20（设计语言 §2.5 军规）
             .heightIn(min = 48.dp)
             .clickable(onClick = onClick)
             .semantics { role = Role.Button },

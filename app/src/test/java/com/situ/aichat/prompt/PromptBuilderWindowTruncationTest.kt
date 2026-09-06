@@ -28,11 +28,13 @@ class PromptBuilderWindowTruncationTest {
         timestamp: Long = ++ts,
         /** 留痕改造 2026-08-31 新增（默认 plain_text = 既有例行为逐字不变）。 */
         kind: MessageKind = MessageKind.PLAIN_TEXT,
+        /** 见面字符预算例专用（默认 = 既有例逐字不变）。 */
+        content: String = "内容$id",
     ) = MessageEntity(
         messageUUID = id,
         conversationUuid = "c1",
         roleRaw = role,
-        content = "内容$id",
+        content = content,
         timestamp = timestamp,
         isPartOfVoiceCall = call,
         isOfflineMode = offline,
@@ -42,9 +44,16 @@ class PromptBuilderWindowTruncationTest {
 
     private fun ids(list: List<MessageEntity>) = list.map { it.messageUUID }
 
+    /**
+     * 特殊块保留策略（图纸 2026-09-06 七件 §3.B/F）。默认 callLimit=4 复现旧 `maxRounds×4` 在本组既有例
+     * （maxRounds ≤ 1 的通话例）下的取值；见面预算默认 = 出厂值。
+     */
+    private fun policy(callLimit: Int = 4, budgetCjk: Int = SpecialBlockPolicy.MEETING_BUDGET_CJK) =
+        SpecialBlockPolicy(meetingBudgetCjk = budgetCjk, callLimit = callLimit)
+
     @Test
     fun `maxRounds为0返回空`() {
-        assertEquals(emptyList<MessageEntity>(), truncateToRecentRounds(listOf(msg("user", "u1")), maxRounds = 0))
+        assertEquals(emptyList<MessageEntity>(), truncateToRecentRounds(listOf(msg("user", "u1")), maxRounds = 0, policy = policy()))
     }
 
     @Test
@@ -56,7 +65,7 @@ class PromptBuilderWindowTruncationTest {
             msg("user", "u3"), msg("assistant", "a3"),
             msg("user", "u4"), msg("assistant", "a4"),
         )
-        val kept = truncateToRecentRounds(messages, maxRounds = 3)
+        val kept = truncateToRecentRounds(messages, maxRounds = 3, policy = policy())
         // 已知既有行为：达到 maxRounds 时把边界那条 assistant 收进来后停——窗口最旧端是「半个回合」（a1 无 u1）。
         assertEquals(listOf("a1", "u2", "a2", "u3", "a3", "u4", "a4"), ids(kept))
     }
@@ -69,7 +78,7 @@ class PromptBuilderWindowTruncationTest {
             msg("user", "c3", call = true), msg("assistant", "c4", call = true),
             msg("user", "u2"), msg("assistant", "a2"),
         )
-        val kept = truncateToRecentRounds(messages, maxRounds = 1)
+        val kept = truncateToRecentRounds(messages, maxRounds = 1, policy = policy())
         // 通话块=1 轮：数满即停，更早的 u1/a1 裁掉；块本身与其后的最新聊天保留。
         assertEquals(listOf("c1", "c2", "c3", "c4", "u2", "a2"), ids(kept))
     }
@@ -79,10 +88,35 @@ class PromptBuilderWindowTruncationTest {
         val callMsgs = (1..6).map { msg(if (it % 2 == 1) "user" else "assistant", "c$it", call = true) }
         val tail = listOf(msg("user", "u9"), msg("assistant", "a9"))
         val notes = mutableListOf<String>()
-        val kept = truncateToRecentRounds(callMsgs + tail, maxRounds = 1, onTruncation = { notes.add(it) })
-        // specialBlockLimit = 1×4 = 4 → 只留块内最近 4 条（c3..c6），并产出省略提示。
+        val kept = truncateToRecentRounds(callMsgs + tail, maxRounds = 1, policy = policy(callLimit = 4), onTruncation = { notes.add(it) })
+        // 通话 callLimit = 4（= 短期轮数×4 的单源取值）→ 只留块内最近 4 条（c3..c6），并产出省略提示。
         assertEquals(listOf("c3", "c4", "c5", "c6", "u9", "a9"), ids(kept))
         assertTrue(notes.single().contains("通话") && notes.single().contains("4"))
+    }
+
+    @Test
+    fun `见面块按字符预算截断_MIN_KEEP兜底全留`() {
+        // 6 条各 5,000 字（合计 30,000 > 预算 12,000），但块长 6 < MIN_KEEP 8 → 全留、不报截断。
+        val meeting = (1..6).map {
+            msg(if (it % 2 == 1) "user" else "assistant", "m$it", offline = true, session = "s1", content = "字".repeat(5_000))
+        }
+        val tail = listOf(msg("user", "u9"), msg("assistant", "a9"))
+        val notes = mutableListOf<String>()
+        val kept = truncateToRecentRounds(meeting + tail, maxRounds = 1, policy = policy(budgetCjk = 12_000), onTruncation = { notes.add(it) })
+        assertEquals(listOf("m1", "m2", "m3", "m4", "m5", "m6", "u9", "a9"), ids(kept))
+        assertTrue("块内一条没丢就不该报截断", notes.isEmpty())
+    }
+
+    @Test
+    fun `见面块按字符预算截断_超MIN_KEEP后按预算停并报截断`() {
+        // 12 条各 5,000 字：前 8 条（最新 8 条）无条件保留，第 9 条会使累计 40,000+5,000 超预算 12,000 → 停在 8。
+        val meeting = (1..12).map {
+            msg(if (it % 2 == 1) "user" else "assistant", "m$it", offline = true, session = "s1", content = "字".repeat(5_000))
+        }
+        val notes = mutableListOf<String>()
+        val kept = truncateToRecentRounds(meeting, maxRounds = 1, policy = policy(budgetCjk = 12_000), onTruncation = { notes.add(it) })
+        assertEquals((5..12).map { "m$it" }, ids(kept))
+        assertEquals("（线下见面更早部分已省略，仅保留最近 8 条）", notes.single())
     }
 
     @Test
@@ -91,13 +125,13 @@ class PromptBuilderWindowTruncationTest {
             msg("user", "u1"), msg("assistant", "a1"),
             msg("user", "u2"), msg("assistant", "a2"),
         )
-        val kept = truncateToRecentRounds(messages, maxRounds = 10, isIncluded = { it.messageUUID != "u2" })
+        val kept = truncateToRecentRounds(messages, maxRounds = 10, policy = policy(), isIncluded = { it.messageUUID != "u2" })
         assertEquals(listOf("u1", "a1", "a2"), ids(kept))
     }
 
     @Test
     fun `动态扩窗_未总结轮数封顶基准两倍`() {
-        val settings = AppSettings() // 默认 shortTermMemoryLength=20
+        val settings = AppSettings() // 默认 shortTermMemoryLength=30
         val base = settings.shortTermMemoryLength
         assertEquals(base, calculateEffectiveMemoryLength(settings, 0))
         assertEquals(base + 10, calculateEffectiveMemoryLength(settings, 10))

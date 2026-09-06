@@ -3,6 +3,11 @@ package com.situ.aichat.ui.chat
 import com.situ.aichat.data.calendar.CalendarAction
 import com.situ.aichat.meeting.FutureMeetingTool
 import com.situ.aichat.offline.OfflineMeetingAction
+import com.situ.aichat.promise.PromiseChatTool
+
+/** 约定记账工具的回喂文案（图纸 2026-09-06 §3.3-C 逐字锁定·H3 不谎报）。 */
+internal const val PROMISE_FOLLOW_UP_TEXT =
+    "已收到这条约定记账请求，App 会在你回复之后据实处理（当前尚未写入账本）。"
 
 /**
  * 回喂给模型的「工具结果」文案（H3·#3·产品决定 C「视情况」）。
@@ -13,6 +18,8 @@ import com.situ.aichat.offline.OfflineMeetingAction
  * - 日历 + **自动执行**：回合后即写入，说「将为用户…」（意图态），不预报完成。
  * - **约见面**（propose_future_meeting）：只是把提案交用户确认（冒确认卡·尚未落定）→ 待定态。
  * - 线下见面：本就是「卡片已发送、等待回应/确认」的待定态（沿用原文案）。
+ * - **约定记账**（record_promise / resolve_promise）：回喂时账还没记（闸门与落库在回合尾的
+ *   `ChatPromiseToolHandler`，可能被证据闸 / 去重挡下）→ 意图态，绝不预报「已记下」。
  * - **日历工具但参数没解析出动作（解析失败）/ 未知工具**：据实说「没能执行」。
  *
  * ⚠️ 兜底 `else` **绝不能**用「操作已执行」——那会让解析失败的日历调用、或刚发提案的约见面调用被谎报成已办成
@@ -32,6 +39,8 @@ internal fun toolFollowUpResultText(
 
     FutureMeetingTool.isFutureMeetingTool(toolName) ->
         "已把这次见面约定作为提案交给用户确认（待其确认，当前尚未落定）。"
+
+    PromiseChatTool.isPromiseTool(toolName) -> PROMISE_FOLLOW_UP_TEXT
 
     OfflineMeetingAction.isOfflineMeetingTool(toolName) ->
         if (toolName == "suggest_offline_meeting") "邀约卡片已发送，等待用户回应。" else "结束见面卡片已发送，等待用户确认。"

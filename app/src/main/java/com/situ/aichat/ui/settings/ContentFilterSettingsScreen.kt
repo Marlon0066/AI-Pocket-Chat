@@ -50,6 +50,7 @@ import com.situ.aichat.ui.designsystem.AppFormBar
 import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppSegmentedControl
 import com.situ.aichat.ui.designsystem.AppSettingsRow
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppSwitch
 import com.situ.aichat.ui.designsystem.AppTextArea
 import com.situ.aichat.ui.designsystem.AppTextField
@@ -341,7 +342,7 @@ private fun RuleEditScreen(
                 .imePadding() // C4：规则编辑屏（名/正则/替换多输入）键盘弹起可滚到键盘上方
                 .verticalScroll(editorScrollState)
                 .contentMaxWidth()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = AppSpacing.screenGutter),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Spacer(Modifier.height(4.dp))

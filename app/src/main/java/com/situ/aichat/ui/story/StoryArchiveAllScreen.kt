@@ -35,6 +35,7 @@ import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.StoryEntity
 import com.situ.aichat.ui.components.LocalAppHaptics
 import com.situ.aichat.ui.components.clickableScale
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
 
@@ -76,7 +77,8 @@ fun StoryArchiveAllScreen(
                 state = gridState,
                 columns = GridCells.Fixed(3),
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                // 屏 gutter 恒 20（设计语言 §2.5 军规）
+                contentPadding = PaddingValues(horizontal = AppSpacing.screenGutter, vertical = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {

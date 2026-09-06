@@ -1,6 +1,7 @@
 package com.situ.aichat.prompt
 
 import com.situ.aichat.data.local.entity.CharacterEntity
+import com.situ.aichat.data.local.entity.ConversationEntity
 import com.situ.aichat.data.local.entity.MessageEntity
 import com.situ.aichat.data.backup.UserProfileExport
 import com.situ.aichat.data.local.entity.UserProfileEntity
@@ -55,6 +56,18 @@ class PromptBuilderPersonaIdentityTest {
         appSettings = AppSettings(), strings = strings(), now = fixedNow,
     ).filter { it.role == "system" }.joinToString("\n\n") { it.content.orEmpty() }
 
+    /** 线下装配（照 PromptBuilderSceneModeTest 的 offlineConv/offlineHistory 构造）：健康线下会话 + 线下历史。 */
+    private fun offlineSystemText(character: CharacterEntity = character()): String = PromptBuilder.buildMessages(
+        character = character,
+        conversation = ConversationEntity(
+            uuid = "conv1", title = "会话", characterUuid = "c1", creationDate = 0L,
+            isInOfflineMode = true, currentOfflineSessionId = "sess1",
+        ),
+        sortedMessages = history().map { it.copy(isOfflineMode = true, offlineSessionId = "sess1") },
+        userProfile = null, appSettings = AppSettings(), strings = strings(), now = fixedNow,
+        scene = PromptScene.OFFLINE_MEETING,
+    ).filter { it.role == "system" }.joinToString("\n\n") { it.content.orEmpty() }
+
     // ── 件①：示例对话限定句 ──
 
     @Test
@@ -93,6 +106,25 @@ class PromptBuilderPersonaIdentityTest {
         assertTrue("{{user}} 解析为用户名回退", text.contains("用户：在吗"))
         assertFalse("宏字面量不残留", text.contains("{{char}}"))
         assertTrue("限定句仍在", text.contains("仅供你学习说话的语气和用词"))
+    }
+
+    // ── 场景感小批（2026-09-06 图纸 §7 T2-2）：线下示例段头改指末尾标签规则 ──
+
+    @Test
+    fun 线下示例非空_段头改指末尾标签规则不再指聊天格式() {
+        val text = offlineSystemText(character(examples = "用户：今天累吗\n小雨：还行，就是有点困"))
+        assertTrue("线下段头 = M4 物料", text.contains("示例对话（仅供你学习说话的语气和用词；见面时怎么写仍按末尾的标签规则来）："))
+        assertTrue("示例原文在", text.contains("小雨：还行，就是有点困"))
+        assertFalse("不再指线上【聊天格式】", text.contains("消息条数与格式仍按【聊天格式】"))
+        // 段头指向的标签规则确实同装配存在（否则限定句指了个空气）。
+        assertTrue("被指向的 9 标签规则真实存在", text.contains("使用以下 9 种标签包裹所有内容"))
+    }
+
+    @Test
+    fun 线下示例为空_段头整体不出() {
+        val text = offlineSystemText(character(examples = ""))
+        assertFalse("线下段头整体不出现", text.contains("示例对话（"))
+        assertFalse("限定句不出现", text.contains("仅供你学习说话的语气和用词"))
     }
 
     // ── 件③：相处偏好行 / 生日行 ──

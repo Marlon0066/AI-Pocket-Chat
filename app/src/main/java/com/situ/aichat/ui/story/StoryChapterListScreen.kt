@@ -51,6 +51,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.ui.designsystem.appCardSurface
@@ -141,7 +142,8 @@ fun StoryChapterListScreen(
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(16.dp),
+                // 屏 gutter 恒 20（设计语言 §2.5 军规）
+                contentPadding = PaddingValues(horizontal = AppSpacing.screenGutter, vertical = 16.dp),
             ) {
                 item(key = "header") { story?.let { BookHead(it, lastReadNumber, choiceCount) } }
                 item(key = "quick") { QuickActions(pending, resume, onOpenChapter) }

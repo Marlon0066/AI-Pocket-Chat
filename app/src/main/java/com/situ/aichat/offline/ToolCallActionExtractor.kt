@@ -4,6 +4,8 @@ import com.situ.aichat.data.calendar.CalendarAction
 import com.situ.aichat.data.model.MeetingCandidate
 import com.situ.aichat.data.remote.llm.CompletedToolCall
 import com.situ.aichat.meeting.FutureMeetingTool
+import com.situ.aichat.promise.PromiseChatTool
+import com.situ.aichat.promise.PromiseToolAction
 
 /**
  * 把累积完成的结构化工具调用解码为领域动作（纯函数，1:1 iOS `parseToolCallActions` / `parseOfflineMeetingActions`）。
@@ -28,6 +30,7 @@ object ToolCallActionExtractor {
         for (call in completed) {
             if (OfflineMeetingAction.isOfflineMeetingTool(call.name)) continue // 线下见面单独处理
             if (FutureMeetingTool.isFutureMeetingTool(call.name)) continue // 未来约定单独处理（不当日历，否则误判解析失败逼降级）
+            if (PromiseChatTool.isPromiseTool(call.name)) continue // 约定记账单独处理（同上，不当日历解析）
             runCatching { CalendarAction.fromToolCallArguments(call.arguments) }
                 .onSuccess { actions.add(it) }
                 .onFailure { parsingFailed = true }
@@ -47,6 +50,21 @@ object ToolCallActionExtractor {
             FutureMeetingTool.candidateFromToolCall(call.arguments)?.let { candidates.add(it) }
         }
         return candidates
+    }
+
+    /**
+     * 解析约定记账工具调用（`record_promise` / `resolve_promise`）→ 待落库动作（图纸 2026-09-06 §3.1）。
+     * 工具参数空壳 / 非法 → 静默跳过（**不计解析失败**·识别侧宁漏勿错，与约见面同款）；非本族的调用忽略。
+     * 闸门（证据 / 编号 / 上限）不在此，在 `ChatPromiseToolHandler.screen`。
+     */
+    fun parsePromiseActions(completed: List<CompletedToolCall>): List<PromiseToolAction> {
+        if (completed.isEmpty()) return emptyList()
+        val actions = ArrayList<PromiseToolAction>()
+        for (call in completed) {
+            if (!PromiseChatTool.isPromiseTool(call.name)) continue
+            PromiseChatTool.fromToolCall(call.name, call.arguments)?.let { actions.add(it) }
+        }
+        return actions
     }
 
     /**
@@ -81,18 +99,19 @@ object ToolCallActionExtractor {
      * 工具调用解析后，是否该整轮退回文本标记降级（H2·治 #5「一坏调用毁整轮」）。
      *
      * 旧逻辑：任一 [CalendarResult.parsingFailed]/[OfflineResult.parsingFailed] 即退 → 一个坏调用把同轮
-     * **已解析成功**的其它调用（日历/线下/约见面候选）连同正文一起丢掉、再多花一次 LLM 重发。
-     * 新逻辑：仅当「有调用失败、且三类一个可用动作/候选都没解析出来」（全军覆没）才退；**部分成功 → 不退**，
+     * **已解析成功**的其它调用（日历/线下/约见面候选/约定动作）连同正文一起丢掉、再多花一次 LLM 重发。
+     * 新逻辑：仅当「有调用失败、且四类一个可用动作/候选都没解析出来」（全军覆没）才退；**部分成功 → 不退**，
      * 留住解析出来的、丢掉坏的那个（坏调用已在各 `parse*` 内被跳过）。
      */
     fun shouldFallBackToText(
         calendar: CalendarResult,
         offline: OfflineResult,
         meetingCandidates: List<MeetingCandidate>,
+        promiseActions: List<PromiseToolAction> = emptyList(),
     ): Boolean {
         val anyFailed = calendar.parsingFailed || offline.parsingFailed
-        val anyParsed =
-            calendar.actions.isNotEmpty() || offline.actions.isNotEmpty() || meetingCandidates.isNotEmpty()
+        val anyParsed = calendar.actions.isNotEmpty() || offline.actions.isNotEmpty() ||
+            meetingCandidates.isNotEmpty() || promiseActions.isNotEmpty()
         return anyFailed && !anyParsed
     }
 }

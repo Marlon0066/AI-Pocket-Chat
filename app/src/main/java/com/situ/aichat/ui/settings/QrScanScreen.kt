@@ -178,8 +178,8 @@ private fun CameraPreview(onDecoded: (String) -> Unit) {
     )
 }
 
-/** 逐帧从 YUV 的 Y 平面解二维码；扫到一帧即回调并停止后续解码（[done] 守卫）。 */
-private class QrFrameAnalyzer(private val onDecoded: (String) -> Unit) : ImageAnalysis.Analyzer {
+/** 逐帧从 YUV 的 Y 平面解二维码；扫到一帧即回调并停止后续解码（[done] 守卫）。琉璃卷五复用（`ui/liuli` 树借同一份实现·改这里两张脸同时变）。 */
+internal class QrFrameAnalyzer(private val onDecoded: (String) -> Unit) : ImageAnalysis.Analyzer {
     @Volatile
     private var done = false
 

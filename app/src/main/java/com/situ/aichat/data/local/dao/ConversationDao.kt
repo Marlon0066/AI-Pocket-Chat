@@ -20,20 +20,17 @@ data class ConversationWithWallpaper(
 
 @Dao
 interface ConversationDao {
-    /** Active list: pinned first, then most-recent activity (mirrors iOS chat list ordering). */
-    @Query("SELECT * FROM conversations WHERE isArchived = 0 ORDER BY isPinned DESC, lastMessageDate DESC, creationDate DESC")
+    /**
+     * 聊天列表：置顶在前，其次按最近活动。**「Active」是历史留名**——聊天归档功能已于 2026-09-06 删除
+     * （图纸 `docs/handoff/2026-09-06-删除聊天归档功能.md`），本查询现在返回**全部**会话，不再有任何过滤。
+     * 方法名保留是因为 30 处消费者，改名不属那一卷。
+     */
+    @Query("SELECT * FROM conversations ORDER BY isPinned DESC, lastMessageDate DESC, creationDate DESC")
     fun observeActive(): Flow<List<ConversationEntity>>
 
-    /** 活跃会话一次性快照（与 [observeActive] 同序），供桌面小组件 provideGlance 直读（13.9a；无需挂 Flow 观察者）。 */
-    @Query("SELECT * FROM conversations WHERE isArchived = 0 ORDER BY isPinned DESC, lastMessageDate DESC, creationDate DESC")
+    /** 会话一次性快照（与 [observeActive] 同序、同「无过滤」口径），供桌面小组件 provideGlance 直读（13.9a；无需挂 Flow 观察者）。 */
+    @Query("SELECT * FROM conversations ORDER BY isPinned DESC, lastMessageDate DESC, creationDate DESC")
     suspend fun activeSnapshot(): List<ConversationEntity>
-
-    @Query("SELECT * FROM conversations WHERE isArchived = 1 ORDER BY lastMessageDate DESC")
-    fun observeArchived(): Flow<List<ConversationEntity>>
-
-    /** 归档会话**数**（K5·2026-07-12）：列表页只拿它判「>0 显示归档入口」——WHERE 与 [observeArchived] 同（平价测试钉死）。 */
-    @Query("SELECT COUNT(*) FROM conversations WHERE isArchived = 1")
-    fun observeArchivedCount(): Flow<Int>
 
     @Query("SELECT * FROM conversations WHERE uuid = :uuid")
     fun observeByUuid(uuid: String): Flow<ConversationEntity?>
@@ -56,11 +53,11 @@ interface ConversationDao {
     suspend fun getByCharacter(characterUuid: String): List<ConversationEntity>
 
     /**
-     * 某角色最新「未归档」会话（宠物聊天气泡 M11：插宠物独白用）。1:1 iOS `PetChatBubbleService.latestConversation`：
-     * 排除已归档、按 `lastMessageDate ?? creationDate` 降序取首。无活动会话 → null（调用方静默跳过）。
+     * 某角色最新会话（宠物聊天气泡 M11：插宠物独白用）：按 `lastMessageDate ?? creationDate` 降序取首。
+     * 无会话 → null（调用方静默跳过）。**不再排除任何会话**——聊天归档已于 2026-09-06 删除，「Active」是历史留名。
      */
     @Query(
-        "SELECT * FROM conversations WHERE characterUuid = :characterUuid AND isArchived = 0 " +
+        "SELECT * FROM conversations WHERE characterUuid = :characterUuid " +
             "ORDER BY COALESCE(lastMessageDate, creationDate) DESC LIMIT 1",
     )
     suspend fun latestActiveForCharacter(characterUuid: String): ConversationEntity?
@@ -84,12 +81,12 @@ interface ConversationDao {
     )
     suspend fun memorySummaryBlockedByCharacter(characterUuid: String): List<ConversationEntity>
 
-    /** 未读会话计数和（非归档），用于 app 图标角标基数（P6.1e，对齐 iOS baseUnread）。 */
-    @Query("SELECT COALESCE(SUM(cachedUnreadCount), 0) FROM conversations WHERE isArchived = 0")
+    /** 全部会话的未读计数和，用于 app 图标角标基数（P6.1e，对齐 iOS baseUnread）。 */
+    @Query("SELECT COALESCE(SUM(cachedUnreadCount), 0) FROM conversations")
     suspend fun totalUnread(): Int
 
     /** 同 [totalUnread] 的响应式版本，底部「聊天」Tab 未读角标用（nav-shell-2，对齐 iOS MainTabView chats .badge）。 */
-    @Query("SELECT COALESCE(SUM(cachedUnreadCount), 0) FROM conversations WHERE isArchived = 0")
+    @Query("SELECT COALESCE(SUM(cachedUnreadCount), 0) FROM conversations")
     fun observeTotalUnread(): Flow<Int>
 
     @Upsert
@@ -158,10 +155,6 @@ interface ConversationDao {
     @Query("UPDATE conversations SET isPinned = :pinned WHERE uuid = :uuid")
     suspend fun setPinned(uuid: String, pinned: Boolean)
 
-    /** 归档/取消归档（1:1 iOS swipe Archive/Unarchive → conversation.isArchived = ...）。 */
-    @Query("UPDATE conversations SET isArchived = :archived WHERE uuid = :uuid")
-    suspend fun setArchived(uuid: String, archived: Boolean)
-
     /** 按 uuid 删会话（FK CASCADE 连带删其消息行；磁盘媒体须先经 ConversationMediaCleaner 清理）。 */
     @Query("DELETE FROM conversations WHERE uuid = :uuid")
     suspend fun deleteById(uuid: String)
@@ -198,6 +191,16 @@ interface ConversationDao {
     )
     suspend fun updateInSceneRecap(uuid: String, text: String, sessionKey: String, untilMillis: Long)
 
+    // MARK: - 散场硬闸（图纸 2026-09-06 见面窗口与节拍卡七件 §3.E）：列级 UPDATE，禁整行 upsert 单独改它。
+
+    /** 置散场硬闸剩余轮数（点「再待一会儿」→ [com.situ.aichat.offline.OfflineMeetingService.END_HOLD_TURNS]）。 */
+    @Query("UPDATE conversations SET offlineEndHoldTurns = :turns WHERE uuid = :uuid")
+    suspend fun setOfflineEndHold(uuid: String, turns: Int)
+
+    /** 成功回合尾调用；只在见面中且 > 0 时减 1（返回受影响行数，0 = 无需递减）。 */
+    @Query("UPDATE conversations SET offlineEndHoldTurns = offlineEndHoldTurns - 1 WHERE uuid = :uuid AND isInOfflineMode = 1 AND offlineEndHoldTurns > 0")
+    suspend fun consumeOfflineEndHold(uuid: String): Int
+
     /** 手动/自愈重试：把 sessionId 重塞回 pending + 清零计数与时间戳（绕过退避，1:1 iOS manuallyRetry）。 */
     @Query(
         "UPDATE conversations SET pendingOfflineSummarySessionId = :sessionId, pendingOfflineSummaryFailCount = 0, " +
@@ -218,13 +221,13 @@ interface ConversationDao {
     fun observeCharacterUuidsWithOfflineFallback(): Flow<List<String>>
 
     /**
-     * 未答恢复候选（10.2g）：最后一条是用户消息（含非空预览）、未归档、非线下的会话。1:1 iOS lastMessageRole=="user"
-     * 谓词——列直查不 JOIN，避免全表加载（小米14 数据量大时关键）；archived/isInOfflineMode 折进 SQL，
+     * 未答恢复候选（10.2g）：最后一条是用户消息（含非空预览）、非线下的会话。1:1 iOS lastMessageRole=="user"
+     * 谓词——列直查不 JOIN，避免全表加载（小米14 数据量大时关键）；isInOfflineMode 折进 SQL，
      * 角色存在 + busy-defer 留 Kotlin 过滤（需服务查询）。
      */
     @Query(
         "SELECT * FROM conversations WHERE lastMessageRole = 'user' AND lastMessagePreview != '' " +
-            "AND isArchived = 0 AND isInOfflineMode = 0",
+            "AND isInOfflineMode = 0",
     )
     suspend fun conversationsAwaitingReply(): List<ConversationEntity>
 

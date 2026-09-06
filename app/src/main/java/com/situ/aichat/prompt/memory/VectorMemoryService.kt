@@ -293,7 +293,8 @@ class VectorMemoryService @Inject constructor(
 
             val conversationUuids = conversationDao.getByCharacter(characterUuid).map { it.uuid }
                 .ifEmpty { listOf(currentConversationUuid) }
-            val windowTimestamps = messageDao.recentUserTimestamps(currentConversationUuid, shortTermLength) // DESC
+            // 切点与消息路同源（图纸 2026-09-06 七件 §3.A·J2）：只数线上用户消息，见面消息不推动切点。
+            val windowTimestamps = messageDao.recentOnlineUserTimestamps(currentConversationUuid, shortTermLength) // DESC
             val windowCutoff = shortTermWindowCutoffMillis(windowTimestamps, shortTermLength)
             // 第三路候选（我们的日子·卷二 W-8·R1 🟡-1）：cutoff 与消息路同源。消息路的 null = 会话短于窗口、整个会话都在原文里；
             // 对日子路它等价于「从该会话最早一条用户消息那天起全部排除」→ 退回最旧用户消息时刻，守住「窗口内日子永不出」（§9.4）。

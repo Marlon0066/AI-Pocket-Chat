@@ -13,16 +13,26 @@ import com.situ.aichat.data.repository.MessageRepository
 import com.situ.aichat.data.repository.SettingsRepository
 import com.situ.aichat.diagnostics.ContextLogService
 import com.situ.aichat.diagnostics.LogSource
+import com.situ.aichat.prompt.SpecialBlockKind
+import com.situ.aichat.prompt.SpecialBlockPolicy
+import com.situ.aichat.prompt.retainedSpecialBlockCount
 import kotlinx.coroutines.CancellationException
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * 场内滚动压缩·前情提要协调（记忆改造二期·部件⑤·图纸 §3.2）：进行中的长见面 / 长通话，窗口只保留本场最近
- * `shortTermMemoryLength×4` 条（基准 80），更早部分被静默丢弃、只剩一句「更早部分已省略」note。本协调把被丢弃
- * 的部分**滚动压缩**成一段前情提要挂在 conversations 三列（图纸 §3.2-A），由 PromptBuilder 注入在截断提示之后。
+ * 场内滚动压缩·前情提要协调（记忆改造二期·部件⑤·图纸 §3.2；保留数与加厚 = 图纸 2026-09-06 见面窗口与节拍卡七件 §3.B/F）：
+ * 进行中的长见面 / 长通话，窗口只保留本场最近的一截，更早部分被静默丢弃、只剩一句「更早部分已省略」note。
+ * 本协调把被丢弃的部分**滚动压缩**成前情提要挂在 conversations 三列（图纸 §3.2-A），由 PromptBuilder 注入在截断提示之后。
  * 见面与语音通话共用同一套机制。
+ *
+ * **保留数单源**：本场「原文还留几条」一律经 [com.situ.aichat.prompt.retainedSpecialBlockCount]——与截断侧
+ * （[com.situ.aichat.prompt.truncateToRecentRounds]）同一个函数：见面 = 20,000 CJK 字符预算 + MIN_KEEP 8 条，
+ * 通话 = `shortTermMemoryLength×4` 条。绝不在本文件再算一遍条数（两把尺子 = 提要与原文错位）。
+ *
+ * **提要形态**：三小节场记（经过 / 说定的事 / 情绪走向）、每次 ≤800 字（提示词软上限），
+ * 超 [MAX_RECAP_CJK] 视为垃圾丢弃。它要能独自扛住本场早段的记忆，并承接节拍卡（G 件退役）的场记职能。
  *
  * **惰性失效**（图纸 §3.2-A）：写回带场景 key（见面=sessionId·通话=`call:{首条ts}`），注入 / 续写前校验 key 匹配，
  * 场结束不清列 → 下一场生成时整组覆写、旧 key 永不再匹配 → 自然失效（省清理钩子、杜绝漏清）。
@@ -58,7 +68,7 @@ class InSceneRecapCoordinator @Inject constructor(
             val sessionId = convo.currentOfflineSessionId
             if (!convo.isInOfflineMode || sessionId.isNullOrEmpty()) return // 守卫
             val material = messageRepo.offlineSessionMessages(conversationUuid, sessionId)
-            generate(convo, material, sceneKey = sessionId, sceneWord = SCENE_WORD_MEETING)
+            generate(convo, material, sceneKey = sessionId, sceneWord = SCENE_WORD_MEETING, kind = SpecialBlockKind.OFFLINE_MEETING)
         } finally {
             inFlight.remove(conversationUuid)
         }
@@ -77,7 +87,7 @@ class InSceneRecapCoordinator @Inject constructor(
             val block = trailingCallBlock(recent)
             if (block.isEmpty()) return // 守卫
             val callKey = currentCallBlockKey(recent) ?: return
-            generate(convo, block, sceneKey = callKey, sceneWord = SCENE_WORD_CALL)
+            generate(convo, block, sceneKey = callKey, sceneWord = SCENE_WORD_CALL, kind = SpecialBlockKind.VOICE_CALL)
         } finally {
             inFlight.remove(conversationUuid)
         }
@@ -95,15 +105,17 @@ class InSceneRecapCoordinator @Inject constructor(
         material: List<MessageEntity>,
         sceneKey: String,
         sceneWord: String,
+        kind: SpecialBlockKind,
     ) {
         val count = material.size
         if (count == 0) return
         val settings = settingsRepo.getAppSettings()
-        val capBase = maxOf(settings.shortTermMemoryLength * 4, 1)
+        // 保留数与截断同源（图纸 2026-09-06 七件 §3.B/F）：不在这里再算一遍条数。
+        val retained = retainedSpecialBlockCount(material, kind, SpecialBlockPolicy.from(settings))
         // 惰性失效：库中 key == 本场 key 才承认旧提要 / 旧水位；否则视同无提要（覆盖数=0·整组覆写）。
         val keyMatches = convo.inSceneRecapSessionKey.isNotEmpty() && convo.inSceneRecapSessionKey == sceneKey
         val coveredCount = if (keyMatches) material.count { it.timestamp <= convo.inSceneRecapUntilMillis } else 0
-        val cut = recapDecision(count, capBase, coveredCount) ?: return // 判定
+        val cut = recapDecision(count, retained, coveredCount) ?: return // 判定
 
         val cutTs = material[cut.cutIndex - 1].timestamp // cutTs = 素材第 cutIndex 条（1-indexed）的 timestamp
         val waterline = if (keyMatches) convo.inSceneRecapUntilMillis else Long.MIN_VALUE
@@ -158,8 +170,8 @@ class InSceneRecapCoordinator @Inject constructor(
         /** 尝试后冷却（图纸 §3.2-B·锁定）。 */
         const val COOLDOWN_MS = 120_000L
 
-        /** 垃圾防线：CJK 字数上限（图纸 §3.2-B·锁定）。 */
-        const val MAX_RECAP_CJK = 600
+        /** 垃圾防线：CJK 字数上限（图纸 2026-09-06 七件 §4.6·D-3·锁定）。提示词软上限 800 字，这里是硬防线。 */
+        const val MAX_RECAP_CJK = 1600
 
         /** 压缩温度（图纸 §3.2-B·锁定）。 */
         const val TEMPERATURE = 0.3
@@ -174,12 +186,13 @@ class InSceneRecapCoordinator @Inject constructor(
         data class RecapCut(val cutIndex: Int)
 
         /**
-         * 共同判定（图纸 §3.2-B·锁定·纯函数）：[count]=素材条数、[capBase]=基准窗口（`shortTermMemoryLength×4`）、
-         * [coveredCount]=已覆盖条数。dropped≤0（未超基准）或 dropped≤covered（覆盖足够）→ null（不生成）；
+         * 共同判定（图纸 §3.2-B·锁定·纯函数）：[count]=素材条数、[retained]=与截断同源的保留条数
+         * （[com.situ.aichat.prompt.retainedSpecialBlockCount]）、[coveredCount]=已覆盖条数。
+         * dropped≤0（原文全在窗口里）或 dropped≤covered（覆盖足够）→ null（不生成）；
          * 否则切点 `cutIndex = min(count, dropped + COVER_AHEAD)`。
          */
-        fun recapDecision(count: Int, capBase: Int, coveredCount: Int): RecapCut? {
-            val dropped = count - capBase
+        fun recapDecision(count: Int, retained: Int, coveredCount: Int): RecapCut? {
+            val dropped = count - retained
             if (dropped <= 0) return null
             if (dropped <= coveredCount) return null
             return RecapCut(cutIndex = minOf(count, dropped + COVER_AHEAD))
@@ -196,16 +209,25 @@ class InSceneRecapCoordinator @Inject constructor(
         }
 
         /**
-         * 生成提示词（图纸 §3.2-C·纯函数）：oldRecap 空白时整段省略「已有前情提要」块与首行的
-         * 「，以及此前已写好的前情提要」。第三人称指名（图纸一·B2·§9）：命名要求用真实 [charName]/[userName]
-         * （空由调用方兜底「角色」/「用户」）——取代原 §3.2-C「双方」逐字锁定（J-4 有意规格演进·同步更新单测）。
+         * 生成提示词（纯函数·逐字锁定 = 图纸 2026-09-06 见面窗口与节拍卡七件 §4.1）：oldRecap 空白时整段省略
+         * 「已有前情提要」块与首行的「，以及此前已写好的前情提要」。第三人称指名（图纸一·B2·§9）：命名要求用真实
+         * [charName]/[userName]（空由调用方兜底「角色」/「用户」）。
+         *
+         * 2026-09-06 加厚（F 件）：由「一段 ≤300 字的散文」改为**三小节场记**（经过 / 说定的事 / 情绪走向）、
+         * 总长 ≤800 字——提要要能独自扛住见面早段的记忆（原文被字符预算丢掉之后只剩它），
+         * 同时承接节拍卡（G 件退役）的场记职能。
          */
         internal fun buildRecapPrompt(sceneWord: String, oldRecap: String, chunkText: String, charName: String, userName: String): String {
             val hasOld = oldRecap.isNotBlank()
             val sb = StringBuilder()
             sb.append("你是剧情记录员。下面是一场正在进行的").append(sceneWord).append("里较早部分的对话记录")
             if (hasOld) sb.append("，以及此前已写好的前情提要")
-            sb.append("。请把这些内容浓缩成一段新的前情提要：第三人称、按时间顺序，提到两人时用「").append(charName).append("」「").append(userName).append("」的名字（不要写「用户」「角色」），只保留对后续有用的信息（发生了什么、聊到的要点、情绪的变化、双方说定的事），不超过300字。只输出前情提要正文，不要任何标题、解释或前后缀。")
+            sb.append("。请把这些内容浓缩成一段新的前情提要，供角色在后续对话里回忆用。第三人称、按时间顺序，提到两人时用「").append(charName).append("」「").append(userName)
+                .append("」的名字（不要写「用户」「角色」）。按下面三个小节写，每节一到三句，没有内容的小节写「无」：\n")
+                .append("经过：发生了什么、去了哪、聊到的要点\n")
+                .append("说定的事：双方答应的、约好的、承诺的\n")
+                .append("情绪走向：两人情绪怎么变化、现在停在什么状态\n")
+                .append("总长不超过 800 字。只输出这三个小节（含小节名），不要额外标题、解释或前后缀。")
             sb.append("\n\n")
             if (hasOld) sb.append("已有前情提要：\n").append(oldRecap).append("\n\n")
             sb.append("较早部分的记录：\n").append(chunkText)

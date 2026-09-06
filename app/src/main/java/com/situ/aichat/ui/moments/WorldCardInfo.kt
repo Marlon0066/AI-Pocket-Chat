@@ -1,9 +1,8 @@
 package com.situ.aichat.ui.moments
 
 import com.situ.aichat.data.local.entity.CharacterPetEntity
-import com.situ.aichat.pet.PetNeglectPhase
-import com.situ.aichat.pet.neglectPhase
-import com.situ.aichat.ui.pet.PetMoodType
+import com.situ.aichat.ui.pet.PetStatusKind
+import com.situ.aichat.ui.pet.petStatusKind
 
 /**
  * 世界卡信息条纯派生逻辑（W11 图纸 §3·契约 FABLE5_WORLD_SYSTEM_PROPOSAL.md §16）。
@@ -24,13 +23,13 @@ internal sealed interface InfoSegment {
     data object EggHatchable : InfoSegment
 }
 
-/** 宠物「需要你」的态（与 [com.situ.aichat.ui.pet.PetMoodType] → PetStatusLine 映射逐字同源·§3）。 */
+/** 宠物「需要你」的态（由 [com.situ.aichat.ui.pet.PetStatusKind] 派生·单源见 `ui/pet/PetStatusLine.kt`）。 */
 internal enum class PetNeedKind { RAN_AWAY, SICK, HUNGRY, SAD }
 
 /**
  * 由活数据派生信息条段（§3）：人数段（>0 才出）+ 宠物「需要你」段（仅 SICK/HUNGRY/SAD/RAN_AWAY 出·
- * HAPPY/CONTENT 不出——信息条只顶「需要你」的事）。宠物映射与 PetStatusLine（MomentsHubScreen.kt:331-355）
- * 逐字同源（复用 [PetMoodType.from] 单一判定 + [neglectPhase] 区分离家出走·DRY）。
+ * HAPPY/CONTENT 不出——信息条只顶「需要你」的事）。宠物映射**单源** = [petStatusKind]
+ * （`ui/pet/PetStatusLine.kt`·同时供动态页宠物条与宠物总览页消费·DRY）。
  */
 internal object WorldCardInfo {
 
@@ -43,12 +42,12 @@ internal object WorldCardInfo {
         else if (eggHatchable) add(InfoSegment.EggHatchable)
     }
 
-    /** 宠物态 → 「需要你」段类（HAPPY/CONTENT → null 不出段·与 PetStatusLine when 分支逐字同源）。 */
-    private fun petNeedKind(pet: CharacterPetEntity): PetNeedKind? = when (PetMoodType.from(pet)) {
-        PetMoodType.SICK ->
-            if (pet.neglectPhase == PetNeglectPhase.RAN_AWAY) PetNeedKind.RAN_AWAY else PetNeedKind.SICK
-        PetMoodType.HUNGRY -> PetNeedKind.HUNGRY
-        PetMoodType.SAD -> PetNeedKind.SAD
-        PetMoodType.HAPPY, PetMoodType.CONTENT -> null
+    /** 宠物态 → 「需要你」段类（HAPPY/CONTENT → null 不出段）。判定**不在本文件**，一律经 [petStatusKind] 单源。 */
+    private fun petNeedKind(pet: CharacterPetEntity): PetNeedKind? = when (petStatusKind(pet)) {
+        PetStatusKind.RAN_AWAY -> PetNeedKind.RAN_AWAY
+        PetStatusKind.SICK -> PetNeedKind.SICK
+        PetStatusKind.HUNGRY -> PetNeedKind.HUNGRY
+        PetStatusKind.SAD -> PetNeedKind.SAD
+        PetStatusKind.HAPPY, PetStatusKind.CONTENT -> null
     }
 }

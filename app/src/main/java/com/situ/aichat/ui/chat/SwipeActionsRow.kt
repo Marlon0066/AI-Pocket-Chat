@@ -81,6 +81,12 @@ fun SwipeActionsRow(
     trailingActions: List<SwipeAction>,
     modifier: Modifier = Modifier,
     onRowLongClick: (() -> Unit)? = null,
+    /**
+     * 动作面的长相（琉璃卷四 A-12·**加法零回归**：null = 原样走本文件的 [ActionButton]，暖陶调用方不传、
+     * 渲染逐字节不变）。琉璃那张脸的动作面是「纸底 + 中央玻璃圆钮」，与暖陶的整块实色面不是一回事，
+     * 但**手势 / 吸附 / 触觉 / a11y customActions 机制完全共用**——所以只换这一枚面，不复制机制。
+     */
+    actionFace: (@Composable (action: SwipeAction, modifier: Modifier, onClick: () -> Unit) -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     val density = LocalDensity.current
@@ -120,12 +126,22 @@ fun SwipeActionsRow(
         Row(Modifier.matchParentSize()) {
             // 行首（右滑露出）：置顶等。
             leadingActions.forEach { action ->
-                ActionButton(action, Modifier.width(ACTION_WIDTH).fillMaxHeight()) { act(action) }
+                val faceModifier = Modifier.width(ACTION_WIDTH).fillMaxHeight()
+                if (actionFace != null) {
+                    actionFace(action, faceModifier) { act(action) }
+                } else {
+                    ActionButton(action, faceModifier) { act(action) }
+                }
             }
             Box(Modifier.weight(1f))
             // 行尾（左滑露出）：归档 / 删除。
             trailingActions.forEach { action ->
-                ActionButton(action, Modifier.width(ACTION_WIDTH).fillMaxHeight()) { act(action) }
+                val faceModifier = Modifier.width(ACTION_WIDTH).fillMaxHeight()
+                if (actionFace != null) {
+                    actionFace(action, faceModifier) { act(action) }
+                } else {
+                    ActionButton(action, faceModifier) { act(action) }
+                }
             }
         }
 

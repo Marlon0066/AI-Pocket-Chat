@@ -135,42 +135,39 @@ internal object Palette {
     val SadInk = Color(0xFF4E5C68)    // 雾蓝功能深档（故事图标·浅档）
     val ShyInk = Color(0xFF7E5258)    // 暖玫功能深档（宠物图标·浅档）
 
-    // ── 青花主题（多主题配色·首发蓝档·见 FABLE5_THEME_QINGHUA_PROPOSAL.md §3）：白多蓝点睛·瓷白底 + 钴蓝点缀。 ──
-    // 浅档（青花·瓷白）
-    val PorcelainBlue = Color(0xFFF6F8FC)        // 浅 surface 底（瓷白·极淡冷调）
-    val MistBlue = Color(0xFFE7EDF6)             // 浅 surface sunken / stroke / AI 气泡描边
-    val InkBlue = Color(0xFF1E2A3C)              // 浅 text primary（黛青墨）
-    val InkBlueSoft = Color(0xFF586679)          // 浅 text secondary
-    val InkBlueFaint = Color(0xFF97A2B4)         // 浅 text tertiary（纯装饰）
-    val Cobalt = Color(0xFF3461A6)               // 浅 accent 装饰/大元素钴蓝
-    val CobaltText = Color(0xFF284E86)           // 浅 钴蓝文字/小图标 on 瓷白（≥4.5:1）
-    val CobaltContainer = Color(0xFFDCE7F6)      // 浅 选中软填充（极浅青花）
-    val CobaltOnContainer = Color(0xFF25406E)    // 浅 container 上的字
-    val CobaltGradStart = Color(0xFF3D6CB0)      // 浅 气泡/主钮渐变起点（135°）
-    val CobaltGradEnd = Color(0xFF2A538F)        // 浅 气泡/主钮渐变终点（兼恒深档起点·对 #F4F8FD ≈7.2:1）
-    val CobaltDeepEnd = Color(0xFF21406E)        // 浅 恒深档终点
-    val OnCobalt = Color(0xFFF4F8FD)             // 钴蓝填充上的近白字（两档同）
-    val OnCobaltDeep = Color(0xFFEDF3FB)         // 恒深档填充上的暖白字（两档同）
-    // 深档（青花·夜·墨青底 + 略提亮钴蓝·点缀降饱和）
-    val NightInk = Color(0xFF0F1521)             // 深 surface 底（墨青夜）
-    val NightRaised = Color(0xFF19212F)          // 深 surface raised / AI 气泡
-    val NightSunken = Color(0xFF222C3D)          // 深 surface sunken
-    val NightStroke = Color(0xFF2A3547)          // 深 1px 描边（替投影）
-    val MoonCream = Color(0xFFE7ECF4)            // 深 text primary（冷调暖白）
-    val MoonCreamSoft = Color(0xFFA6B0C0)        // 深 text secondary
-    val MoonCreamFaint = Color(0xFF6F7A8C)       // 深 text tertiary
-    val CobaltBright = Color(0xFF6E93C8)         // 深 accent 装饰/选中 tint（亮档·on 深底可见·配深字 ≥4.5·避中间调死区）
-    val CobaltTextDark = Color(0xFF8FB3E6)       // 深 钴蓝文字 on 墨青（≥4.5:1）
-    val CobaltContainerDark = Color(0xFF233650)  // 深 选中软填充
-    val CobaltOnContainerDark = Color(0xFFBFD4F2) // 深 container 上的字
-    val CobaltGradStartDark = Color(0xFF3E69AC)  // 深 气泡/主钮渐变起点（深钴蓝·配白字 ≥4.5·避中间调死区）
-    val CobaltGradEndDark = Color(0xFF305A95)    // 深 气泡/主钮渐变终点
-    val CobaltDeepStartDark = Color(0xFF2F548C)  // 深 恒深档起点
-    val CobaltDeepEndDark = Color(0xFF244372)    // 深 恒深档终点
-    val GlazeBlue = Color(0xFFFFFFFF)            // 浅 药丸面顶（白瓷·同暖档口径）
-    val GlazeBlueShade = Color(0xFFF5F8FD)       // 浅 药丸面底（向瓷白底靠）
-    val GlazeBlueDark = Color(0xFF3E485A)        // 深 药丸面顶（冷灰抬升一阶）
-    val GlazeBlueDarkShade = Color(0xFF343E4F)   // 深 药丸面底
+    // ── 琉璃主题（第二张脸配色·见 FABLE5_THEME_LIULI_PROPOSAL.md §4.2/§4.3）：冷灰瓷白 / 近黑 + 钴蓝。 ──
+    // 昼（琉璃·瓷白）
+    val GlassMist = Color(0xFFF6F7FB)            // 昼 surface 底（≥4.54 托住 economy.gold·作者修订值）
+    val GlassSunken = Color(0xFFE8EAF0)          // 昼 surface sunken（搜索槽 / 凹陷）
+    val GlassStroke = Color(0xFFDDE0E8)          // 昼 surface stroke（≈ 墨 10% over 底·实色）
+    val GlassBubbleStroke = Color(0xFFE9ECF3)    // 昼 AI 气泡发丝（≈ 墨 6% over 白）
+    val InkCool = Color(0xFF111318)              // 昼 text primary
+    val InkCoolSoft = Color(0xFF5F6470)          // 昼 text secondary（5.9 on 白）
+    val InkCoolFaint = Color(0xFF9A9FAB)         // 昼 text tertiary（纯装饰）
+    val Cobalt26 = Color(0xFF2570E8)             // 昼 accent 装饰 / 大元素（白字 4.6）
+    val Cobalt26Text = Color(0xFF0A5FCB)         // 昼 钴蓝文字 on 白 6.0 / on sunken 5.0（作者修订值）
+    val Cobalt26Container = Color(0xFFE3EEFD)    // 昼 选中浅染
+    val Cobalt26OnContainer = Color(0xFF0B4FB0)  // 昼 container 上字（7.0）
+    val Cobalt26GradStart = Color(0xFF2570E8)    // 渐变起点（两档同·白字 4.6）
+    val Cobalt26GradEnd = Color(0xFF1557CC)      // 渐变终点（两档同·白字 6.4）
+    val Cobalt26DeepEnd = Color(0xFF0F44A3)      // 恒深档终点（两档同）
+    val GlazeGlass = Color(0xFFFFFFFF)           // 昼 药丸面顶（D-15 甲：白瓷药丸仍在未迁屏出现）
+    val GlazeGlassShade = Color(0xFFF4F6FA)      // 昼 药丸面底
+    // 夜（琉璃·夜·近黑非纯黑 D-9）
+    val NightGlass = Color(0xFF0B0D12)           // 夜 surface 底
+    val NightGlassRaised = Color(0xFF16191F)     // 夜 surface raised / 纸面
+    val NightGlassSunken = Color(0xFF1F232B)     // 夜 surface sunken
+    val NightGlassStroke = Color(0xFF2A2F39)     // 夜 stroke / AI 气泡发丝
+    val NightGlassBubble = Color(0xFF1C2028)     // 夜 AI 气泡（深石板）
+    val MoonWhite = Color(0xFFF2F4F8)            // 夜 text primary
+    val MoonWhiteSoft = Color(0xFFA3A9B5)        // 夜 text secondary（7.5 on raised）
+    val MoonWhiteFaint = Color(0xFF6C7280)       // 夜 text tertiary（纯装饰）
+    val Cobalt26Bright = Color(0xFF3B86FF)       // 夜 accent 装饰 / tint（配 NightGlass 墨字 5.6·白字仅 3.5 禁）
+    val Cobalt26TextDark = Color(0xFF6FA8FF)     // 夜 钴蓝文字 on 近黑 8.1
+    val Cobalt26ContainerDark = Color(0xFF17304F) // 夜 选中浅染
+    val Cobalt26OnContainerDark = Color(0xFFB9D3FF) // 夜 container 上字（8.8）
+    val GlazeGlassDark = Color(0xFF343B48)       // 夜 药丸面顶（冷灰抬升一阶）
+    val GlazeGlassDarkShade = Color(0xFF2A303C)  // 夜 药丸面底
 
     // ── 通用 ──
     val Scrim = Color(0xFF000000)

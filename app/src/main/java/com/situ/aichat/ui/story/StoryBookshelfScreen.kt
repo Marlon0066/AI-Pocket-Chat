@@ -54,6 +54,7 @@ import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppDialogTone
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.ui.designsystem.AppTopBarIcons
@@ -134,7 +135,8 @@ fun StoryBookshelfScreen(
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize().padding(padding),
-                    contentPadding = PaddingValues(16.dp),
+                    // 屏 gutter 恒 20（设计语言 §2.5 军规）
+                    contentPadding = PaddingValues(horizontal = AppSpacing.screenGutter, vertical = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     item(key = "_tagline") {

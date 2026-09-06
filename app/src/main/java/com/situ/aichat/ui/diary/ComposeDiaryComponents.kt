@@ -198,6 +198,8 @@ internal fun DiaryPaper(
     prompt: String,
     isGenerating: Boolean,
     reduceMotion: Boolean,
+    /** 「让 TA 帮你起个头」空态胶囊是否可用（编辑「TA 的信」时为 false → 不出现）。 */
+    aiAssistAvailable: Boolean,
     onContentChange: (String) -> Unit,
     onAiStart: () -> Unit,
 ) {
@@ -233,7 +235,7 @@ internal fun DiaryPaper(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
-        if (content.isEmpty()) {
+        if (content.isEmpty() && aiAssistAvailable) {
             AiStartPill(isGenerating = isGenerating, reduceMotion = reduceMotion, onClick = onAiStart)
         }
     }
@@ -287,6 +289,8 @@ internal fun ComposeActionBar(
     hasContent: Boolean,
     canAddImage: Boolean,
     isGenerating: Boolean,
+    /** 「AI 帮我写」是否可用（编辑「TA 的信」时为 false → 该入口整个不出现）。 */
+    aiAssistAvailable: Boolean,
     visibility: DiaryVisibility,
     onAddImage: () -> Unit,
     onToggleVisibility: () -> Unit,
@@ -316,7 +320,7 @@ internal fun ComposeActionBar(
             Row(horizontalArrangement = Arrangement.spacedBy(0.dp), verticalAlignment = Alignment.CenterVertically) {
                 DiaryNavIcon(Icons.Filled.Add, stringResource(R.string.diary_compose_add_image), enabled = canAddImage, onClick = onAddImage)
                 DiaryMicButton(onStart = onStartVoice, onDrag = onVoiceDrag, onFinish = onFinishVoice)
-                if (hasContent) {
+                if (hasContent && aiAssistAvailable) {
                     DiaryNavIcon(Icons.Filled.Edit, stringResource(R.string.diary_compose_ai_assist), enabled = !isGenerating, onClick = onAiAssist)
                 }
                 val isOpen = visibility == DiaryVisibility.OPEN_TO_AI

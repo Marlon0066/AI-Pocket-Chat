@@ -45,6 +45,7 @@ import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppDialogTone
 import com.situ.aichat.ui.designsystem.AppSegmentedControl
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTextArea
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
@@ -103,7 +104,7 @@ fun StoryFieldEditorScreen(
             modifier = Modifier.fillMaxSize().padding(padding).imePadding(),
         ) {
             Column(
-                modifier = Modifier.weight(1f).verticalScroll(scrollState).padding(horizontal = 16.dp),
+                modifier = Modifier.weight(1f).verticalScroll(scrollState).padding(horizontal = AppSpacing.screenGutter),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 // 副标题（原在顶栏 title 槽第二行·取值表达式原样搬含空白守卫）：横向内边距由外层 Column

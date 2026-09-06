@@ -329,4 +329,32 @@ class ChatReplyDelivererTest {
         // 否则纯卡片回合的收尾维护期会被误判成起步相位而被用户下一句打断。
         assertNotNull(deliverer.lastOutputJob)
     }
+
+    // ── T2-7（图纸 2026-09-06 约定工具调用化）：暗号动作透传 + immediate 兜底不记账 ──
+
+    @Test
+    fun 约定暗号_正常投递时透传动作_标记不进气泡() = runBlocking {
+        val raw = "好呀，说定啦～" +
+            """[promise]{"action":"record","content":"周六一起去看展","evidence":"那就周六一起去看展吧"}"""
+        val slot = mutableListOf<MessageEntity>()
+        val result = deliverer.deliverAssistantReply(
+            raw, character, settings(), dotsAppearMillis = 0L, immediate = false, voicePlan = null,
+        )
+        assertEquals(1, result.promiseMarkerActions.size)
+        coVerify { messageRepo.upsert(capture(slot)) }
+        assertTrue("标记绝不进气泡", slot.none { it.content.contains("[promise]") })
+    }
+
+    @Test
+    fun 约定暗号_immediate兜底_不透传动作但仍剥标记() = runBlocking {
+        val raw = "好呀，说定啦～" +
+            """[promise]{"action":"record","content":"周六一起去看展","evidence":"那就周六一起去看展吧"}"""
+        val slot = mutableListOf<MessageEntity>()
+        val result = deliverer.deliverAssistantReply(
+            raw, character, settings(), dotsAppearMillis = 0L, immediate = true, voicePlan = null,
+        )
+        assertTrue("取消兜底不从半截回复记账", result.promiseMarkerActions.isEmpty())
+        coVerify { messageRepo.upsert(capture(slot)) }
+        assertTrue("标记无论如何都已剥离", slot.none { it.content.contains("[promise]") })
+    }
 }

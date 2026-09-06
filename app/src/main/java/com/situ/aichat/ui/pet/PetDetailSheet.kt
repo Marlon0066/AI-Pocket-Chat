@@ -53,6 +53,7 @@ import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppProgressBar
 import com.situ.aichat.ui.designsystem.AppSheet
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTheme
 
 // 宠物详情底部弹窗（从 PetDetailScreen 抽出·只搬不改）：点养护栏「详情」打开的 ModalBottomSheet——
@@ -63,7 +64,8 @@ import com.situ.aichat.ui.designsystem.AppTheme
 internal fun PetDetailSheet(pet: CharacterPetEntity, trends: PetStatusTrends, onDismiss: () -> Unit) {
     AppSheet(onDismissRequest = onDismiss) {
         Column(
-            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 24.dp),
+            // 屏 gutter 恒 20（设计语言 §2.5 军规）
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = AppSpacing.screenGutter).padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text("${pet.name}的详情", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)

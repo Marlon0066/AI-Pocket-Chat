@@ -28,6 +28,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
 import com.situ.aichat.diagnostics.LogShareFormat
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
 import kotlinx.coroutines.launch
@@ -81,7 +82,7 @@ fun ContextLogTextScreen(
         },
     ) { padding ->
         SelectionContainer(Modifier.fillMaxSize().padding(padding)) {
-            LazyColumn(state = listState, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
+            LazyColumn(state = listState, contentPadding = PaddingValues(horizontal = AppSpacing.screenGutter, vertical = 12.dp)) {
                 if (text.isEmpty()) {
                     item {
                         Text("（无内容）", style = AppTheme.typography.secondary, color = AppTheme.colors.text.primary)

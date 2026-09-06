@@ -32,7 +32,8 @@ fun AppRoot(viewModel: AppViewModel = hiltViewModel()) {
     AIPocketChatTheme(
         darkTheme = appearance.mode.resolveDarkTheme(isSystemInDarkTheme()),
         dynamicColor = appearance.useDynamicColor,
-        palette = appearance.palette,
+        skin = appearance.skin,
+        glassTier = appearance.glassTier,
     ) {
         // P15.2a：全局分级触觉底座注入，下游各模块经 LocalAppHaptics.current 取用。
         CompositionLocalProvider(LocalAppHaptics provides rememberAppHaptics()) {

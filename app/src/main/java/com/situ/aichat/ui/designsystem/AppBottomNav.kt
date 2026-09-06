@@ -101,7 +101,8 @@ fun AppBottomNav(items: List<AppBottomNavItem>, modifier: Modifier = Modifier, o
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            // 屏 gutter 恒 20（设计语言 §2.5 军规）：胶囊是有底色的容器，无补偿故直接给 20（胶囊因此窄 8dp）。
+            .padding(horizontal = AppSpacing.screenGutter, vertical = 8.dp),
     ) {
         BoxWithConstraints(
             modifier = Modifier

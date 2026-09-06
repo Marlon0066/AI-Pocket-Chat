@@ -147,7 +147,8 @@ class DiaryExchangeService @Inject constructor(
             userLabel = userName,
             characterLabel = promptStrings.roleMe,
         )
-        val scheduleSummary = buildScheduleSummary(penpal.character.uuid, start, zone)
+        val daily = buildDailySchedule(penpal.character.uuid, start, zone)
+        val scheduleSummary = daily.summary
         val moodLine = penpal.conversationUuids
             .firstNotNullOfOrNull { conversationDao.getByUuid(it) }
             ?.let { c ->
@@ -161,6 +162,16 @@ class DiaryExchangeService @Inject constructor(
         // 角色日记丰富化（2026-07-13·以角色为中心·各空 → 该段自动省略）：A记忆(memorySummary·直接字段)、
         // B关系(阶段+最近里程碑)、C约定/惦记(复用现成渲染器·双语)、D用户bio、③人设框定。记忆/关系数据挂在 character 上。
         val ch = penpal.character
+        // 角色卡（2026-09-05·A 件）：过去角色写日记只看得见名字/性格/角色设定三样，职业、年龄、外貌、
+        // 背景、说话习惯、口头禅、兴趣、住哪全是盲的 → 只好自编设定。住址优先取日程行的城市（世界城名）。
+        val characterCard = DiaryCharacterCardBlock.build(
+            character = ch,
+            cityName = daily.cityName,
+            userName = userName,
+            now = Instant.ofEpochMilli(now),
+            zone = zone,
+            strings = DiaryCharacterCardStrings.from(ps),
+        )
         val relationship = formatRelationship(ch.growthMetadata.currentPhase, milestoneDao.getForCharacter(ch.uuid), exStrings, zone)
         val promiseBlock = PromiseInjectionRenderer.render(promiseRepository.injectableForCharacter(ch.uuid, now), now, zone)
         val loopBlock = OpenLoopScanService.formatInjectionBlock(
@@ -191,6 +202,9 @@ class DiaryExchangeService @Inject constructor(
             chatSummary = chatSummary,
             scheduleSummary = scheduleSummary,
             enrichment = enrichment,
+            characterCard = characterCard,
+            // 写作规则覆盖（2026-09-05·设置页「日记写作规则」的「TA 的信」那套）：未自定义 ⇒ 与接线前逐字节相同。
+            overrides = DiaryRuleOverrides.forExchange(settingsRepo.getAppSettings(), userName, ch.name),
         )
         val messages = listOf(
             ChatMessageDto(role = "system", content = system),
@@ -259,17 +273,25 @@ class DiaryExchangeService @Inject constructor(
         return Penpal(character, conversationUuids)
     }
 
-    /** TA 当日日程 → "HH:mm-HH:mm 活动（地点）" 行（无日程 → ""，section 省略）。 */
-    private suspend fun buildScheduleSummary(characterUuid: String, startOfDay: Long, zone: ZoneId): String {
-        val schedule = scheduleDao.scheduleFor(characterUuid, startOfDay) ?: return ""
+    /**
+     * TA 当日日程行的一次取回（2026-09-05·图纸 J-2/F4）：同一次查询同时供「日程摘要」与「住址城市」——
+     * 日程行上的 [cityName] 已含「加入世界后用世界城名」的覆盖，故与日程口径天然一致、零新依赖。
+     *
+     * @property summary "HH:mm-HH:mm 活动（地点）" 行（无日程 / 无事件 → ""，section 省略）
+     * @property cityName 日程行上的城市（无日程 → null，由角色卡回落）
+     */
+    private data class DailySchedule(val summary: String, val cityName: String?)
+
+    private suspend fun buildDailySchedule(characterUuid: String, startOfDay: Long, zone: ZoneId): DailySchedule {
+        val schedule = scheduleDao.scheduleFor(characterUuid, startOfDay) ?: return DailySchedule("", null)
         val events = scheduleDao.eventsForSchedule(schedule.uuid).sortedBy { it.startTime }
-        if (events.isEmpty()) return ""
-        return events.joinToString("\n") { e ->
+        val summary = events.joinToString("\n") { e ->
             val s = ZonedDateTime.ofInstant(Instant.ofEpochMilli(e.startTime), zone)
             val t = ZonedDateTime.ofInstant(Instant.ofEpochMilli(e.endTime), zone)
             val place = e.location.takeIf { it.isNotEmpty() }?.let { "（$it）" }.orEmpty()
             "%02d:%02d-%02d:%02d %s%s".format(s.hour, s.minute, t.hour, t.minute, e.activity, place)
         }
+        return DailySchedule(summary, schedule.cityName)
     }
 
     internal companion object {

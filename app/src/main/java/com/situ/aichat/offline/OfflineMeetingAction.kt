@@ -85,13 +85,12 @@ data class OfflineMeetingAction(
                 function = FunctionDefinitionDto(
                     name = "end_offline_meeting",
                     description = """
-                        End the current offline meeting. Call this tool ONLY when at least one of these 4 clear signals has just appeared in the current turn:
+                        End the current offline meeting. Call this tool ONLY when at least one of these 3 clear signals has just appeared in the current turn:
 
                         TRIGGER SIGNALS (call the tool):
                         1. Either character has explicitly said a farewell phrase in this turn ("该走了 / 时候不早了 / 我先走了 / 下次再约 / 送你到地铁口")
                         2. A complete emotional closure has been reached in this turn (hug, wave goodbye, watching the other leave, a promise of next time)
-                        3. The 【节拍状态】 block at the end of the system prompt (if present) says allow_end = true
-                        4. Physical separation is already unfolding in your narration (walking toward parting, getting into a taxi, opening the car door)
+                        3. Physical separation is already unfolding in your narration (walking toward parting, getting into a taxi, opening the car door)
 
                         MANDATORY ORDER OF OPERATIONS:
                         Before calling this tool you MUST first emit, IN THE SAME TURN, a complete farewell scene containing at least one [场景] or [环境] block, one [动作] block, and one [对话] block. Only call the tool AFTER those content blocks have been written. The farewell narrative lives in the content blocks — do NOT pass it as a tool parameter and do NOT call this tool on an empty reply.
@@ -100,7 +99,6 @@ data class OfflineMeetingAction(
                         - Fewer than 3 user messages have been exchanged in this meeting
                         - The user just asked a question and is awaiting an answer
                         - An emotional peak is still unfolding (confession, first touch, vulnerability moment)
-                        - 【节拍状态】 explicitly says allow_end = false
                         - The hidden_tension seed you introduced at meeting start is still completely unresolved
                     """.trimIndent(),
                     parameters = FunctionParametersDto(

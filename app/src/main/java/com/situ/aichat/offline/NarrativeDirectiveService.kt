@@ -89,7 +89,7 @@ object NarrativeDirectiveService {
         if (bullets.isEmpty()) return null
 
         val joined = bullets.joinToString("\n") { "· $it" }
-        return "【本轮叙事指令】（仅本轮有效，下轮会变化；与【节拍状态】冲突时以节拍状态为准）\n$joined"
+        return "【本轮叙事指令】（仅本轮有效，下轮会变化）\n$joined"
     }
 
     // MARK: - 内部辅助

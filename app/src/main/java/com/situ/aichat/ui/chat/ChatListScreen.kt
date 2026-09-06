@@ -1,7 +1,6 @@
 package com.situ.aichat.ui.chat
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,8 +18,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -52,6 +49,7 @@ import com.situ.aichat.ui.designsystem.AppDialogTone
 import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppListScreenHeader
 import com.situ.aichat.ui.designsystem.AppSearchField
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBarIcons
 import com.situ.aichat.util.DateFormatters
@@ -62,14 +60,12 @@ import com.situ.aichat.util.rememberTimeTick
 fun ChatListScreen(
     onOpenChat: (String) -> Unit,
     onCreateCharacter: () -> Unit,
-    onOpenArchived: () -> Unit,
     bottomContentPadding: Dp = 0.dp,
     viewModel: ChatListViewModel = hiltViewModel(),
 ) {
     val rows by viewModel.visibleRows.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
     val searchTerm by viewModel.searchTerm.collectAsStateWithLifecycle()
-    val archivedCount by viewModel.archivedCount.collectAsStateWithLifecycle()
     val scheduleStatus by viewModel.scheduleStatus.collectAsStateWithLifecycle()
     val pickerCharacters by viewModel.pickerCharacters.collectAsStateWithLifecycle()
     var pendingDelete by remember { mutableStateOf<ChatListViewModel.Row?>(null) }
@@ -99,7 +95,7 @@ fun ChatListScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     // top=0：紧接页眉底缘，三边等距由页眉 edgeMargin 提供。
-                    .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                    .padding(start = AppSpacing.screenGutter, end = AppSpacing.screenGutter, bottom = 8.dp),
             )
 
             if (rows.isEmpty() && !isSearching) {
@@ -119,7 +115,6 @@ fun ChatListScreen(
                                     relStrings = relStrings,
                                     onOpen = { onOpenChat(row.conversation.uuid) },
                                     onTogglePin = { viewModel.setPinned(row.conversation.uuid, !row.conversation.isPinned) },
-                                    onArchive = { viewModel.archive(row.conversation.uuid) },
                                     onRequestDelete = { pendingDelete = row },
                                     onQuickReply = { quickReplyTarget = row },
                                 )
@@ -136,16 +131,10 @@ fun ChatListScreen(
                                 relStrings = relStrings,
                                 onOpen = { onOpenChat(row.conversation.uuid) },
                                 onTogglePin = { viewModel.setPinned(row.conversation.uuid, !row.conversation.isPinned) },
-                                onArchive = { viewModel.archive(row.conversation.uuid) },
                                 onRequestDelete = { pendingDelete = row },
                                 onQuickReply = { quickReplyTarget = row },
                             )
                             AppListDivider()
-                        }
-                    }
-                    if (archivedCount > 0 && !isSearching) {
-                        item(key = "archived-entry") {
-                            ArchivedEntryRow(count = archivedCount, onClick = onOpenArchived)
                         }
                     }
                 }
@@ -191,7 +180,7 @@ fun ChatListScreen(
     }
 }
 
-/** 置顶/普通行的滑动包装：左滑露出 归档/删除（行尾，安全侧），右滑露出 置顶/取消置顶（行首，对齐 iOS）。 */
+/** 置顶/普通行的滑动包装：左滑露出 删除（行尾，安全侧），右滑露出 置顶/取消置顶（行首，对齐 iOS）。 */
 @Composable
 private fun SwipeableChatRow(
     row: ChatListViewModel.Row,
@@ -200,7 +189,6 @@ private fun SwipeableChatRow(
     relStrings: DateFormatters.RelativeTimeStrings,
     onOpen: () -> Unit,
     onTogglePin: () -> Unit,
-    onArchive: () -> Unit,
     onRequestDelete: () -> Unit,
     onQuickReply: () -> Unit,
     modifier: Modifier = Modifier,
@@ -214,13 +202,6 @@ private fun SwipeableChatRow(
         contentColor = colors.onTertiary,
         onClick = onTogglePin,
     )
-    val archiveAction = SwipeAction(
-        label = stringResource(R.string.chat_list_action_archive),
-        icon = Icons.Filled.Archive,
-        containerColor = colors.primary,
-        contentColor = colors.onPrimary,
-        onClick = onArchive,
-    )
     val deleteAction = SwipeAction(
         label = stringResource(R.string.action_delete),
         icon = Icons.Filled.Delete,
@@ -231,7 +212,7 @@ private fun SwipeableChatRow(
     SwipeActionsRow(
         onRowClick = onOpen,
         leadingActions = listOf(pinAction),
-        trailingActions = listOf(archiveAction, deleteAction),
+        trailingActions = listOf(deleteAction),
         modifier = modifier,
         onRowLongClick = onQuickReply,
     ) {
@@ -240,7 +221,7 @@ private fun SwipeableChatRow(
 }
 
 /**
- * 共享单行视图（聊天列表 + 归档页复用），两行制（Fable-5·过审 2026-06-20）：头像 +
+ * 聊天列表单行视图，两行制（Fable-5·过审 2026-06-20）：头像 +
  * 第一行〔置顶钉 + 角色名 ·(小圆点) 当前状态 … 相对时间〕+ 第二行〔最后消息预览(用户消息带「你: 」) + 未读角标(>99 显 99+)〕。
  * 当前状态 = 日程进行中事件（[scheduleStatus]，无则第一行仅名字）；名字优先取空间、状态空间不足先省略，时间戳恒显示在行尾。
  */
@@ -375,31 +356,6 @@ private fun PinnedSectionHeader() {
 }
 
 @Composable
-private fun ArchivedEntryRow(count: Int, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(Icons.Filled.Archive, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-        Text(
-            stringResource(R.string.chat_list_archived_entry),
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f),
-        )
-        Text("$count", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Icon(
-            Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
 private fun EmptyChatList(onStartConversation: () -> Unit) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
@@ -444,7 +400,7 @@ fun ConversationDeleteDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     )
 }
 
-/** 从资源装配相对时间本地化串（聊天列表 + 归档页共用）。 */
+/** 从资源装配相对时间本地化串（聊天列表用）。 */
 @Composable
 fun rememberRelativeTimeStrings(): DateFormatters.RelativeTimeStrings =
     DateFormatters.RelativeTimeStrings(

@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
  * [SnackbarHostState] 的用法与 `showSnackbar(...)` 调用**一字不用改**。
  *
  * 造型：纸卡 = [Modifier.appCardSurface]（raised·圆角 16dp）+ [Modifier.grainSurface] 纸感，
- * 外边距 14dp、内边距 14×11dp、槽间距 10dp；文案 [AppTypography.snackbarBody] 两行省略，
+ * 外边距 20dp（= 屏 gutter 军规 [AppSpacing.screenGutter]）、内边距 14×11dp、槽间距 10dp；文案 [AppTypography.snackbarBody] 两行省略，
  * 动作词 [AppTypography.snackbarAction] 靠右。
  *
  * **有意不做**（用户已知悉的降格）：① 不画「成功带灰绿点」——收编站现在没有语义分级信息可判；
@@ -45,7 +45,8 @@ private fun AppSnackbarCard(data: SnackbarData) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 14.dp)
+            // 纸条是有底色的卡：屏 gutter 恒 20（设计语言 §2.5 军规），无内部补偿故 padding 直接给 20。
+            .padding(horizontal = AppSpacing.screenGutter)
             .appCardSurface(raised = true, cornerRadius = 16.dp)
             .grainSurface()
             .padding(horizontal = 14.dp, vertical = 11.dp),

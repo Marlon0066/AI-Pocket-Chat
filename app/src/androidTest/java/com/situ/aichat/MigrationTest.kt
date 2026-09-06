@@ -1436,6 +1436,6 @@ class MigrationTest {
          * 逐版本循环校验的上界。**升 DB 版本时必须同步升此常量**，否则新步静默无覆盖
          * （2026-07-16 四小件：此值曾 stale 在 31、DB 已 37，v31→v37 六步循环零覆盖——本卷一并清账到 38）。
          */
-        const val LATEST_VERSION = 48
+        const val LATEST_VERSION = 49
     }
 }

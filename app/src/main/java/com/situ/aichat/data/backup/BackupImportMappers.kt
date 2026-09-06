@@ -104,7 +104,6 @@ internal fun ConversationExport.toEntity(characterUuid: String) = ConversationEn
     lastMemorySummaryFailureDate = lastMemorySummaryFailureDate,
     lastMemorySummaryAttemptDate = lastMemorySummaryAttemptDate,
     isPinned = isPinned,
-    isArchived = isArchived,
     isReservedForNotifications = isReservedForNotifications,
     lastReadDate = lastReadDate,
     lastMessageDate = lastMessageDate,

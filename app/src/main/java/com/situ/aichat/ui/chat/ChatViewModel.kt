@@ -30,7 +30,6 @@ import com.situ.aichat.offline.OfflineChatVisibility
 import com.situ.aichat.offline.OfflineMarkerStartPayload
 import com.situ.aichat.offline.OfflineMeetingService
 import com.situ.aichat.offline.OfflineSummaryRetryCoordinator
-import com.situ.aichat.offline.SceneProgressService
 import com.situ.aichat.meeting.MeetingAppointmentStore
 import com.situ.aichat.meeting.MeetingProposalCoordinator
 import com.situ.aichat.meeting.MeetupNotificationService
@@ -118,6 +117,7 @@ class ChatViewModel @Inject constructor(
     private val characterRepo: CharacterRepository,
     private val openLoopRepository: com.situ.aichat.data.repository.OpenLoopRepository,
     private val promiseRepository: com.situ.aichat.data.repository.PromiseRepository,
+    private val promiseLedgerService: com.situ.aichat.promise.PromiseLedgerService,
     private val ourDayRepository: com.situ.aichat.data.repository.OurDayRepository,
     private val offlineMeetingMemoryRepository: com.situ.aichat.data.repository.OfflineMeetingMemoryRepository,
     private val characterWriteLock: CharacterWriteLock,
@@ -662,17 +662,6 @@ class ChatViewModel @Inject constructor(
         onStructuredMemoryExtracted = { NotificationTemplateWorker.enqueueForCharacter(appContext, it) },
     )
 
-    // MARK: - 线下节拍状态触发（审计 S3 抽 SceneProgressTrigger，VM 持有并接线引擎；行为不变）
-    private val sceneProgressTrigger = SceneProgressTrigger(
-        scope = chatTurnScope, // 2-5b：回合系=应用级作用域，退出会话不取消
-        conversationUuid = conversationUuid,
-        conversationRepo = conversationRepo,
-        messageRepo = messageRepo,
-        characterRepo = characterRepo,
-        userProfileDao = userProfileDao,
-        apiConfigRepo = apiConfigRepo,
-        contextLog = contextLog,
-    )
 
     // MARK: - 后台分析触发·成长+关系簇（已抽到 RelationshipAnalysisTrigger，VM 持有并委托；成长命脉，行为不变）
     private val relationshipAnalysisTrigger = RelationshipAnalysisTrigger(
@@ -699,6 +688,25 @@ class ChatViewModel @Inject constructor(
     )
 
     // MARK: - 助手回合编排引擎（刀8·已抽到 AssistantTurnEngine，VM 持有并委托；引擎管线[assistantTurnJob/串行/打断]留 VM）
+    // MARK: - 约定记账当场提示（图纸 2026-09-06 约定工具调用化 §3.5）：闸门 / 落库 / 提示全在协作者里，VM 只接线。
+    // 排队条件（同槽只留一件）：日历 toast 在 / 断网 / 网络恢复条在 / 赴约钮在 → 提示等它们让位（超 8 秒放弃显示）。
+    // ⚠️ 声明必须排在它读的四个流之后（PITFALLS 1b 同族坑）。
+    private val promiseHintBlocked: StateFlow<Boolean> =
+        combine(calendarHandler.calendarToast, networkConnected, networkStatusChanged, arrivalAppointment) { toast, connected, changed, arrival ->
+            toast != null || !connected || changed == true || arrival != null
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    private val promiseToolHandler = ChatPromiseToolHandler(
+        scope = viewModelScope, // 只跑提示的等待 / 计时；落库跑在引擎的回合协程（chatTurnScope）
+        ledger = promiseLedgerService,
+        conversationRepo = conversationRepo,
+        blocked = promiseHintBlocked,
+        conversationUuid = conversationUuid,
+    )
+    internal val promiseHint: StateFlow<PromiseHint?> = promiseToolHandler.hint // PromiseHint 是 internal 瞬态 UI 态
+    fun undoPromiseHint(uuid: String) = promiseToolHandler.undoRecorded(uuid)
+    fun dismissPromiseHint() = promiseToolHandler.dismiss()
+
     private val assistantTurnEngine = AssistantTurnEngine(
         scope = chatTurnScope, // 2-5b：回合系=应用级作用域，退出会话不取消
         appContext = appContext,
@@ -737,12 +745,12 @@ class ChatViewModel @Inject constructor(
         openLoopDetectionTrigger = openLoopDetectionTrigger,
         openLoopRepository = openLoopRepository,
         promiseRepository = promiseRepository,
+        promiseToolHandler = promiseToolHandler,
         ourDayRepository = ourDayRepository,
         meetingAppointmentStore = meetingAppointmentStore,
         errorFlow = _error,
         infoToastFlow = _infoToast,
         isDelivering = _isDelivering,
-        incrementSceneProgress = sceneProgressTrigger::incrementRoundAndCheck,
     )
 
     /** 聊天内礼物 / 红包钱路协作者（刀9 抽出）。送礼后的 AI 回复经 [AssistantTurnController.enqueueExternalTurn] 入合并等待窗（C1）。 */

@@ -70,10 +70,10 @@ fun AppTopBar(
                 icon = AppTopBarIcons.Back,
                 contentDescription = stringResource(R.string.action_back),
                 onClick = onBack,
-                // 12 = 视觉距屏缘 16 − 触达外溢 4（口径同 AppListScreenHeader）。
+                // 屏 gutter 恒 20（设计语言 §2.5 军规）；白瓷圆钮触达外溢 +4，故 padding = 20 − 4 = 16。
                 modifier = Modifier
                     .align(Alignment.CenterStart)
-                    .padding(start = 12.dp),
+                    .padding(start = AppSpacing.gutterForRoundButton),
                 enabled = backEnabled,
             )
         }
@@ -83,7 +83,9 @@ fun AppTopBar(
             color = colors.text.primary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            // 双侧 64dp 内边距 = 长标题恒不压到返回钮 / 动作钮（钮 40 + 边距 12 + 余量）。
+            // 双侧 64dp 内边距 = 长标题恒不压到返回钮 / 动作钮。算式（R1 复核订正）：padding 16 作用在
+            // **48dp 触达框**上 → 触达框占 16–64、视觉圆占 20–60，标题框正好接在触达框外缘（与视觉圆留 4dp）。
+            // ⚠️ 不是「16 + 视觉 40 + 8」——那把 padding 错算在 40dp 视觉盒上了（同 R1 F1 的坑·设计语言 §2.5.3）。
             modifier = Modifier
                 .align(Alignment.Center)
                 .padding(horizontal = 64.dp)
@@ -91,9 +93,10 @@ fun AppTopBar(
         )
         if (actions != null) {
             Row(
+                // 同返回钮：屏 gutter 恒 20（§2.5 军规），圆钮补偿 +4 → padding 16。
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(end = 12.dp),
+                    .padding(end = AppSpacing.gutterForRoundButton),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 content = actions,

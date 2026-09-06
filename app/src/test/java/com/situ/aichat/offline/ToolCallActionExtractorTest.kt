@@ -3,6 +3,7 @@ package com.situ.aichat.offline
 import com.situ.aichat.data.calendar.CalendarActionType
 import com.situ.aichat.data.model.MeetingCandidateIntent
 import com.situ.aichat.data.remote.llm.CompletedToolCall
+import com.situ.aichat.promise.PromiseToolAction
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -171,5 +172,47 @@ class ToolCallActionExtractorTest {
         // 整轮没有任何工具调用 → 也不退。
         val none = ToolCallActionExtractor.parseCalendarActions(emptyList())
         assertFalse(ToolCallActionExtractor.shouldFallBackToText(none, emptyOffline, emptyList()))
+    }
+
+    // ── T1-6（图纸 2026-09-06 约定工具调用化·E1/E8）：约定工具的解析与降级判定 ──
+
+    @Test fun calendar_skipsPromiseTools_withoutMarkingParsingFailed() {
+        val completed = listOf(
+            call("calendar_action", goodCalendarArgs),
+            call("record_promise", """{"content":"周六一起去看展","evidence":"那就周六去看展吧"}"""),
+            call("resolve_promise", """{"no":1,"status":"fulfilled","evidence":"简历我已经改好发你了"}"""),
+        )
+        val r = ToolCallActionExtractor.parseCalendarActions(completed)
+        assertFalse("约定工具不该被当日历解析失败（否则整轮误降级）", r.parsingFailed)
+        assertEquals(1, r.actions.size)
+    }
+
+    @Test fun promise_parsesRecordAndResolve_andSkipsInvalidSilently() {
+        val actions = ToolCallActionExtractor.parsePromiseActions(
+            listOf(
+                call("record_promise", """{"content":"周六一起去看展","due":"2026-09-13","evidence":"那就周六去看展吧"}"""),
+                call("resolve_promise", """{"no":2,"status":"cancelled","evidence":"这次就先不去了"}"""),
+                call("record_promise", """{"content":"","evidence":"空壳"}"""), // 空壳 → 静默跳过
+                call("resolve_promise", """{"no":1,"status":"fulfilled""""), // 非法 JSON → 静默跳过
+                call("calendar_action", goodCalendarArgs), // 非本族 → 忽略
+            ),
+        )
+        assertEquals(2, actions.size)
+        assertEquals("周六一起去看展", (actions[0] as PromiseToolAction.Record).content)
+        val resolve = actions[1] as PromiseToolAction.Resolve
+        assertEquals(2, resolve.no)
+        assertEquals("cancelled", resolve.status)
+    }
+
+    @Test fun no_fallback_when_failed_calendar_but_promise_parsed() {
+        val cal = ToolCallActionExtractor.parseCalendarActions(listOf(call("calendar_action", badCalendarArgs)))
+        val promises = ToolCallActionExtractor.parsePromiseActions(
+            listOf(call("record_promise", """{"content":"周六一起去看展","evidence":"那就周六去看展吧"}""")),
+        )
+        assertTrue(cal.parsingFailed)
+        assertEquals(1, promises.size)
+        assertFalse("约定动作解出来了 → 不整轮降级（H2 语义延伸）", ToolCallActionExtractor.shouldFallBackToText(cal, emptyOffline, emptyList(), promises))
+        // 尾参缺省时与旧公式等价：同样入参不带约定动作 → 仍然要降级。
+        assertTrue(ToolCallActionExtractor.shouldFallBackToText(cal, emptyOffline, emptyList()))
     }
 }

@@ -26,6 +26,7 @@ class MemorySettingsViewModel @Inject constructor(
     fun setShortTermMemoryLength(rounds: Int) = launch { settings.setShortTermMemoryLength(rounds) }
     fun setAutoSummarizeInterval(rounds: Int) = launch { settings.setAutoSummarizeInterval(rounds) }
     fun setMemorySummaryMaxLength(chars: Int) = launch { settings.setMemorySummaryMaxLength(chars) }
+    fun setMemorySummaryCooldownMinutes(minutes: Int) = launch { settings.setMemorySummaryCooldownMinutes(minutes) }
     fun setProgressiveCompressionEnabled(enabled: Boolean) = launch { settings.setProgressiveCompressionEnabled(enabled) }
     fun setStructuredMemoryInterval(rounds: Int) = launch { settings.setStructuredMemoryInterval(rounds) }
     fun setVectorSearchThreshold(percent: Int) = launch { settings.setVectorSearchThreshold(percent) }

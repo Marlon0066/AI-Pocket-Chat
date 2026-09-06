@@ -155,6 +155,56 @@ class PromiseLedgerServiceTest {
         coVerify(exactly = 1) { t.second.markResolved(loop, now) }
     }
 
+    // ── applyChange 直接调用（2026-09-06 约定工具调用化 §2.2·聊天内 resolve_promise 与攒批对账共用同一落库路） ──
+
+    @Test fun applyChange_writesAndResolvesLoop_returnsTrue() = runBlocking {
+        val t = fixture()
+        val current = PromiseEntity(
+            uuid = "p1", characterUuid = "c1", content = "帮忙改简历", statusRaw = PromiseStatus.OPEN,
+            openLoopUuid = "loop1", createdAtMillis = 0, updatedAtMillis = 0,
+        )
+        val loop = OpenLoopEntity(
+            uuid = "loop1", conversationUuid = "conv1", characterUuid = "c1", content = "帮忙改简历",
+            typeRaw = OpenLoopType.PROMISE_CHAR, statusRaw = OpenLoopStatus.OPEN, createdAt = 0,
+        )
+        coEvery { t.first.byUuid("p1") } returns current
+        coEvery { t.second.byUuid("loop1") } returns loop
+
+        val ok = service(t).applyChange(
+            PromiseReconciliation.VerifiedChange("p1", PromiseStatus.FULFILLED, "我改好啦"),
+            now,
+        )
+
+        assertTrue(ok)
+        coVerify(exactly = 1) {
+            t.first.upsert(
+                match {
+                    it.uuid == "p1" && it.statusRaw == PromiseStatus.FULFILLED && it.resolvedAtMillis == now &&
+                        it.resolutionEvidence == "我改好啦" && it.updatedAtMillis == now
+                },
+            )
+        }
+        coVerify(exactly = 1) { t.second.markResolved(loop, now) }
+    }
+
+    @Test fun applyChange_targetMissingOrNotOpen_returnsFalse_zeroWrite() = runBlocking {
+        val t = fixture()
+        coEvery { t.first.byUuid("gone") } returns null
+        assertFalse(service(t).applyChange(PromiseReconciliation.VerifiedChange("gone", PromiseStatus.FULFILLED, "证据"), now))
+
+        val t2 = fixture()
+        coEvery { t2.first.byUuid("p1") } returns PromiseEntity(
+            uuid = "p1", characterUuid = "c1", content = "帮忙改简历", statusRaw = PromiseStatus.CANCELLED,
+            createdAtMillis = 0, updatedAtMillis = 0,
+        )
+        assertFalse(
+            "编号过期 / 已被并发了结 → 重读非 open → 零写 false",
+            service(t2).applyChange(PromiseReconciliation.VerifiedChange("p1", PromiseStatus.FULFILLED, "证据"), now),
+        )
+        coVerify(exactly = 0) { t.first.upsert(any()) }
+        coVerify(exactly = 0) { t2.first.upsert(any()) }
+    }
+
     @Test fun applyReconciliation_linkedLoopNotOpen_noOp_e16() = runBlocking {
         val t = fixture()
         val current = PromiseEntity(

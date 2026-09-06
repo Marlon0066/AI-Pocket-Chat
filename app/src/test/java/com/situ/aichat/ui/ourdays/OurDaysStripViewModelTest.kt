@@ -37,7 +37,8 @@ import java.util.Locale
 
 /**
  * T2-3（卷三图纸 §7.2·Robolectric 真 Room）：入口条角色 = 最近活跃 / 回退最新创建 / 零角色；预览三态链（昨天 → 近 7 天最近 → null）；
- * nthDay；七格自周首日起。`today` 取真实时钟 ⇒ 行相对 now 构造。
+ * nthDay；七格自周首日起。`today` 取真实时钟 ⇒ 行相对 now 构造；**周格断言只落 `today`**（恒在本周内）——「昨天」在周首日当天掉进上一周
+ * （Robolectric 运行时默认区域 en_US ⇒ 周起周日 ⇒ 每逢周日），2026-09-06 周日实跑撞出过 `NoSuchElementException`。
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -149,14 +150,15 @@ class OurDaysStripViewModelTest {
         assertFalse(p.isYesterday); assertEquals(today.minusDays(4), p.date); assertEquals("四天前的事。", p.firstSentence)
     }
 
+    /** 昨天那行留着：在近 7 天窗内且无手记 ⇒ 证明空手记不产生预览；热度落在 `today` 格（昨天不保证在本周·见类注释）。 */
     @Test
     fun 预览链_近七天无手记为null_nthDay从相识日算() {
         charactersFlow.value = listOf(character("c1", 10))
-        insert(row("c1", today.minusDays(20), note = "太早了。"), row("c1", today.minusDays(1)))
+        insert(row("c1", today.minusDays(20), note = "太早了。"), row("c1", today.minusDays(1)), row("c1", today))
         vm()
         val s = loaded { it.nthDay != null }
         assertNull(s.preview)
         assertEquals(21, s.nthDay)
-        assertEquals(1, s.week.first { it.date == today.minusDays(1) }.heatLevel)
+        assertEquals(1, s.week.first { it.date == today }.heatLevel)
     }
 }

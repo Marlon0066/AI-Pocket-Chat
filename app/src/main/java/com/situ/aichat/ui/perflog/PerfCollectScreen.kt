@@ -237,8 +237,8 @@ private fun ActionButton(
     }
 }
 
-/** 人类可读的字节数（采集页「占用空间」）。 */
-private fun humanBytes(bytes: Long): String = when {
+/** 人类可读的字节数（采集页「占用空间」）。琉璃卷五复用（`ui/liuli` 树借同一份实现·改这里两张脸同时变）。 */
+internal fun humanBytes(bytes: Long): String = when {
     bytes >= 1024 * 1024 -> "%.1f MB".format(java.util.Locale.ROOT, bytes / 1024.0 / 1024.0)
     bytes >= 1024 -> "%.1f KB".format(java.util.Locale.ROOT, bytes / 1024.0)
     else -> "$bytes B"

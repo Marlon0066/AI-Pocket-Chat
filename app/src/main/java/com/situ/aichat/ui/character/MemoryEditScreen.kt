@@ -39,6 +39,7 @@ import com.situ.aichat.ui.components.contentMaxWidth
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppFormBar
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTextArea
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
@@ -96,7 +97,7 @@ fun MemoryEditScreen(
                 .background(MaterialTheme.colorScheme.background)
                 .verticalScroll(scrollState) // 滚动承重在此（弹层键盘遮挡战役教训）
                 .contentMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(horizontal = AppSpacing.screenGutter, vertical = 12.dp)
                 .imePadding(),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {

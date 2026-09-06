@@ -10,7 +10,7 @@ enum class OfflineStateRepair {
     /** flag=false 但 sessionId 残留 → 只清 sessionId（iOS「orphanSession」）。 */
     CLEAR_SESSION_ID,
 
-    /** flag/marker 异常 → 整体重置（清 flag+sessionId+currentSceneProgress+节拍计数，iOS resetOfflineState）。 */
+    /** flag/marker 异常 → 整体重置（清 flag + sessionId + 散场硬闸，iOS resetOfflineState）。 */
     FULL_RESET,
 }
 

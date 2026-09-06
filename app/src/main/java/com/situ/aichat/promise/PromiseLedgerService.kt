@@ -153,22 +153,7 @@ class PromiseLedgerService @Inject constructor(
         verified: PromiseReconciliation.Verified,
         now: Long,
     ) {
-        for (change in verified.changes) {
-            val current = promiseRepository.byUuid(change.promiseUuid) ?: continue
-            if (current.statusRaw != PromiseStatus.OPEN) continue // 仍 open 才写（陈旧防护）
-            promiseRepository.upsert(
-                current.copy(
-                    statusRaw = change.status,
-                    resolvedAtMillis = now,
-                    resolutionEvidence = change.evidence,
-                    updatedAtMillis = now,
-                ),
-            )
-            current.openLoopUuid?.let { loopUuid ->
-                val loop = openLoopRepository.byUuid(loopUuid) ?: return@let
-                if (loop.statusRaw == OpenLoopStatus.OPEN) openLoopRepository.markResolved(loop, now) // 非 open → no-op
-            }
-        }
+        for (change in verified.changes) applyChange(change, now)
         // dates（记忆改造四期·§3.5-③·补日期第三路）：每条 byUuid 重读 → 仍 open 且 due 仍空才写（重读双守卫·陈旧/并发防护）。
         // 已有 openLoopUuid 的不重桥、不改 loop 的 dueAt（loop 短线自治，容忍）；无 loop 且新 due 在未来 → linkOrCreateLoop 建。
         // **绝不写 resolutionEvidence**——三期「证据空=手动」推断不变量继续成立；dates 证据只做闸门不落库（§3.5-③）。
@@ -191,6 +176,32 @@ class PromiseLedgerService @Inject constructor(
                 now = now,
             )
         }
+    }
+
+    /**
+     * 单条状态变更落库（体 = 原 [applyReconciliation] changes 循环体·**只搬不改**）：byUuid 重读 → 仅当仍为 open
+     * 才写状态 / 了结时间 / 证据；关联 loop 仍 open 才 markResolved（非 open → no-op·E16）。
+     *
+     * 2026-09-06 约定工具调用化抽出：聊天内 `resolve_promise` 工具路与攒批对账走**同一条落库路**（编号过期 /
+     * 已被并发了结 → 重读非 open → 零写返回 false）。
+     * @return true = 本次写入生效；false = 目标不存在 / 已非 open（全部零写返回）。
+     */
+    suspend fun applyChange(change: PromiseReconciliation.VerifiedChange, now: Long): Boolean {
+        val current = promiseRepository.byUuid(change.promiseUuid) ?: return false
+        if (current.statusRaw != PromiseStatus.OPEN) return false // 仍 open 才写（陈旧防护）
+        promiseRepository.upsert(
+            current.copy(
+                statusRaw = change.status,
+                resolvedAtMillis = now,
+                resolutionEvidence = change.evidence,
+                updatedAtMillis = now,
+            ),
+        )
+        current.openLoopUuid?.let { loopUuid ->
+            val loop = openLoopRepository.byUuid(loopUuid) ?: return@let
+            if (loop.statusRaw == OpenLoopStatus.OPEN) openLoopRepository.markResolved(loop, now) // 非 open → no-op
+        }
+        return true
     }
 
     /**

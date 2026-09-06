@@ -27,7 +27,7 @@ import kotlinx.coroutines.launch
 /**
  * 「回合后台分析触发」之记忆簇协作者——从 ChatViewModel 抽出（对齐 iOS ChatViewModel+Memory/+Growth），方法体字节级不变。
  * 两条完全独立的 fire-and-forget 后台流：滚动记忆摘要 + 结构化记忆(10 要点)抽取；错误全静默、不碰 UI / _error。
- * [scope] = VM 的 viewModelScope；两个防并发标志随之搬入（仅 Main 调度协程读写，无需同步）。
+ * [scope] = 应用级 `@ChatTurnScope`（`Dispatchers.Main.immediate`·退出会话不取消·ChatViewModel 2-5b）；两个防并发旗标仅在该 Main 作用域内读写，无需同步。
  */
 internal class MemoryAnalysisTrigger(
     private val scope: CoroutineScope,
@@ -98,6 +98,7 @@ internal class MemoryAnalysisTrigger(
                 val decision = MemoryService.summaryTriggerDecision(
                     outsideRoundCount = outsideRoundCount,
                     interval = interval,
+                    successCooldownMinutes = settings.memorySummaryCooldownMinutes,
                     lastSuccessDate = conversation.lastMemorySummarySuccessDate,
                     lastFailureDate = conversation.lastMemorySummaryFailureDate,
                     now = System.currentTimeMillis(),

@@ -114,31 +114,37 @@ class HistoryTimeDividerTest {
         val now = inst(2026, 9, 3, 21, 5)
         val line = HistoryTimeDivider.lineFor(ms(2026, 9, 3, 21, 0), ms(2026, 9, 3, 3, 0), now, zone, withRegrounding = true)
         assertEquals("【时间 · 今天 21:00——以上对话发生在今天 03:00 前后，已隔约 18 小时】", line)
-        assertFalse("同日档不给时间词换算表", line!!.contains("那时说的"))
+        assertFalse("同日档不给时间词原点句", line!!.contains("都是从那天算的"))
         assertFalse("时长自带「约」，模板不得再写一个", line.contains("约约"))
     }
 
     @Test
-    fun regrounding_crossDayTier_givesFullConversionTable() {
-        // §4.2 跨日档模板：「——以上对话发生在{旧日期标签} 前后，距今 {N} 天；那时说的"今天"指{旧短日期}、
-        // "明天"指{旧短日期+1}、"今晚"指{旧短日期}晚」。复刻真实翻车：前天 23:10 的话，今天 02:34 又开口。
+    fun regrounding_crossDayTier_givesOriginSentenceWithTwoDates() {
+        // 图纸 §12 跨日档模板（2026-09-06 措辞修订·原点句·取代 §4.2 三词换算表）：「——以上对话发生在{旧日期标签} 前后，距今 {N} 天；
+        // 那段话里的"今天""刚才""今晚""明天""等会儿"都是从那天算的，不是从现在算的："今晚"就是{旧短日期}晚，"明天"就是{旧短日期+1}」。
+        // 复刻真实翻车：前天 23:10 的话，今天 02:34 又开口。
         val now = inst(2026, 9, 3, 2, 36)
         val line = HistoryTimeDivider.lineFor(ms(2026, 9, 3, 2, 34), ms(2026, 8, 31, 23, 10), now, zone, withRegrounding = true)
         assertEquals(
             "【时间 · 今天 02:34——以上对话发生在8月31日 周一 23:10 前后，距今 3 天；" +
-                "那时说的\"今天\"指8月31日、\"明天\"指9月1日、\"今晚\"指8月31日晚】",
+                "那段话里的\"今天\"\"刚才\"\"今晚\"\"明天\"\"等会儿\"都是从那天算的，不是从现在算的：" +
+                "\"今晚\"就是8月31日晚，\"明天\"就是9月1日】",
             line,
         )
+        // 硬约束（§4.2 / ReplyParser echo 正则）：整串单行、中间不得出现「】」。
+        assertFalse("注记不得含换行", line!!.contains("\n"))
+        assertEquals("整串只在末尾出现一个「】」", line.length - 1, line.indexOf("】"))
     }
 
     @Test
     fun regrounding_overnightTier_conversionAnchoredOnYesterday() {
-        // 跨夜档（昨天 14:00 → 今天 02:34 = 12.5h 跨 1 日）同样给换算表，N = 旧话日期到今天的自然日差 = 1。
+        // 跨夜档（昨天 14:00 → 今天 02:34 = 12.5h 跨 1 日）同样给原点句，N = 旧话日期到今天的自然日差 = 1。
         val now = inst(2026, 9, 3, 2, 36)
         val line = HistoryTimeDivider.lineFor(ms(2026, 9, 3, 2, 34), ms(2026, 9, 2, 14, 0), now, zone, withRegrounding = true)
         assertEquals(
             "【时间 · 今天 02:34——以上对话发生在昨天 14:00 前后，距今 1 天；" +
-                "那时说的\"今天\"指9月2日、\"明天\"指9月3日、\"今晚\"指9月2日晚】",
+                "那段话里的\"今天\"\"刚才\"\"今晚\"\"明天\"\"等会儿\"都是从那天算的，不是从现在算的：" +
+                "\"今晚\"就是9月2日晚，\"明天\"就是9月3日】",
             line,
         )
     }

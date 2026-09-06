@@ -60,6 +60,7 @@ import com.situ.aichat.ui.components.clickableScale
 import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppDialogTone
 import com.situ.aichat.ui.designsystem.AppShapes
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTextField
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
@@ -113,7 +114,8 @@ fun StoryTemplateWallScreen(
             columns = GridCells.Fixed(2),
             state = gridState,
             modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(16.dp),
+            // 屏 gutter 恒 20（设计语言 §2.5 军规）
+            contentPadding = PaddingValues(horizontal = AppSpacing.screenGutter, vertical = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {

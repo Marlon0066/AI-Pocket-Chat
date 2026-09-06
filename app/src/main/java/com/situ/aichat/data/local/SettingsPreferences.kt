@@ -6,8 +6,9 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.situ.aichat.data.model.AppSkin
 import com.situ.aichat.data.model.AppearanceMode
-import com.situ.aichat.data.model.ThemePalette
+import com.situ.aichat.data.model.GlassTier
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -89,16 +90,25 @@ class SettingsPreferences @Inject constructor(
         dataStore.edit { it[KEY_USE_DYNAMIC_COLOR] = enabled }
     }
 
-    // MARK: - 主题配色（Fable-5 多主题·2026-06-30·见 FABLE5_THEME_QINGHUA_PROPOSAL.md）
+    // MARK: - 界面「脸」（琉璃第二张脸·2026-09-04·见 FABLE5_THEME_LIULI_PROPOSAL.md §7.1）
 
     /**
-     * 主题配色家族（默认暖陶 [ThemePalette.CLAY]）。与深浅模式正交；用户在外观设置切换。设备本地（=iOS UserDefaults 语义）。
+     * 界面「脸」（默认暖陶 [AppSkin.CLAY]）。与深浅模式正交；用户在外观设置切换。设备本地（=iOS UserDefaults 语义）。
+     * DataStore key 沿用历史串 `"theme_palette"`（不迁移·老值 `"qinghua"` 由 [AppSkin.fromRaw] 回退暖陶）。
      */
-    val themePalette: Flow<ThemePalette> =
-        dataStore.data.map { ThemePalette.fromRaw(it[KEY_THEME_PALETTE]) }
+    val appSkin: Flow<AppSkin> =
+        dataStore.data.map { AppSkin.fromRaw(it[KEY_THEME_PALETTE]) }
 
-    suspend fun setThemePalette(palette: ThemePalette) {
-        dataStore.edit { it[KEY_THEME_PALETTE] = palette.raw }
+    suspend fun setAppSkin(skin: AppSkin) {
+        dataStore.edit { it[KEY_THEME_PALETTE] = skin.raw }
+    }
+
+    /** 琉璃玻璃「透明度」档（默认清透 [GlassTier.CLEAR]）。只影响琉璃的玻璃片；暖陶下无消费者。 */
+    val glassTier: Flow<GlassTier> =
+        dataStore.data.map { GlassTier.fromRaw(it[KEY_GLASS_TIER]) }
+
+    suspend fun setGlassTier(tier: GlassTier) {
+        dataStore.edit { it[KEY_GLASS_TIER] = tier.raw }
     }
 
     /**
@@ -122,6 +132,7 @@ class SettingsPreferences @Inject constructor(
         private val KEY_APPEARANCE_MODE = stringPreferencesKey("appearance_mode")
         private val KEY_USE_DYNAMIC_COLOR = booleanPreferencesKey("use_dynamic_color")
         private val KEY_THEME_PALETTE = stringPreferencesKey("theme_palette")
+        private val KEY_GLASS_TIER = stringPreferencesKey("glass_tier")
         private val KEY_BOTTOM_NAV_OPACITY = floatPreferencesKey("bottom_nav_opacity")
     }
 }

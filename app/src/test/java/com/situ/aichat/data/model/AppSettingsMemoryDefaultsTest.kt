@@ -20,4 +20,19 @@ class AppSettingsMemoryDefaultsTest {
     fun `默认参与单源常量一致`() {
         assertEquals(AppSettings.DEFAULT_MEMORY_SUMMARY_MAX_LENGTH, AppSettings().memorySummaryMaxLength)
     }
+
+    // 2026-09-05 拍板（图纸「记忆设置页与触发判定小批」§7 T1-3）：窗口默认 20→30、新增可调总结间隔默认 30 分钟。
+    // 同为「默认参 == 单源常量」双保险写法——SettingsRepository 的 DataStore 回退也读同一常量。
+
+    @Test
+    fun `短期记忆窗口默认值为30_拍板锁定`() {
+        assertEquals(30, AppSettings().shortTermMemoryLength)
+        assertEquals(AppSettings.DEFAULT_SHORT_TERM_MEMORY_LENGTH, AppSettings().shortTermMemoryLength)
+    }
+
+    @Test
+    fun `两次总结最小间隔默认30分钟_拍板锁定`() {
+        assertEquals(30, AppSettings().memorySummaryCooldownMinutes)
+        assertEquals(AppSettings.DEFAULT_MEMORY_SUMMARY_COOLDOWN_MINUTES, AppSettings().memorySummaryCooldownMinutes)
+    }
 }

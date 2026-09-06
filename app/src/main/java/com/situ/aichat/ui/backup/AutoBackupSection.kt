@@ -181,11 +181,12 @@ fun AutoBackupSection(
     }
 }
 
-/** SAF tree URI → 友好路径（`primary:Download/AIChat` → `Download/AIChat`）；解析失败回退原串。 */
-private fun folderLabel(uriString: String): String = runCatching {
+/** SAF tree URI → 友好路径（`primary:Download/AIChat` → `Download/AIChat`）；解析失败回退原串；琉璃卷五复用（`ui/liuli` 树借同一份实现·改这里两张脸同时变）。 */
+internal fun folderLabel(uriString: String): String = runCatching {
     val docId = DocumentsContract.getTreeDocumentId(Uri.parse(uriString))
     docId.substringAfter(':').ifBlank { docId }
 }.getOrDefault(uriString)
 
-private fun formatTime(millis: Long): String =
+/** 琉璃卷五复用（`ui/liuli` 树借同一份实现·改这里两张脸同时变）。 */
+internal fun formatTime(millis: Long): String =
     DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(millis))

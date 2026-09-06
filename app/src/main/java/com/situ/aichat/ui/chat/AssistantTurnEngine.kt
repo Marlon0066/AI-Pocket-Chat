@@ -65,6 +65,7 @@ import com.situ.aichat.tts.TtsService
 import com.situ.aichat.tts.TtsVoiceProfile
 import com.situ.aichat.tts.provider.MiniMaxVoiceTagsCapability
 import com.situ.aichat.tts.provider.MiniMaxVoiceTagsSettings
+import com.situ.aichat.promise.PromiseInjectionRenderer
 import com.situ.aichat.prompt.PromptScene
 import com.situ.aichat.prompt.PromptStrings
 import com.situ.aichat.prompt.memory.InSceneRecapCoordinator
@@ -80,10 +81,9 @@ import kotlin.coroutines.coroutineContext
 
 /**
  * 助手回合编排引擎（刀8·从 ChatViewModel 抽出·只搬不改）：构建 prompt → 流式（工具调用降级 + 空响应重试 +
- * 媒体降级）→ 交投递层 [ChatReplyDeliverer] 分条递送 → 成功后逐回合维护（嵌入/宠物/记忆/成长/关系/通知/补帖/
- * 节拍状态）。被 VM 各发送入口与 runAssistantTurnForCurrentConversation 复用；引擎管线（assistantTurnJob/
- * launchSerializedTurn/打断）仍由 VM 持有，本引擎只跑「一回合」。打字/递送/错误/info 流由 VM 持有并注入；
- * 节拍状态触发经 [incrementSceneProgress] 回调回 VM（其带 android Log 与 in-memory 状态，留 VM 最干净）。
+ * 媒体降级）→ 交投递层 [ChatReplyDeliverer] 分条递送 → 成功后逐回合维护（嵌入/宠物/记忆/成长/关系/通知/补帖）。
+ * 被 VM 各发送入口与 runAssistantTurnForCurrentConversation 复用；引擎管线（assistantTurnJob/
+ * launchSerializedTurn/打断）仍由 VM 持有，本引擎只跑「一回合」。打字/递送/错误/info 流由 VM 持有并注入。
  */
 internal const val HISTORY_FETCH_LIMIT = 500
 
@@ -126,12 +126,12 @@ internal class AssistantTurnEngine(
     private val openLoopDetectionTrigger: OpenLoopDetectionTrigger,
     private val openLoopRepository: com.situ.aichat.data.repository.OpenLoopRepository,
     private val promiseRepository: com.situ.aichat.data.repository.PromiseRepository,
+    private val promiseToolHandler: ChatPromiseToolHandler,
     private val ourDayRepository: com.situ.aichat.data.repository.OurDayRepository,
     private val meetingAppointmentStore: MeetingAppointmentStore,
     private val errorFlow: MutableStateFlow<String?>,
     private val infoToastFlow: MutableStateFlow<String?>,
     private val isDelivering: MutableStateFlow<Boolean>,
-    private val incrementSceneProgress: () -> Unit,
 ) {
     /** 批4 4-8：异常 → 用户可读中文短句（LlmError 自带本地化；Http 文案剥 " - " 后的原始错误体）。 */
     private fun userFacingError(e: Exception): String = when (e) {
@@ -310,6 +310,7 @@ internal class AssistantTurnEngine(
         // useToolCalling 同时决定 ① 走不走工具路 ② PromptBuilder 选「工具调用」还是「文本标记」提示词。有意与 iOS（耦合）分叉。
         val useToolCalling = config.toolCallingEnabled
         val canInitiateOffline = settings.characterCanInitiateOfflineMeeting
+        val allowEndMeeting = !convo.isInOfflineMode || convo.offlineEndHoldTurns <= 0 // 散场硬闸预防层（图纸 2026-09-06 七件 §3.E）：闸未放开则本轮不下发 end_offline_meeting
         // ② 执行失败回流：本轮装配前**一次性**消费该会话「未消费的日历真失败」（已 TTL 过滤）；工具/降级两版装配共用同一值。
         val calendarFailureNudge = calendarHandler.consumePendingFailure(nowInstant.toEpochMilli())
         // 同一上下文按 toolCallingEnabled 装配两版消息：tool 路用 useToolCalling 版；降级时用 false 版（纯文本标记）。
@@ -414,7 +415,7 @@ internal class AssistantTurnEngine(
                 var turnUsage: UsageDto? = null
                 result = try {
                     // 去媒体降级后强制不发工具（1:1 iOS buildFallbackMessages：toolCallingEnabled=false，纯文本回合）。
-                    streamOneTurn(chatMessages, config, useToolCalling && !mediaStripped, canInitiateOffline, settings.calendarIntegrationEnabled, settings.calendarActionConfirmation, sb, settings.sanitizedLlmTemperature, onUsage = { turnUsage = it }) {
+                    streamOneTurn(chatMessages, config, useToolCalling && !mediaStripped, canInitiateOffline, allowEndMeeting, convo.isInOfflineMode, settings.calendarIntegrationEnabled, settings.calendarActionConfirmation, sb, settings.sanitizedLlmTemperature, onUsage = { turnUsage = it }) {
                         assembleMessages(false, withMedia = !mediaStripped)
                     }
                 } catch (e: CancellationException) {
@@ -507,6 +508,12 @@ internal class AssistantTurnEngine(
                     userText = userMessageForEmbed?.content.orEmpty())
                 // M14 关系评估：每轮递增 relationshipMessageCount + 保底触发判定（链式触发在成长分析完成后）
                 relationshipAnalysisTrigger.incrementRelationshipRoundAndCheck(character.uuid, settings, userName)
+                // 约定账本工具路（图纸 2026-09-06 §3.3-D）：工具 + 暗号两来源合并，落库与提示交 handler
+                // （内部见面中短路 / 全闸 / 不抛）。跑在回合协程里 → 用户中途退出聊天屏账照记。
+                val promiseActions = result.promiseToolActions + turn.promiseMarkerActions
+                if (promiseActions.isNotEmpty()) {
+                    promiseToolHandler.applyAndShow(promiseActions, PromiseInjectionRenderer.numberedOpen(promises), character.uuid, ChatPromiseToolHandler.haystack(history, result.text), System.currentTimeMillis())
+                }
                 // 未来约定见面·快路（工具/文本暗号·8d-3b）：当场识别的候选即时入库冒确认卡（不过扫描节奏）。
                 meetingDetectionTrigger.ingestFastPath(meetingFastCandidates, character)
                 // 未来约定见面识别（骨干路·8d-3a）：按节奏后台扫最近对话识别约定 → coordinator 入库（NEW 过确认卡）。
@@ -516,8 +523,7 @@ internal class AssistantTurnEngine(
                 // 长线回访（活人感二期 M2·§3.2）：本轮确实带了回访项 → 置终态 revisited（一次为限·E12）；resolvedAt 原值保留（E8）。
                 // 回合失败/被打断走不到此处 → 不标记 → 下回合重新候选（E6）。
                 revisitLoop?.let { openLoopRepository.markRevisited(it, System.currentTimeMillis()) }
-                // M16 线下节拍状态：仅线下模式生效（内部判定），≥15 user 差 + 3min 防抖触发 LLM 生成（对齐 iOS）。
-                incrementSceneProgress()
+                conversationRepo.consumeOfflineEndHold(conversationUuid) // 散场硬闸递减（§3.E）：只在成功回合尾消耗一次，SQL 自带 > 0 守卫
                 // P6.1c：发完消息后重排该角色主动消息通知（对齐 iOS ChatViewModel+Send 发消息后 scheduleNotifications；
                 // 内部 shouldRebuild 守卫，状态未变则不重排、不烧 LLM）。
                 notificationScheduler.schedule(character)
@@ -549,6 +555,8 @@ internal class AssistantTurnEngine(
         val offlineActions: List<OfflineMeetingAction>,
         val hasOfflineMeetingToolCall: Boolean,
         val meetingToolCandidates: List<MeetingCandidate> = emptyList(),
+        /** 约定记账工具动作（图纸 2026-09-06）；唯一消费点 = 回合尾 promiseToolHandler.applyAndShow。 */
+        val promiseToolActions: List<com.situ.aichat.promise.PromiseToolAction> = emptyList(),
         /** 工具遥测（上下文日志工具可见性·随 recordSuccess 落库；装配逻辑在 [LogToolInfo] 工厂）。 */
         val toolInfo: LogToolInfo? = null,
     ) {
@@ -570,6 +578,8 @@ internal class AssistantTurnEngine(
         config: ApiConfigValues,
         useToolCalling: Boolean,
         canInitiateOffline: Boolean,
+        allowEndMeeting: Boolean,
+        inOfflineMode: Boolean,
         includeCalendarTool: Boolean,
         calendarNeedsConfirmation: Boolean,
         sb: StringBuilder,
@@ -585,7 +595,7 @@ internal class AssistantTurnEngine(
         }
 
         val accumulator = ToolCallAccumulator()
-        val tools = buildChatToolDefinitions(includeCalendarTool = includeCalendarTool, canInitiateOffline = canInitiateOffline)
+        val tools = buildChatToolDefinitions(includeCalendarTool = includeCalendarTool, canInitiateOffline = canInitiateOffline, allowEndMeeting = allowEndMeeting, offlineMeeting = inOfflineMode)
         try {
             llmClient.streamChat(messages = toolMessages, config = config, temperature = temperature, tools = tools, onUsage = onUsage).collect { token ->
                 when (token) {
@@ -611,8 +621,9 @@ internal class AssistantTurnEngine(
         val calRes = ToolCallActionExtractor.parseCalendarActions(completed)
         val offRes = ToolCallActionExtractor.parseOfflineActions(completed, canInitiateOffline)
         val meetingCandidates = ToolCallActionExtractor.parseFutureMeetingActions(completed)
+        val promiseActs = ToolCallActionExtractor.parsePromiseActions(completed)
         val callsForLog = completed.map { it.name to it.arguments }
-        if (ToolCallActionExtractor.shouldFallBackToText(calRes, offRes, meetingCandidates)) {
+        if (ToolCallActionExtractor.shouldFallBackToText(calRes, offRes, meetingCandidates, promiseActs)) {
             // ② 工具调用「全军覆没」（有失败、且一个可用动作/候选都没解出）→ 文本降级链路。
             //    部分成功不再走这里：留住已解析的、丢掉坏的那个（H2·治 #5 一坏毁整轮·坏调用已在 extractor 内跳过）。
             sb.setLength(0)
@@ -626,12 +637,12 @@ internal class AssistantTurnEngine(
 
         var text = sb.toString()
         // ③ 只回 tool_calls 没正文时，发工具结果取文字回复（线下卡本身即完整回复 → 不 follow-up）。
-        val usedTextFollowUp = AssistantResponsePreprocessor.needsTextFollowUp(calRes.actions, offRes.actions) && text.isBlank()
+        val usedTextFollowUp = AssistantResponsePreprocessor.needsTextFollowUp(calRes.actions, offRes.actions, promiseActs) && text.isBlank()
         if (usedTextFollowUp) {
             text = fetchToolCallFollowUp(toolMessages, completed, config, temperature, calendarNeedsConfirmation)
         }
         return TurnStreamResult(
-            text, calRes.actions, offRes.actions, offRes.actions.isNotEmpty(), meetingCandidates,
+            text, calRes.actions, offRes.actions, offRes.actions.isNotEmpty(), meetingCandidates, promiseActs,
             toolInfo = LogToolInfo.toolTurn(
                 tools.map { it.function.name }, callsForLog,
                 parsedCalendarActions = calRes.actions.size,

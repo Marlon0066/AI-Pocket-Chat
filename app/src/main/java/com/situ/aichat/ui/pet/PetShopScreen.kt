@@ -50,6 +50,7 @@ import com.situ.aichat.pet.metadata
 import com.situ.aichat.ui.components.LocalAppHaptics
 import com.situ.aichat.ui.designsystem.AppSheet
 import com.situ.aichat.ui.designsystem.AppSnackbarHost
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.ui.gift.GiftColors
 import kotlinx.coroutines.launch
@@ -95,14 +96,14 @@ fun PetShopScreen(
                 onSelect = { viewModel.selectCategory(it) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = AppSpacing.screenGutter, vertical = 8.dp),
                 label = { it.displayName },
             )
 
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
+                contentPadding = PaddingValues(start = AppSpacing.screenGutter, end = AppSpacing.screenGutter, bottom = 32.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {

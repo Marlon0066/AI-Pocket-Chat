@@ -153,7 +153,7 @@ import com.situ.aichat.data.local.entity.WorldUserResidentEntity
         // 「我们的日子」卷一《沉淀》（总图纸 docs/handoff/2026-09-02-我们的日子-总图纸.md §3.1）：一天 × 一角色的事实快照 + 手记（无 FK·手动级联清）。
         OurDayEntity::class,
     ],
-    version = 48,
+    version = 49,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {

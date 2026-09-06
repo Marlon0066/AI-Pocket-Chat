@@ -100,7 +100,7 @@ private val WALKING_TEXTS = listOf(
 /**
  * 宠物详情页（1:1 iOS `PetDetailView`）：三层 ZStack（心情背景 + 粒子 + 内容[精灵 260dp/名字/状态环]）+
  * 玻璃底栏 careToolbar（按 neglectPhase 分支）+ 反应气泡 + 进化庆祝 + 散步倒计时/结算。无宠物 → 领养进度。
- * 商店/背包入口为 P9 占位。
+ * 商店 / 背包入口 → `petShop/{uuid}` / `petInventory/{uuid}`（P9.3c 已落地·原「P9 占位」注释已过期）。
  */
 @Composable
 fun PetDetailScreen(

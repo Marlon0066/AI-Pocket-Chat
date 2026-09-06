@@ -25,6 +25,9 @@ class PromiseInjectionRendererTest {
 
     private val now = at(2026, 7, 10, 12, 0)
 
+    // open 行形态：行首 `{n}. `（2026-09-06 约定工具调用化 §9①）——已结行仍是 `- `，故此正则也把两组分开。
+    private val OPEN_LINE = Regex("""^\d+\. """)
+
     private fun open(
         uuid: String,
         content: String,
@@ -54,7 +57,7 @@ class PromiseInjectionRendererTest {
         )
         assertEquals(
             "【我们的约定】\n" +
-                "- 2026-07-10（今天·聊天中）定下：一起去看画展\n" +
+                "1. 2026-07-10（今天·聊天中）定下：一起去看画展\n" +
                 guidance,
             out,
         )
@@ -71,7 +74,7 @@ class PromiseInjectionRendererTest {
         )
         assertEquals(
             "【我们的约定】\n" +
-                "- 2026-07-09（昨天·聊天中）定下：一起去看画展\n" +
+                "1. 2026-07-09（昨天·聊天中）定下：一起去看画展\n" +
                 "（最近了结）\n" +
                 "- 已兑现（7月9日）：帮忙改简历\n" +
                 "- 已取消（7月8日）：周末爬山\n" +
@@ -88,7 +91,7 @@ class PromiseInjectionRendererTest {
             open("d1", "有期一", at(2026, 7, 2, 9, 0), due = at(2026, 8, 10, 9, 0)),
         )
         val out = PromiseInjectionRenderer.render(rows, now, zone)
-        val lines = out.lines().filter { it.startsWith("- ") }
+        val lines = out.lines().filter { OPEN_LINE.containsMatchIn(it) }
         // due 升序在前（有期一 8/10 → 有期二 8/20），其后 null-due 按 createdAt 升序（无期一 7/3 → 无期二 7/5）。
         assertEquals(
             listOf("有期一", "有期二", "无期约定一", "无期约定二"),
@@ -99,10 +102,12 @@ class PromiseInjectionRendererTest {
     @Test fun softCap_open20_takesEarliestByCreatedAt() {
         val rows = (1..25).map { i -> open("p$i", "约定$i", at(2026, 6, 1, 0, 0) + i * 60_000L) }
         val out = PromiseInjectionRenderer.render(rows, now, zone)
-        val openLines = out.lines().filter { it.startsWith("- ") }
+        val openLines = out.lines().filter { OPEN_LINE.containsMatchIn(it) }
         assertEquals(20, openLines.size)
         // null-due 按 createdAt 升序 → 取最早 20（约定1..约定20）。
+        assertTrue(openLines.first().startsWith("1. "))
         assertTrue(openLines.first().endsWith("约定1"))
+        assertTrue(openLines.last().startsWith("20. "))
         assertTrue(openLines.last().endsWith("约定20"))
     }
 
@@ -216,5 +221,27 @@ class PromiseInjectionRendererTest {
         assertTrue(!PromiseInjectionRenderer.isDueUpcoming(at(2026, 7, 9, 23, 0), nowMidnight, zone))
         // due 恰今天 00:00 vs now 00:30 → true（同本地日）。
         assertTrue(PromiseInjectionRenderer.isDueUpcoming(at(2026, 7, 10, 0, 0), nowMidnight, zone))
+    }
+
+    // ── T1-12（2026-09-06 约定工具调用化）：编号 = resolve_promise.no 的单源，渲染端与映射端必须同序 ──
+
+    @Test fun numberedOpen_matchesRenderedNumbering_andCapsAt20() {
+        val rows = (1..25).map { i -> open("p$i", "约定$i", at(2026, 6, 1, 0, 0) + i * 60_000L) } +
+            listOf(
+                open("d1", "有期一", at(2026, 7, 2, 9, 0), due = at(2026, 8, 10, 9, 0)),
+                resolved("r1", "已了结的", PromiseStatus.FULFILLED, now - 3_600_000L),
+            )
+        val numbered = PromiseInjectionRenderer.numberedOpen(rows)
+        assertEquals(PromiseInjectionRenderer.OPEN_CAP, numbered.size)
+        // 渲染出的每一行 `{n}. …定下：{content}` 的第 n 条内容，必须等于 numberedOpen[n-1] 的内容（同序单源）。
+        val renderedContents = PromiseInjectionRenderer.render(rows, now, zone).lines()
+            .filter { OPEN_LINE.containsMatchIn(it) }
+            .mapIndexed { i, line ->
+                assertEquals("第 ${i + 1} 行编号", "${i + 1}. ", OPEN_LINE.find(line)!!.value)
+                line.substringAfter("定下：").substringBefore("（约在")
+            }
+        assertEquals(numbered.map { it.content }, renderedContents)
+        // 已了结的那条既不进编号也不进 open 行。
+        assertTrue(numbered.none { it.content == "已了结的" })
     }
 }

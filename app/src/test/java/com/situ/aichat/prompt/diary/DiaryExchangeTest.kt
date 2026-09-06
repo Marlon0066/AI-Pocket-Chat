@@ -8,6 +8,7 @@ import com.situ.aichat.data.local.dao.MessageDao
 import com.situ.aichat.data.local.dao.MilestoneDao
 import com.situ.aichat.data.local.dao.ScheduleDao
 import com.situ.aichat.data.local.dao.UserProfileDao
+import com.situ.aichat.data.local.entity.CharacterDailyScheduleEntity
 import com.situ.aichat.data.local.entity.CharacterEntity
 import com.situ.aichat.data.local.entity.ConversationEntity
 import com.situ.aichat.data.local.entity.DiaryEntryEntity
@@ -159,6 +160,102 @@ class DiaryExchangeTest {
                 "OO", "MOR",
             ).joinToString("\n"),
             minimal,
+        )
+    }
+
+    // T1-3（图纸 §7·2026-09-05）：角色卡形参默认空 ⇒ 装配与该形参引入前**逐字相同**（B1/B6 回归钉）。
+    @Test fun `exchange prompt - 不传角色卡时段序与形参引入前逐字相同`() {
+        val zone = ZoneId.of("UTC")
+        val now = 1_700_000_000_000L
+        fun build(card: String? = null) = if (card == null) {
+            DiaryExchangePromptBuilder.build(
+                strings = sentinelStrings(),
+                characterName = "Nova", personality = "warm", systemPrompt = "SP", userName = "U",
+                nowMillis = now, zone = zone,
+                moodLine = "😊", chatSummary = "CHAT", scheduleSummary = "SCHED",
+            )
+        } else {
+            DiaryExchangePromptBuilder.build(
+                strings = sentinelStrings(),
+                characterName = "Nova", personality = "warm", systemPrompt = "SP", userName = "U",
+                nowMillis = now, zone = zone,
+                moodLine = "😊", chatSummary = "CHAT", scheduleSummary = "SCHED",
+                characterCard = card,
+            )
+        }
+        val dateStr = DateFormatters.yearMonthDayHourMinuteWithWeekday(now, zone)
+        // 段序从图纸 §B3 独立反推：身份 → 设定 → 任务 → 心情 → 聊天 → 日程 → 时间 → 要求 → 输出规则。
+        assertEquals(
+            listOf(
+                "intro<Nova|warm>", "setup<SP>", "",
+                "task<U,U>", "",
+                "MH", "😊", "",
+                "CH", "CHAT", "",
+                "SH", "SCHED", "",
+                "CT<$dateStr>", "",
+                "REQH", "RS", "RSt<U>", "RW", "RM", "RNS", "RNP", "RNA", "",
+                "OO", "MOR",
+            ).joinToString("\n"),
+            build(),
+        )
+        assertEquals("显式传空卡片 = 不传", build(), build(""))
+        // 显式传空覆盖 map 同样逐字相同（chunk 2 新形参的零变化钉）。
+        assertEquals(
+            build(),
+            DiaryExchangePromptBuilder.build(
+                strings = sentinelStrings(),
+                characterName = "Nova", personality = "warm", systemPrompt = "SP", userName = "U",
+                nowMillis = now, zone = zone,
+                moodLine = "😊", chatSummary = "CHAT", scheduleSummary = "SCHED",
+                overrides = emptyMap(),
+            ),
+        )
+        // 有卡片时：插在 intro 之后、setup 之前（**插入**不重排）。
+        val withCard = build("CARD1\nCARD2").lines()
+        assertEquals(listOf("intro<Nova|warm>", "CARD1", "CARD2", "setup<SP>", ""), withCard.take(5))
+    }
+
+    // T1-4（图纸 §7·E9/C2）：四项覆盖各自落在要求段的对应行——人称/文风**整行替换**、字数进 `%1$s`、
+    // 补充规则逐行追加在要求段末尾（空行跳过）；其余要求行、只输出正文、MOOD 尾行一字不动。
+    @Test fun `exchange prompt - 四项覆盖分别落在要求段对应行`() {
+        val zone = ZoneId.of("UTC")
+        val now = 1_700_000_000_000L
+        // 字数哨兵带占位（真资源 2026-09-05 起也带 %1$s）。
+        val strings = sentinelStrings().copy(reqWords = "RW<%1\$s>")
+        fun build(overrides: Map<String, String>) = DiaryExchangePromptBuilder.build(
+            strings = strings,
+            characterName = "Nova", personality = "warm", systemPrompt = "", userName = "U",
+            nowMillis = now, zone = zone,
+            moodLine = "", chatSummary = "", scheduleSummary = "",
+            overrides = overrides,
+        )
+        // 无覆盖：字数行用默认常量 1000，人称/文风走默认串。
+        val plain = build(emptyMap()).lines()
+        val reqStart = plain.indexOf("REQH")
+        assertEquals(listOf("REQH", "RS", "RSt<U>", "RW<1000>", "RM", "RNS", "RNP", "RNA", "", "OO", "MOR"), plain.drop(reqStart))
+
+        val custom = build(
+            mapOf(
+                DiaryPromptField.NARRATIVE_PERSON.raw to "用「我」写你自己",
+                DiaryPromptField.STYLE_HINT.raw to "克制一点，别抒情",
+                DiaryPromptField.WORD_COUNT_RANGE.raw to "1500",
+                DiaryPromptField.EXTRA_RULES.raw to "别写天气\n\n  多写手上的动作  ",
+            ),
+        ).lines()
+        val customStart = custom.indexOf("REQH")
+        assertEquals(
+            listOf(
+                "REQH",
+                "- 用「我」写你自己",        // 人称行整行替换（前缀补 "- "）
+                "- 克制一点，别抒情",        // 文风行整行替换
+                "RW<1500>",                  // 字数进占位
+                "RM", "RNS", "RNP", "RNA",   // 其余四条要求行原样
+                "- 别写天气",                // 补充规则逐行追加·空行跳过·两端 trim
+                "- 多写手上的动作",
+                "",
+                "OO", "MOR",                 // 只输出正文 + MOOD 尾行位置与文字不动
+            ),
+            custom.drop(customStart),
         )
     }
 
@@ -392,6 +489,35 @@ class DiaryExchangeTest {
             "C 惦记块经扫描服务进 prompt（首轮语义取最新 open）",
             system.contains("## 你心里还惦记的事") && system.contains("想去的那家咖啡店"),
         )
+    }
+
+    // T2-1（图纸 §7·E5/E6）：住址优先取**当天日程行**的城市（加入世界后 = 世界城名），无日程行才回落角色卡。
+    @Test fun `角色卡住址 - 日程行城市压过角色卡城市，无日程行时回落`(): Unit = runBlocking {
+        every { context.getString(R.string.diary_exchange_city) } returns "你住在%1\$s。"
+        coEvery { characterDao.getByUuid("c1") } returns
+            CharacterEntity(uuid = "c1", name = "小满", creationDate = 0L, cityName = "上海")
+        coEvery { diaryRepository.exchangeEntryInRange(any(), any()) } returns null
+        coEvery { diaryRepository.hasPublishedUserDiaryInRange(any(), any()) } returns true
+        coEvery { scheduleDao.eventsForSchedule(any()) } returns emptyList()
+        coEvery { scheduleDao.scheduleFor("c1", any()) } returns CharacterDailyScheduleEntity(
+            uuid = "sc1", characterUuid = "c1", date = 0L, cityName = "云野镇",
+        )
+        val sent = slot<List<ChatMessageDto>>()
+        coEvery {
+            contextLog.completion(any(), any(), any(), capture(sent), any(), any(), any(), any(), any())
+        } returns "日记。\nMOOD: 😌"
+
+        service.unlockToday()
+
+        val withSchedule = sent.captured.first().content.orEmpty()
+        assertTrue("住址应取日程行的世界城名", withSchedule.contains("你住在云野镇。"))
+        assertFalse("绝不写角色卡上的旧城市", withSchedule.contains("你住在上海。"))
+
+        // 当天无日程行 → 回落角色卡上的城市。
+        coEvery { scheduleDao.scheduleFor("c1", any()) } returns null
+        service.unlockToday()
+        val withoutSchedule = sent.captured.first().content.orEmpty()
+        assertTrue("无日程行时回落角色卡城市", withoutSchedule.contains("你住在上海。"))
     }
 
     @Test fun `unlock is idempotent - existing letter returned without any LLM call`(): Unit = runBlocking {

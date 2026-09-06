@@ -3,6 +3,8 @@ package com.situ.aichat.ui.moments
 import com.situ.aichat.data.local.entity.CharacterPetEntity
 import com.situ.aichat.data.local.entity.StoryEntity
 import com.situ.aichat.ui.pet.PetMoodType
+import com.situ.aichat.ui.pet.needsAttention
+import com.situ.aichat.ui.pet.petStatusKind
 
 /**
  * 圈子枢纽「实时状态卡」纯派生逻辑（契约 FABLE5_MOMENTS_HUB_REDESIGN_PROPOSAL.md §3）。
@@ -50,3 +52,36 @@ private fun petMoodUrgency(mood: PetMoodType): Int = when (mood) {
     PetMoodType.CONTENT -> 3
     PetMoodType.HAPPY -> 4
 }
+
+// ── 动态页「宠物」条（图纸 2026-09-06-宠物总览页复活 §3.1） ──
+
+/** 精灵排上限 5（与「圈子」条头像排 HERO_AVATAR_MAX 同口径）。 */
+internal const val PET_STRIP_SPRITE_MAX = 5
+
+/**
+ * 宠物条一览（纯派生·T1 可直接出题）。
+ *
+ * @property count    宠物总数（0 = 空态：不出精灵排、尾行显「一起养一只宠物吧」）
+ * @property sprites  精灵排：adoptedDate 升序前 [PET_STRIP_SPRITE_MAX] 只
+ * @property neediest 最需照顾那只（[pickNeediestPet]）；null 仅当无宠物
+ * @property allWell  有宠物且**无一**「需要你」→ 尾行显「都好着呢」
+ */
+internal data class PetStripGlance(
+    val count: Int,
+    val sprites: List<CharacterPetEntity>,
+    val neediest: CharacterPetEntity?,
+    val allWell: Boolean,
+)
+
+/**
+ * 全量宠物 → 宠物条一览。
+ *
+ * 「需要你」判定复用 [petStatusKind] + [needsAttention] 单源（`ui/pet/PetStatusLine.kt`），
+ * 与世界卡信息条同一套 —— 两处**永不**自相矛盾（图纸 §3.2/§3.3）。
+ */
+internal fun petStripGlance(pets: List<CharacterPetEntity>): PetStripGlance = PetStripGlance(
+    count = pets.size,
+    sprites = pets.sortedBy { it.adoptedDate }.take(PET_STRIP_SPRITE_MAX),
+    neediest = pickNeediestPet(pets),
+    allWell = pets.isNotEmpty() && pets.none { petStatusKind(it).needsAttention },
+)

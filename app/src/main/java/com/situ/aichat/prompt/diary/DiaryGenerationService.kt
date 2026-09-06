@@ -91,7 +91,8 @@ class DiaryGenerationService @Inject constructor(
         // 宠物状态注入（P8.2，1:1 iOS DiaryGenerationService.buildPetContextForDiary）；宠物系统关 → 空。
         val petSummary = if (settings.petSystemEnabled) PetDiaryPrompts.buildPetContextForDiary(petRepository.getAll()) else ""
 
-        // 场景覆盖框架（DiaryPromptField）→ P12 设置 UI；现传空 = 默认行为。
+        // 场景覆盖框架（DiaryPromptField）：2026-09-05 起接设置页「日记写作规则」（篇幅/人称/文风/补充规则）；
+        // 用户未自定义时三个文本项不进 map、字数恒 1000 ⇒ 与接线前逐字节相同（图纸 §3.4/B1）。
         val systemPrompt = DiaryPromptBuilder.buildSystemPrompt(
             strings = strings,
             userName = userName,
@@ -106,7 +107,7 @@ class DiaryGenerationService @Inject constructor(
             moodHint = moodHint.orEmpty(),
             guide = guide,
             photoCount = photoCount,
-            overrides = emptyMap(),
+            overrides = DiaryRuleOverrides.forUserDiary(settings, userName),
         )
 
         val messages = listOf(

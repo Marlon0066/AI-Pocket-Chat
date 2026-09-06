@@ -15,16 +15,19 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-import com.situ.aichat.data.model.ThemePalette
+import com.situ.aichat.data.model.AppSkin
+import com.situ.aichat.data.model.GlassTier
 import com.situ.aichat.ui.designsystem.DarkAppColors
 import com.situ.aichat.ui.designsystem.LightAppColors
 import com.situ.aichat.ui.designsystem.LocalAppColors
-import com.situ.aichat.ui.designsystem.QinghuaDarkAppColors
-import com.situ.aichat.ui.designsystem.QinghuaLightAppColors
+import com.situ.aichat.ui.designsystem.LiuliDarkAppColors
+import com.situ.aichat.ui.designsystem.LiuliLightAppColors
 import com.situ.aichat.ui.designsystem.brandDarkColorScheme
 import com.situ.aichat.ui.designsystem.brandLightColorScheme
-import com.situ.aichat.ui.designsystem.brandQinghuaDarkColorScheme
-import com.situ.aichat.ui.designsystem.brandQinghuaLightColorScheme
+import com.situ.aichat.ui.designsystem.brandLiuliDarkColorScheme
+import com.situ.aichat.ui.designsystem.brandLiuliLightColorScheme
+import com.situ.aichat.ui.liuli.designsystem.LocalAppSkin
+import com.situ.aichat.ui.liuli.designsystem.LocalGlassTier
 
 /**
  * 当前**已解析**的深色状态（含 AppearanceMode 强制「浅色/深色」覆盖，非仅系统深浅）。由 [AIPocketChatTheme]
@@ -37,16 +40,18 @@ val LocalIsDarkTheme = staticCompositionLocalOf { false }
 // 未迁移屏经此一夜换暖装；已迁移组件直接读 AppTheme.* token。
 private val LightColors = brandLightColorScheme()
 private val DarkColors = brandDarkColorScheme()
-private val QinghuaLightColors = brandQinghuaLightColorScheme()
-private val QinghuaDarkColors = brandQinghuaDarkColorScheme()
+private val LiuliLightColors = brandLiuliLightColorScheme()
+private val LiuliDarkColors = brandLiuliDarkColorScheme()
 
 @Composable
 fun AIPocketChatTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // 动态取色默认翻转为品牌调色板（Monet 降为 opt-in·设计语言 §1.5）；管线/开关保留，沉没成本零。
     dynamicColor: Boolean = false,
-    // 主题配色家族（暖陶默认/青花…·与深浅正交·见 FABLE5_THEME_QINGHUA_PROPOSAL.md）。
-    palette: ThemePalette = ThemePalette.CLAY,
+    // 界面「脸」（暖陶默认 / 琉璃·与深浅正交·见 FABLE5_THEME_LIULI_PROPOSAL.md §7.1）。
+    skin: AppSkin = AppSkin.CLAY,
+    // 琉璃玻璃透明度档（只影响琉璃的玻璃片；暖陶下无消费者）。
+    glassTier: GlassTier = GlassTier.CLEAR,
     content: @Composable () -> Unit,
 ) {
     val colorScheme = when {
@@ -54,7 +59,7 @@ fun AIPocketChatTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        palette == ThemePalette.QINGHUA -> if (darkTheme) QinghuaDarkColors else QinghuaLightColors
+        skin == AppSkin.LIULI -> if (darkTheme) LiuliDarkColors else LiuliLightColors
         darkTheme -> DarkColors
         else -> LightColors
     }
@@ -72,14 +77,17 @@ fun AIPocketChatTheme(
         }
     }
 
-    // semantic 色 token 随「配色 × 深浅」provide（已迁移组件读 AppTheme.colors，不经 M3）。
-    val appColors = when (palette) {
-        ThemePalette.QINGHUA -> if (darkTheme) QinghuaDarkAppColors else QinghuaLightAppColors
-        ThemePalette.CLAY -> if (darkTheme) DarkAppColors else LightAppColors
+    // semantic 色 token 随「脸 × 深浅」provide（已迁移组件读 AppTheme.colors，不经 M3）。
+    val appColors = when (skin) {
+        AppSkin.LIULI -> if (darkTheme) LiuliDarkAppColors else LiuliLightAppColors
+        AppSkin.CLAY -> if (darkTheme) DarkAppColors else LightAppColors
     }
     CompositionLocalProvider(
         LocalIsDarkTheme provides darkTheme,
         LocalAppColors provides appColors,
+        // 琉璃侧下发（卷二起 ui/liuli/** 的导航层选脸与玻璃片读它们）。
+        LocalAppSkin provides skin,
+        LocalGlassTier provides glassTier,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,

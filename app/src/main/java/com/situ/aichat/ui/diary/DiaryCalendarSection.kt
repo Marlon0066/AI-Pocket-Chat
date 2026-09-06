@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.DiaryEntryWithComments
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTheme
 import java.time.DayOfWeek
 import java.time.Instant
@@ -112,7 +113,8 @@ fun DiaryCalendarSection(
             .entries.sortedByDescending { it.value }
     }
 
-    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
+    // 屏 gutter 恒 20（设计语言 §2.5 军规）
+    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = AppSpacing.screenGutter, vertical = 16.dp)) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { displayedMonth = displayedMonth.minusMonths(1L) }) {

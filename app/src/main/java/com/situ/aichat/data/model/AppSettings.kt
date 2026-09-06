@@ -16,9 +16,11 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class AppSettings(
     // 记忆 / 截断
-    val shortTermMemoryLength: Int = 20,
+    val shortTermMemoryLength: Int = DEFAULT_SHORT_TERM_MEMORY_LENGTH,
     val autoSummarizeInterval: Int = 10,        // 摘要触发下限（轮），0=关
     val memorySummaryMaxLength: Int = DEFAULT_MEMORY_SUMMARY_MAX_LENGTH, // 摘要最大字数
+    /** 两次记忆总结之间的最小间隔（分钟）。0 = 不限（时间轨恒就绪，攒够轮数即总结）。 */
+    val memorySummaryCooldownMinutes: Int = DEFAULT_MEMORY_SUMMARY_COOLDOWN_MINUTES,
     /**
      * 智能渐进压缩（2026-06-20 新增）。开=记忆接近上限时按四级渐进话术逐级压缩(合并日期/每天留一句/不整段删);
      * 关=只给一句硬字数要求,如何取舍交给 LLM。**默认 false（关）**——有意改变默认行为(此前等于恒「开」),
@@ -241,6 +243,17 @@ data class AppSettings(
      */
     val lastViewedDiaryDate: Long = 0L,
 
+    // 日记写作规则（2026-09-05·两套四项·图纸 docs/handoff/2026-09-05-日记提示词补角色卡与写作规则可编辑.md §3.5）。
+    // 文本三项空串 = 用默认文案；字数直接是数值（1000 = 与历史行为逐字节相同）。
+    val diaryWordCount: Int = DEFAULT_DIARY_WORD_COUNT,
+    val diaryNarrativePerson: String = "",
+    val diaryStyleHint: String = "",
+    val diaryExtraRules: String = "",
+    val diaryExchangeWordCount: Int = DEFAULT_DIARY_WORD_COUNT,
+    val diaryExchangeNarrativePerson: String = "",
+    val diaryExchangeStyleHint: String = "",
+    val diaryExchangeExtraRules: String = "",
+
     // 朋友圈（P7.2，1:1 iOS moment*）。频率沿用 iOS 默认（decision②）；设置 UI → 7.2.8（暂无 DataStore，恒默认）。
     /** 每角色每日自动发帖上限，默认 2，UI 滑块 0~5（0=关）。 */
     val momentAutoPostFrequency: Int = 2,
@@ -338,6 +351,13 @@ data class AppSettings(
     companion object {
         // 长期记忆（滚动摘要）字数上限默认值（2026-07-11 拍板 3000→5000；滑杆 200..5000 步 100，手填可超上限）
         const val DEFAULT_MEMORY_SUMMARY_MAX_LENGTH = 5000
+        // 短期记忆窗口默认轮数（2026-09-05 拍板 20→30；默认参与 SettingsRepository 回退的单源）
+        const val DEFAULT_SHORT_TERM_MEMORY_LENGTH = 30
+        // 两次记忆总结的最小间隔默认分钟（2026-09-05 拍板：原硬编码 30 分钟成功冷却做成可调项；0=不限）
+        const val DEFAULT_MEMORY_SUMMARY_COOLDOWN_MINUTES = 30
+
+        /** 日记篇幅默认（两套共用·1000 = 与写作规则可编辑之前逐字节相同）。 */
+        const val DEFAULT_DIARY_WORD_COUNT = 1000
 
         const val REPLY_SEGMENT_MIN_BOUND = 1
         const val REPLY_SEGMENT_MAX_BOUND = 15

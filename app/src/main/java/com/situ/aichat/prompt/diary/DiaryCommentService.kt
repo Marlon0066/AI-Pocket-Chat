@@ -165,6 +165,9 @@ class DiaryCommentService @Inject constructor(
      */
     suspend fun generateCommentsForEntry(entryUuid: String) {
         val entry = diaryRepository.getEntry(entryUuid) ?: return
+        // TA 写的信不安排「大家来评论」——交换日记的互动只走 R6-1（用户留言 → 作者本人回应）。
+        // 正常流程本就不会给信调度评论；本守卫兜住「用户把信存成草稿再一键发布」这条（编辑放开后）新可达路径。
+        if (entry.authorCharacterUuid != null) return
         if (DiaryVisibility.fromRaw(entry.visibilityRaw) != DiaryVisibility.OPEN_TO_AI) return
         val config = apiConfigRepo.resolveConfigValues(ApiFunction.DIARY_GENERATION) ?: return
         val settings = settingsRepo.getAppSettings()

@@ -45,6 +45,7 @@ import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppFormBar
 import com.situ.aichat.ui.designsystem.AppSegmentedControl
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppSwitch
 import com.situ.aichat.ui.designsystem.AppTextArea
 import com.situ.aichat.ui.designsystem.AppTextField
@@ -173,7 +174,7 @@ internal fun ModuleEditForm(
                 .fillMaxWidth()
                 .imePadding()
                 .verticalScroll(scrollState)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = AppSpacing.screenGutter),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (isSystem) {

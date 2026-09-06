@@ -27,6 +27,8 @@ fun MemorySettingsSections(viewModel: MemorySettingsViewModel = hiltViewModel())
     val rounds = stringResource(R.string.mem_unit_rounds)
     val chars = stringResource(R.string.mem_unit_chars)
     val off = stringResource(R.string.mem_value_off)
+    val minutes = stringResource(R.string.mem_unit_minutes)
+    val unlimited = stringResource(R.string.mem_value_unlimited)
 
     Column {
         SettingsSection(
@@ -48,15 +50,42 @@ fun MemorySettingsSections(viewModel: MemorySettingsViewModel = hiltViewModel())
             title = stringResource(R.string.mem_section_long_title),
             footer = stringResource(R.string.mem_section_long_footer),
         ) {
+            // 攒够多少轮再总结（提案 D-1/D-3·图纸 §4.1）：滑杆上限跟着短期窗口走 = 拦住「设出安全区」的常见误设；
+            // 手填仍可超（设置行惯例·setter 不加上限钳），越界靠下方琥珀副标提示，用户的值绝不被静默改写。
+            val triggerUpper = maxOf(s.shortTermMemoryLength, s.autoSummarizeInterval, 1)
+            val preview = MemoryTriggerPreview.from(
+                window = s.shortTermMemoryLength,
+                interval = s.autoSummarizeInterval,
+                cooldownMinutes = s.memorySummaryCooldownMinutes,
+            )
             SettingsSliderRow(
                 label = stringResource(R.string.mem_long_trigger),
                 valueLabel = if (s.autoSummarizeInterval == 0) off else "${s.autoSummarizeInterval} $rounds",
                 value = s.autoSummarizeInterval.toFloat(),
-                valueRange = 0f..100f,
-                steps = 99,
+                valueRange = 0f..triggerUpper.toFloat(),
+                steps = (triggerUpper - 1).coerceAtLeast(0),
                 infoMessage = stringResource(R.string.mem_long_trigger_info), // settings-slider-infobutton
                 onManualInput = { viewModel.setAutoSummarizeInterval(it) }, // settings-slider-manualinput
+                subtitle = when (preview) {
+                    MemoryTriggerPreview.Off -> stringResource(R.string.mem_long_live_off)
+                    is MemoryTriggerPreview.OverWindow -> stringResource(R.string.mem_long_over_window, preview.window)
+                    is MemoryTriggerPreview.Normal -> if (preview.cooldownMinutes > 0) {
+                        stringResource(R.string.mem_long_live_example, preview.firstRound, preview.interval, preview.cooldownMinutes)
+                    } else {
+                        stringResource(R.string.mem_long_live_example_nowait, preview.firstRound, preview.interval)
+                    }
+                },
+                subtitleIsWarning = preview is MemoryTriggerPreview.OverWindow,
                 onValueChange = { viewModel.setAutoSummarizeInterval(it.roundToInt()) },
+            )
+            SettingsSliderRow(
+                label = stringResource(R.string.mem_long_cooldown),
+                valueLabel = if (s.memorySummaryCooldownMinutes == 0) unlimited else "${s.memorySummaryCooldownMinutes} $minutes",
+                value = s.memorySummaryCooldownMinutes.toFloat(),
+                valueRange = 0f..180f,
+                steps = 35,
+                onManualInput = { viewModel.setMemorySummaryCooldownMinutes(it) }, // settings-slider-manualinput（手填不做 5 吸附）
+                onValueChange = { viewModel.setMemorySummaryCooldownMinutes((it / 5f).roundToInt() * 5) },
             )
             SettingsSliderRow(
                 label = stringResource(R.string.mem_long_max),

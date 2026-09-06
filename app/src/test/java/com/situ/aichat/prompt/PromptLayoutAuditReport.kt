@@ -158,7 +158,7 @@ class PromptLayoutAuditReport {
     // ── 场景构建 ──
 
     private fun build(tier: String): List<ChatMessageDto> {
-        val settings = AppSettings() // 默认:shortTermMemoryLength=20
+        val settings = AppSettings() // 默认:shortTermMemoryLength=30
         return when (tier) {
             "轻" -> PromptBuilder.buildMessages(
                 character = character(memoryChars = 0).copy(memorySummary = ""),

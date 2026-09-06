@@ -34,6 +34,7 @@ import com.situ.aichat.ui.components.SettingsSwitchRow
 import com.situ.aichat.ui.components.clickableScale
 import com.situ.aichat.ui.components.contentMaxWidth
 import com.situ.aichat.ui.designsystem.AppShapes
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.worldbook.WorldInfoInsertionStrategy
@@ -92,7 +93,7 @@ fun WorldBookSettingsScreen(
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .contentMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = AppSpacing.screenGutter, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Surface(shape = AppShapes.medium, tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
@@ -213,7 +214,8 @@ fun WorldBookSettingsScreen(
     }
 }
 
-private fun strategyLabelRes(strategy: WorldInfoInsertionStrategy): Int = when (strategy) {
+/** 琉璃卷五复用（`ui/liuli` 树借同一份实现·改这里两张脸同时变）。 */
+internal fun strategyLabelRes(strategy: WorldInfoInsertionStrategy): Int = when (strategy) {
     WorldInfoInsertionStrategy.CHARACTER_FIRST -> R.string.wb_strategy_char_first
     WorldInfoInsertionStrategy.GLOBAL_FIRST -> R.string.wb_strategy_global_first
     WorldInfoInsertionStrategy.EVENLY -> R.string.wb_strategy_evenly

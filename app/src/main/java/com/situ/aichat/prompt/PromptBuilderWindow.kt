@@ -3,12 +3,16 @@ package com.situ.aichat.prompt
 import com.situ.aichat.data.local.entity.MessageEntity
 import com.situ.aichat.data.model.AppSettings
 import com.situ.aichat.data.model.MessageKind
+import com.situ.aichat.offline.OfflineMarkerStartPayload
 import java.time.Instant
 
 /**
  * 短期记忆窗口预算 + 历史截断核心算法（自 [PromptBuilder] 抽出 · 文件瘦身，**行为零改 / 逐字不变**）：
  * [prepareFilteredRecentMessages] 按动态记忆长度切窗 + 分离聊天/见面消息 + 邀约事件流剥离 + 脏消息过滤；
  * [truncateToRecentRounds] 按「轮」截断（整段线下见面 / 通话特殊块算 1 轮，1:1 iOS）。
+ *
+ * 特殊块内「保留几条」不在本文件算：一律经 [retainedSpecialBlockCount]（见面 = CJK 字符预算 / 通话 = 条数），
+ * 与前情提要协调器同源（图纸 2026-09-06 见面窗口与节拍卡七件 §3.B/F）。
  *
  * 由 [PromptBuilder.buildMessages] 装配第 0 步调用（同包顶层函数·无需限定）；回调 [PromptBuilder] 的
  * shouldKeepOfflineMarkerStart / ROLE_USER / ROLE_ASSISTANT 经 `PromptBuilder.` 限定，消息类型解析用同包
@@ -51,6 +55,7 @@ internal fun prepareFilteredRecentMessages(
     val recentChatMessages = truncateToRecentRounds(
         messages = chatOnlyMessages,
         maxRounds = effectiveMemoryLength,
+        policy = SpecialBlockPolicy.from(appSettings),
         isIncluded = { it.content.isNotEmpty() && it.kind() != MessageKind.CALL_RECORD_CARD },
         onTruncation = { note -> truncationNotes.add(note) },
     )
@@ -86,21 +91,20 @@ internal fun calculateEffectiveMemoryLength(appSettings: AppSettings, unsummariz
 
 // MARK: - 截断（核心算法，整段特殊块算 1 轮）
 
-fun truncateToRecentRounds(
+internal fun truncateToRecentRounds(
     messages: List<MessageEntity>,
     maxRounds: Int,
+    policy: SpecialBlockPolicy,
     isIncluded: (MessageEntity) -> Boolean = { true },
     onTruncation: ((String) -> Unit)? = null,
 ): List<MessageEntity> {
     if (maxRounds <= 0) return emptyList()
 
-    val specialBlockLimit = maxOf(maxRounds * 4, 1)
-
     var roundCount = 0
     val collected = mutableListOf<MessageEntity>()
     var lastRole: String? = null
     var pendingSpecialBlock = mutableListOf<MessageEntity>()
-    var pendingBlockType: SpecialBlockType? = null
+    var pendingBlockType: SpecialBlockKind? = null
 
     fun flushSpecialBlock() {
         val blockType = pendingBlockType
@@ -110,9 +114,12 @@ fun truncateToRecentRounds(
             return
         }
         roundCount += 1
-        val toCollect: List<MessageEntity> = if (pendingSpecialBlock.size > specialBlockLimit) {
-            onTruncation?.invoke("（${blockType.label}更早部分已省略，仅保留最近 $specialBlockLimit 条）")
-            pendingSpecialBlock.take(specialBlockLimit)
+        // 保留数单源（图纸 2026-09-06 七件 §3.B/F）：pendingSpecialBlock 是**最新在前**，单源函数吃升序 →
+        // 传 asReversed()；take(retained) 即最新 retained 条（与原 take(limit) 同向）。
+        val retained = retainedSpecialBlockCount(pendingSpecialBlock.asReversed(), blockType, policy)
+        val toCollect: List<MessageEntity> = if (retained < pendingSpecialBlock.size) {
+            onTruncation?.invoke("（${blockType.label}更早部分已省略，仅保留最近 $retained 条）")
+            pendingSpecialBlock.take(retained)
         } else {
             pendingSpecialBlock
         }
@@ -123,7 +130,7 @@ fun truncateToRecentRounds(
     }
 
     loop@ for (message in messages.asReversed()) {
-        val currentBlockType = SpecialBlockType.classify(message)
+        val currentBlockType = SpecialBlockKind.classify(message)
 
         if (currentBlockType != null) {
             val existing = pendingBlockType
@@ -160,15 +167,22 @@ fun truncateToRecentRounds(
     return collected.asReversed()
 }
 
-private enum class SpecialBlockType(val label: String) {
-    OFFLINE_MEETING("线下见面"),
-    VOICE_CALL("通话");
-
-    companion object {
-        fun classify(message: MessageEntity): SpecialBlockType? = when {
-            message.isPartOfVoiceCall -> VOICE_CALL
-            message.isOfflineMode -> OFFLINE_MEETING
-            else -> null
+/**
+ * 当前 session 的入场标记 payload：从**全量**历史（调用方传入的 sortedMessages·未截断）倒序找
+ * 第一条 kind()==OFFLINE_MARKER_START 且 offlineSessionId==currentOfflineSessionId 的消息并解析。
+ * sessionId 空白 / 无匹配标记 / parse 失败 → null（找到首条即停，不续扫）。
+ * 供 PromptBuilder 线下末位分支取地点 / 活动 / 心事种子——不再从截断后的窗口里找
+ * （见面块超字符预算后入场标记会被丢出窗口）。
+ */
+internal fun currentOfflineSessionStartPayload(
+    sortedMessages: List<MessageEntity>,
+    currentOfflineSessionId: String?,
+): OfflineMarkerStartPayload? {
+    if (currentOfflineSessionId.isNullOrBlank()) return null
+    for (msg in sortedMessages.asReversed()) {
+        if (msg.kind() == MessageKind.OFFLINE_MARKER_START && msg.offlineSessionId == currentOfflineSessionId) {
+            return OfflineMarkerStartPayload.parse(msg.content)
         }
     }
+    return null
 }

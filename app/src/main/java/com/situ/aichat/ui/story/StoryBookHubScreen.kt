@@ -45,6 +45,7 @@ import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppSegmentedControl
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
 import kotlinx.coroutines.launch
@@ -135,13 +136,14 @@ fun StoryBookHubScreen(
                 options = listOf(0, 1),
                 selected = tabIndex,
                 onSelect = { tabIndex = it },
-                modifier = Modifier.padding(horizontal = 16.dp),
+                modifier = Modifier.padding(horizontal = AppSpacing.screenGutter), // 屏 gutter 恒 20（设计语言 §2.5 军规）
                 label = { stringResource(if (it == 0) R.string.story_hub_tab_archive else R.string.story_hub_tab_settings) },
             )
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(16.dp),
+                // 屏 gutter 恒 20（设计语言 §2.5 军规）
+                contentPadding = PaddingValues(horizontal = AppSpacing.screenGutter, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 if (tabIndex == 0) {
@@ -213,7 +215,8 @@ private fun BookHeader(story: StoryEntity, onContinue: () -> Unit) {
     progress.chapterNumber?.let { line = stringResource(R.string.story_hub_progress_chapter, line, it) }
     progress.arcIndex?.let { line = stringResource(R.string.story_hub_progress_arc, line, it) }
     Row(
-        Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp),
+        // 屏 gutter 恒 20（设计语言 §2.5 军规）
+        Modifier.fillMaxWidth().padding(start = AppSpacing.screenGutter, end = AppSpacing.screenGutter, top = 4.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(13.dp),
     ) {

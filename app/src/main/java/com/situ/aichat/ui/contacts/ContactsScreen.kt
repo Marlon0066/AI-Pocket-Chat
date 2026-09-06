@@ -63,6 +63,7 @@ import com.situ.aichat.ui.designsystem.AppDialogTone
 import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppListScreenHeader
 import com.situ.aichat.ui.designsystem.AppSearchField
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBarIcons
 import com.situ.aichat.util.DateFormatters
@@ -121,7 +122,7 @@ fun ContactsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     // top=0：紧接页眉底缘，三边等距由页眉 edgeMargin 提供。
-                    .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                    .padding(start = AppSpacing.screenGutter, end = AppSpacing.screenGutter, bottom = 8.dp),
             )
 
             // rows 已是过滤后列表（VM combine observeAll+milestones+query）：空+空搜索=全空态(图标+CTA)；

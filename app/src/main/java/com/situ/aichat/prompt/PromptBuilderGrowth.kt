@@ -95,7 +95,7 @@ private fun personalityBehavior(dimension: String, value: Int): String {
             value < RelationshipBands.SCRIPT_LOW -> "- 你非常内向：很少主动找话题，回复简短，沉默时不会觉得尴尬，更喜欢倾听"
             value < RelationshipBands.SCRIPT_MID_LOW -> "- 你偏内向：不太主动开话题但被问到会认真回答，偶尔需要独处充电"
             value <= RelationshipBands.SCRIPT_HIGH -> "- 你偏外向：喜欢主动聊天，话题活跃，回复里经常带感叹号或语气词"
-            else -> "- 你非常外向：总是主动找话题，分享日常，发消息频率高，安静太久会主动打破沉默"
+            else -> "- 你非常外向：总是主动找话题，分享日常，话很密，安静太久会主动打破沉默"
         }
         "emotionality" -> when {
             value < RelationshipBands.SCRIPT_LOW -> "- 你情绪非常稳定：遇到什么事都很冷静，很少用情绪化的表达，有时显得有点冷"

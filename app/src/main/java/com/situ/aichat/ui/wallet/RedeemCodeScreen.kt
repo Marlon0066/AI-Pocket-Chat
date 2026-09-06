@@ -242,7 +242,8 @@ private fun StatusRow(phase: RedeemCodeViewModel.Phase) {
     }
 }
 
-private fun errorMessage(error: RedeemCodeService.RedeemError): Int = when (error) {
+/** 琉璃卷五复用（`ui/liuli` 树借同一份实现·改这里两张脸同时变）。 */
+internal fun errorMessage(error: RedeemCodeService.RedeemError): Int = when (error) {
     RedeemCodeService.RedeemError.INVALID_FORMAT -> R.string.redeem_err_format
     RedeemCodeService.RedeemError.INVALID_CODE -> R.string.redeem_err_invalid
     RedeemCodeService.RedeemError.EXPIRED -> R.string.redeem_err_expired

@@ -199,22 +199,18 @@ class OfflineMeetingService @Inject constructor(
     }
 
     /**
-     * 用户点「再待一会儿」后继续见面（1:1 iOS continueOfflineMeeting）：强制 allow_end→false + 插续场 systemHint
-     * + 刷新活动时间。返回 true 让 VM 触发 AI 回复；非线下 → false。
+     * 用户点「再待一会儿」后继续见面（1:1 iOS continueOfflineMeeting）：置散场硬闸（[END_HOLD_TURNS] 次成功回合）
+     * + 插续场 systemHint + 刷新活动时间。返回 true 让 VM 触发 AI 回复；非线下 → false。
      */
     suspend fun continueOfflineMeeting(conversationUuid: String): Boolean = db.withTransaction {
         val convo = conversationRepo.get(conversationUuid) ?: return@withTransaction false
         if (!convo.isInOfflineMode) return@withTransaction false
         val now = System.currentTimeMillis()
 
-        // ① 强制 allow_end → false，防止 AI 立刻再次提议告别。R5#0：用与解析端同一套容错逻辑的单源字段写入器
-        // （SceneProgressService.forceFieldValue），不再用字面 contains/replace——LLM 漏空格/全角冒号/写 True 时
-        // 旧逻辑静默改不动，「再待一会儿」失效。仅在确有改动时写库（无 allow_end 行或本就 false → 原样不写）。
-        val progress = convo.currentSceneProgress
-        val updated = SceneProgressService.forceFieldValue(progress, "allow_end", "false")
-        if (updated != progress) {
-            conversationRepo.updateSceneProgress(conversationUuid, updated)
-        }
+        // ① 散场硬闸（图纸 2026-09-06 见面窗口与节拍卡七件 §3.E·D-1）：接下来 [END_HOLD_TURNS] 次**成功**的
+        // AI 回合不下发 end_offline_meeting，且任何结束动作在 [handleEndMeeting] 被丢弃。列级写、同事务。
+        // （2026-09-06 前这里是「把节拍卡 allow_end 改回 false」软劝模型；节拍卡已随 G 件退役。）
+        conversationRepo.setOfflineEndHold(conversationUuid, END_HOLD_TURNS)
 
         // ② 续场 systemHint（AI 可见，用户不可见）。
         messageRepo.upsert(
@@ -339,6 +335,9 @@ class OfflineMeetingService @Inject constructor(
     suspend fun handleEndMeeting(conversationUuid: String, action: OfflineMeetingAction, emotionTag: String?) {
         db.withTransaction {
             val convo = conversationRepo.get(conversationUuid) ?: return@withTransaction
+            // 散场硬闸执行层（图纸 2026-09-06 七件 §3.E·J5）：用户刚点过「再待一会儿」→ 本次结束动作直接丢弃，
+            // 不插卡、不改预览。覆盖工具调用与 [offline_end] 文本暗号两条路（此处是结束动作唯一落库口）。
+            if (convo.offlineEndHoldTurns > 0) return@withTransaction
             val now = System.currentTimeMillis()
             messageRepo.upsert(
                 MessageEntity(
@@ -495,6 +494,9 @@ class OfflineMeetingService @Inject constructor(
     }
 
     companion object {
+        /** 「再待一会儿」硬闸轮数（图纸 2026-09-06 见面窗口与节拍卡七件 §4.6·D-1·锁定）。 */
+        internal const val END_HOLD_TURNS = 3
+
         private const val CONFIRM_ACCEPT = "（接受了邀约，准备出发）"
         private const val CONFIRM_MANUAL = "（主动发起了见面，准备出发）"
         private const val CONFIRM_ARRIVAL = "（如约赴会，来见你了）"

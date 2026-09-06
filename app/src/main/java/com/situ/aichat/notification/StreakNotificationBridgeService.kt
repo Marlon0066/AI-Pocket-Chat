@@ -259,17 +259,19 @@ class StreakNotificationBridgeService @Inject constructor(
 
         /**
          * 「首选会话」选择（对齐 iOS preferredConversation）。纯函数，可单测：
-         * 1) 有 lastMessageDate 的非归档活跃会话 → 取 lastMessageDate 最新；
-         * 2) 否则取非归档的预留会话(isReservedForNotifications) → creationDate 最新；
+         * 1) 有 lastMessageDate 的会话 → 取 lastMessageDate 最新；
+         * 2) 否则取预留会话(isReservedForNotifications) → creationDate 最新；
          * 3) 都没有 → null。
+         *
+         * 归档判据已于 2026-09-06 随聊天归档功能整体删除（图纸 `docs/handoff/2026-09-06-删除聊天归档功能.md`）。
          */
         internal fun selectPreferredConversation(conversations: List<ConversationEntity>): ConversationEntity? {
             val active = conversations
-                .filter { !it.isArchived && it.lastMessageDate != null }
+                .filter { it.lastMessageDate != null }
                 .maxWithOrNull(compareBy { it.lastMessageDate ?: it.creationDate })
             if (active != null) return active
             return conversations
-                .filter { it.isReservedForNotifications && !it.isArchived }
+                .filter { it.isReservedForNotifications }
                 .maxWithOrNull(compareBy { it.creationDate })
         }
     }

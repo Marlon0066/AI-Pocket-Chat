@@ -1,9 +1,10 @@
 package com.situ.aichat.data.model
 
 /**
- * App functions that can be assigned a dedicated API config — faithful port of iOS `APIFunction`.
- * Only [CHAT] and [MEMORY_SUMMARY] are wired on Android today; the rest are placeholders for
- * features landing in P4–P11 (the assignment UI lists them all, matching iOS).
+ * App functions that can be assigned a dedicated API config (origin: iOS `APIFunction`; entries after
+ * [WORLD] are Android-only). Every entry has a real caller today — each feature resolves its own slot via
+ * `ApiConfigRepository.resolveConfigValues(fn)` and falls back to the active config when unassigned, so an
+ * unassigned slot never yields a dead button. The assignment UI lists all entries grouped by [category].
  *
  * `displayName` / `subtitle` are kept inline (Chinese, matching iOS base strings) since they're
  * data-layer enum metadata; UI chrome (titles/category headers/"默认") is in string resources.
@@ -23,7 +24,6 @@ enum class ApiFunction(val raw: String, val displayName: String, val subtitle: S
     GROWTH_ANALYSIS("growthAnalysis", "成长分析", "后台分析角色成长变化；思考模型更准，普通模型也够用"),
     RELATIONSHIP_ANALYSIS("relationshipAnalysis", "关系分析", "后台分析关系变化；思考模型更准，普通模型也够用"),
     NOTIFICATION_TEMPLATE("notificationTemplate", "通知文案", "生成推送通知的文字内容，普通模型即可"),
-    SCENE_PROGRESS("sceneProgress", "节拍状态", "线下见面时更新场景进度和允许结束标志，建议普通模型（要快）"),
     WORLD("world", "世界", "世界小报、偷听、风物志与初遇的润色，普通模型即可"),
 
     // 活人感内核·卷一《人设编译器》（图纸 §3.4 逐字锁定）。**追加在末尾**：entries 顺序即分配屏排序，插中间会挪位。
@@ -38,7 +38,7 @@ enum class ApiFunction(val raw: String, val displayName: String, val subtitle: S
     val category: ApiFunctionCategory
         get() = when (this) {
             CHAT, VOICE_CALL -> ApiFunctionCategory.CONVERSATION
-            MEMORY_SUMMARY, IMAGE_UNDERSTANDING, GROWTH_ANALYSIS, RELATIONSHIP_ANALYSIS, SCENE_PROGRESS,
+            MEMORY_SUMMARY, IMAGE_UNDERSTANDING, GROWTH_ANALYSIS, RELATIONSHIP_ANALYSIS,
             PERSONA_COMPILE, OUR_DAYS -> ApiFunctionCategory.BACKGROUND
             DIARY_GENERATION, MOMENT_GENERATION, SCHEDULE_GENERATION, STORY_CREATION,
             STORY_STRUCTURING, NOTIFICATION_TEMPLATE, WORLD -> ApiFunctionCategory.CONTENT

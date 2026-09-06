@@ -708,6 +708,14 @@ val MIGRATION_47_48 = object : Migration(47, 48) {
     }
 }
 
+/** v48→v49（散场硬闸·图纸 docs/handoff/2026-09-06-见面窗口与节拍卡七件.md §3.E）：
+ *  `conversations` 加 `offlineEndHoldTurns`（点「再待一会儿」后不许散场的剩余 AI 回合数·老行默认 0 = 无闸）。 */
+val MIGRATION_48_49 = object : Migration(48, 49) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `conversations` ADD COLUMN `offlineEndHoldTurns` INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
 /** 全部迁移（按序），注入 Room.databaseBuilder().addMigrations(*ALL_MIGRATIONS)。 */
 val ALL_MIGRATIONS = arrayOf(
     MIGRATION_1_2,
@@ -757,4 +765,5 @@ val ALL_MIGRATIONS = arrayOf(
     MIGRATION_45_46,
     MIGRATION_46_47,
     MIGRATION_47_48,
+    MIGRATION_48_49,
 )

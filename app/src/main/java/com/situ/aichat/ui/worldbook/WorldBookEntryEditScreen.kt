@@ -53,6 +53,7 @@ import com.situ.aichat.ui.designsystem.AppMenu
 import com.situ.aichat.ui.designsystem.AppMenuItem
 import com.situ.aichat.ui.designsystem.AppSegmentedControl
 import com.situ.aichat.ui.designsystem.AppShapes
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTextArea
 import com.situ.aichat.ui.designsystem.AppTextField
 import com.situ.aichat.ui.designsystem.AppTheme
@@ -121,7 +122,7 @@ fun WorldBookEntryEditScreen(
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .contentMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(horizontal = AppSpacing.screenGutter, vertical = 12.dp)
                 .imePadding(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {

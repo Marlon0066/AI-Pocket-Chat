@@ -47,7 +47,16 @@ data class ConversationEntity(
     val lastOpenLoopScanFailureDate: Long? = null, // 扫描失败短冷却起点
 
     val isPinned: Boolean = false,
+
+    /**
+     * 【历史残留·2026-09-06 起无人读写】`isArchived` 列所属的聊天归档功能已删除（图纸 docs/handoff/2026-09-06-删除聊天归档功能.md）。
+     * 本列与 [Index] 保留而非 DROP：conversations 是 messages / world_book_timed_states 的外键父表且
+     * onDelete=CASCADE，minSdk 29 无原生 DROP COLUMN → 删列须重建父表，手写重建漏 `PRAGMA foreign_keys=OFF`
+     * 会级联删光全部消息。收益（一个死 boolean）远小于风险。日后要清请走 Room @DeleteColumn AutoMigration，另立一卷。
+     * **禁止任何查询再引用本列**（看门测试：DashboardCountParityTest「归档残留列不再影响任何查询」）。
+     */
     val isArchived: Boolean = false,
+
     val isReservedForNotifications: Boolean = false,
 
     val lastReadDate: Long? = null,
@@ -68,7 +77,10 @@ data class ConversationEntity(
     // isInOfflineMode + currentOfflineSessionId 耦合（进入/退出同一事务写）。摘要退避状态持久化在此（跨进程）。
     val isInOfflineMode: Boolean = false,
     val currentOfflineSessionId: String? = null,
-    /** 本次见面的节拍状态（Markdown）；空=未触发更新；进入/退出清空；注入【节拍状态】块。 */
+    /**
+     * 【历史残留·2026-09-06 起无人读写】原线下节拍卡正文（图纸 docs/handoff/2026-09-06-见面窗口与节拍卡七件.md G）；
+     * 列保留理由同 [isArchived]（conversations 是外键父表，删列须重建父表）。进入/退出线下态仍照旧清空。
+     */
     val currentSceneProgress: String = "",
     /** 待生成见面摘要的 sessionId（退出时设、提取成功清；重启/重进自动重试）。 */
     val pendingOfflineSummarySessionId: String? = null,
@@ -78,6 +90,13 @@ data class ConversationEntity(
     val pendingOfflineSummaryLastAttemptAt: Long? = null,
     /** 规则兜底摘要对应的 sessionId 列表（逗号分隔，UI 显示「简化」标识 + 自愈升级用）。 */
     val offlineSummaryFallbackSessionIds: String = "",
+
+    /**
+     * 散场硬闸剩余轮数（图纸 2026-09-06 见面窗口与节拍卡七件 §3.E·D-1）：用户点「再待一会儿」置 3；
+     * 每个**成功**的 AI 回合尾递减 1（SQL 守卫不为负）；> 0 时本轮不下发 end_offline_meeting 且任何结束动作被
+     * [com.situ.aichat.offline.OfflineMeetingService.handleEndMeeting] 丢弃。进入/退出/重置线下态归零。
+     */
+    val offlineEndHoldTurns: Int = 0,
 
     // 场内滚动压缩·前情提要（记忆改造二期·部件⑤·图纸 §3.2-A）——进行中的长见面/长通话，被截断窗口静默丢弃
     // 的早期部分压缩成一段前情提要挂在此，注入在截断提示之后。**惰性失效**：注入/续写前校验 sessionKey 是否 ==

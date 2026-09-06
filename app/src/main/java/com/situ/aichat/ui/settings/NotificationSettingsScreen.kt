@@ -306,15 +306,15 @@ private const val QUIET_END_MIN = 300f // 05:00
 private const val QUIET_END_MAX = 660f // 11:00
 private const val QUIET_END_STEPS = 11 // (660-300)/30-1
 
-/** 当日分钟数 → "HH:mm"（两侧自拼，Locale 无关）。 */
-private fun formatMinuteOfDay(minuteOfDay: Int): String {
+/** 当日分钟数 → "HH:mm"（两侧自拼，Locale 无关）。`internal` = 琉璃通知页复用同一份实现（卷四 A-7）。 */
+internal fun formatMinuteOfDay(minuteOfDay: Int): String {
     val h = minuteOfDay / 60
     val m = minuteOfDay % 60
     return "${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}"
 }
 
-/** 吸附到 30min 整档（图纸 §4）。 */
-private fun snapToHalfHour(value: Float): Int =
+/** 吸附到 30min 整档（图纸 §4）。`internal` = 琉璃通知页复用同一份实现（卷四 A-7）。 */
+internal fun snapToHalfHour(value: Float): Int =
     (value.roundToInt() / QUIET_STEP_MINUTES) * QUIET_STEP_MINUTES
 
 /** 免打扰起 / 止滑条行：上方一行当前值文本 + 滑条（制式同本页其他 bodySmall 说明行）。 */

@@ -1,7 +1,5 @@
 package com.situ.aichat.offline
 
-import kotlin.math.roundToInt
-
 /**
  * 线下模式叙事预设（源自 iOS `OfflineNarrativePreset`；2026-08-31「人设优先、机器退位」微图纸起
  * 与 iOS 分道：情绪底色池 / 行为类导演指令 / 强制欲言又止（旧规则 16）/「微小意外」条款（旧规则 17）
@@ -10,6 +8,10 @@ import kotlin.math.roundToInt
  * 中文（含 iOS 模板里 rule8 与 rule9 之间靠 `\` 续行 = 无换行直接相接的行为）。
  *
  * 导演指令引擎（analyze/generate/select）在 10.2b-2；本文件只提供预设数据 + prompt 装配。
+ *
+ * 天气（P11）落地时在首句之后加一行「此刻天气：…」——面对面只有一片天，不分你那边 / 用户那边
+ * （原【双方位置和天气】块与 OfflineWeatherSnapshot 已于 2026-09-06 场景感小批删除：天气恒 null，
+ * 该块只产「你住在X / 用户住在Y / 根据情境自然决定见面地点」三行，与钉死的见面地点自相矛盾）。
  */
 data class OfflineNarrativePreset(
     val level: DetailLevel,
@@ -61,7 +63,7 @@ data class OfflineNarrativePreset(
             environmentTagDesc = "场景的感官细节：看到的、听到的、闻到的、感受到的[/环境]",
             rule8 = "8. 每一轮回复的结尾呈\"等待用户反应的姿态\"——自然地把对话空间留给用户。可以是一句话说完了、一个动作做完了、或者一个自然的停顿。不需要刻意制造悬念。反面示例：✗\"他们道别，各自离开\"（这是单方面结束场景）",
             rule12 = "12. 对话是主体——大部分内容应该是角色在说话；动作、环境、内心是点缀，穿插在对话之间让画面更生动，但不要喧宾夺主。避免连续两段纯内心独白",
-            rule13 = "13. [环境] 写此刻场景里真实存在的感官细节——听到什么、闻到什么、温度如何，选最自然的那一个写就行，不用每种感官都覆盖。把【双方位置和天气】的天气融进环境描写里，但不要直接说“因为天气所以……”",
+            rule13 = "13. [环境] 写此刻场景里真实存在的感官细节——听到什么、闻到什么、温度如何，选最自然的那一个写就行，不用每种感官都覆盖。系统若给了真实天气，就把它融进环境描写里，但不要直接说“因为天气所以……”",
             extraStyleRules = "17. 写作风格：像朋友在讲今天发生了什么，不像在写小说。不用华丽的比喻和修辞，不用文学腔，角色说话用口语而不是书面语。如果一句话在现实生活中没有人会这样说，就换一种说法",
             blockEmphasisPool = listOf(
                 BlockEmphasisDirective(setOf(BlockType.EMOTION), "本轮记得写一个 [情绪]——角色此刻的真实感受，用日常的方式表达就好"),
@@ -88,7 +90,7 @@ data class OfflineNarrativePreset(
             environmentTagDesc = "感官细节：温度、气味、声音方向、“差一点发生”的触感、视觉[/环境]",
             rule8 = "8. 每一轮回复的最后一个内容块必须呈\"等待用户反应的姿态\"——把话筒交给用户，不是推进剧情也不是结束场景。合法形式：一个停在半空的动作（他的指尖差一点碰到你的手）、一句未得到回答的话（\"你是不是……\"）、一个停下的脚步、一个望向你的眼神。反面示例（不要这样收束）：✗\"他们道别，各自离开\"（这是结束场景）；✗\"她点头坐下，点了一杯拿铁\"（这只是交代完动作）",
             rule12 = "12. 整轮文字整体配比参考：对话 ≈40%、角色动作+身体语言 ≈30%、环境+感官 ≈20%、内心独白 ≈10%；避免连续两段纯对话或连续两段纯内心独白",
-            rule13 = "13. 使用 [环境] 时优先写非视觉通道——温度差、嗅觉、“差一点发生”的触感、声音的方向感；视觉细节建议每轮最多 1 处，把感官带宽留给其他通道；把【双方位置和天气】的真实天气作为隐性氛围（雨天偏内向、晴天偏开放、夜晚偏感性），让它渗进环境描写里，但不要直白地说“因为今天下雨所以……”，让氛围是“泡”出来的不是“说”出来的",
+            rule13 = "13. 使用 [环境] 时优先写非视觉通道——温度差、嗅觉、“差一点发生”的触感、声音的方向感；视觉细节建议每轮最多 1 处，把感官带宽留给其他通道；系统若给了真实天气，就把它作为隐性氛围（雨天偏内向、晴天偏开放、夜晚偏感性），让它渗进环境描写里，但不要直白地说“因为今天下雨所以……”，让氛围是“泡”出来的不是“说”出来的",
             extraStyleRules = "",
             blockEmphasisPool = listOf(
                 BlockEmphasisDirective(setOf(BlockType.EMOTION), "本轮用 [情绪] 描写角色情绪的身体版本——不是「她有点紧张」，而是「她无意识地把手机翻过来又翻回去」"),
@@ -150,23 +152,21 @@ data class OfflineNarrativePreset(
          * 构建线下见面模式完整系统提示词（1:1 iOS `buildPrompt`）。
          *
          * @param currentTimeText 已格式化的当前真实时间。
+         * @param userName 用户称呼（昵称，空昵称由调用方退「用户」）——首句直呼真名，不写「用户」二字。
+         * @param meetingLocation 本场见面地点（入场标记 payload；空 = 首句不带地点分句）。
+         * @param meetingActivity 本场见面活动（同上；地点空时一并忽略）。
          * @param tensionSeed 心事种子（非空时拼【今日场景种子】块 + [SEED_CONSTRAINT]）。
-         * @param sceneProgress 节拍状态 Markdown（非空时拼【节拍状态】块）。
          * @param perTurnDirective 本轮叙事指令（10.2b-2 引擎生成；非空时拼入）。
          */
         fun buildPrompt(
             currentTimeText: String,
-            characterCity: String?,
-            characterWeather: OfflineWeatherSnapshot?,
-            userCity: String?,
-            userWeather: OfflineWeatherSnapshot?,
+            userName: String,
+            meetingLocation: String?,
+            meetingActivity: String?,
             tensionSeed: String?,
-            sceneProgress: String?,
             perTurnDirective: String?,
             preset: OfflineNarrativePreset,
         ): String {
-            val locationBlock = buildLocationBlock(characterCity, characterWeather, userCity, userWeather)
-
             // timeLine 末尾的 \n 必须保留、不能有前导空格。
             val timeLine = "当前真实时间：$currentTimeText\n"
             val rule14 = "14. 结合当前的真实时间来推进线下场景"
@@ -176,7 +176,7 @@ data class OfflineNarrativePreset(
 
             // base 用 flush-left """ 避免 trimIndent 与插值换行冲突；rule8 与 "9." 直接相接 = iOS `\` 续行行为。
             val base = """【当前处于线下见面模式】
-${timeLine}你现在和用户面对面在一起。请用沉浸式叙事风格输出内容。$locationBlock
+${timeLine}你现在和${userName}面对面在一起${meetingPlaceClause(meetingLocation, meetingActivity)}。请用沉浸式叙事风格输出内容。
 
 使用以下 9 种标签包裹所有内容，不允许输出任何裸文本：
 
@@ -204,14 +204,12 @@ ${preset.rule8}9. 每次回复 4-6 个内容块
 ${preset.rule12}
 ${preset.rule13}
 $rule14
-15. 当见面场景走到告别时，先完整输出告别段落（至少 1 个 [场景] 或 [环境] + 1 个 [动作] + 1 个 [对话]），然后调用 end_offline_meeting 工具。判断是否应结束以本 prompt 末尾【节拍状态】的 allow_end 字段为准（若未注入则遵循场景自然推进）。如果你的模型不支持工具调用，请在回复末尾附上 [offline_end] 标记
-16. 节奏由角色人设和当下情境决定：有话直说的角色可以把话说完，慢热的角色可以欲言又止；不需要刻意制造悬念或在每轮留下钩子，允许什么都没发生、纯粹放松的相处。当 allow_end 为 true 时允许场景自然收束走向告别$extraLine"""
+15. 当见面场景走到告别时，先完整输出告别段落（至少 1 个 [场景] 或 [环境] + 1 个 [动作] + 1 个 [对话]），然后调用 end_offline_meeting 工具。是否该告别由场景自然推进决定：见面至少进行了 3 轮、并且已经说到告别、天晚了或准备离开时才收束。如果你的模型不支持工具调用，请在回复末尾附上 [offline_end] 标记
+16. 节奏由角色人设和当下情境决定：有话直说的角色可以把话说完，慢热的角色可以欲言又止；不需要刻意制造悬念或在每轮留下钩子，允许什么都没发生、纯粹放松的相处。$extraLine"""
 
             val directiveBlock = if (!perTurnDirective.isNullOrEmpty()) "\n\n$perTurnDirective" else ""
-            val progress = sceneProgress?.trim().orEmpty()
-            val sceneProgressBlock = if (progress.isNotEmpty()) "\n\n【节拍状态】\n$progress" else ""
 
-            return base + CONSISTENCY_BLOCK + seedBlock + directiveBlock + sceneProgressBlock
+            return base + CONSISTENCY_BLOCK + seedBlock + directiveBlock
         }
 
         /**
@@ -231,49 +229,18 @@ $rule14
         private const val SEED_CONSTRAINT: String =
             "这件事不需要立刻摊开说——如果对话自然聊到了就可以提起，没聊到也不用硬塞。让它像真实的心事一样，在合适的时候自然浮出来。"
 
-        /** 位置天气块（1:1 iOS `buildLocationBlock`）；城市/天气任一为空均优雅省略。 */
-        fun buildLocationBlock(
-            characterCity: String?,
-            characterWeather: OfflineWeatherSnapshot?,
-            userCity: String?,
-            userWeather: OfflineWeatherSnapshot?,
-        ): String {
-            // TODO(P11)：接真天气前，roundToInt（半值向 +∞）与 iOS Int(rounded())（半值远离 0）对负半值差 1°
-            // （如 −2.5° → 安卓 −2°/iOS −3°）。接 weather 快照时改用「远离 0」舍入对齐。当前 weather 恒 null，latent（复核 LOW#9）。
-            val lines = ArrayList<String>()
-            if (!characterCity.isNullOrEmpty()) {
-                var line = "你住在$characterCity"
-                characterWeather?.let { w ->
-                    line += "，你那边的天气是${w.conditionEmoji}${w.condition}，${w.temperatureLow.roundToInt()}°~${w.temperatureHigh.roundToInt()}°"
-                }
-                line += "。"
-                lines.add(line)
-            }
-            if (!userCity.isNullOrEmpty()) {
-                var line = "用户住在$userCity"
-                userWeather?.let { w ->
-                    line += "，用户那边是${w.conditionEmoji}${w.condition}，${w.temperatureLow.roundToInt()}°~${w.temperatureHigh.roundToInt()}°"
-                    w.hourlyChangeSummary?.let { line += "（$it）" }
-                }
-                line += "。"
-                lines.add(line)
-            }
-            if (lines.isEmpty()) return ""
-            lines.add("根据对话中的情境自然决定见面地点，可以是你去找用户、用户来找你、或你们约在某个地方。")
-            lines.add("让上面的天气成为场景的隐性氛围——渗进环境描写里，影响角色的情绪底色，但不要直白地说“今天下雨了”这种天气名词。")
-            return "\n\n【双方位置和天气】\n" + lines.joinToString("\n")
+        /**
+         * 说明书首句的地点分句（场景感小批 2026-09-06）：地点空 → ""；否则
+         * 「，这次是在{地点}{，活动}；中途换了地方，以对话里最近一个 [场景] 标签为准」。
+         * 地点 / 活动逗号直连、不做任何词形加工（活动值常自带前导「在」，加「在」会拼出「在你家家看电影」）。
+         */
+        internal fun meetingPlaceClause(location: String?, activity: String?): String {
+            val place = location?.trim().orEmpty()
+            if (place.isEmpty()) return ""
+            val act = activity?.trim().orEmpty()
+            val activityPart = if (act.isEmpty()) "" else "，$act"
+            return "，这次是在$place$activityPart；中途换了地方，以对话里最近一个 [场景] 标签为准"
         }
     }
 }
 
-/**
- * 线下 prompt 位置块用的天气快照（M16 不依赖未建的天气模块；P11 天气落地后映射进来）。
- * 字段对齐 iOS WeatherData 在 buildLocationBlock 用到的部分。
- */
-data class OfflineWeatherSnapshot(
-    val conditionEmoji: String,
-    val condition: String,
-    val temperatureLow: Double,
-    val temperatureHigh: Double,
-    val hourlyChangeSummary: String? = null,
-)

@@ -19,7 +19,7 @@ import org.robolectric.annotation.Config
 
 /**
  * MemoryService 消化素材接线 + 提取提示词哨兵（记忆改造一期·图纸 §3.6/§3.7 / T2-10）。
- * 断言从图纸独立反推：extraMaterial 拼进 {{聊天记录}}（空/非空两态）；DEFAULT_EXTRACTION_PROMPT 含规则 6 且仍含两标题；
+ * 断言从图纸独立反推：extraMaterial 拼进 {{聊天记录}}（空/非空两态）；DEFAULT_EXTRACTION_PROMPT 含规则 6 / 规则 7（写入时换算·2026-09-06）且仍含两标题；
  * generateMemorySummary 返回值剥净内联 <think>（非流式 completion 不剥标签，落库前必须在此收口）。
  * Robolectric：MemoryService 内部若干安卓依赖（formatTimestamp 自 2026-09-01 件⑤起改 Locale.ROOT 纯 JVM，不再是保留 Robolectric 的理由）。
  */
@@ -131,6 +131,19 @@ class MemoryServiceTest {
         assertTrue("进行中约定不写进长期事实", p.contains("由系统的约定清单单独管理，不要写进「长期事实」"))
         assertTrue("仍含长期事实标题", p.contains("【长期事实】"))
         assertTrue("仍含近期经历标题", p.contains("【近期经历】"))
+    }
+
+    @Test fun defaultExtractionPrompt_hasRule7_relativeTimeNormalizedAtWrite() {
+        // 写入时换算（2026-09-06 用户拍板）：素材行首 [时间] 是发生时间；消息里的相对时间词落记忆时须换成具体日期，
+        // 且合并旧记忆时把未换算的也顺手改掉（与规则 2 的旧代称换血同一手法）。不得引入「当前时间」宏（MemoryCompressionModeTest 钉死）。
+        val p = MemoryService.DEFAULT_EXTRACTION_PROMPT
+        assertTrue("含规则 7（写入时换算）", p.contains("7. 每条消息前方括号里的时间，就是那句话说出来的时间"))
+        assertTrue("相对时间词一律换成具体日期", p.contains("写进记忆时一律按那条消息的时间换算成具体日期"))
+        assertTrue("规则 2 合并时顺手换算旧记忆", p.contains("也一并按该条开头的 [日期] 换算成具体日期"))
+        assertTrue("规则 7 给前→后对照例而非孤立事实句", p.contains("原话「明天要去面试」，就写成「[2026-09-03] {{user}}说 9 月 4 日要去面试」"))
+        assertTrue("「刚才」类不硬换日期", p.contains("「刚才」「等会儿」这类说法直接去掉或改成那天的时段"))
+        assertFalse("不得引入「当前时间」", p.contains("当前时间"))
+        assertTrue("输出格式段零碰（强耦合）", p.contains("每条一行，必须带日期标记，格式为「[YYYY-MM-DD] 内容」"))
     }
 
     // ── 第三人称指名（2026-07-14·图纸 §7 T-a/T-b/T-c）：断言从 D-3/D-4/E1/E3/E7 规格独立反推 ──

@@ -154,7 +154,8 @@ class NarrativeDirectiveServiceTest {
 
     @Test fun generate_plain_has_header_and_single_bullet_from_pool() {
         val result = NarrativeDirectiveService.generateDirective(anyProfile(), OfflineNarrativePreset.PLAIN)!!
-        assertTrue(result.startsWith("【本轮叙事指令】（仅本轮有效，下轮会变化；与【节拍状态】冲突时以节拍状态为准）\n"))
+        // 表头逐字（§4.3·重新打字）：节拍状态从句随节拍卡 2026-09-06 退役。
+        assertTrue(result.startsWith("【本轮叙事指令】（仅本轮有效，下轮会变化）\n"))
         val bullets = bulletLines(result)
         assertEquals(1, bullets.size) // PLAIN: only blockEmphasisPool is non-empty
         assertTrue(bullets[0] in OfflineNarrativePreset.PLAIN.blockEmphasisPool.map { it.text })

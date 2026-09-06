@@ -8,7 +8,7 @@ import org.junit.Test
 
 /**
  * `OfflineNarrativePreset` tests (P10.2b-1): detail-level resolution, custom-factory rules, and
- * `buildPrompt`/`buildLocationBlock` structure — sentinel-based, reverse-derived from iOS
+ * `buildPrompt`/`meetingPlaceClause` structure — sentinel-based, reverse-derived from iOS
  * `OfflineNarrativePreset` (incl. the iOS `\`-continuation that joins rule 8 directly to "9.").
  */
 class OfflineNarrativePresetTest {
@@ -52,16 +52,16 @@ class OfflineNarrativePresetTest {
 
     // ── buildPrompt structure ──
 
-    private fun prompt(seed: String?, progress: String?, directive: String?) =
+    private fun prompt(seed: String?, directive: String?) =
         OfflineNarrativePreset.buildPrompt(
             currentTimeText = "2026-06-03 15:30",
-            characterCity = null, characterWeather = null, userCity = null, userWeather = null,
-            tensionSeed = seed, sceneProgress = progress, perTurnDirective = directive,
+            userName = "小美", meetingLocation = null, meetingActivity = null,
+            tensionSeed = seed, perTurnDirective = directive,
             preset = OfflineNarrativePreset.PLAIN,
         )
 
     @Test fun build_prompt_has_header_tags_and_rules() {
-        val p = prompt(seed = null, progress = null, directive = null)
+        val p = prompt(seed = null, directive = null)
         assertTrue(p.startsWith("【当前处于线下见面模式】"))
         assertTrue(p.contains("使用以下 9 种标签包裹所有内容"))
         assertTrue(p.contains("11. 每次回复第一个内容块永远不是 [对话]"))
@@ -76,13 +76,12 @@ class OfflineNarrativePresetTest {
     @Test fun build_prompt_rule16_is_persona_first_no_forced_hooks() {
         // 三档统一：新规则 16 逐字（从微图纸规格反推，非照抄实现）。
         val expected = "16. 节奏由角色人设和当下情境决定：有话直说的角色可以把话说完，慢热的角色可以欲言又止；" +
-            "不需要刻意制造悬念或在每轮留下钩子，允许什么都没发生、纯粹放松的相处。" +
-            "当 allow_end 为 true 时允许场景自然收束走向告别"
+            "不需要刻意制造悬念或在每轮留下钩子，允许什么都没发生、纯粹放松的相处。"
         for (preset in listOf(OfflineNarrativePreset.PLAIN, OfflineNarrativePreset.NORMAL, OfflineNarrativePreset.DETAILED)) {
             val p = OfflineNarrativePreset.buildPrompt(
                 currentTimeText = "x",
-                characterCity = null, characterWeather = null, userCity = null, userWeather = null,
-                tensionSeed = null, sceneProgress = null, perTurnDirective = null,
+                userName = "小美", meetingLocation = null, meetingActivity = null,
+                tensionSeed = null, perTurnDirective = null,
                 preset = preset,
             )
             assertTrue(p.contains(expected))
@@ -97,8 +96,8 @@ class OfflineNarrativePresetTest {
         // §4-E：规则 17 撤除后 NORMAL 风格规则编号 18→17（正文逐字不动），紧跟规则 16 无断号（R1 🔵-2 补锁）。
         val p = OfflineNarrativePreset.buildPrompt(
             currentTimeText = "x",
-            characterCity = null, characterWeather = null, userCity = null, userWeather = null,
-            tensionSeed = null, sceneProgress = null, perTurnDirective = null,
+            userName = "小美", meetingLocation = null, meetingActivity = null,
+            tensionSeed = null, perTurnDirective = null,
             preset = OfflineNarrativePreset.NORMAL,
         )
         assertTrue(p.contains("\n17. 写作风格：像朋友在讲今天发生了什么"))
@@ -122,40 +121,56 @@ class OfflineNarrativePresetTest {
     }
 
     @Test fun build_prompt_always_carries_real_time_line() {
-        val p = prompt(seed = null, progress = null, directive = null)
+        val p = prompt(seed = null, directive = null)
         assertTrue(p.contains("当前真实时间：2026-06-03 15:30"))
         assertTrue(p.contains("14. 结合当前的真实时间来推进线下场景"))
     }
 
-    @Test fun build_prompt_appends_seed_directive_sceneprogress_in_order() {
-        val p = prompt(seed = "她今天有心事", progress = "allow_end: false", directive = "【本轮叙事指令】\n· 补一个情绪")
+    @Test fun build_prompt_appends_seed_then_directive_in_order() {
+        val p = prompt(seed = "她今天有心事", directive = "【本轮叙事指令】\n· 补一个情绪")
         // 种子约束 = 三档统一常量（微图纸 §4-B 逐字；「前 3 轮不说破」定节奏版已废弃）。
         assertTrue(
             p.contains(
                 "【今日场景种子】\n她今天有心事\n这件事不需要立刻摊开说——如果对话自然聊到了就可以提起，没聊到也不用硬塞。让它像真实的心事一样，在合适的时候自然浮出来。",
             ),
         )
-        assertTrue(p.contains("【本轮叙事指令】\n· 补一个情绪"))
-        // sceneProgress is appended LAST.
-        assertTrue(p.endsWith("【节拍状态】\nallow_end: false"))
-        // order: seed before directive before the INJECTED scene-progress block.
-        // (rule 15 mentions "末尾【节拍状态】的…" inline, so use the injected block's full sentinel.)
+        // 叙事指令块现在是最后一块（节拍状态块已随 G 件退役·图纸 2026-09-06 见面窗口与节拍卡七件）。
+        assertTrue(p.endsWith("【本轮叙事指令】\n· 补一个情绪"))
         assertTrue(p.indexOf("【今日场景种子】") < p.indexOf("【本轮叙事指令】"))
-        assertTrue(p.indexOf("【本轮叙事指令】") < p.indexOf("【节拍状态】\nallow_end: false"))
+    }
+
+    /** G 件（图纸 2026-09-06 七件 §4.2/§9）：线下提示词任何位置都不再出现节拍字样。 */
+    @Test fun build_prompt_has_no_scene_progress_anywhere() {
+        for (preset in listOf(OfflineNarrativePreset.PLAIN, OfflineNarrativePreset.NORMAL, OfflineNarrativePreset.DETAILED)) {
+            val p = OfflineNarrativePreset.buildPrompt(
+                currentTimeText = "x",
+                userName = "小美", meetingLocation = "公园", meetingActivity = "散步",
+                tensionSeed = "有心事", perTurnDirective = "【本轮叙事指令】\n· 补一个情绪",
+                preset = preset,
+            )
+            assertFalse(p.contains("【节拍状态】"))
+            assertFalse(p.contains("allow_end"))
+        }
+    }
+
+    /** 规则 15 新文本逐字（§4.2·重新打字）：告别判据改为「场景自然推进 + 至少 3 轮」。 */
+    @Test fun build_prompt_rule15_end_condition_is_scene_driven() {
+        val expected = "15. 当见面场景走到告别时，先完整输出告别段落（至少 1 个 [场景] 或 [环境] + 1 个 [动作] + 1 个 [对话]），" +
+            "然后调用 end_offline_meeting 工具。是否该告别由场景自然推进决定：见面至少进行了 3 轮、并且已经说到告别、" +
+            "天晚了或准备离开时才收束。如果你的模型不支持工具调用，请在回复末尾附上 [offline_end] 标记"
+        assertTrue(prompt(seed = null, directive = null).contains(expected))
     }
 
     @Test fun build_prompt_omits_optional_blocks_when_absent() {
-        val p = prompt(seed = null, progress = null, directive = null)
+        val p = prompt(seed = null, directive = null)
         assertFalse(p.contains("【今日场景种子】"))
         assertFalse(p.contains("【本轮叙事指令】"))
-        // base's rule 15 references "【节拍状态】的…" inline; the INJECTED block is "【节拍状态】\n…".
-        assertFalse(p.contains("【节拍状态】\n"))
     }
 
     // ── B5 人设一致性 + 线上线下连续性（§3.7 逐字·所有档位一致） ──
 
     @Test fun build_prompt_inserts_consistency_blocks_verbatim_before_seed() {
-        val p = prompt(seed = "她今天有心事", progress = null, directive = null)
+        val p = prompt(seed = "她今天有心事", directive = null)
         // 两块逐字（块首各带一个空行·§3.7/§9 禁改）。
         assertTrue(
             p.contains(
@@ -171,38 +186,92 @@ class OfflineNarrativePresetTest {
         // 所有档位一致（DETAILED 档也含）+ 无可选块时仍注入。
         val p = OfflineNarrativePreset.buildPrompt(
             currentTimeText = "x",
-            characterCity = null, characterWeather = null, userCity = null, userWeather = null,
-            tensionSeed = null, sceneProgress = null, perTurnDirective = null,
+            userName = "小美", meetingLocation = null, meetingActivity = null,
+            tensionSeed = null, perTurnDirective = null,
             preset = OfflineNarrativePreset.DETAILED,
         )
         assertTrue(p.contains("【人设一致性】"))
         assertTrue(p.contains("【线上线下连续性】"))
     }
 
-    // ── buildLocationBlock ──
+    // ── 场景感小批（2026-09-06 图纸 §7 T1-1）：首句钉见面地点 / 位置天气块整块退役 ──
 
-    @Test fun location_block_both_cities_with_weather() {
-        val block = OfflineNarrativePreset.buildLocationBlock(
-            characterCity = "北京",
-            characterWeather = OfflineWeatherSnapshot("☀️", "晴", 12.4, 18.6),
-            userCity = "上海",
-            userWeather = OfflineWeatherSnapshot("🌧️", "小雨", 10.0, 15.0, "傍晚转阴"),
+    /** M6 三形态 = 说明书第三行（第一行模式标记、第二行真实时间）。 */
+    private fun thirdLine(p: String): String = p.split("\n")[2]
+
+    private fun promptAt(location: String?, activity: String?, seed: String? = null) =
+        OfflineNarrativePreset.buildPrompt(
+            currentTimeText = "2026-06-03 15:30",
+            userName = "小美", meetingLocation = location, meetingActivity = activity,
+            tensionSeed = seed, perTurnDirective = null,
+            preset = OfflineNarrativePreset.PLAIN,
         )
-        assertTrue(block.startsWith("\n\n【双方位置和天气】\n"))
-        assertTrue(block.contains("你住在北京，你那边的天气是☀️晴，12°~19°。")) // rounding 12.4→12, 18.6→19
-        assertTrue(block.contains("用户住在上海，用户那边是🌧️小雨，10°~15°（傍晚转阴）。"))
-        assertTrue(block.contains("根据对话中的情境自然决定见面地点"))
+
+    @Test fun 地点分句_有地点有活动() {
+        assertEquals(
+            "，这次是在公园，散步；中途换了地方，以对话里最近一个 [场景] 标签为准",
+            OfflineNarrativePreset.meetingPlaceClause("公园", "散步"),
+        )
     }
 
-    @Test fun location_block_empty_when_no_city() {
-        assertEquals("", OfflineNarrativePreset.buildLocationBlock(null, null, null, null))
-        assertEquals("", OfflineNarrativePreset.buildLocationBlock("", null, "", null))
+    @Test fun 地点分句_有地点无活动() {
+        assertEquals(
+            "，这次是在公园；中途换了地方，以对话里最近一个 [场景] 标签为准",
+            OfflineNarrativePreset.meetingPlaceClause("公园", ""),
+        )
+        // 活动 null 与空串同义。
+        assertEquals(
+            OfflineNarrativePreset.meetingPlaceClause("公园", ""),
+            OfflineNarrativePreset.meetingPlaceClause("公园", null),
+        )
     }
 
-    @Test fun location_block_city_without_weather() {
-        val block = OfflineNarrativePreset.buildLocationBlock("北京", null, null, null)
-        assertTrue(block.contains("你住在北京。"))
-        // no weather CLAUSE (the trailing instruction line legitimately contains the word 天气).
-        assertFalse(block.contains("你那边的天气是"))
+    @Test fun 地点分句_地点空或全空格一律空串() {
+        assertEquals("", OfflineNarrativePreset.meetingPlaceClause("", "散步"))
+        assertEquals("", OfflineNarrativePreset.meetingPlaceClause("  ", null))
+        assertEquals("", OfflineNarrativePreset.meetingPlaceClause(null, null))
+    }
+
+    @Test fun 首句_有地点有活动为M6第一形态() {
+        assertEquals(
+            "你现在和小美面对面在一起，这次是在公园，散步；中途换了地方，以对话里最近一个 [场景] 标签为准。请用沉浸式叙事风格输出内容。",
+            thirdLine(promptAt("公园", "散步")),
+        )
+    }
+
+    @Test fun 首句_有地点无活动为M6第二形态() {
+        assertEquals(
+            "你现在和小美面对面在一起，这次是在公园；中途换了地方，以对话里最近一个 [场景] 标签为准。请用沉浸式叙事风格输出内容。",
+            thirdLine(promptAt("公园", "")),
+        )
+    }
+
+    @Test fun 首句_无地点为M6第三形态且位置天气块整块消失() {
+        val p = promptAt(null, null)
+        assertEquals("你现在和小美面对面在一起。请用沉浸式叙事风格输出内容。", thirdLine(p))
+        assertFalse(p.contains("这次是在"))
+        assertFalse(p.contains("[场景] 标签为准"))
+        // V3：【双方位置和天气】块（含「自然决定见面地点」「你住在」）永久消失。
+        assertFalse(p.contains("【双方位置和天气】"))
+        assertFalse(p.contains("自然决定见面地点"))
+        assertFalse(p.contains("你住在"))
+        assertFalse(p.contains("用户住在"))
+        // 首句直呼真名，不写「用户」二字。
+        assertFalse(p.contains("你现在和用户面对面"))
+    }
+
+    @Test fun rule13不再点名已删的位置天气块() {
+        // V4：NORMAL / DETAILED 改引「系统若给了真实天气」；PLAIN 本就不引用，逐字不变。
+        for (rule13 in listOf(OfflineNarrativePreset.NORMAL.rule13, OfflineNarrativePreset.DETAILED.rule13)) {
+            assertTrue(rule13.contains("系统若给了真实天气"))
+            assertFalse(rule13.contains("【双方位置和天气】"))
+        }
+        assertEquals("13. [环境] 简单写一下周围的情况就行", OfflineNarrativePreset.PLAIN.rule13)
+    }
+
+    @Test fun 地点与心事种子可并存() {
+        val p = promptAt("公园", "散步", seed = "她今天有心事")
+        assertTrue(thirdLine(p).contains("这次是在公园，散步"))
+        assertTrue(p.contains("【今日场景种子】\n她今天有心事"))
     }
 }

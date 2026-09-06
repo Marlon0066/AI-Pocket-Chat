@@ -202,4 +202,88 @@ class MemorySummaryCapTest {
         assertEquals(90000, persisted.length)
         coVerify(exactly = 0) { memoryService.compressMemory(any(), any(), any(), any()) }
     }
+
+    // ── 校验 2「短稿闸」（图纸 2026-09-05 §3.3 / §7 T2-5·E9–E13）──
+    // 规格：默认模板下限 = 1/3 × min(旧长, maxLength)（maxLength ≤ 0 只看旧长）；自定义模板让位仍 1/20。
+    // 下方每个下限都按该式**重新手算**为字面量，不引用实现（实现改公式必在此撞墙）。
+    // 各例新稿都远低于 1.2×maxLength，压缩链不参与；旧记忆经 getByUuid 显式打桩（relaxed 空记忆会顶掉底稿）。
+
+    /** 按指定旧记忆 / 上限 / 自定义模板跑一次，返回 (写回文本, 游标是否推进)。 */
+    private fun runWithOldMemory(oldLength: Int, newLength: Int, maxLength: Int, customPrompt: String = ""): Pair<String, Boolean> {
+        val old = "旧".repeat(oldLength)
+        coEvery { characterDao.getByUuid("c1") } returns character.copy(memorySummary = old)
+        stubGenerate(mem(newLength))
+        var marked = false
+        val persisted = runBlocking {
+            coordinator.summarizeAndPersist(
+                character = character.copy(memorySummary = old),
+                messages = messages,
+                config = config,
+                maxLength = maxLength,
+                customPrompt = customPrompt,
+                markSummarized = { marked = true },
+            )
+        }
+        return persisted to marked
+    }
+
+    /** 断言这一档被短稿闸拒收：抛 SuspiciouslyShort + 零写回 + 游标不推进。 */
+    private fun assertRejectedAsShort(oldLength: Int, newLength: Int, maxLength: Int, customPrompt: String = "") {
+        try {
+            val (_, marked) = runWithOldMemory(oldLength, newLength, maxLength, customPrompt)
+            fail("应抛 SuspiciouslyShort（marked=$marked）")
+        } catch (e: MemorySummaryError) {
+            assertTrue("应为 SuspiciouslyShort，实为 $e", e is MemorySummaryError.SuspiciouslyShort)
+        }
+        coVerify(exactly = 0) { characterDao.updateMemorySummary(any(), any(), any()) }
+    }
+
+    @Test
+    fun `短稿闸_旧3000上限5000_新稿999低于下限1000_拒收`() {
+        // E9：min(3000, 5000)/3 = 1000；999 < 1000。
+        assertRejectedAsShort(oldLength = 3000, newLength = 999, maxLength = 5000)
+    }
+
+    @Test
+    fun `短稿闸_旧3000上限5000_新稿1000正好达下限_放行`() {
+        // E10：比较为「严格小于才拒」，等于下限放行。
+        val (persisted, marked) = runWithOldMemory(oldLength = 3000, newLength = 1000, maxLength = 5000)
+        assertEquals(1000, persisted.length)
+        assertTrue("放行例游标正常推进", marked)
+        coVerify(exactly = 1) { characterDao.updateMemorySummary("c1", "旧".repeat(3000), mem(1000)) }
+    }
+
+    @Test
+    fun `短稿闸_上限2000小于旧记忆5000_下限按上限算666_新稿700放行`() {
+        // E11 上半：min(5000, 2000)/3 = 666——上限比旧记忆小时，闸随上限走，用户调小上限后不会被自己的旧记忆锁死。
+        val (persisted, marked) = runWithOldMemory(oldLength = 5000, newLength = 700, maxLength = 2000)
+        assertEquals(700, persisted.length)
+        assertTrue(marked)
+    }
+
+    @Test
+    fun `短稿闸_上限2000小于旧记忆5000_新稿600低于下限666_拒收`() {
+        // E11 下半：同一档的另一侧。
+        assertRejectedAsShort(oldLength = 5000, newLength = 600, maxLength = 2000)
+    }
+
+    @Test
+    fun `短稿闸_自定义模板让位_旧3000新稿200仍放行`() {
+        // E12 上半：自定义模板下限退回 3000/20 = 150；200 ≥ 150 → 放行（默认模板下 1000 的闸不适用）。
+        val (persisted, marked) = runWithOldMemory(oldLength = 3000, newLength = 200, maxLength = 5000, customPrompt = "我的模板")
+        assertEquals(200, persisted.length)
+        assertTrue(marked)
+    }
+
+    @Test
+    fun `短稿闸_自定义模板_旧3000新稿100低于下限150_仍拒收`() {
+        // E12 下半：让位不等于拆闸，1/20 那道仍在。
+        assertRejectedAsShort(oldLength = 3000, newLength = 100, maxLength = 5000, customPrompt = "我的模板")
+    }
+
+    @Test
+    fun `短稿闸_上限关闭时只看旧长_旧3000新稿900拒收`() {
+        // E13：maxLength ≤ 0 → 下限 = 3000/3 = 1000；900 < 1000。
+        assertRejectedAsShort(oldLength = 3000, newLength = 900, maxLength = 0)
+    }
 }

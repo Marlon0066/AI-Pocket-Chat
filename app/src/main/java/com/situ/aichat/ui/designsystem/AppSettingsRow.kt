@@ -27,7 +27,7 @@ import com.situ.aichat.ui.components.LocalAppHaptics
  * Fable-5 设置行 = **陶土瓦片 + 题 + 副 + 尾槽**（六件套草图 2026-07-17 过审·取代 M3 `ListItem`）。
  *
  * 骨架：`[30dp 瓦片] —12dp— [题/副 竖排 weight 1f] —12dp— [尾值] [chevron 或 trailing 槽]`，
- * 行内边距 18×10dp、最小高 56dp。瓦片 = 30dp 圆角 9dp、底 [AppColors.accent] primary 15%、图标 18dp。
+ * 行内边距 16×10dp（横向 = 军规「列表行水平起点 16dp」·[AppSpacing.rowInset]）、最小高 56dp。瓦片 = 30dp 圆角 9dp、底 [AppColors.accent] primary 15%、图标 18dp。
  * 字阶三枚走 [AppTypography] 具名 token（`settingsRowTitle` / `settingsRowSubtitle` / `settingsRowValue`），
  * **组件内不写裸 sp**。
  *
@@ -68,7 +68,8 @@ fun AppSettingsRow(
                 },
             )
             .heightIn(min = 56.dp)
-            .padding(horizontal = 18.dp, vertical = 10.dp),
+            // 列表行水平起点恒 16（设计语言 §2.5 军规）——18 是孤值。竖向不动（军规只管水平）。
+            .padding(horizontal = AppSpacing.rowInset, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {

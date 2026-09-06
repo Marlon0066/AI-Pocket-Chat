@@ -179,9 +179,13 @@ class MemoryService @Inject constructor(
         return result.sortedBy { it.timestamp }
     }
 
-    /** 第 [shortTermLength] 近的非空 user 消息时间戳；不足 N 条 → null（全部在窗口内，不总结）。 */
+    /**
+     * 第 [shortTermLength] 近的非空**线上** user 消息时间戳；不足 N 条 → null（全部在窗口内，不总结）。
+     * 只数线上消息（`isOfflineMode = 0`）：见面里用户每发一条都推切点，会把见面前的线上消息逐条挤出窗口、
+     * 计为「窗外未总结」，有效窗口从 N 涨到 2N（图纸 2026-09-06 七件 §3.A·J1）。
+     */
     suspend fun shortTermWindowCutoffMillis(conversationUuid: String, shortTermLength: Int): Long? {
-        val timestamps = messageDao.recentUserTimestamps(conversationUuid, shortTermLength)
+        val timestamps = messageDao.recentOnlineUserTimestamps(conversationUuid, shortTermLength)
         if (timestamps.size < shortTermLength) return null
         return timestamps.last() // DESC 取回，最后一个 = 第 N 近（最旧）
     }
@@ -314,18 +318,19 @@ class MemoryService @Inject constructor(
 
         /**
          * 触发顺序：① 失败短冷却 300s → ② 用户可调下限 [interval] → ③ 双轨（从未成功直接触发；
-         * 否则成功冷却 1800s OR 窗口外累积 ≥ 30 条 user 消息 任一满足）。
+         * 否则 [successCooldownMinutes] 分钟时间轨（0=不限）OR 窗口外累积 ≥ 2×[interval] 条 user 消息 任一满足）。
          */
         fun summaryTriggerDecision(
             outsideRoundCount: Int,
             interval: Int,
+            successCooldownMinutes: Int,
             lastSuccessDate: Long?,
             lastFailureDate: Long?,
             now: Long,
         ): SummaryTriggerDecision {
-            val failureCooldownMs = 300_000L     // 5 分钟
-            val successCooldownMs = 1_800_000L   // 30 分钟
-            val countTrack = 30                  // 30 条 user 消息
+            val failureCooldownMs = 300_000L                              // 5 分钟（锁定·不可调）
+            val successCooldownMs = successCooldownMinutes * 60_000L      // 用户可调；0=不限
+            val countTrack = interval.toLong() * 2                        // 计数轨 = 2×下限轮数
 
             if (lastFailureDate != null) {
                 val elapsed = now - lastFailureDate
@@ -339,8 +344,8 @@ class MemoryService @Inject constructor(
             if (lastSuccessDate == null) return SummaryTriggerDecision.Trigger
 
             val elapsed = now - lastSuccessDate
-            val timeReady = elapsed >= successCooldownMs
-            val countReady = outsideRoundCount >= countTrack
+            val timeReady = successCooldownMinutes <= 0 || elapsed >= successCooldownMs
+            val countReady = outsideRoundCount.toLong() >= countTrack
             return if (timeReady || countReady) {
                 SummaryTriggerDecision.Trigger
             } else {
@@ -464,11 +469,12 @@ class MemoryService @Inject constructor(
 
             ## 规则
             1. 用简洁的第三人称记录，两个人一律用名字指代：对方写「{{user}}」，角色写「{{char}}」；不要用「用户」「角色」这类代称。
-            2. 如果有已有记忆，将新记忆与旧记忆合并，去除重复；若已有记忆里还留着「用户」「角色」这类旧代称，合并时一并改写成对应的名字（{{user}} / {{char}}）。
+            2. 如果有已有记忆，将新记忆与旧记忆合并，去除重复；若已有记忆里还留着「用户」「角色」这类旧代称，合并时一并改写成对应的名字（{{user}} / {{char}}）；若已有记忆里还留着「明天」「今晚」这类没换算的相对时间，也一并按该条开头的 [日期] 换算成具体日期。
             3. {{user}}明确改变了偏好时，更新「长期事实」区对应条目。
             4. 总字数严格控制在{{最大字数}}字以内（这是硬性上限，必须遵守）。
             5. 当前已有记忆约{{当前字数}}字，上限为{{最大字数}}字。{{压缩策略}}
             6. 约定的处理：进行中的约定（答应了还没做的事）由系统的约定清单单独管理，不要写进「长期事实」；已经兑现或已经取消的约定可以作为经历写进「近期经历」。
+            7. 每条消息前方括号里的时间，就是那句话说出来的时间。消息里的「明天」「今晚」「下周三」这类相对说法，写进记忆时一律按那条消息的时间换算成具体日期：比如说话时间是 2026-09-03、原话「明天要去面试」，就写成「[2026-09-03] {{user}}说 9 月 4 日要去面试」；「刚才」「等会儿」这类说法直接去掉或改成那天的时段。不要把「明天」这类词原样写进记忆。
 
             ## 记忆连续性要求（针对「近期经历」区）
             - 在字数上限允许的前提下，尽可能覆盖每个有过对话的日期
@@ -500,6 +506,6 @@ sealed interface SummaryTriggerDecision {
     /** 用户可调下限未到（默认 10 轮）。 */
     data object SkipBelowInterval : SummaryTriggerDecision
 
-    /** 双轨冷却：30 分钟时间轨未到 + 30 条消息数轨未到。 */
+    /** 双轨冷却：用户设的时间轨未到 + 2×interval 计数轨未到。 */
     data class SkipDualCooldown(val elapsedSeconds: Int) : SummaryTriggerDecision
 }

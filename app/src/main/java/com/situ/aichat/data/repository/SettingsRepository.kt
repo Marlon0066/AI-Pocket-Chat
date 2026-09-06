@@ -37,9 +37,10 @@ class SettingsRepository @Inject constructor(
             characterPromptModulesJSON = p[KEY_CHARACTER_PROMPT_MODULES] ?: "",
             promptModulePresetsJSON = p[KEY_PROMPT_MODULE_PRESETS] ?: "",
             // 记忆参数（P12.1 设置页）——被 ChatViewModel/BusyReplyService/RecoveryReplyGenerator 读取，故显式映射。
-            shortTermMemoryLength = p[KEY_SHORT_TERM_MEMORY] ?: 20,
+            shortTermMemoryLength = p[KEY_SHORT_TERM_MEMORY] ?: AppSettings.DEFAULT_SHORT_TERM_MEMORY_LENGTH,
             autoSummarizeInterval = p[KEY_AUTO_SUMMARIZE_INTERVAL] ?: 10,
             memorySummaryMaxLength = p[KEY_MEMORY_SUMMARY_MAX] ?: AppSettings.DEFAULT_MEMORY_SUMMARY_MAX_LENGTH,
+            memorySummaryCooldownMinutes = p[KEY_MEMORY_SUMMARY_COOLDOWN_MINUTES] ?: AppSettings.DEFAULT_MEMORY_SUMMARY_COOLDOWN_MINUTES,
             // 智能渐进压缩开关（2026-06-20）——被 MemorySummaryCoordinator/MemoryService 提取话术读取；默认 false(关)。
             progressiveCompressionEnabled = p[KEY_PROGRESSIVE_COMPRESSION] ?: false,
             structuredMemoryInterval = p[KEY_STRUCTURED_MEMORY_INTERVAL] ?: 30,
@@ -125,6 +126,14 @@ class SettingsRepository @Inject constructor(
             diaryInteractingCharacterUUIDs = p[KEY_DIARY_INTERACTING_CHARS] ?: "",
             diaryCommentDelay = p[KEY_DIARY_COMMENT_DELAY] ?: 5,
             lastViewedDiaryDate = p[KEY_LAST_VIEWED_DIARY_DATE] ?: 0L,
+            diaryWordCount = p[KEY_DIARY_WORD_COUNT] ?: AppSettings.DEFAULT_DIARY_WORD_COUNT,
+            diaryNarrativePerson = p[KEY_DIARY_NARRATIVE_PERSON] ?: "",
+            diaryStyleHint = p[KEY_DIARY_STYLE_HINT] ?: "",
+            diaryExtraRules = p[KEY_DIARY_EXTRA_RULES] ?: "",
+            diaryExchangeWordCount = p[KEY_DIARY_EX_WORD_COUNT] ?: AppSettings.DEFAULT_DIARY_WORD_COUNT,
+            diaryExchangeNarrativePerson = p[KEY_DIARY_EX_NARRATIVE_PERSON] ?: "",
+            diaryExchangeStyleHint = p[KEY_DIARY_EX_STYLE_HINT] ?: "",
+            diaryExchangeExtraRules = p[KEY_DIARY_EX_EXTRA_RULES] ?: "",
             // 朋友圈设置（P7.2.8）——被 MomentGenerationService/MomentInteractionService 读取；设置 UI 在 7.2.8。
             momentAutoPostFrequency = p[KEY_MOMENT_AUTO_POST_FREQ] ?: 2,
             momentAutoCommentFrequency = p[KEY_MOMENT_AUTO_COMMENT_FREQ] ?: 2,
@@ -223,6 +232,7 @@ class SettingsRepository @Inject constructor(
             p[KEY_SHORT_TERM_MEMORY] = s.shortTermMemoryLength
             p[KEY_AUTO_SUMMARIZE_INTERVAL] = s.autoSummarizeInterval
             p[KEY_MEMORY_SUMMARY_MAX] = s.memorySummaryMaxLength
+            p[KEY_MEMORY_SUMMARY_COOLDOWN_MINUTES] = s.memorySummaryCooldownMinutes
             p[KEY_PROGRESSIVE_COMPRESSION] = s.progressiveCompressionEnabled
             p[KEY_STRUCTURED_MEMORY_INTERVAL] = s.structuredMemoryInterval
             p[KEY_VECTOR_SEARCH_THRESHOLD] = s.vectorSearchThreshold
@@ -281,6 +291,14 @@ class SettingsRepository @Inject constructor(
             p[KEY_DIARY_INTERACTING_CHARS] = s.diaryInteractingCharacterUUIDs
             p[KEY_DIARY_COMMENT_DELAY] = s.diaryCommentDelay
             p[KEY_LAST_VIEWED_DIARY_DATE] = s.lastViewedDiaryDate
+            p[KEY_DIARY_WORD_COUNT] = s.diaryWordCount
+            p[KEY_DIARY_NARRATIVE_PERSON] = s.diaryNarrativePerson
+            p[KEY_DIARY_STYLE_HINT] = s.diaryStyleHint
+            p[KEY_DIARY_EXTRA_RULES] = s.diaryExtraRules
+            p[KEY_DIARY_EX_WORD_COUNT] = s.diaryExchangeWordCount
+            p[KEY_DIARY_EX_NARRATIVE_PERSON] = s.diaryExchangeNarrativePerson
+            p[KEY_DIARY_EX_STYLE_HINT] = s.diaryExchangeStyleHint
+            p[KEY_DIARY_EX_EXTRA_RULES] = s.diaryExchangeExtraRules
             p[KEY_MOMENT_AUTO_POST_FREQ] = s.momentAutoPostFrequency
             p[KEY_MOMENT_AUTO_COMMENT_FREQ] = s.momentAutoCommentFrequency
             p[KEY_MOMENT_AUTO_LIKE] = s.momentAutoLikeEnabled
@@ -405,6 +423,10 @@ class SettingsRepository @Inject constructor(
     /** 长期记忆（滚动摘要）触发下限轮，下限 0（0=关，iOS Trigger Threshold，手填可超滑杆上限）。 */
     suspend fun setAutoSummarizeInterval(rounds: Int) =
         dataStore.edit { it[KEY_AUTO_SUMMARIZE_INTERVAL] = rounds.coerceAtLeast(0) }
+
+    /** 两次记忆总结的最小间隔（分钟），下限 0（0=不限；手填可超滑杆上限 180）。 */
+    suspend fun setMemorySummaryCooldownMinutes(minutes: Int) =
+        dataStore.edit { it[KEY_MEMORY_SUMMARY_COOLDOWN_MINUTES] = minutes.coerceAtLeast(0) }
 
     /** 角色长期记忆摘要软上限字数，下限 200（iOS Character Long-Term Memory Limit，手填可超滑杆上限）。 */
     suspend fun setMemorySummaryMaxLength(chars: Int) =
@@ -712,6 +734,16 @@ class SettingsRepository @Inject constructor(
     suspend fun setLastViewedDiaryDate(epochMillis: Long) =
         dataStore.edit { it[KEY_LAST_VIEWED_DIARY_DATE] = epochMillis }
 
+    // 日记写作规则（2026-09-05·图纸 §3.5）：文本三项存 "" = 用默认文案；字数钳 50..5000（手动输入可超滑杆）。
+    suspend fun setDiaryWordCount(w: Int) = dataStore.edit { it[KEY_DIARY_WORD_COUNT] = w.coerceIn(DIARY_WORDS_MIN, DIARY_WORDS_MAX) }
+    suspend fun setDiaryNarrativePerson(text: String) = dataStore.edit { it[KEY_DIARY_NARRATIVE_PERSON] = text }
+    suspend fun setDiaryStyleHint(text: String) = dataStore.edit { it[KEY_DIARY_STYLE_HINT] = text }
+    suspend fun setDiaryExtraRules(text: String) = dataStore.edit { it[KEY_DIARY_EXTRA_RULES] = text }
+    suspend fun setDiaryExchangeWordCount(w: Int) = dataStore.edit { it[KEY_DIARY_EX_WORD_COUNT] = w.coerceIn(DIARY_WORDS_MIN, DIARY_WORDS_MAX) }
+    suspend fun setDiaryExchangeNarrativePerson(text: String) = dataStore.edit { it[KEY_DIARY_EX_NARRATIVE_PERSON] = text }
+    suspend fun setDiaryExchangeStyleHint(text: String) = dataStore.edit { it[KEY_DIARY_EX_STYLE_HINT] = text }
+    suspend fun setDiaryExchangeExtraRules(text: String) = dataStore.edit { it[KEY_DIARY_EX_EXTRA_RULES] = text }
+
     // MARK: - 朋友圈设置（P7.2.8；对齐 iOS MomentSettingsView 的 4 控件）
 
     /** 每角色每日自动发帖上限，写入钳 0~5（0=关）。 */
@@ -843,6 +875,7 @@ class SettingsRepository @Inject constructor(
         val KEY_SHORT_TERM_MEMORY = intPreferencesKey("short_term_memory_length")
         val KEY_AUTO_SUMMARIZE_INTERVAL = intPreferencesKey("auto_summarize_interval")
         val KEY_MEMORY_SUMMARY_MAX = intPreferencesKey("memory_summary_max_length")
+        val KEY_MEMORY_SUMMARY_COOLDOWN_MINUTES = intPreferencesKey("memory_summary_cooldown_minutes")
         val KEY_PROGRESSIVE_COMPRESSION = booleanPreferencesKey("progressive_compression_enabled")
         val KEY_STRUCTURED_MEMORY_INTERVAL = intPreferencesKey("structured_memory_interval")
         val KEY_VECTOR_SEARCH_THRESHOLD = intPreferencesKey("vector_search_threshold")
@@ -906,6 +939,17 @@ class SettingsRepository @Inject constructor(
         val KEY_DIARY_INTERACTING_CHARS = stringPreferencesKey("diary_interacting_character_uuids")
         val KEY_DIARY_COMMENT_DELAY = intPreferencesKey("diary_comment_delay")
         val KEY_LAST_VIEWED_DIARY_DATE = longPreferencesKey("last_viewed_diary_date")
+        val KEY_DIARY_WORD_COUNT = intPreferencesKey("diary_word_count")
+        val KEY_DIARY_NARRATIVE_PERSON = stringPreferencesKey("diary_narrative_person")
+        val KEY_DIARY_STYLE_HINT = stringPreferencesKey("diary_style_hint")
+        val KEY_DIARY_EXTRA_RULES = stringPreferencesKey("diary_extra_rules")
+        val KEY_DIARY_EX_WORD_COUNT = intPreferencesKey("diary_exchange_word_count")
+        val KEY_DIARY_EX_NARRATIVE_PERSON = stringPreferencesKey("diary_exchange_narrative_person")
+        val KEY_DIARY_EX_STYLE_HINT = stringPreferencesKey("diary_exchange_style_hint")
+        val KEY_DIARY_EX_EXTRA_RULES = stringPreferencesKey("diary_exchange_extra_rules")
+        /** 日记篇幅写入钳位（滑杆 300–2000·手动输入可超；钳此防 0 字/天文数字·图纸 §4.2/E13）。 */
+        const val DIARY_WORDS_MIN = 50
+        const val DIARY_WORDS_MAX = 5000
         val KEY_MOMENT_AUTO_POST_FREQ = intPreferencesKey("moment_auto_post_frequency")
         val KEY_MOMENT_AUTO_COMMENT_FREQ = intPreferencesKey("moment_auto_comment_frequency")
         val KEY_MOMENT_AUTO_LIKE = booleanPreferencesKey("moment_auto_like_enabled")

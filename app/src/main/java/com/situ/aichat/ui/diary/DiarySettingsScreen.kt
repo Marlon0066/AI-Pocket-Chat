@@ -33,6 +33,7 @@ import com.situ.aichat.ui.components.SettingsSwitchRow
 import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppMenu
 import com.situ.aichat.ui.designsystem.AppMenuItem
+import com.situ.aichat.ui.designsystem.AppSettingsRow
 import com.situ.aichat.ui.designsystem.AppSlider
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
@@ -45,6 +46,7 @@ import com.situ.aichat.ui.designsystem.AppTopBar
 @Composable
 fun DiarySettingsScreen(
     onBack: () -> Unit,
+    onOpenWritingRules: () -> Unit,
     viewModel: DiarySettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -181,6 +183,18 @@ fun DiarySettingsScreen(
                     }
                 }
             }
+
+            // 写作规则（2026-09-05·图纸 §4.1）：篇幅/人称/文风/补充规则两套 + 只读预览，另起一屏。
+            SettingsSection(
+                title = stringResource(R.string.diary_settings_rules_header),
+                footer = stringResource(R.string.diary_settings_rules_footer),
+            ) {
+                AppSettingsRow(
+                    title = stringResource(R.string.diary_settings_rules_entry),
+                    showChevron = true,
+                    onClick = onOpenWritingRules,
+                )
+            }
         }
     }
 
@@ -202,7 +216,8 @@ fun DiarySettingsScreen(
     }
 }
 
-private fun parseHm(time: String): Pair<Int, Int> {
+/** 琉璃卷五复用（`ui/liuli` 树借同一份实现·改这里两张脸同时变）。 */
+internal fun parseHm(time: String): Pair<Int, Int> {
     val parts = time.split(":")
     val h = parts.getOrNull(0)?.toIntOrNull()?.coerceIn(0, 23) ?: 21
     val m = parts.getOrNull(1)?.toIntOrNull()?.coerceIn(0, 59) ?: 0

@@ -17,7 +17,6 @@ object LogSource {
     // MARK: - 记忆（iOS-parity）
     const val MEMORY_SUMMARY = "记忆总结"
     const val STRUCTURED_MEMORY = "结构化记忆提取"
-    const val SCENE_PROGRESS = "节拍状态"
 
     // MARK: - 场内滚动压缩·前情提要（记忆改造二期·部件⑤·安卓特有·归 MEMORY 类目）
     const val IN_SCENE_RECAP = "场内前情提要"
@@ -90,7 +89,7 @@ object LogSource {
     /** 全部已知来源（[LogCategory] 覆盖不变量测试 + 去重校验的枚举源）。新增 source 务必同步追加。 */
     val ALL: List<String> = listOf(
         CHAT, VOICE_CALL,
-        MEMORY_SUMMARY, STRUCTURED_MEMORY, SCENE_PROGRESS, IN_SCENE_RECAP, OUR_DAYS,
+        MEMORY_SUMMARY, STRUCTURED_MEMORY, IN_SCENE_RECAP, OUR_DAYS,
         GROWTH_ANALYSIS, RELATIONSHIP_ANALYSIS, MEETING_DETECTION,
         OPEN_LOOP_SCAN, OPEN_LOOP_MESSAGE,
         PROMISE_RECONCILE,

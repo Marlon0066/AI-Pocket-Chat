@@ -3,8 +3,10 @@ package com.situ.aichat.ui.moments
 import com.situ.aichat.data.local.entity.CharacterPetEntity
 import com.situ.aichat.data.local.entity.StoryEntity
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -73,5 +75,82 @@ class MomentsHubGlanceTest {
         val content = pet("安安", happiness = 50)
         val sad = pet("丧丧", happiness = 10)
         assertSame(sad, pickNeediestPet(listOf(content, sad)))
+    }
+
+    // ── petStripGlance（图纸 2026-09-06-宠物总览页复活 V2/V3·断言从 §3.1 规格独立反推） ──
+
+    /** 带领养时刻的宠物（精灵排按 adoptedDate 升序取前 5）。 */
+    private fun petAt(name: String, adoptedDate: Long, hunger: Int = 0, happiness: Int = 80, neglect: String = "none") =
+        CharacterPetEntity(name = name, hunger = hunger, happiness = happiness, neglectPhaseRaw = neglect, adoptedDate = adoptedDate)
+
+    @Test fun strip_empty_countZero_noSprites_noNeediest_notAllWell() {
+        val g = petStripGlance(emptyList())
+        assertEquals(0, g.count)
+        assertTrue(g.sprites.isEmpty())
+        assertNull(g.neediest)
+        assertFalse("无宠物不是「都好着呢」，是空态", g.allWell)
+    }
+
+    @Test fun strip_singleHealthy_allWell() {
+        val g = petStripGlance(listOf(pet("开开")))          // happiness 80 → HAPPY
+        assertEquals(1, g.count)
+        assertTrue(g.allWell)
+    }
+
+    @Test fun strip_singleHungry_notAllWell_neediestIsIt() {
+        val hungry = pet("饿饿", hunger = 80)
+        val g = petStripGlance(listOf(hungry))
+        assertFalse(g.allWell)
+        assertSame(hungry, g.neediest)
+    }
+
+    @Test fun strip_mixed_notAllWell_neediestIsTheUrgentOne() {
+        val happy = pet("开开")
+        val sick = pet("病病", neglect = "sick")
+        val g = petStripGlance(listOf(happy, sick))
+        assertFalse(g.allWell)
+        assertSame(sick, g.neediest)
+    }
+
+    /** CONTENT（happiness 50·不饿不病）不属「需要你」→ 仍算都好着呢。 */
+    @Test fun strip_contentOnly_isAllWell() {
+        val g = petStripGlance(listOf(pet("安安", happiness = 50)))
+        assertTrue(g.allWell)
+    }
+
+    @Test fun strip_sixPets_countSix_spritesCappedAtFive_byAdoptedDateAsc() {
+        // 倒序喂入，验证函数自己按 adoptedDate 升序排；总数**不**被截（缺口正在此：家内站位才截 3）
+        val pets = (6 downTo 1).map { petAt("宠$it", adoptedDate = it * 1000L) }
+        val g = petStripGlance(pets)
+        assertEquals(6, g.count)
+        assertEquals(5, g.sprites.size)
+        assertEquals(listOf("宠1", "宠2", "宠3", "宠4", "宠5"), g.sprites.map { it.name })
+    }
+
+    /**
+     * V3 单源一致性：`petStripGlance` 的 neediest 与世界卡信息条 `WorldCardInfo.buildSegments`
+     * 选中的**必须是同一只**——两处若各写一套 when，同屏会自相矛盾（图纸 §3.2/§3.3）。
+     */
+    @Test fun strip_neediest_agreesWith_worldCardInfoBar() {
+        val happy = pet("开开")
+        val sad = pet("丧丧", happiness = 10)
+        val hungry = pet("饿饿", hunger = 80)
+        val pets = listOf(happy, sad, hungry)
+        val g = petStripGlance(pets)
+        val seg = WorldCardInfo.buildSegments(joined = 0, pending = 0, pet = g.neediest)
+            .filterIsInstance<InfoSegment.PetNeeds>()
+            .single()
+        assertEquals("饿饿", seg.name)                       // 饿 > 难过（petMoodUrgency 序）
+        assertSame(hungry, g.neediest)
+        assertEquals(PetNeedKind.HUNGRY, seg.kind)
+    }
+
+    /** 全健康时信息条不出宠物段（决策 41⑥ quiet），与 allWell=true 一致。 */
+    @Test fun strip_allWell_worldCardEmitsNoPetSegment() {
+        val pets = listOf(pet("开开"), pet("安安", happiness = 50))
+        val g = petStripGlance(pets)
+        assertTrue(g.allWell)
+        val segs = WorldCardInfo.buildSegments(joined = 0, pending = 0, pet = g.neediest)
+        assertTrue("都好着呢时信息条不该顶宠物段", segs.filterIsInstance<InfoSegment.PetNeeds>().isEmpty())
     }
 }

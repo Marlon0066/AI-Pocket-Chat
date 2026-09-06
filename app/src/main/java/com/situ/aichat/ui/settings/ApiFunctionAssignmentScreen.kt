@@ -156,9 +156,11 @@ private fun FunctionAssignmentRow(
  * 「聊天对话」行的联动提示——把「这个模型看不看得懂图」翻译成用户真正关心的那句：
  * 聊天「+」里到底有没有「照片」。看不懂图时同时给出**逃生口**（手动开启），
  * 因为能力识别可能因服务商不给元数据 + 探针判不出而落到「不确定」。
+ *
+ * 琉璃卷五复用（`ui/liuli` 树借同一份实现·改这里两张脸同时变）。
  */
 @Composable
-private fun chatVisionFootnote(hint: FunctionVisionHint): String? = when (hint) {
+internal fun chatVisionFootnote(hint: FunctionVisionHint): String? = when (hint) {
     FunctionVisionHint.NO_CONFIG -> null // 一个配置都没有时，本屏其它地方已经在提示了
     FunctionVisionHint.HAS_VISION -> stringResource(R.string.api_fn_chat_vision_on)
     FunctionVisionHint.NO_VISION -> stringResource(R.string.api_fn_chat_vision_off)
@@ -171,16 +173,19 @@ private fun chatVisionFootnote(hint: FunctionVisionHint): String? = when (hint) 
  * 看不懂图时这条链会静默走兜底，照片在记忆里只剩「发送了一张图片」七个字，撞上向量库
  * 那道与图片无关的 8 字下限 → 这张照片永远进不了语义检索。屏上不说，用户发现不了
  * （R4 §五·用户 2026-08-29 拍板「用辅助文字说明一下」）。逃生口与「聊天对话」同款。
+ *
+ * 琉璃卷五复用（`ui/liuli` 树借同一份实现·改这里两张脸同时变）。
  */
 @Composable
-private fun imageVisionFootnote(hint: FunctionVisionHint): String? = when (hint) {
+internal fun imageVisionFootnote(hint: FunctionVisionHint): String? = when (hint) {
     FunctionVisionHint.NO_CONFIG -> null // 同上：一个配置都没有时本屏别处已在提示
     FunctionVisionHint.HAS_VISION -> stringResource(R.string.api_fn_image_vision_on)
     FunctionVisionHint.NO_VISION -> stringResource(R.string.api_fn_image_vision_off)
 }
 
+/** 琉璃卷五复用（`ui/liuli` 树借同一份实现·改这里两张脸同时变）。 */
 @Composable
-private fun categoryLabel(category: ApiFunctionCategory): String = when (category) {
+internal fun categoryLabel(category: ApiFunctionCategory): String = when (category) {
     ApiFunctionCategory.CONVERSATION -> stringResource(R.string.api_fn_cat_conversation)
     ApiFunctionCategory.BACKGROUND -> stringResource(R.string.api_fn_cat_background)
     ApiFunctionCategory.CONTENT -> stringResource(R.string.api_fn_cat_content)

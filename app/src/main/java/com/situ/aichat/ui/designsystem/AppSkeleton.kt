@@ -70,8 +70,8 @@ fun AppSkeletonRow(
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         AppSkeleton(Modifier.size(avatarSize), shape = CircleShape, pulsing = pulsing)
-        Spacer(Modifier.size(AppSpacing.md))
-        Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.sm)) {
+        Spacer(Modifier.size(AppSpacing.m))
+        Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.s)) {
             AppSkeleton(
                 Modifier.size(width = 132.dp, height = 12.dp),
                 shape = AppShapes.full,

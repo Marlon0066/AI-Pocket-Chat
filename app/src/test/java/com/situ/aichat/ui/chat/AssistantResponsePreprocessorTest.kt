@@ -4,6 +4,7 @@ import com.situ.aichat.data.calendar.CalendarAction
 import com.situ.aichat.data.calendar.CalendarActionType
 import com.situ.aichat.offline.OfflineMeetingAction
 import com.situ.aichat.offline.OfflineMeetingActionType
+import com.situ.aichat.promise.PromiseToolAction
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -136,5 +137,36 @@ class AssistantResponsePreprocessorTest {
 
     @Test fun follow_up_skipped_for_nothing() {
         assertFalse(AssistantResponsePreprocessor.needsTextFollowUp(emptyList(), emptyList()))
+    }
+
+    // ── T1-10（图纸 2026-09-06 约定工具调用化·E7）：[promise] 暗号剥离 + follow-up 公式扩展 ──
+
+    private fun record() = PromiseToolAction.Record("周六一起去看展", null, "那就周六去看展吧")
+
+    @Test fun text_promise_marker_parsed_and_stripped() {
+        val raw = "好呀，说定啦～\n" +
+            """[promise]{"action":"record","content":"周六一起去看展","evidence":"那就周六去看展吧"}"""
+        val r = AssistantResponsePreprocessor.preprocess(raw, emptyList(), false, true)
+        assertEquals("好呀，说定啦～", r.responseAfterOffline)
+        assertFalse("正文绝不残留标记", r.responseAfterOffline.contains("[promise]"))
+        assertEquals(1, r.promiseMarkerActions.size)
+        assertEquals("周六一起去看展", (r.promiseMarkerActions[0] as PromiseToolAction.Record).content)
+    }
+
+    @Test fun text_no_promise_marker_leavesActionsEmpty() {
+        val r = AssistantResponsePreprocessor.preprocess("今天天气真好呀", emptyList(), false, true)
+        assertEquals("今天天气真好呀", r.responseAfterOffline)
+        assertTrue(r.promiseMarkerActions.isEmpty())
+    }
+
+    @Test fun follow_up_needed_for_promise_only_but_skipped_when_offline_card_present() {
+        // 只调了约定工具、正文空 → 要去取一段正文（否则回合没有气泡）。
+        assertTrue(AssistantResponsePreprocessor.needsTextFollowUp(emptyList(), emptyList(), listOf(record())))
+        // 线下卡在场且无日历 → 卡即回复，约定动作静默记账，不额外要文字。
+        assertFalse(AssistantResponsePreprocessor.needsTextFollowUp(emptyList(), listOf(suggest("公园", "散步")), listOf(record())))
+        // 日历 + 约定 → 仍要。
+        assertTrue(AssistantResponsePreprocessor.needsTextFollowUp(listOf(calendar()), emptyList(), listOf(record())))
+        // 尾参缺省 = 旧公式逐字节等价（既有四例已覆盖，这里再钉一次空约定动作的等价性）。
+        assertFalse(AssistantResponsePreprocessor.needsTextFollowUp(emptyList(), emptyList(), emptyList()))
     }
 }

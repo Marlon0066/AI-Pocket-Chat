@@ -32,6 +32,8 @@ import com.situ.aichat.R
 import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppSlider
 import com.situ.aichat.ui.designsystem.AppTextField
+import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.designsystem.appCardSurface
 import kotlin.math.roundToInt
 
@@ -53,6 +55,13 @@ fun SettingsSliderRow(
      * 给「拖动中只更本地态、松手才落盘」的调用点用；不传就还是原来的每档即时生效。
      */
     onValueChangeFinished: (() -> Unit)? = null,
+    /**
+     * 滑杆下方的一行小字（add-only·默认 null = 不放任何节点，其余调用点渲染**逐字节一致**）。
+     * 给「按当前值实时重算的活例子 / 越界提示」用（记忆设置页首个使用方·图纸 2026-09-05 §4.2）。
+     */
+    subtitle: String? = null,
+    /** 副标走警示档（琥珀 [AppStatusColors.onWarning]）而非常态次级色——用于「设出了安全区」这类提示。 */
+    subtitleIsWarning: Boolean = false,
     onValueChange: (Float) -> Unit,
 ) {
     // settings-slider-infobutton：infoMessage 非空时标题旁加 ⓘ，点开「说明」弹窗（对齐 iOS SettingSliderRow info.circle）。
@@ -92,6 +101,15 @@ fun SettingsSliderRow(
             steps = steps,
             onValueChangeFinished = onValueChangeFinished,
         )
+        if (subtitle != null) {
+            Text(
+                subtitle,
+                style = AppTypography.settingsRowSubtitle,
+                color = if (subtitleIsWarning) AppTheme.colors.status.onWarning else AppTheme.colors.text.secondary,
+                // 滑杆自带触达高度已把上方隔开，故只留下缘 4dp。
+                modifier = Modifier.padding(bottom = 4.dp),
+            )
+        }
     }
     if (showInfo && infoMessage != null) {
         AppDialog(

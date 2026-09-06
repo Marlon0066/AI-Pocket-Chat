@@ -1,6 +1,8 @@
 package com.situ.aichat.ui.chat
 
 import com.situ.aichat.data.local.entity.CharacterEntity
+import com.situ.aichat.data.local.entity.ConversationEntity
+import com.situ.aichat.data.local.entity.MessageEntity
 import com.situ.aichat.data.model.AppSettings
 import com.situ.aichat.data.model.StructuredMemoryMetadata
 import com.situ.aichat.data.remote.llm.ApiConfigValues
@@ -9,6 +11,7 @@ import com.situ.aichat.data.repository.CharacterWriteLock
 import com.situ.aichat.data.repository.ConversationRepository
 import com.situ.aichat.prompt.memory.MemoryDigestCoordinator
 import com.situ.aichat.prompt.memory.MemoryService
+import com.situ.aichat.prompt.memory.MemorySummaryError
 import com.situ.aichat.prompt.memory.StructuredMemoryCoordinator
 import com.situ.aichat.prompt.memory.StructuredMemoryError
 import io.mockk.coEvery
@@ -17,6 +20,10 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 
@@ -51,21 +58,24 @@ class MemoryAnalysisTriggerTest {
         coEvery { characterWriteLock.withCharacterLock<StructuredMemoryMetadata?>(any(), any()) } coAnswers {
             secondArg<suspend () -> StructuredMemoryMetadata?>().invoke()
         }
-        trigger = MemoryAnalysisTrigger(
-            scope = CoroutineScope(Dispatchers.Unconfined),
-            conversationUuid = "conv-1",
-            characterRepo = characterRepo,
-            conversationRepo = conversationRepo,
-            characterWriteLock = characterWriteLock,
-            memoryService = memoryService,
-            digestCoordinator = digestCoordinator,
-            structuredCoordinator = structuredCoordinator,
-            apiConfigRepo = mockk(relaxed = true),
-            settingsRepo = mockk(relaxed = true),
-            userProfileDao = mockk(relaxed = true),
-            onStructuredMemoryExtracted = onStructuredMemoryExtracted,
-        )
+        trigger = newTrigger(CoroutineScope(Dispatchers.Unconfined))
     }
+
+    /** 同一组假件、只换调度作用域——T2-3 需要虚拟时钟跳过重试间的 delay(2s)。 */
+    private fun newTrigger(scope: CoroutineScope) = MemoryAnalysisTrigger(
+        scope = scope,
+        conversationUuid = "conv-1",
+        characterRepo = characterRepo,
+        conversationRepo = conversationRepo,
+        characterWriteLock = characterWriteLock,
+        memoryService = memoryService,
+        digestCoordinator = digestCoordinator,
+        structuredCoordinator = structuredCoordinator,
+        apiConfigRepo = mockk(relaxed = true),
+        settingsRepo = mockk(relaxed = true),
+        userProfileDao = mockk(relaxed = true),
+        onStructuredMemoryExtracted = onStructuredMemoryExtracted,
+    )
 
     // ---- 记忆摘要守卫 ----
 
@@ -75,6 +85,70 @@ class MemoryAnalysisTriggerTest {
         coVerify(exactly = 0) {
             digestCoordinator.digestAndReconcile(any(), any(), any(), any(), any(), any())
         }
+    }
+
+    // ---- 记忆摘要真触发路径（图纸 2026-09-05 §7 T2-1…T2-4）----
+
+    /** 摘要路的三件预设：角色 / 会话（可指定成功时间戳）/ 窗口外 user 消息条数。 */
+    private fun stubSummaryPath(outsideUserRounds: Int, lastSuccessDate: Long? = null) {
+        coEvery { characterRepo.get("c1") } returns CharacterEntity(uuid = "c1", name = "测试", creationDate = 0L)
+        coEvery { conversationRepo.get("conv-1") } returns ConversationEntity(
+            uuid = "conv-1", title = "", characterUuid = "c1", creationDate = 0L,
+            lastMemorySummarySuccessDate = lastSuccessDate,
+        )
+        coEvery { memoryService.collectMessagesOutsideWindow(any(), any(), any()) } returns
+            (1..outsideUserRounds).map {
+                MessageEntity(messageUUID = "m$it", conversationUuid = "conv-1", roleRaw = "user", content = "第 $it 句", timestamp = it.toLong())
+            }
+    }
+
+    @Test
+    fun T2_1摘要_攒够10轮且从未成功_总结一次并记成功() {
+        stubSummaryPath(outsideUserRounds = 10)
+        trigger.checkAndTriggerMemorySummary("c1", config, AppSettings(autoSummarizeInterval = 10), "用户")
+        coVerify(exactly = 1) { digestCoordinator.digestAndReconcile(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 1) { conversationRepo.recordMemorySummaryResult("conv-1", success = true, now = any()) }
+    }
+
+    @Test
+    fun T2_2摘要_确定性失败SuspiciouslyShort_不重试且记失败() {
+        stubSummaryPath(outsideUserRounds = 10)
+        coEvery { digestCoordinator.digestAndReconcile(any(), any(), any(), any(), any(), any()) } throws
+            MemorySummaryError.SuspiciouslyShort
+        trigger.checkAndTriggerMemorySummary("c1", config, AppSettings(autoSummarizeInterval = 10), "用户")
+        coVerify(exactly = 1) { digestCoordinator.digestAndReconcile(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 1) { conversationRepo.recordMemorySummaryResult("conv-1", success = false, now = any()) }
+        coVerify(exactly = 0) { conversationRepo.recordMemorySummaryResult("conv-1", success = true, now = any()) }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun T2_3摘要_瞬态异常_重试满2次后记失败() = runTest {
+        // 瞬态失败之间有 delay(2_000)：换 StandardTestDispatcher 让虚拟时钟跳过等待。
+        val scopedTrigger = newTrigger(CoroutineScope(StandardTestDispatcher(testScheduler)))
+        stubSummaryPath(outsideUserRounds = 10)
+        coEvery { digestCoordinator.digestAndReconcile(any(), any(), any(), any(), any(), any()) } throws
+            RuntimeException("网络抖动")
+        scopedTrigger.checkAndTriggerMemorySummary("c1", config, AppSettings(autoSummarizeInterval = 10), "用户")
+        advanceUntilIdle()
+        coVerify(exactly = 2) { digestCoordinator.digestAndReconcile(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 1) { conversationRepo.recordMemorySummaryResult("conv-1", success = false, now = any()) }
+    }
+
+    @Test
+    fun T2_4摘要_间隔设为不限_刚成功过也照总结() {
+        // 字段接线证据：cooldown=0 → 时间轨恒就绪；同参 cooldown=30 时 1 秒前刚成功、攒 10 轮 <2×10 → 不触发。
+        stubSummaryPath(outsideUserRounds = 10, lastSuccessDate = System.currentTimeMillis() - 1_000L)
+        trigger.checkAndTriggerMemorySummary(
+            "c1", config, AppSettings(autoSummarizeInterval = 10, memorySummaryCooldownMinutes = 0), "用户",
+        )
+        coVerify(exactly = 1) { digestCoordinator.digestAndReconcile(any(), any(), any(), any(), any(), any()) }
+
+        val waiting = newTrigger(CoroutineScope(Dispatchers.Unconfined))
+        waiting.checkAndTriggerMemorySummary(
+            "c1", config, AppSettings(autoSummarizeInterval = 10, memorySummaryCooldownMinutes = 30), "用户",
+        )
+        coVerify(exactly = 1) { digestCoordinator.digestAndReconcile(any(), any(), any(), any(), any(), any()) }
     }
 
     // ---- 结构化记忆守卫 ----

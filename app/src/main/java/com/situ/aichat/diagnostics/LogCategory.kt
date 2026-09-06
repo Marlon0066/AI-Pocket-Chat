@@ -4,9 +4,9 @@ package com.situ.aichat.diagnostics
  * 上下文日志分类筛选（批 D·移植 iOS `LogListView.LogFilter` 并**修正其归类 bug**）。
  *
  * ★ iOS 原版漏映射三个 source（只在「全部」露脸、点任何具体类目都不显）：
- *   - `节拍状态`（[LogSource.SCENE_PROGRESS]，互动故事节拍）→ iOS 不在 Story 类目里
  *   - `角色主动送礼`/`礼物反应生成`（[LogSource.PROACTIVE_GIFT]/[LogSource.GIFT_REACTION]）→ iOS 根本没有礼物类目
- * 本移植：节拍归 [STORY]、**新增 [GIFT] 类目**，并给安卓特有 source 各定归属，使「每个 source ≥1 具体类目」
+ *     （另一个曾漏映射的 `节拍状态` 随线下节拍卡于 2026-09-06 整体退役，其 source 已删）
+ * 本移植：**新增 [GIFT] 类目**，并给安卓特有 source 各定归属，使「每个 source ≥1 具体类目」
  * 成立（[LogCategoryCoverage] 单测守门，防回归）。
  *
  * [ALL]/[FAILED] 是特殊筛选（非按 source）：ALL=全部、FAILED=`isSuccess=false`，故 [sources] 空、[isSourceFilter]=false。
@@ -42,8 +42,7 @@ enum class LogCategory(val sources: List<String>) {
 
     DIARY(listOf(LogSource.DIARY_GENERATION, LogSource.DIARY_COMMENT, LogSource.PET_DIARY)),
 
-    /** ★ 修复点：节拍状态（故事节拍推进）并入故事类目，iOS 原版漏了。 */
-    STORY(listOf(LogSource.STORY_GENERATION, LogSource.SCENE_PROGRESS)),
+    STORY(listOf(LogSource.STORY_GENERATION)),
 
     SCHEDULE(listOf(LogSource.SCHEDULE_GENERATION, LogSource.SCHEDULE_WEATHER_ADJUST)),
 

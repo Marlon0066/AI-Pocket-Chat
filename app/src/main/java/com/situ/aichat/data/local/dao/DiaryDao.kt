@@ -73,9 +73,13 @@ interface DiaryDao {
 
     // ---- 交换日记（R4） ----
 
-    /** 该日的交换日记（角色写的·每日至多一篇·懒生成幂等取回）。 */
+    /**
+     * 该日的交换日记（角色写的·每日至多一篇·懒生成幂等取回）。
+     * 双保险（2026-09-05）：`triggerTypeRaw='exchange'` 也认——历史上被编辑保存清掉 authorCharacterUuid 的
+     * 旧行（含 R6-3② 之前的老备份恢复行）照样算「当天已收到信」，不再让信封位复活、角色重复写信。
+     */
     @Query(
-        "SELECT * FROM diary_entries WHERE authorCharacterUuid IS NOT NULL " +
+        "SELECT * FROM diary_entries WHERE (authorCharacterUuid IS NOT NULL OR triggerTypeRaw = 'exchange') " +
             "AND timestamp >= :start AND timestamp < :end LIMIT 1",
     )
     suspend fun exchangeEntryInRange(start: Long, end: Long): DiaryEntryEntity?
@@ -94,10 +98,13 @@ interface DiaryDao {
     @Query("UPDATE diary_entries SET digestedAtMillis = :now WHERE uuid = :uuid")
     suspend fun markDigested(uuid: String, now: Long)
 
-    /** 交换解锁门：该日用户**已发布**（非草稿·非宠物）的日记数。 */
+    /**
+     * 交换解锁门：该日用户**已发布**（非草稿·非宠物）的日记数。
+     * 双保险（2026-09-05）：排除 `triggerTypeRaw='exchange'`——TA 的信绝不能自己顶开自己的解锁门。
+     */
     @Query(
-        "SELECT COUNT(*) FROM diary_entries WHERE authorCharacterUuid IS NULL AND isDraft = 0 " +
-            "AND isPetDiary = 0 AND timestamp >= :start AND timestamp < :end",
+        "SELECT COUNT(*) FROM diary_entries WHERE authorCharacterUuid IS NULL AND triggerTypeRaw <> 'exchange' " +
+            "AND isDraft = 0 AND isPetDiary = 0 AND timestamp >= :start AND timestamp < :end",
     )
     suspend fun countPublishedUserDiariesInRange(start: Long, end: Long): Int
 

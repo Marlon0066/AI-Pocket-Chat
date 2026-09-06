@@ -41,14 +41,20 @@ class InSceneRecapCoordinatorTest {
 
     // ══════════ T1-3 recapDecision（判定纯函数）══════════
 
-    @Test fun `recapDecision null when count not above cap (E5)`() {
-        assertNull("count≤cap → 不生成", InSceneRecapCoordinator.recapDecision(count = 8, capBase = 80, coveredCount = 0))
-        assertNull("count==cap → 不生成", InSceneRecapCoordinator.recapDecision(count = 80, capBase = 80, coveredCount = 0))
+    @Test fun `recapDecision null when count not above retained (E5)`() {
+        assertNull("count≤retained → 不生成", InSceneRecapCoordinator.recapDecision(count = 8, retained = 80, coveredCount = 0))
+        assertNull("count==retained → 不生成", InSceneRecapCoordinator.recapDecision(count = 80, retained = 80, coveredCount = 0))
     }
 
     @Test fun `recapDecision null when dropped covered enough`() {
         // dropped=10 ≤ covered=15 → 覆盖足够，不生成。
-        assertNull(InSceneRecapCoordinator.recapDecision(count = 90, capBase = 80, coveredCount = 15))
+        assertNull(InSceneRecapCoordinator.recapDecision(count = 90, retained = 80, coveredCount = 15))
+    }
+
+    /** E8（图纸 2026-09-06 七件 §5）：保留数 == 素材条数（原文一条没丢）→ 恒不生成，无论素材多长。 */
+    @Test fun `recapDecision null when retained equals count (E8)`() {
+        assertNull(InSceneRecapCoordinator.recapDecision(count = 150, retained = 150, coveredCount = 0))
+        assertEquals(50, InSceneRecapCoordinator.recapDecision(count = 150, retained = 140, coveredCount = 0)?.cutIndex)
     }
 
     @Test fun `recapDecision cutIndex is min of count and dropped plus 40`() {
@@ -89,19 +95,31 @@ class InSceneRecapCoordinatorTest {
         assertNull(InSceneRecapCoordinator.currentCallBlockKey(listOf(callMsg("a", 10, false))))
     }
 
-    @Test fun `buildRecapPrompt omits old-recap block when empty, includes when present, uses names`() {
+    /**
+     * T2-6（图纸 2026-09-06 七件 §4.1 逐字锁定·两态）：整串在此**重新打字**为字面量，与实现比对
+     * ——实现改一个字（含标点与全半角）即挂。
+     */
+    @Test fun `buildRecapPrompt matches locked text in both old-recap states`() {
+        val head = "你是剧情记录员。下面是一场正在进行的线下见面里较早部分的对话记录"
+        val body = "。请把这些内容浓缩成一段新的前情提要，供角色在后续对话里回忆用。第三人称、按时间顺序，" +
+            "提到两人时用「夏晴子」「小明」的名字（不要写「用户」「角色」）。按下面三个小节写，每节一到三句，没有内容的小节写「无」：\n" +
+            "经过：发生了什么、去了哪、聊到的要点\n" +
+            "说定的事：双方答应的、约好的、承诺的\n" +
+            "情绪走向：两人情绪怎么变化、现在停在什么状态\n" +
+            "总长不超过 800 字。只输出这三个小节（含小节名），不要额外标题、解释或前后缀。"
+
         val without = InSceneRecapCoordinator.buildRecapPrompt("线下见面", oldRecap = "", chunkText = "记录A", charName = "夏晴子", userName = "小明")
+        assertEquals(head + body + "\n\n较早部分的记录：\n记录A", without)
         assertFalse("空 oldRecap 不含已有前情提要块", without.contains("已有前情提要"))
         assertFalse("空 oldRecap 首行不含追加从句", without.contains("以及此前已写好的前情提要"))
-        assertTrue(without.contains("正在进行的线下见面里较早部分的对话记录。"))
-        // 第三人称指名（图纸一·B2·§9 锁定串）：命名要求用真名 + 禁「用户」「角色」。
-        assertTrue("命名要求含双名字", without.contains("提到两人时用「夏晴子」「小明」的名字（不要写「用户」「角色」）"))
-        assertTrue(without.endsWith("较早部分的记录：\n记录A"))
 
-        val withOld = InSceneRecapCoordinator.buildRecapPrompt("语音通话", oldRecap = "旧提要", chunkText = "记录B", charName = "团子", userName = "阿珍")
-        assertTrue(withOld.contains("以及此前已写好的前情提要"))
-        assertTrue(withOld.contains("已有前情提要：\n旧提要\n\n"))
-        assertTrue("命名要求含双名字", withOld.contains("提到两人时用「团子」「阿珍」的名字（不要写「用户」「角色」）"))
+        val withOld = InSceneRecapCoordinator.buildRecapPrompt("线下见面", oldRecap = "旧提要", chunkText = "记录A", charName = "夏晴子", userName = "小明")
+        assertEquals(head + "，以及此前已写好的前情提要" + body + "\n\n已有前情提要：\n旧提要\n\n较早部分的记录：\n记录A", withOld)
+
+        // 场景词插值位（通话侧共用同一串）。
+        val call = InSceneRecapCoordinator.buildRecapPrompt("语音通话", oldRecap = "", chunkText = "记录B", charName = "团子", userName = "阿珍")
+        assertTrue(call.startsWith("你是剧情记录员。下面是一场正在进行的语音通话里较早部分的对话记录。"))
+        assertTrue("命名要求含双名字", call.contains("提到两人时用「团子」「阿珍」的名字（不要写「用户」「角色」）"))
     }
 
     @Test fun `recap header literal unchanged (E5)`() {
@@ -135,7 +153,7 @@ class InSceneRecapCoordinatorTest {
 
         coEvery { characterRepo.get(any()) } returns CharacterEntity(uuid = "c1", name = "小满", creationDate = 0L)
         coEvery { apiConfigRepo.resolveConfigValues(any()) } returns config
-        // 默认 shortTermMemoryLength=11 → capBase=44（>40，令 cutIndex 可小于 count）。
+        // 默认 shortTermMemoryLength=11 → 通话保留上限 44（>40，令 cutIndex 可小于 count）；见面走字符预算（见 [meetingMsgs]）。
         coEvery { settingsRepo.getAppSettings() } returns AppSettings(shortTermMemoryLength = 11)
         coEvery { contextLog.completion(any(), any(), any(), capture(promptSlot), any(), any(), any(), any(), any()) } returns "压缩后的前情提要"
     }
@@ -147,15 +165,22 @@ class InSceneRecapCoordinatorTest {
             inSceneRecapSessionKey = key, inSceneRecapText = text, inSceneRecapUntilMillis = until,
         )
 
-    /** 一场见面消息：timestamp = 1..n（cutTs 即 cutIndex 的序号），可选 kind。 */
+    /**
+     * 一场见面消息：timestamp = 1..n（cutTs 即 cutIndex 的序号），可选 kind。
+     * 每条 [CJK_PER_MSG] 字：见面块改按字符预算保留后（图纸 2026-09-06 七件 §3.B/F），
+     * 20,000 预算 ÷ 450 = 44 条 → 与本组既有例的保留数 44 同值，下方 dropped=6 / cutIndex=46 的算式原样成立。
+     */
     private fun meetingMsgs(n: Int, kind: String = MessageKind.PLAIN_TEXT.raw) =
         (1..n).map { i ->
             MessageEntity(
                 messageUUID = "m$i", conversationUuid = "conv1",
-                roleRaw = if (i % 2 == 1) "user" else "assistant", content = "内容$i",
+                roleRaw = if (i % 2 == 1) "user" else "assistant", content = "内容$i".padEnd(CJK_PER_MSG, '字'),
                 timestamp = i.toLong(), isOfflineMode = true, offlineSessionId = "s1", messageKindRaw = kind,
             )
         }
+
+    /** 见面例每条消息的字数（见 [meetingMsgs]）。 */
+    private val CJK_PER_MSG = 450
 
     // ── T2-4 见面路径整链 ──
 
@@ -165,14 +190,14 @@ class InSceneRecapCoordinatorTest {
 
         coordinator.checkMeetingRecap("conv1")
 
-        // count=50, capBase=44, dropped=6, covered=0 → cutIndex=min(50, 46)=46 → cutTs=material[45].ts=46。
+        // count=50, retained=44（20,000 预算 ÷ 450 字）, dropped=6, covered=0 → cutIndex=min(50, 46)=46 → cutTs=material[45].ts=46。
         coVerify(exactly = 1) { contextLog.completion(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
         coVerify(exactly = 1) { conversationRepo.updateInSceneRecap("conv1", "压缩后的前情提要", "s1", 46L) }
     }
 
     @Test fun `meeting below cap does not call LLM (E5)`() = runTest {
         coEvery { conversationRepo.get("conv1") } returns convo()
-        coEvery { messageRepo.offlineSessionMessages("conv1", "s1") } returns meetingMsgs(40) // < capBase 44
+        coEvery { messageRepo.offlineSessionMessages("conv1", "s1") } returns meetingMsgs(40) // 40×450=18,000 < 预算 → 一条没丢
 
         coordinator.checkMeetingRecap("conv1")
 
@@ -200,14 +225,27 @@ class InSceneRecapCoordinatorTest {
         coVerify(exactly = 0) { conversationRepo.updateInSceneRecap(any(), any(), any(), any()) }
     }
 
-    @Test fun `over-long LLM response is discarded, no write (E6)`() = runTest {
+    /** E22（图纸 2026-09-06 七件 §5）：超 MAX_RECAP_CJK=1600 的返回 → 丢弃，旧值与水位不动。 */
+    @Test fun `over-long LLM response is discarded, no write (E22)`() = runTest {
         coEvery { conversationRepo.get("conv1") } returns convo()
         coEvery { messageRepo.offlineSessionMessages("conv1", "s1") } returns meetingMsgs(50)
-        coEvery { contextLog.completion(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns "国".repeat(601)
+        coEvery { contextLog.completion(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns "国".repeat(1601)
 
         coordinator.checkMeetingRecap("conv1")
 
         coVerify(exactly = 0) { conversationRepo.updateInSceneRecap(any(), any(), any(), any()) }
+    }
+
+    /** E23：801–1600 字（提示词软上限 800 之上、硬防线之内）→ 照常落库。 */
+    @Test fun `response above soft limit but under hard guard is accepted (E23)`() = runTest {
+        val text = "国".repeat(801)
+        coEvery { conversationRepo.get("conv1") } returns convo()
+        coEvery { messageRepo.offlineSessionMessages("conv1", "s1") } returns meetingMsgs(50)
+        coEvery { contextLog.completion(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns text
+
+        coordinator.checkMeetingRecap("conv1")
+
+        coVerify(exactly = 1) { conversationRepo.updateInSceneRecap("conv1", text, "s1", 46L) }
     }
 
     @Test fun `blank chunk skips LLM entirely (E14)`() = runTest {

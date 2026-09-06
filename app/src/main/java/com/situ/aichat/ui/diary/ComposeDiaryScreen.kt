@@ -162,6 +162,7 @@ fun ComposeDiaryScreen(
                 hasContent = state.content.isNotBlank(),
                 canAddImage = state.images.size < 9,
                 isGenerating = state.isGenerating,
+                aiAssistAvailable = !state.isExchangeLetter,
                 visibility = state.visibility,
                 onAddImage = { pickImages.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                 onToggleVisibility = {
@@ -203,6 +204,7 @@ fun ComposeDiaryScreen(
                     prompt = prompt,
                     isGenerating = state.isGenerating,
                     reduceMotion = reduceMotion,
+                    aiAssistAvailable = !state.isExchangeLetter,
                     onContentChange = viewModel::setContent,
                     onAiStart = { showGuideSheet = true },
                 )

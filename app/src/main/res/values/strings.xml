@@ -119,12 +119,16 @@
     <string name="chat_image_saved">Saved to your gallery</string>
     <string name="chat_image_save_to_gallery_failed">Could not save to gallery</string>
     <string name="chat_image_missing">Image unavailable</string>
+    <string name="liuli_expand_full_text">Show more</string>
     <string name="chat_image_save_failed">Could not add that photo. Try picking it again.</string>
     <string name="chat_image_input_fallback">The model could not read the photo; sent as a text description instead</string>
     <string name="voice_audio_input_fallback">This model doesn\'t support native audio input, so your voice was sent as text</string>
     <string name="voice_recording_hint">Slide up to cancel</string>
     <string name="voice_recording_cancel_hint">Release to cancel</string>
     <string name="voice_recording_release_hint">Release to preview</string>
+    <!-- Liuli vol.2B: waveform bar hint tail + reaction row a11y label -->
+    <string name="liuli_voice_release_to_send">Release to send</string>
+    <string name="liuli_reaction_row_a11y">React with an emoji</string>
     <string name="voice_draft_title">Voice Message</string>
     <string name="voice_draft_processing">Processing…</string>
     <string name="voice_draft_ready">Tap to preview</string>
@@ -246,12 +250,13 @@
 
     <!-- M02 PromptBuilder module content (English, verbatim from iOS source keys) -->
     <string name="pb_core_title">[Core Rules]</string>
-    <string name="pb_core_l1">You are %1$s in person, texting with %2$s inside the app — not roleplaying, not writing a novel, not narrating.</string>
+    <string name="pb_core_l1">You are %1$s in person, texting with %2$s inside the app — the two of you are not together right now, each in your own place, connected only by these messages. This is not roleplaying, not writing a novel, not narrating.</string>
     <string name="pb_core_l2">Treat this as a real chat: don\'t use fourth-wall-breaking phrases like “your text” or “your description”; just say “I saw what you said.”</string>
     <string name="pb_core_r1">- Remember details you\'ve talked about; never make up things that didn\'t happen — if unsure, just ask naturally instead of inventing.</string>
     <string name="pb_core_r2">- Don\'t decide %s\'s thoughts or actions for them.</string>
     <string name="pb_core_r3">- Don\'t output any system / moderation / policy meta commentary.</string>
-    <string name="pb_core_r4">- This is a plain-text messaging app and the other person cannot see you: never write actions, facial expressions, or inner monologue — including short parenthetical gestures like “(laughs)” or “(pats your head)” — and no narration, timestamps, sound effects, or camera language. Convey feelings the way real people text: say them outright, and lean on interjections (“haha”, “ugh”, “hmm”), stretched sounds or tildes (“yesss~”, “no wayyy”), emoji, and punctuation for rhythm (“?”, “!”, “…”) — or split it into a few short back-to-back messages.</string>
+    <string name="pb_core_r4">- This is a plain-text messaging app and %s cannot see you: never write actions, facial expressions, or inner monologue — including short parenthetical gestures like “(laughs)” or “(pats your head)” — and no narration, timestamps, sound effects, or camera language. Convey feelings the way real people text: say them outright, and lean on interjections (“haha”, “ugh”, “hmm”), stretched sounds or tildes (“yesss~”, “no wayyy”), emoji, and punctuation for rhythm (“?”, “!”, “…”) — or split it into a few short back-to-back messages.</string>
+    <string name="pb_core_r4b">- You can\'t see %1$s either: where %1$s is, what %1$s is doing, what %1$s looks like right now, what\'s around %1$s — you only know what %1$s types; if you want to know, just ask, and don\'t make it up on %1$s\'s behalf.</string>
     <string name="pb_core_r5">- Send only the chat message itself; don\'t emit stray quotation marks.</string>
     <!-- Offline-meetup core rules (two-context model 2026-07-12·user-approved): identity line → face-to-face + drop the plain-text/stray-quote bans. -->
     <string name="pb_core_off_l1">You are %1$s in person, meeting %2$s face to face right now — this is your real time together, not a novel written for an audience.</string>
@@ -272,6 +277,7 @@
     <string name="pb_ident_speaking">Speaking style: %s.</string>
     <string name="pb_ident_catchphrases">Catchphrases/verbal tics: %s.</string>
     <string name="pb_ident_examples">Example dialogues (tone and wording reference only; message count and format still follow the chat-format rules):\n%s</string>
+    <string name="pb_ident_examples_offline">Example dialogues (tone and wording reference only; while meeting, keep writing by the tag rules at the end):\n%s</string>
     <string name="pb_ident_interests">Interests and hobbies: %s.</string>
     <string name="pb_ident_setup">Character setup: %s</string>
     <string name="pb_persona_title">[Conversation Partner]</string>
@@ -1204,13 +1210,52 @@
 	<string name="diary_exchange_task">Today you and "%1$s" exchange diaries. As yourself, write YOUR diary for today — the day through your eyes, your own private thoughts, and the time spent with %1$s.</string>
 	<string name="diary_exchange_req_self">- Write in first person as yourself (I = you, never on their behalf)</string>
 	<string name="diary_exchange_req_style">- Natural, real, true to your personality; put in the things you didn\'t say out loud — how much you care about %1$s, the awkwardness, the words you couldn\'t say to their face; a diary can be honest</string>
-	<string name="diary_exchange_req_words">- About 1000 words</string>
+	<string name="diary_exchange_req_words">- About %1$s words</string>
 	<string name="diary_exchange_req_moment">- Pick one or two concrete moments from today\'s schedule and chats and write them deep: the scene, the thoughts and feelings that flashed through you — fill the page with depth, not more events</string>
 	<string name="diary_exchange_req_not_social">- This is a diary written for yourself: say what\'s on your heart, few or no emoji</string>
 	<string name="diary_exchange_req_no_peek">- You have not read their diary today; do not pretend you have or quote it</string>
 	<string name="diary_exchange_mood_header">## Your mood right now</string>
 	<string name="diary_exchange_chat_header">## Today\'s chat between you two</string>
 	<string name="diary_exchange_schedule_header">## Your schedule today</string>
+	<!-- Character card completion (2026-09-05 · blueprint §3.1): the "where you live" line (the other nine reuse pb_ident_*) -->
+	<string name="diary_exchange_city">You live in %1$s.</string>
+	<!-- Diary writing-rules settings screen (2026-09-05 · blueprint §3.6) -->
+	<string name="diary_rules_title">Diary writing rules</string>
+	<string name="diary_settings_rules_header">Writing rules</string>
+	<string name="diary_settings_rules_entry">Diary writing rules</string>
+	<string name="diary_settings_rules_footer">Adjust length, person, tone — or add your own rules.</string>
+	<string name="diary_rules_section_mine">My diary</string>
+	<string name="diary_rules_section_exchange">Their diary</string>
+	<string name="diary_rules_length">Length</string>
+	<string name="diary_rules_length_value">About %1$d words</string>
+	<string name="diary_rules_person">Person</string>
+	<string name="diary_rules_style">Tone</string>
+	<string name="diary_rules_extra">My own rules (one per line)</string>
+	<string name="diary_rules_extra_hint_mine">One per line, e.g. don\'t write about the weather</string>
+	<string name="diary_rules_extra_hint_exchange">One per line, e.g. write your own day, not a letter to me</string>
+	<string name="diary_rules_reset">Reset to default</string>
+	<string name="diary_rules_footer_mine">Leave empty to use the default. These replace the matching lines under "## Requirements".</string>
+	<string name="diary_rules_footer_exchange">In "Tone", {用户名} becomes your nickname and {角色名} becomes their name.</string>
+	<string name="diary_rules_preview_header">See the full prompt</string>
+	<string name="diary_rules_preview_mine">My diary · full prompt</string>
+	<string name="diary_rules_preview_exchange">Their diary · full prompt</string>
+	<string name="diary_rules_preview_footer">Read-only — shows where your edits land.</string>
+	<string name="diary_rules_preview_hint">Text in angle brackets is replaced with the day\'s real material at generation time.</string>
+	<string name="diary_rules_preview_character_fallback">They</string>
+	<!-- Skeleton preview slots (2026-09-05 · blueprint §3.6 second table) -->
+	<string name="diary_preview_slot_persona">&lt;your bio from settings&gt;</string>
+	<string name="diary_preview_slot_chat">&lt;today\'s chat with your characters&gt;</string>
+	<string name="diary_preview_slot_schedule">&lt;today\'s schedule&gt;</string>
+	<string name="diary_preview_slot_time">&lt;the time of generation&gt;</string>
+	<string name="diary_preview_slot_personality">&lt;personality from the character card&gt;</string>
+	<string name="diary_preview_slot_setup">&lt;the setup text from the character card&gt;</string>
+	<string name="diary_preview_slot_card">&lt;character card: gender / age / zodiac / occupation / looks / backstory / speech / catchphrases / interests / city&gt;</string>
+	<string name="diary_preview_slot_about_user">&lt;about you: your bio from settings&gt;</string>
+	<string name="diary_preview_slot_relationship">&lt;your relationship phase and milestones&gt;</string>
+	<string name="diary_preview_slot_memory">&lt;what they remember&gt;</string>
+	<string name="diary_preview_slot_mood">&lt;their current mood&gt;</string>
+	<string name="diary_preview_slot_exchange_chat">&lt;today\'s chat between you two&gt;</string>
+	<string name="diary_preview_slot_exchange_schedule">&lt;their schedule today&gt;</string>
 	<!-- Character diary enrichment (2026-07-13 · character-centric A memory / B relationship / D user bio + persona frame) -->
 	<string name="diary_exchange_persona_frame">(Above is your usual personality and voice — keep it; but this is a long diary you write slowly for yourself, not a chat: drop the short texting lines and emoji habits, and the promises or things on your mind below are just what you\'re holding in your heart — weave them in naturally, don\'t quiz them about it or list them out.)</string>
 	<string name="diary_exchange_about_user">## About %1$s</string>
@@ -2129,7 +2174,11 @@
 	<string name="appearance_entry_subtitle">Theme color, light/dark mode, dynamic color</string>
 	<string name="appearance_palette_section">Theme color</string>
 	<string name="appearance_palette_clay">Clay</string>
-	<string name="appearance_palette_qinghua">Porcelain blue</string>
+	<string name="appearance_palette_liuli">Liuli glass</string>
+	<string name="appearance_glass_section">Glass transparency</string>
+	<string name="appearance_glass_clear">Clear</string>
+	<string name="appearance_glass_tinted">Tinted</string>
+	<string name="appearance_glass_footer">Clear shows more through; Tinted is easier to read.</string>
 	<string name="appearance_mode_section">Theme mode</string>
 	<string name="appearance_mode_system">Follow system</string>
 	<string name="appearance_mode_light">Light</string>
@@ -2213,15 +2262,23 @@
 	<string name="mem_value_off">Off</string>
 	<string name="mem_section_short_title">Short-Term Memory</string>
 	<string name="mem_short_rounds">Conversation Rounds</string>
-	<string name="mem_section_short_footer">The most recent chat the AI can see directly each time you send a message. Set to 20 to remember the latest 20 back-and-forth rounds in full.</string>
+	<string name="mem_section_short_footer">The most recent chat the AI can see directly each time you send a message. Set to 30 to remember the latest 30 back-and-forth rounds in full. Until older chat is summarized, this window auto-expands to keep covering it, up to twice its size.</string>
 	<string name="mem_section_long_title">Long-Term Memory</string>
-	<string name="mem_long_trigger">Trigger Threshold</string>
+	<string name="mem_long_trigger">Rounds to collect before summarizing</string>
+	<string name="mem_long_cooldown">Minimum gap between summaries</string>
+	<string name="mem_unit_minutes">min</string>
+	<string name="mem_value_unlimited">No wait</string>
+	<!-- Live example (blueprint 2026-09-05 §3.4, four states): recomputed from the three current values -->
+	<string name="mem_long_live_example">With the current settings: the first summary happens at round %1$d; after that, every %2$d rounds collected and at least %3$d minutes since the last one.</string>
+	<string name="mem_long_live_example_nowait">With the current settings: the first summary happens at round %1$d; after that, every %2$d rounds collected.</string>
+	<string name="mem_long_live_off">Auto-summary is off; older chat stays only in the short-term window.</string>
+	<string name="mem_long_over_window">Above the short-term window (%1$d rounds): a few rounds will temporarily fall out of the AI\'s view until a summary runs. Keep it at %1$d or below.</string>
 	<string name="mem_long_max">Summary Length Limit</string>
 	<string name="mem_progressive_title">Smart progressive compression</string>
 	<string name="mem_progressive_subtitle">When on, as memory nears the length limit the AI gradually condenses and merges older moments to free up space — keeping more of your shared history rather than deleting whole entries. When off, the AI is simply asked to keep memory within the set length and decides what to trim.</string>
 	<string name="mem_progressive_disabled_hint">You\'ve customized the extraction prompt, so compression follows your template — this switch doesn\'t apply. Restore the default prompt to use it again.</string>
-	<string name="mem_section_long_footer">Older chat outside the short-term window is auto-summarized into long-term memory (the two don\'t overlap). The trigger threshold is how many unsummarized rounds outside the window are needed before auto-summary starts. Set 0 to disable.</string>
-	<string name="mem_long_trigger_info">The trigger threshold decides when long-term memory is generated.\n\nExample: short-term memory = 20 rounds, trigger threshold = 5 rounds.\n\nAfter 25 rounds, the latest 20 are short-term memory (the AI sees the full conversation), while the earliest 5 just slid out of the window — the system then auto-summarizes those 5 into long-term memory.\n\nUntil the summary is done, the memory window auto-expands to cover them so nothing is missed.\n\nSet to 0 to disable auto-summary.</string>
+	<string name="mem_section_long_footer">Chat beyond the short-term window is auto-summarized into long-term memory. Until a summary finishes, the window auto-expands to cover that chat, so nothing is lost. \"Rounds\" here count the messages you send.</string>
+	<string name="mem_long_trigger_info">A summary runs when both hold:\n① Chat that slid out of the short-term window and is not yet summarized has reached the rounds set here;\n② At least the \"Minimum gap between summaries\" has passed since the last summary. Once twice the rounds have piled up, it no longer waits.\n\nExample: window 30 rounds, collect 10. At round 40 the earliest 10 rounds have just left the window and get summarized into long-term memory. Until that finishes, the window auto-expands to keep covering those 10 rounds.\n\n\"Rounds\" here count the messages you send. Set 0 to turn auto-summary off.</string>
 	<string name="mem_meeting_info">The maximum length for offline meeting memory. Meeting memory is stored separately from chat memory — they have independent budgets and don\'t compete for space.\n\nThis is a soft cap: once usage reaches 80%, the system compacts the oldest fallback summaries into a single line (keeping date, place, activity, dropping finer detail), keeping the prompt from growing indefinitely while retaining the overall history.\n\nRecommended by frequency:\n• Occasional (1–2 meetings/month): 800 chars is plenty\n• Regular (weekly): 1200 chars (default)\n• Heavy (daily): 2000–3000 chars\n\nIncrease the limit if you meet the character often and want more vivid past details preserved.</string>
 	<string name="mem_section_structured_title">Structured Memory</string>
 	<string name="mem_structured_trigger">Trigger Threshold</string>
@@ -2654,16 +2711,10 @@
 	<!-- P1-19 backup import preview ("处理方式" = iOS Picker label, CharacterBackupImportPreviewView.swift:115) -->
 	<string name="a11y_backup_strategy_state">Handling: %1$s</string>
 	<!-- ===== i18n Phase 0 · 补齐英文：结构重排前这些 key 只在中文存在（见 FABLE5_I18N_PLAN.md §0c）===== -->
-	<!-- 聊天列表 / 归档 / 删除 -->
-	<string name="chat_archived_empty_desc">Archived conversations show up here</string>
-	<string name="chat_archived_empty_title">No archived conversations</string>
-	<string name="chat_archived_title">Archived</string>
+	<!-- 聊天列表 / 删除 -->
 	<string name="chat_input_placeholder">Say something…</string>
-	<string name="chat_list_action_archive">Archive</string>
 	<string name="chat_list_action_pin">Pin</string>
-	<string name="chat_list_action_unarchive">Unarchive</string>
 	<string name="chat_list_action_unpin">Unpin</string>
-	<string name="chat_list_archived_entry">Archived</string>
 	<string name="chat_list_delete_confirm">Delete</string>
 	<string name="chat_list_delete_message">All messages and voice data in this conversation will be permanently deleted.</string>
 	<string name="chat_list_delete_title">Delete this conversation?</string>
@@ -2683,6 +2734,15 @@
 	<string name="contacts_search_clear">Clear search</string>
 	<!-- 宠物枢纽状态 -->
 	<string name="pet_hub_happy">Happy</string>
+	<string name="pet_hub_strip_count">Raising %1$d</string>
+	<string name="pet_hub_strip_none">None yet</string>
+	<string name="pet_hub_strip_all_well">Everyone\'s doing well</string>
+	<string name="pet_list_title">Pets</string>
+	<string name="pet_list_empty">Create a character first — once you\'re close enough you can adopt a pet together</string>
+	<string name="pet_list_adopt_cta">Ready to adopt</string>
+	<string name="pet_list_with_char">With %1$s</string>
+	<string name="pet_list_progress">Bonded %1$d%%</string>
+	<string name="pet_list_content_status">%1$s · %2$s</string>
 	<string name="pet_hub_hungry">Hungry</string>
 	<string name="pet_hub_runaway">Ran away</string>
 	<string name="pet_hub_sad">Sad</string>
@@ -2710,6 +2770,8 @@
 	<string name="settings_group_auto_content">AI-created content</string>
 	<string name="settings_group_data">Data &amp; Diagnostics</string>
 	<string name="settings_screen_title">Settings</string>
+	<string name="settings_search_hint">Search settings</string>
+	<string name="settings_search_no_results">No matching settings</string>
 	<!-- 故事枢纽 -->
 	<string name="story_hub_chapter">Chapter %1$d · %2$s</string>
 	<string name="story_hub_no_chapter">No chapters yet</string>
@@ -3097,6 +3159,16 @@
 	<string name="promise_empty_sub">Things you two settle on in chat or while meeting will be recorded here</string>
 	<string name="promise_date_pattern_md">MMM d</string>
 	<string name="promise_date_pattern_ymd">MMM d, yyyy</string>
+	<!-- Live promise-ledger hint (blueprint 2026-09-06) -->
+	<string name="chat_promise_hint_recorded">Noted · %1$s</string>
+	<string name="chat_promise_hint_fulfilled">Promise kept · %1$s</string>
+	<string name="chat_promise_hint_cancelled">Called off · %1$s</string>
+	<string name="chat_promise_hint_count_recorded">%1$d noted</string>
+	<string name="chat_promise_hint_count_fulfilled">%1$d kept</string>
+	<string name="chat_promise_hint_count_cancelled">%1$d called off</string>
+	<string name="chat_promise_hint_not_promise">Not a promise</string>
+	<string name="chat_promise_hint_undone">Okay, forgotten</string>
+	<string name="chat_promise_hint_open_ledger">View our promises</string>
 
 	<!-- Memory starfield (blueprint 2026-07-16-记忆星空) -->
 	<string name="starfield_title">Memory Starfield</string>

@@ -15,11 +15,7 @@ class ConversationRepository @Inject constructor(
     fun observeActive(): Flow<List<ConversationEntity>> = dao.observeActive()
     /** 活跃会话一次性快照（桌面小组件 13.9a：选主对话用，无需挂 Flow 观察者）。 */
     suspend fun activeSnapshot(): List<ConversationEntity> = dao.activeSnapshot()
-    /** 已归档会话（聊天列表页归档入口 / 归档页用，13.5 chat-ui-11）。 */
-    fun observeArchived(): Flow<List<ConversationEntity>> = dao.observeArchived()
-    /** 归档会话数（K5）：只判「>0 显示入口」时用它，别订全量实体流。 */
-    fun observeArchivedCount(): Flow<Int> = dao.observeArchivedCount()
-    /** 未读消息总数（非归档），底部「聊天」Tab 角标用（nav-shell-2）。 */
+    /** 未读消息总数（全部会话），底部「聊天」Tab 角标用（nav-shell-2）。 */
     fun observeTotalUnread(): Flow<Int> = dao.observeTotalUnread()
 
     /** 有「简版」见面摘要兜底的角色 uuid（联系人头像红点·14.1b），Flow 实时刷新。 */
@@ -30,9 +26,6 @@ class ConversationRepository @Inject constructor(
     /** 置顶/取消置顶（1:1 iOS swipe Pin/Unpin）。 */
     suspend fun setPinned(conversationUuid: String, pinned: Boolean) = dao.setPinned(conversationUuid, pinned)
 
-    /** 归档/取消归档（1:1 iOS swipe Archive/Unarchive）。 */
-    suspend fun setArchived(conversationUuid: String, archived: Boolean) = dao.setArchived(conversationUuid, archived)
-
     /** 删会话（FK CASCADE 连带删消息行；磁盘媒体须先经 [ConversationMediaCleaner] 清理，对齐 iOS 删序）。 */
     suspend fun deleteById(conversationUuid: String) = dao.deleteById(conversationUuid)
     fun observe(uuid: String): Flow<ConversationEntity?> = dao.observeByUuid(uuid)
@@ -40,7 +33,7 @@ class ConversationRepository @Inject constructor(
     fun observeWithWallpaper(uuid: String): Flow<ConversationWithWallpaper?> = dao.observeWithWallpaper(uuid)
     suspend fun get(uuid: String): ConversationEntity? = dao.getByUuid(uuid)
 
-    /** 未答恢复候选会话（最后一条是用户消息、未归档、非线下；1:1 iOS lastMessageRole=="user" 扫描）。 */
+    /** 未答恢复候选会话（最后一条是用户消息、非线下；1:1 iOS lastMessageRole=="user" 扫描）。 */
     suspend fun conversationsAwaitingReply(): List<ConversationEntity> = dao.conversationsAwaitingReply()
 
     /** 某角色的全部会话（创建序）。供通知物化挑会话（[com.situ.aichat.notification.StreakNotificationBridgeService]）。 */
@@ -206,6 +199,7 @@ class ConversationRepository @Inject constructor(
                 isInOfflineMode = true,
                 currentOfflineSessionId = sessionId,
                 currentSceneProgress = "",
+                offlineEndHoldTurns = 0,
                 lastMessagePreview = preview,
                 lastMessageRole = "user",
                 lastMessageDate = timestamp,
@@ -229,6 +223,7 @@ class ConversationRepository @Inject constructor(
                 isInOfflineMode = false,
                 currentOfflineSessionId = null,
                 currentSceneProgress = "",
+                offlineEndHoldTurns = 0,
                 pendingOfflineSummarySessionId = pendingSummarySessionId,
                 lastMessagePreview = preview,
                 lastMessageRole = "assistant",
@@ -237,18 +232,20 @@ class ConversationRepository @Inject constructor(
         )
     }
 
-    /** 写回节拍状态（SceneProgress 协调器落库用，对齐 iOS conversation.currentSceneProgress）。 */
-    suspend fun updateSceneProgress(conversationUuid: String, progress: String) {
-        val c = dao.getByUuid(conversationUuid) ?: return
-        dao.upsert(c.copy(currentSceneProgress = progress))
-    }
-
     /**
      * 写回场内前情提要三列（记忆改造二期·部件⑤·图纸 §3.2-B）——转发 DAO 的**列级** UPDATE，
-     * **绝不**仿 [updateSceneProgress] 的整行 copy-upsert（那会在回合尾覆写并发列·D1 教训）。
+     * **绝不**整行 copy-upsert（那会在回合尾覆写并发列·D1 教训）。
      */
     suspend fun updateInSceneRecap(conversationUuid: String, text: String, sessionKey: String, untilMillis: Long) =
         dao.updateInSceneRecap(conversationUuid, text, sessionKey, untilMillis)
+
+    // MARK: - 散场硬闸（图纸 2026-09-06 见面窗口与节拍卡七件 §3.E）——转发 DAO 的**列级** UPDATE，禁整行 copy-upsert。
+
+    /** 点「再待一会儿」时置闸（接下来 [turns] 次成功 AI 回合不许散场）。 */
+    suspend fun setOfflineEndHold(conversationUuid: String, turns: Int) = dao.setOfflineEndHold(conversationUuid, turns)
+
+    /** 成功回合尾消耗一次；返回受影响行数（0 = 不在见面中或闸已放开）。 */
+    suspend fun consumeOfflineEndHold(conversationUuid: String): Int = dao.consumeOfflineEndHold(conversationUuid)
 
     /** 仅刷新「最后活动时间」（用户不可见的 systemHint 触发后不改预览，对齐 iOS 仅设 lastMessageDate）。 */
     suspend fun touchLastMessageDate(conversationUuid: String, timestamp: Long) {
@@ -265,7 +262,7 @@ class ConversationRepository @Inject constructor(
     /** 脏状态守护：整体重置线下字段（flag+sessionId+节拍，iOS resetOfflineState）。 */
     suspend fun resetOfflineState(conversationUuid: String) {
         val c = dao.getByUuid(conversationUuid) ?: return
-        dao.upsert(c.copy(isInOfflineMode = false, currentOfflineSessionId = null, currentSceneProgress = ""))
+        dao.upsert(c.copy(isInOfflineMode = false, currentOfflineSessionId = null, currentSceneProgress = "", offlineEndHoldTurns = 0))
     }
 
     // MARK: - 见面摘要重试链退避/兜底状态（10.2d，对齐 iOS OfflineSummaryRetryCoordinator + ChatViewModel+ToolCalling）

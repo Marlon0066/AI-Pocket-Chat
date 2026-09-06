@@ -38,6 +38,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
+import com.situ.aichat.promise.PromiseToolAction
 import java.util.UUID
 import kotlin.coroutines.coroutineContext
 import kotlin.random.Random
@@ -51,6 +52,8 @@ internal data class DeliveredTurn(
     val deliveredStructuredAction: Boolean,
     /** 文本暗号路解析出的未来约定候选（快路·8d-3b）；编排层回复后经 trigger.ingestFastPath 入库。标记已从正文剥离。 */
     val meetingMarkerCandidates: List<MeetingCandidate> = emptyList(),
+    /** 文本暗号路解析出的约定记账动作（图纸 2026-09-06）；编排层回合尾交 `ChatPromiseToolHandler` 过闸落库。 */
+    val promiseMarkerActions: List<PromiseToolAction> = emptyList(),
 ) {
     companion object {
         val EMPTY = DeliveredTurn(emptyList(), false)
@@ -141,6 +144,8 @@ internal class ChatReplyDeliverer(
         val deliveredStructuredAction = !immediate && (pre.calendarActions.isNotEmpty() || mergedOfflineActions.isNotEmpty())
         // 快路未来约定候选：取消兜底(immediate)不从半截回复入库；标记无论如何已在 preprocess 剥离（防泄露）。
         val meetingMarkerCandidates = if (immediate) emptyList() else pre.futureMeetingCandidates
+        // 约定记账暗号动作：同口径——取消兜底(immediate)不从半截回复记账；标记无论如何已在 preprocess 剥离（防泄露）。
+        val promiseMarkerActions = if (immediate) emptyList() else pre.promiseMarkerActions
 
         // 应用日历动作 + 分发线下卡（1:1 iOS 在投递前、即使正文为空也执行；取消兜底 immediate=true 不写入）。
         // 卡片 emotionTag 取 null —— iOS 分发先于 parseMood，pendingEmotionTag 此刻恒为 nil（每轮末重置）。
@@ -167,7 +172,7 @@ internal class ChatReplyDeliverer(
         // 工具调用来源的 suggestMeeting：邀约卡即完整回复，丢弃 LLM 附带正文（文本标记路径不抑制——剩余文字是角色对话）。
         val hasSuggestFromToolCall = toolOfflineActions.any { it.action == OfflineMeetingActionType.SUGGEST_MEETING }
         val effectiveRaw = if (hasSuggestFromToolCall) "" else pre.responseAfterOffline
-        if (effectiveRaw.isBlank()) return DeliveredTurn(emptyList(), deliveredStructuredAction, meetingMarkerCandidates) // 卡片/日历已处理，无正文可投递
+        if (effectiveRaw.isBlank()) return DeliveredTurn(emptyList(), deliveredStructuredAction, meetingMarkerCandidates, promiseMarkerActions) // 卡片/日历已处理，无正文可投递
 
         // 线下状态：决定语音冻结 / 标签保留 / 单段投递 / 消息 isOfflineMode 标记。
         val convo = conversationRepo.get(conversationUuid)
@@ -232,7 +237,7 @@ internal class ChatReplyDeliverer(
                 if (stored.isNotEmpty()) {
                     finalizeDelivery(stored)
                     notifyIfNotViewing(character, settings, stored, immediate, isOfflineConversation = isOffline)
-                    return DeliveredTurn(stored, deliveredStructuredAction, meetingMarkerCandidates)
+                    return DeliveredTurn(stored, deliveredStructuredAction, meetingMarkerCandidates, promiseMarkerActions)
                 }
                 // 语音 chunk 全空/全失败 → 回落文字投递（计数已按语音重置，罕见兜底）。
             } else {
@@ -241,10 +246,10 @@ internal class ChatReplyDeliverer(
         }
 
         val stored = deliverTextReply(stickerNormalized, settings, emotionTag, immediate, dotsAppearMillis, offlineSessionId)
-        if (stored.isEmpty()) return DeliveredTurn(emptyList(), deliveredStructuredAction, meetingMarkerCandidates)
+        if (stored.isEmpty()) return DeliveredTurn(emptyList(), deliveredStructuredAction, meetingMarkerCandidates, promiseMarkerActions)
         finalizeDelivery(stored)
         notifyIfNotViewing(character, settings, stored, immediate, isOfflineConversation = isOffline)
-        return DeliveredTurn(stored, deliveredStructuredAction, meetingMarkerCandidates)
+        return DeliveredTurn(stored, deliveredStructuredAction, meetingMarkerCandidates, promiseMarkerActions)
     }
 
     /**

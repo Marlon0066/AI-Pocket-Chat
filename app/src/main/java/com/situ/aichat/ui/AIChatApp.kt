@@ -34,28 +34,36 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.situ.aichat.R
 import com.situ.aichat.ui.character.MemoryEditScreen
-import com.situ.aichat.ui.designsystem.AppBottomNav
 import com.situ.aichat.ui.designsystem.AppBottomNavHeight
 import com.situ.aichat.ui.designsystem.AppBottomNavItem
 import com.situ.aichat.ui.designsystem.AppNavIcons
 import com.situ.aichat.ui.character.CharacterEditScreen
-import com.situ.aichat.ui.character.CharacterProfileScreen
+import com.situ.aichat.ui.liuli.character.SkinnedCharacterProfileScreen
 import com.situ.aichat.ui.offline.OfflineMeetingMemoryScreen
 import com.situ.aichat.ui.ourdays.OurDayPageScreen
 import com.situ.aichat.ui.ourdays.OurDaysScreen
 import com.situ.aichat.ui.promise.PromiseLedgerScreen
 import com.situ.aichat.ui.schedule.ScheduleFullDayScreen
 import com.situ.aichat.ui.starfield.StarfieldScreen
-import com.situ.aichat.ui.backup.BackupScreen
-import com.situ.aichat.ui.chat.ArchivedChatsScreen
-import com.situ.aichat.ui.chat.ChatListScreen
+import com.situ.aichat.ui.liuli.backup.SkinnedBackupScreen
 import com.situ.aichat.ui.chat.ChatScreen
+import com.situ.aichat.data.model.AppSkin
+import com.situ.aichat.ui.liuli.chat.LiuliChatScreen
+import com.situ.aichat.ui.liuli.designsystem.LocalAppSkin
+import com.situ.aichat.ui.liuli.home.LiuliHomeHost
+import com.situ.aichat.ui.liuli.home.SkinnedBottomNav
+import com.situ.aichat.ui.liuli.home.SkinnedChatListScreen
+import com.situ.aichat.ui.liuli.home.SkinnedContactsScreen
+import com.situ.aichat.ui.liuli.home.SkinnedMomentsHubScreen
+import com.situ.aichat.ui.liuli.home.SkinnedProfileScreen
+import com.situ.aichat.ui.liuli.home.rememberLiuliHomeChrome
 import com.situ.aichat.ui.voicecall.VoiceCallScreen
-import com.situ.aichat.ui.contacts.ContactsScreen
 import com.situ.aichat.ui.diary.ComposeDiaryScreen
 import com.situ.aichat.ui.diary.DiaryDetailScreen
 import com.situ.aichat.ui.diary.DiaryListScreen
-import com.situ.aichat.ui.diary.DiarySettingsScreen
+import com.situ.aichat.ui.liuli.diary.SkinnedDiaryPromptPreviewScreen
+import com.situ.aichat.ui.liuli.diary.SkinnedDiaryPromptSettingsScreen
+import com.situ.aichat.ui.liuli.diary.SkinnedDiarySettingsScreen
 import com.situ.aichat.ui.gift.GiftBoxScreen
 import com.situ.aichat.ui.gift.GiftReactionScreen
 import com.situ.aichat.ui.gift.GiftShopScreen
@@ -65,17 +73,15 @@ import com.situ.aichat.ui.moments.DayMomentsScreen
 import com.situ.aichat.ui.moments.MomentAuthorScreen
 import com.situ.aichat.ui.moments.MomentDetailScreen
 import com.situ.aichat.ui.moments.MomentNotificationListScreen
-import com.situ.aichat.ui.moments.MomentSettingsScreen
-import com.situ.aichat.ui.moments.MomentsHubScreen
+import com.situ.aichat.ui.liuli.moments.SkinnedMomentSettingsScreen
 import com.situ.aichat.ui.moments.MomentsListScreen
 import com.situ.aichat.ui.pet.PetAdoptionScreen
 import com.situ.aichat.ui.pet.PetDetailScreen
 import com.situ.aichat.ui.pet.PetInventoryScreen
 import com.situ.aichat.ui.pet.PetShopScreen
 import com.situ.aichat.ui.pet.PetListScreen
-import com.situ.aichat.ui.profile.ProfileScreen
 import com.situ.aichat.ui.profile.UserProfileEditScreen
-import com.situ.aichat.ui.promptmodule.PromptModuleSettingsScreen
+import com.situ.aichat.ui.liuli.promptmodule.SkinnedPromptModuleSettingsScreen
 import com.situ.aichat.ui.screens.PlaceholderScreen
 import com.situ.aichat.ui.sticker.StickerImportScreen
 import com.situ.aichat.ui.sticker.StickerManagementScreen
@@ -85,7 +91,7 @@ import com.situ.aichat.ui.story.StoryBookHubScreen
 import com.situ.aichat.ui.story.StoryBookshelfScreen
 import com.situ.aichat.ui.worldbook.WorldBookDetailScreen
 import com.situ.aichat.ui.worldbook.WorldBookEntryEditScreen
-import com.situ.aichat.ui.worldbook.WorldBookSettingsScreen
+import com.situ.aichat.ui.liuli.worldbook.SkinnedWorldBookSettingsScreen
 import com.situ.aichat.ui.world.WorldScreen
 import com.situ.aichat.ui.worldbook.WorldBookShelfScreen
 import com.situ.aichat.ui.story.StoryChapterListScreen
@@ -93,38 +99,38 @@ import com.situ.aichat.ui.story.StoryCreationScreen
 import com.situ.aichat.ui.story.StoryFieldEditorScreen
 import com.situ.aichat.ui.story.StoryReaderScreen
 import com.situ.aichat.ui.story.StoryTemplateWallScreen
-import com.situ.aichat.ui.settings.AboutScreen
-import com.situ.aichat.ui.settings.AgreementViewScreen
-import com.situ.aichat.ui.settings.ApiConfigEditScreen
-import com.situ.aichat.ui.settings.ApiConfigScreen
-import com.situ.aichat.ui.settings.QrScanScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedAboutScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedAgreementViewScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedApiConfigEditScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedApiConfigScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedQrScanScreen
 import com.situ.aichat.ui.contextlog.ContextLogDetailScreen
 import com.situ.aichat.ui.contextlog.ContextLogListScreen
 import com.situ.aichat.ui.contextlog.ContextLogSegmentsScreen
-import com.situ.aichat.ui.contextlog.ContextLogSettingsScreen
-import com.situ.aichat.ui.perflog.PerfCollectScreen
+import com.situ.aichat.ui.liuli.contextlog.SkinnedContextLogSettingsScreen
+import com.situ.aichat.ui.liuli.perflog.SkinnedPerfCollectScreen
 import com.situ.aichat.ui.contextlog.ContextLogTextScreen
-import com.situ.aichat.ui.settings.AppearanceSettingsScreen
-import com.situ.aichat.ui.settings.ContentFilterSettingsScreen
-import com.situ.aichat.ui.settings.GrowthSettingsScreen
-import com.situ.aichat.ui.settings.KernelObservatoryScreen
-import com.situ.aichat.ui.settings.ReplyRuleSettingsScreen
-import com.situ.aichat.ui.settings.MemoryHubScreen
-import com.situ.aichat.ui.wallet.RedeemCodeScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedAppearanceSettingsScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedContentFilterSettingsScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedGrowthSettingsScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedKernelObservatoryScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedReplyRuleSettingsScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedMemoryHubScreen
+import com.situ.aichat.ui.liuli.wallet.SkinnedRedeemCodeScreen
 import com.situ.aichat.ui.wallet.UserWalletScreen
-import com.situ.aichat.ui.settings.SystemTogglesScreen
-import com.situ.aichat.ui.settings.ApiFunctionAssignmentScreen
-import com.situ.aichat.ui.settings.BackgroundReliabilityScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedSystemTogglesScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedApiFunctionAssignmentScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedBackgroundReliabilityScreen
 import com.situ.aichat.ui.settings.ReliabilityPromptDialog
-import com.situ.aichat.ui.settings.CalendarAwarenessScreen
-import com.situ.aichat.ui.settings.ImmersiveSettingsScreen
-import com.situ.aichat.ui.settings.NotificationSettingsScreen
-import com.situ.aichat.ui.settings.SettingsScreen
-import com.situ.aichat.ui.settings.StoryGlobalSettingsScreen
-import com.situ.aichat.ui.settings.WorldSettingsScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedCalendarAwarenessScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedImmersiveSettingsScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedNotificationSettingsScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedSettingsScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedStoryGlobalSettingsScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedWorldSettingsScreen
 import com.situ.aichat.world.WorldFocusEntry
-import com.situ.aichat.ui.settings.TtsConfigurationScreen
-import com.situ.aichat.ui.settings.VoiceCallSettingsScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedTtsConfigurationScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedVoiceCallSettingsScreen
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -175,6 +181,8 @@ fun AIChatApp(
     val momentsUnread by navBadgeViewModel.momentsUnread.collectAsStateWithLifecycle()
     // 过渡丝滑化·A1：悬浮底栏背景不透明度（外观设置可调·即时生效）。
     val bottomNavOpacity by navBadgeViewModel.bottomNavOpacity.collectAsStateWithLifecycle()
+    // 琉璃卷三：底栏缩丸的滚动信号（暖陶下建了也不挂·[LiuliHomeHost] 只在琉璃分支接 nestedScroll）。
+    val homeChrome = rememberLiuliHomeChrome()
 
     // P6.1d：通知点击 → 跳转到对应会话（[NotificationNavigator] 由点击物化后投放目标 uuid）。
     val navTarget by pendingNavConversation.collectAsStateWithLifecycle()
@@ -282,7 +290,53 @@ fun AIChatApp(
         fun isChatRoute(route: String?) = route?.startsWith("chat/") == true
         // A0·叠加层变体：Box 容纳 NavHost + 悬浮底栏叠加层。NavHost 仍按系统栏 inset 垫（保留 consume/E3），
         // 但底栏不再占 Scaffold 的 bottomBar 槽 → innerPadding 不随底栏显隐变化 → 详情页可用高度恒定（无沉降）。
-        Box(Modifier.fillMaxSize()) {
+        LiuliHomeHost(
+            modifier = Modifier.fillMaxSize(),
+            chrome = homeChrome,
+            active = showBottomBar,
+            bottomBar = {
+            // A0·叠加层变体：底栏移出 Scaffold 槽 → 浮在 NavHost 之上的叠加层（align 底部·自带 navigationBarsPadding）。
+            // 只在 4 个 Tab 路由显示；进/出详情时它自己在这层淡入淡出，不再改变 NavHost 内容高度（=进会话输入框不再下降）。
+            AnimatedVisibility(
+                visible = showBottomBar,
+                modifier = Modifier.align(Alignment.BottomCenter),
+                enter = slideInVertically(
+                    animationSpec = spring(dampingRatio = 0.9f, stiffness = Spring.StiffnessMedium),
+                ) { it } + fadeIn(spring(stiffness = Spring.StiffnessMedium)),
+                exit = slideOutVertically(
+                    animationSpec = spring(dampingRatio = 0.9f, stiffness = Spring.StiffnessMedium),
+                ) { it } + fadeOut(spring(stiffness = Spring.StiffnessMedium)),
+            ) {
+                val currentDestination = backStackEntry?.destination
+                SkinnedBottomNav(
+                    items = topDestinations.map { dest ->
+                        val selected = currentDestination?.hierarchy?.any { it.route == dest.route } == true
+                        // nav-shell-2：聊天=未读消息总数、动态=未读通知条数；其余 Tab 无角标（对齐 iOS）。
+                        val badgeCount = when (dest) {
+                            TopDest.Chats -> chatsUnread
+                            TopDest.Moments -> momentsUnread
+                            else -> 0
+                        }
+                        AppBottomNavItem(
+                            icon = dest.icon,
+                            label = stringResource(dest.labelRes),
+                            selected = selected,
+                            badgeCount = badgeCount,
+                            onClick = {
+                                navController.navigate(dest.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            },
+                        )
+                    },
+                    opacity = bottomNavOpacity,
+                    chrome = homeChrome,
+                )
+            }
+            },
+        ) {
         NavHost(
             navController = navController,
             startDestination = TopDest.Chats.route,
@@ -335,22 +389,15 @@ fun AIChatApp(
         ) {
             composable(TopDest.Chats.route) {
                 // A1：内容铺满整窗、延伸到半透底栏后；底部留白下沉进列表 contentPadding，末条仍能滑到栏上方（过渡丝滑化·A1）。
-                ChatListScreen(
+                SkinnedChatListScreen(
                     // 批4 4-7：launchSingleTop 防快速双击同一会话压两个同会话页/双 VM。
                     onOpenChat = { conversationUuid -> navController.navigate("chat/$conversationUuid") { launchSingleTop = true } },
                     onCreateCharacter = { navController.navigate("character/new") },
-                    onOpenArchived = { navController.navigate("archivedChats") },
                     bottomContentPadding = AppBottomNavHeight,
                 )
             }
-            composable("archivedChats") {
-                ArchivedChatsScreen(
-                    onBack = { navController.popBackStack() },
-                    onOpenChat = { conversationUuid -> navController.navigate("chat/$conversationUuid") },
-                )
-            }
             composable(TopDest.Contacts.route) {
-                ContactsScreen(
+                SkinnedContactsScreen(
                     onOpenChat = { conversationUuid -> navController.navigate("chat/$conversationUuid") },
                     onCreateCharacter = { navController.navigate("character/new") },
                     onEditCharacter = { uuid -> navController.navigate("character/edit/$uuid") },
@@ -361,7 +408,7 @@ fun AIChatApp(
             // P7.2.7 朋友圈（M06）：枢纽（Tab）→ 信息流 → 发布。详情/通知列表/角色动态 → 7.2.8（现路由占位）；
             // 故事 → P11、宠物 → P8（占位）。
             composable(TopDest.Moments.route) {
-                MomentsHubScreen(
+                SkinnedMomentsHubScreen(
                     onOpenFeed = { navController.navigate("momentsFeed") },
                     onOpenDiary = { navController.navigate("diary") },
                     onOpenOurDays = { navController.navigate("ourDays") },
@@ -369,6 +416,9 @@ fun AIChatApp(
                     onOpenWorld = { navController.navigate("world") { launchSingleTop = true } },
                     bottomContentPadding = AppBottomNavHeight,
                     onOpenPet = { characterUuid -> navController.navigate("petDetail/$characterUuid") { launchSingleTop = true } }, // W12.5 信息条宠物段直达
+                    // 图纸 2026-09-06-宠物总览页复活 D-1：宠物条 → 总览页。**全库唯一** navigate("momentsPet")；
+                    // 此前该路由零导航入口 = 死路由，PetListScreen 在 App 内点不到（图纸 §0.1）。
+                    onOpenPetHub = { navController.navigate("momentsPet") { launchSingleTop = true } },
                 )
             }
             composable("momentsFeed") {
@@ -411,7 +461,7 @@ fun AIChatApp(
                 )
             }
             composable("momentSettings") {
-                MomentSettingsScreen(onBack = { navController.popBackStack() })
+                SkinnedMomentSettingsScreen(onBack = { navController.popBackStack() })
             }
             composable("stickerManagement") {
                 StickerManagementScreen(
@@ -528,7 +578,7 @@ fun AIChatApp(
                 ),
             ) { StoryFieldEditorScreen(onBack = { navController.popBackStack() }) }
             composable("storyGlobalSettings") { // 卷四 §4.2 全局创作偏好子屏（storyId 段 "-" 占位·全局分支不读它）
-                StoryGlobalSettingsScreen({ navController.popBackStack() }, { key -> navController.navigate("storyFieldEditor/-/$key") })
+                SkinnedStoryGlobalSettingsScreen({ navController.popBackStack() }, { key -> navController.navigate("storyFieldEditor/-/$key") })
             }
             // 宠物（M11）：枢纽列表 → 详情（按是否有宠物显示详情或领养进度）→ 领养。
             composable("momentsPet") {
@@ -548,7 +598,7 @@ fun AIChatApp(
             }
             // 世界系统 W13 设置二级页（图纸 §4.3/§4.4）。
             composable("worldSettings") {
-                WorldSettingsScreen(onBack = { navController.popBackStack() })
+                SkinnedWorldSettingsScreen(onBack = { navController.popBackStack() })
             }
             // 世界书 WB7（UI 名「设定集」）：书架 → 书详情；条目编辑器随 WB7b、触发设置随 WB7c。
             composable("worldBooks") {
@@ -559,7 +609,7 @@ fun AIChatApp(
                 )
             }
             composable("worldBookSettings") {
-                WorldBookSettingsScreen(
+                SkinnedWorldBookSettingsScreen(
                     onBack = { navController.popBackStack() },
                     onOpenMemorySettings = { navController.navigate("memorySettings") },
                 )
@@ -649,7 +699,7 @@ fun AIChatApp(
                 )
             }
             composable("redeemCode") {
-                RedeemCodeScreen(onClose = { navController.popBackStack() })
+                SkinnedRedeemCodeScreen(onClose = { navController.popBackStack() })
             }
             composable("giftShop") {
                 GiftShopScreen(
@@ -696,7 +746,7 @@ fun AIChatApp(
                 ReceivedGiftDetailScreen(onBack = { navController.popBackStack() })
             }
             composable(TopDest.Profile.route) {
-                ProfileScreen(
+                SkinnedProfileScreen(
                     onEditProfile = { navController.navigate("userProfile/edit") },
                     onOpenUserMoments = { navController.navigate("userMoments") },
                     onOpenUserWallet = { navController.navigate("userWallet") },
@@ -708,7 +758,7 @@ fun AIChatApp(
             }
             // Fable5「我」页重构：独立设置页（从 ProfileScreen 抽出·9 组重分组）。
             composable("settings") {
-                SettingsScreen(
+                SkinnedSettingsScreen(
                     onBack = { navController.popBackStack() },
                     onOpenApiConfig = { navController.navigate("apiConfig") },
                     onOpenApiFunctions = { navController.navigate("apiFunctions") },
@@ -742,7 +792,7 @@ fun AIChatApp(
                 val scanned by backStackEntry.savedStateHandle
                     .getStateFlow<String?>(KEY_SCANNED_API_CONFIG, null)
                     .collectAsStateWithLifecycle()
-                ApiConfigScreen(
+                SkinnedApiConfigScreen(
                     onBack = { navController.popBackStack() },
                     onEditConfig = { uuid -> navController.navigate("apiConfig/edit/$uuid") },
                     onOpenScan = { navController.navigate("apiConfig/scan") },
@@ -751,7 +801,7 @@ fun AIChatApp(
                 )
             }
             composable("apiConfig/scan") {
-                QrScanScreen(
+                SkinnedQrScanScreen(
                     onResult = { text ->
                         navController.previousBackStackEntry
                             ?.savedStateHandle?.set(KEY_SCANNED_API_CONFIG, text)
@@ -761,19 +811,19 @@ fun AIChatApp(
                 )
             }
             composable("apiFunctions") {
-                ApiFunctionAssignmentScreen(onBack = { navController.popBackStack() })
+                SkinnedApiFunctionAssignmentScreen(onBack = { navController.popBackStack() })
             }
             composable("ttsConfig") {
-                TtsConfigurationScreen(onBack = { navController.popBackStack() })
+                SkinnedTtsConfigurationScreen(onBack = { navController.popBackStack() })
             }
             composable("voiceCallSettings") {
-                VoiceCallSettingsScreen(onBack = { navController.popBackStack() })
+                SkinnedVoiceCallSettingsScreen(onBack = { navController.popBackStack() })
             }
             composable(
                 route = "apiConfig/edit/{uuid}",
                 arguments = listOf(navArgument("uuid") { type = NavType.StringType }),
             ) { backStackEntry ->
-                ApiConfigEditScreen(
+                SkinnedApiConfigEditScreen(
                     uuid = backStackEntry.arguments?.getString("uuid").orEmpty(),
                     onBack = { navController.popBackStack() },
                 )
@@ -786,48 +836,48 @@ fun AIChatApp(
                 arguments = listOf(navArgument("focusFolder") { type = NavType.BoolType; defaultValue = false }),
             ) { entry ->
                 // focusFolder=true（自动备份失败/目录丢失深链，P0-19）→ 进页自动开目录选择器重选；普通进入默认 false。
-                BackupScreen(
+                SkinnedBackupScreen(
                     onBack = { navController.popBackStack() },
                     autoPickFolder = entry.arguments?.getBoolean("focusFolder") == true,
                 )
             }
             composable("backgroundReliability") {
-                BackgroundReliabilityScreen(onBack = { navController.popBackStack() })
+                SkinnedBackgroundReliabilityScreen(onBack = { navController.popBackStack() })
             }
             composable("calendarAwareness") {
-                CalendarAwarenessScreen(onBack = { navController.popBackStack() })
+                SkinnedCalendarAwarenessScreen(onBack = { navController.popBackStack() })
             }
             composable("notificationSettings") {
-                NotificationSettingsScreen(onBack = { navController.popBackStack() })
+                SkinnedNotificationSettingsScreen(onBack = { navController.popBackStack() })
             }
             composable("immersiveSettings") {
-                ImmersiveSettingsScreen(onBack = { navController.popBackStack() })
+                SkinnedImmersiveSettingsScreen(onBack = { navController.popBackStack() })
             }
             composable("appearance") {
-                AppearanceSettingsScreen(onBack = { navController.popBackStack() })
+                SkinnedAppearanceSettingsScreen(onBack = { navController.popBackStack() })
             }
             // SETTINGS_REORG D3：记忆设置 + 记忆提示词二合一 hub，沿用 memorySettings 路由。
             composable("memorySettings") {
-                MemoryHubScreen(onBack = { navController.popBackStack() })
+                SkinnedMemoryHubScreen(onBack = { navController.popBackStack() })
             }
             composable("systemToggles") {
-                SystemTogglesScreen(onBack = { navController.popBackStack() })
+                SkinnedSystemTogglesScreen(onBack = { navController.popBackStack() })
             }
             composable("growthSettings") {
-                GrowthSettingsScreen(
+                SkinnedGrowthSettingsScreen(
                     onBack = { navController.popBackStack() },
                     onOpenObservatory = { navController.navigate("kernelObservatory") },
                 )
             }
             // 活人感内核卷零：开发者调试页（DEBUG 守卫在 Screen 内部，本文件只接线）。
             composable("kernelObservatory") {
-                KernelObservatoryScreen(onBack = { navController.popBackStack() })
+                SkinnedKernelObservatoryScreen(onBack = { navController.popBackStack() })
             }
             composable("replyRuleSettings") {
-                ReplyRuleSettingsScreen(onBack = { navController.popBackStack() })
+                SkinnedReplyRuleSettingsScreen(onBack = { navController.popBackStack() })
             }
             composable("contentFilterSettings") {
-                ContentFilterSettingsScreen(onBack = { navController.popBackStack() })
+                SkinnedContentFilterSettingsScreen(onBack = { navController.popBackStack() })
             }
             // 批 D·D-3 上下文日志：列表 / 详情 / 分段 / 全文 / 保留设置（id 经 route arg → ViewModel SavedStateHandle）。
             composable("contextLog") {
@@ -855,23 +905,23 @@ fun AIChatApp(
                 )
             }
             composable("contextLog/settings") {
-                ContextLogSettingsScreen(onBack = { navController.popBackStack() })
+                SkinnedContextLogSettingsScreen(onBack = { navController.popBackStack() })
             }
             // 性能采集（性能专项卷 0）：手机自采性能数字 + 一键导出报告。设置 ⑧「数据与诊断」组·高级门后。
             composable("perfCollect") {
-                PerfCollectScreen(onBack = { navController.popBackStack() })
+                SkinnedPerfCollectScreen(onBack = { navController.popBackStack() })
             }
             composable("about") {
-                AboutScreen(
+                SkinnedAboutScreen(
                     onBack = { navController.popBackStack() },
                     onOpenAgreement = { navController.navigate("agreementView") },
                 )
             }
             composable("agreementView") {
-                AgreementViewScreen(onBack = { navController.popBackStack() })
+                SkinnedAgreementViewScreen(onBack = { navController.popBackStack() })
             }
             composable("promptModules") {
-                PromptModuleSettingsScreen(
+                SkinnedPromptModuleSettingsScreen(
                     onBack = { navController.popBackStack() },
                     onOpenImmersiveSettings = { navController.navigate("immersiveSettings") },
                 )
@@ -910,13 +960,29 @@ fun AIChatApp(
                 )
             }
             composable("diarySettings") {
-                DiarySettingsScreen(onBack = { navController.popBackStack() })
+                SkinnedDiarySettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenWritingRules = { navController.navigate("diaryWritingRules") },
+                )
+            }
+            composable("diaryWritingRules") {
+                SkinnedDiaryPromptSettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenPreviewMine = { navController.navigate("diaryPromptPreview/mine") },
+                    onOpenPreviewExchange = { navController.navigate("diaryPromptPreview/exchange") },
+                )
+            }
+            composable(
+                route = "diaryPromptPreview/{section}",
+                arguments = listOf(navArgument("section") { type = NavType.StringType }),
+            ) {
+                SkinnedDiaryPromptPreviewScreen(onBack = { navController.popBackStack() })
             }
             composable(
                 route = "promptModules/{characterUuid}",
                 arguments = listOf(navArgument("characterUuid") { type = NavType.StringType }),
             ) {
-                PromptModuleSettingsScreen(
+                SkinnedPromptModuleSettingsScreen(
                     onBack = { navController.popBackStack() },
                     onOpenImmersiveSettings = { navController.navigate("immersiveSettings") },
                 )
@@ -925,7 +991,16 @@ fun AIChatApp(
                 route = "chat/{conversationUuid}",
                 arguments = listOf(navArgument("conversationUuid") { type = NavType.StringType }),
             ) {
-                ChatScreen(
+                if (LocalAppSkin.current == AppSkin.LIULI) LiuliChatScreen( // 琉璃第二张脸·选脸（卷二A 图纸 §2.2·两分支实参逐字相同）
+                    onBack = { navController.popBackStack() },
+                    onOpenProfile = { characterUuid -> navController.navigate("characterProfile/$characterUuid") },
+                    onOpenStickerManagement = { navController.navigate("stickerManagement") },
+                    onOpenVoiceCall = { characterUuid -> navController.navigate("voiceCall/$characterUuid") },
+                    onOpenCharacterVoiceSettings = { uuid -> navController.navigate("character/edit/$uuid?focusVoice=true") },
+                    onOpenTtsConfig = { navController.navigate("ttsConfig") },
+                    onOpenWorldAt = { spec -> WorldFocusEntry.set(spec); navController.navigate("world") { launchSingleTop = true } },
+                    onOpenPromises = { uuid -> navController.navigate("promises/$uuid") },
+                ) else ChatScreen(
                     onBack = { navController.popBackStack() },
                     onOpenProfile = { characterUuid -> navController.navigate("characterProfile/$characterUuid") },
                     onOpenStickerManagement = { navController.navigate("stickerManagement") },
@@ -935,6 +1010,8 @@ fun AIChatApp(
                     onOpenTtsConfig = { navController.navigate("ttsConfig") },
                     // W13：状态行胶囊点击 → 存聚焦意图 + 进世界屏（WorldViewModel init 消费落点·图纸 §3.6）。
                     onOpenWorldAt = { spec -> WorldFocusEntry.set(spec); navController.navigate("world") { launchSingleTop = true } },
+                    // 约定记账提示点整条 → 该角色的「我们的约定」账本页（图纸 2026-09-06）。
+                    onOpenPromises = { uuid -> navController.navigate("promises/$uuid") },
                 )
             }
             composable(
@@ -979,7 +1056,7 @@ fun AIChatApp(
                 route = "characterProfile/{characterUuid}",
                 arguments = listOf(navArgument("characterUuid") { type = NavType.StringType }),
             ) {
-                CharacterProfileScreen(
+                SkinnedCharacterProfileScreen(
                     onBack = { navController.popBackStack() },
                     onEditCharacter = { uuid -> navController.navigate("character/edit/$uuid") },
                     onOpenOfflineMeetings = { uuid -> navController.navigate("offlineMeetings/$uuid") },
@@ -1068,45 +1145,6 @@ fun AIChatApp(
                 )
             }
         }
-        // A0·叠加层变体：底栏移出 Scaffold 槽 → 浮在 NavHost 之上的叠加层（align 底部·自带 navigationBarsPadding）。
-        // 只在 4 个 Tab 路由显示；进/出详情时它自己在这层淡入淡出，不再改变 NavHost 内容高度（=进会话输入框不再下降）。
-        AnimatedVisibility(
-            visible = showBottomBar,
-            modifier = Modifier.align(Alignment.BottomCenter),
-            enter = slideInVertically(
-                animationSpec = spring(dampingRatio = 0.9f, stiffness = Spring.StiffnessMedium),
-            ) { it } + fadeIn(spring(stiffness = Spring.StiffnessMedium)),
-            exit = slideOutVertically(
-                animationSpec = spring(dampingRatio = 0.9f, stiffness = Spring.StiffnessMedium),
-            ) { it } + fadeOut(spring(stiffness = Spring.StiffnessMedium)),
-        ) {
-            val currentDestination = backStackEntry?.destination
-            AppBottomNav(
-                items = topDestinations.map { dest ->
-                    val selected = currentDestination?.hierarchy?.any { it.route == dest.route } == true
-                    // nav-shell-2：聊天=未读消息总数、动态=未读通知条数；其余 Tab 无角标（对齐 iOS）。
-                    val badgeCount = when (dest) {
-                        TopDest.Chats -> chatsUnread
-                        TopDest.Moments -> momentsUnread
-                        else -> 0
-                    }
-                    AppBottomNavItem(
-                        icon = dest.icon,
-                        label = stringResource(dest.labelRes),
-                        selected = selected,
-                        badgeCount = badgeCount,
-                        onClick = {
-                            navController.navigate(dest.route) {
-                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                    )
-                },
-                opacity = bottomNavOpacity,
-            )
-        }
-        } // end Box（NavHost + 悬浮底栏叠加层）
+        } // end LiuliHomeHost（NavHost + 悬浮底栏叠加层）
     }
 }

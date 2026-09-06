@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import com.situ.aichat.offline.OfflineMeetingSession
 import com.situ.aichat.prompt.scheduleTimeOfDayLabel
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTheme
 import java.time.Instant
 import java.time.ZoneId
@@ -102,7 +103,7 @@ internal fun MeetingGalleryTimeline(
 
     LazyColumn(
         Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 28.dp),
+        contentPadding = PaddingValues(start = AppSpacing.screenGutter, end = AppSpacing.screenGutter, top = 4.dp, bottom = 28.dp),
     ) {
         item(key = "stat") {
             Text(

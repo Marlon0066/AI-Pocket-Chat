@@ -120,6 +120,12 @@ android {
             // Log.* 会抛「Method … not mocked」。返回默认值（Log.* → 0）让这些行为测试照常跑，无需为「顺带打了行日志」
             // 给每个测试套 Robolectric。Robolectric 测试有真实 shadow，不受此项影响（农历等仍走真框架）。
             isReturnDefaultValues = true
+            // 单元测试 worker 堆上限：Gradle 默认 512m，全量（900+ 测试文件·Story* Robolectric 段）已吃紧——
+            // 2026-09-05 实测：512m 在 Story* 段 OutOfMemoryError → Robolectric 主线程死、Test worker 永远 park
+            // 在 Sandbox.runOnMainThread（进程 0% CPU、不报 BUILD FAILED、看似「卡住」）；提到 3g 后 921 类 / 8334 例
+            // 2m40s 全绿。这是「最多能用到」的上限不是常驻占用；单轮全量 = worker 3g + daemon（gradle.properties 6g）。
+            // ⚠️ 它不替代「全量单测全机同一时刻只准一个会话跑」（docs/playbook/PITFALLS.md §1g）——多会话并发只会抢得更快。
+            all { it.maxHeapSize = "3g" }
         }
     }
 

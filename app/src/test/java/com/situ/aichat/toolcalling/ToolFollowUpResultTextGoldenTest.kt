@@ -33,6 +33,13 @@ class ToolFollowUpResultTextGoldenTest {
     @Test fun offline_end() =
         assertEquals(GoldenResources.read("followup_offline_end.txt"), toolFollowUpResultText(null, "end_offline_meeting", false))
 
+    /** T1-13（图纸 2026-09-06 约定工具调用化）：约定两工具共用同一句意图态文案，字节冻结。 */
+    @Test fun promise_record() =
+        assertEquals(GoldenResources.read("followup_promise.txt"), toolFollowUpResultText(null, "record_promise", false))
+
+    @Test fun promise_resolve() =
+        assertEquals(GoldenResources.read("followup_promise.txt"), toolFollowUpResultText(null, "resolve_promise", false))
+
     @Test fun parse_fail_or_unknown() =
         assertEquals(GoldenResources.read("followup_parsefail.txt"), toolFollowUpResultText(null, "calendar_action", false))
 }

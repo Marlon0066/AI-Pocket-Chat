@@ -198,19 +198,4 @@ class ConversationStateEvaluatorTest {
         assertEquals(ConversationPhase.OVERNIGHT, state.phase)
     }
 
-    /** 归档会话照样纳入（E11 归档 ≠ 失忆）：DAO 返回含归档条，evaluator 不筛。 */
-    @Test fun evaluate_archivedConversationsIncluded() = runTest {
-        coEvery { conversationDao.getByCharacter(charId) } returns listOf(
-            ConversationEntity(uuid = "c-arch", characterUuid = charId, title = "t", creationDate = 0L, isArchived = true),
-        )
-        coEvery { messageDao.latestNonSystemAcross(listOf("c-arch")) } returns
-            LatestMessageMeta(timestamp = minutesAgo(10), roleRaw = "user", messageUUID = "m-3")
-        coEvery { messageDao.latestUserTimestampAcross(listOf("c-arch")) } returns minutesAgo(10)
-        coEvery { deliveryDao.countDeliveredSince(charId, any()) } returns 0
-
-        val state = evaluator.evaluate(charId, now, zone)
-
-        assertEquals(ConversationPhase.HOT, state.phase)
-        coVerify(exactly = 1) { messageDao.latestNonSystemAcross(listOf("c-arch")) }
-    }
 }

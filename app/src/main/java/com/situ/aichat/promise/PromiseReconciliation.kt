@@ -71,7 +71,7 @@ object PromiseReconciliation {
         }
         return "你在帮 AI 角色「$cName」维护一份与用户「$uName」之间的约定清单。请读下面的对话与生活素材，完成三件事：\n" +
             "1. 判断清单上哪些编号的约定已经兑现，或已经取消/告吹。判定必须谨慎：只有素材里有明确证据才输出，并把能证明的那句原话一字不差地抄进 evidence；拿不准的一律不要输出（维持原状）。\n" +
-            "2. 找出素材里新出现的约定：双方明确说定、之后要一起做或某一方答应对方要做的具体事情，并把说定的那句原话抄进 evidence。随口一提没有下文的不算；金钱类承诺（发红包、转账、给多少钱、送多贵的礼物）不算约定，不要提取。\n" +
+            "2. 找出素材里新出现的约定：双方明确说定、之后要一起做或某一方答应对方要做的具体事情，并把说定的那句原话抄进 evidence。随口一提没有下文的不算；金钱类承诺（发红包、转账、给多少钱、送多贵的礼物）不算约定，不要提取。清单上已经有的事（哪怕措辞不同）不要再当新约定输出。\n" +
             "3. 给清单上标着「未定日期」的约定补日期：只有素材里明确说定了具体日子才补，并把说定日子的那句原话抄进 evidence；拿不准的不要输出。\n" +
             "\n" +
             "当前时间：$nowText\n" +
@@ -146,15 +146,21 @@ object PromiseReconciliation {
         return Verified(changes, newPromises, dates)
     }
 
-    /** 闸二：去空白后 <6 字 → 假；不是素材去空白后的子串 → 假。 */
-    private fun evidenceOk(evidence: String, normMaterial: String): Boolean {
+    /**
+     * 闸二：去空白后 <6 字 → 假；不是素材去空白后的子串 → 假。
+     * `internal`（2026-09-06 约定工具调用化）：聊天内工具路的证据闸复用**同一实现**，不许另写一遍。
+     */
+    internal fun evidenceOk(evidence: String, normMaterial: String): Boolean {
         val ne = PromiseLedgerService.normalize(evidence)
         if (ne.codePointCount(0, ne.length) < EVIDENCE_MIN_LEN) return false
         return normMaterial.contains(ne)
     }
 
-    /** due 解析：null/空/"null" → null；否则按纯日期 `yyyy-MM-dd`（补 09:00·[zone]）；失败 → null。 */
-    private fun parseDue(raw: String?, zone: ZoneId): Long? {
+    /**
+     * due 解析：null/空/"null" → null；否则按纯日期 `yyyy-MM-dd`（补 09:00·[zone]）；失败 → null。
+     * `internal`（2026-09-06 约定工具调用化）：[PromiseChatTool] 的 `due` 参数复用**同一实现**，两路补 09:00 一致。
+     */
+    internal fun parseDue(raw: String?, zone: ZoneId): Long? {
         val s = raw?.trim().orEmpty()
         if (s.isEmpty() || s.equals("null", ignoreCase = true)) return null
         return runCatching { LocalDate.parse(s).atTime(9, 0).atZone(zone).toInstant().toEpochMilli() }.getOrNull()

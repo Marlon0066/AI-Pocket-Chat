@@ -31,34 +31,54 @@ enum class AppearanceMode(val raw: String) {
 }
 
 /**
- * 主题配色家族（Fable-5 多主题·见 FABLE5_THEME_QINGHUA_PROPOSAL.md）。与 [AppearanceMode] 深浅**正交**：
- * 配色管色相家族（暖陶/青花…），深浅管明暗，两两组合成各自的 AppColors。raw 串持久化，未知/空回退默认暖陶。
+ * 界面「脸」（琉璃第二张脸·见 FABLE5_THEME_LIULI_PROPOSAL.md §7.1）。与 [AppearanceMode] 深浅**正交**：
+ * 脸管配色 + 器型家族（暖陶 / 琉璃），深浅管明暗，两两组合成各自的 AppColors。
+ *
+ * raw 串持久化（DataStore key 仍是历史遗留的 `"theme_palette"`，值域 `"clay"` / `"liuli"`）；未知/空回退暖陶
+ * ——老用户存的 `"qinghua"`（青花已推翻）由此静默回退暖陶，**不做迁移**。
  */
-enum class ThemePalette(val raw: String) {
-    CLAY("clay"),       // 暖陶玫（默认·设计语言主强调 #BE8A76）
-    QINGHUA("qinghua"); // 青花蓝（白多蓝点睛·瓷白底 + 钴蓝）
+enum class AppSkin(val raw: String) {
+    CLAY("clay"),   // 暖陶（默认·设计语言主强调 #BE8A76·第一张脸）
+    LIULI("liuli"); // 琉璃（液态玻璃·冷灰瓷白 + 钴蓝·第二张脸）
 
     companion object {
-        fun fromRaw(raw: String?): ThemePalette =
+        fun fromRaw(raw: String?): AppSkin =
             entries.firstOrNull { it.raw == raw } ?: CLAY
     }
 }
 
 /**
- * 根部主题读取的外观快照：主题配色 + 深浅模式 + Material You 动态取色开关。
+ * 琉璃玻璃「透明度」两档（契约 §4.1 · iOS 26.1 清透 / 着色同构）。住 data 层是因为要经 DataStore 持久化
+ * （数据层绝不依赖 UI 包）；`effective()` 等玻璃语义的扩展留在 `ui/liuli/glass`。未知/空回退清透。
+ */
+enum class GlassTier(val raw: String) {
+    CLEAR("clear"),   // 清透：染色轻、身后内容更透
+    TINTED("tinted"); // 着色：染色重、字更清楚（无实时模糊能力时强制此档）
+
+    companion object {
+        fun fromRaw(raw: String?): GlassTier =
+            entries.firstOrNull { it.raw == raw } ?: CLEAR
+    }
+}
+
+/**
+ * 根部主题读取的外观快照：脸 + 深浅模式 + Material You 动态取色开关 + 玻璃透明度档。
  *
- * iOS 这一项是「多主题 currentThemeID」。安卓 2026-06-30 起开放多主题配色（[palette]·反转旧
- * 「不做多主题换肤」决策）；[palette] 与 [mode] 深浅正交。动态取色（[useDynamicColor]）仍为安卓特有 opt-in。
+ * iOS 这一项是「多主题 currentThemeID」。安卓 2026-06-30 起开放多主题配色，2026-09-04 起升级为
+ * 「两张脸一个大脑」（[skin]·见 FABLE5_THEME_LIULI_PROPOSAL.md §1）；[skin] 与 [mode] 深浅正交。
+ * 动态取色（[useDynamicColor]）仍为安卓特有 opt-in；[glassTier] 只影响琉璃的玻璃片。
  */
 data class AppearanceState(
     val mode: AppearanceMode = AppearanceMode.SYSTEM,
     // Fable-5 Phase 0：默认关动态取色=品牌调色板，Monet 降 opt-in（设计语言 §1.5）。
     val useDynamicColor: Boolean = false,
-    // 主题配色家族（默认暖陶·与深浅正交·见 FABLE5_THEME_QINGHUA_PROPOSAL.md）。
-    val palette: ThemePalette = ThemePalette.CLAY,
+    // 界面「脸」（默认暖陶·与深浅正交·见 FABLE5_THEME_LIULI_PROPOSAL.md §7.1）。
+    val skin: AppSkin = AppSkin.CLAY,
+    // 琉璃玻璃透明度档（默认清透·只影响琉璃玻璃片）。
+    val glassTier: GlassTier = GlassTier.CLEAR,
 ) {
     companion object {
-        /** 加载完成前的默认值 = 当前现状（跟随系统 + 默认暖陶），保证无回归、无首帧闪烁。 */
+        /** 加载完成前的默认值 = 当前现状（跟随系统 + 默认暖陶 + 清透），保证无回归、无首帧闪烁。 */
         val DEFAULT = AppearanceState()
     }
 }

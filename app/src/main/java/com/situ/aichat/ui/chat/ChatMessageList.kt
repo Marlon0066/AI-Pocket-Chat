@@ -89,6 +89,8 @@ internal fun ChatMessageList(
     networkConnected: Boolean,
     networkStatusChanged: Boolean?,
     showScrollDown: Boolean,
+    /** 约定记账当场提示在场（图纸 2026-09-06 §4.3）：并入日期胶囊抑制 + 倒数条让路（赴约钮不让）。 */
+    promiseHintVisible: Boolean = false,
     wallpaper: ChatWallpaper?,
     /** VU3：当前角色仍缺可用音色 → 失败通话卡长琥珀尾巴（自愈显示门控·透传给 MessageRow）。 */
     voiceSetupNeeded: Boolean = false,
@@ -254,7 +256,7 @@ internal fun ChatMessageList(
         val arrivalAppt by viewModel.arrivalAppointment.collectAsStateWithLifecycle()
         val countdownAppt by viewModel.nextCountdownAppointment.collectAsStateWithLifecycle()
         val topBannerVisible = !networkConnected || networkStatusChanged == true ||
-            arrivalAppt != null || countdownAppt != null
+            arrivalAppt != null || countdownAppt != null || promiseHintVisible
 
         // ② 滚动浮动日期胶囊（契约 FABLE5_CHAT_TELEGRAM_MOTION_PROPOSAL §2·M1）：只认用户拖动/fling，
         // 停滚 500ms 后淡出；最早项可见或顶部横幅在场时熄灭。皮肤随壁纸双态（玻璃药丸/raised 半透）。
@@ -286,7 +288,8 @@ internal fun ChatMessageList(
         // 同一顶部槽位——到点优先显变身按钮（点击进沉浸赴约），否则显倒数小条（查看/改期/取消）。
         // （arrivalAppt/countdownAppt 收集已上移至胶囊抑制计算处·M1 仅位置移动。）
         AnimatedVisibility(
-            visible = arrivalAppt != null || countdownAppt != null,
+            // 约定提示在场时倒数条让路（持久信息·4 秒后回来）；「出发赴约」是关键动作，永不让路。
+            visible = (arrivalAppt != null || countdownAppt != null) && !(promiseHintVisible && arrivalAppt == null),
             modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp),
             enter = if (reduceMotion) EnterTransition.None else fadeIn() + expandIn(),
             exit = if (reduceMotion) ExitTransition.None else shrinkOut() + fadeOut(),

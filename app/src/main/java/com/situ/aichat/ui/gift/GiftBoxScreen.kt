@@ -46,6 +46,7 @@ import com.situ.aichat.data.local.entity.CharacterEntity
 import com.situ.aichat.data.local.entity.GiftRecordEntity
 import com.situ.aichat.gift.GiftCatalog
 import com.situ.aichat.ui.designsystem.AppSegmentedControl
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.util.ContentImageStore
 import java.time.Instant
@@ -91,7 +92,7 @@ fun GiftBoxScreen(
         LazyVerticalGrid(
             state = gridState,
             columns = GridCells.Fixed(2),
-            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = AppSpacing.screenGutter),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(top = 8.dp, bottom = 32.dp),

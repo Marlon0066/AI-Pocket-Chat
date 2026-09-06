@@ -21,6 +21,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.SheetState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -61,8 +62,9 @@ fun NewConversationPickerSheet(
     onPick: (CharacterEntity) -> Unit,
     onCreateNew: () -> Unit,
     onDismiss: () -> Unit,
+    // 琉璃传「即现」态（首帧在位、不滑入·用户 2026-09-06）；暖陶默认不变。
+    sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val colors = AppTheme.colors
     AppSheet(
         onDismissRequest = onDismiss,

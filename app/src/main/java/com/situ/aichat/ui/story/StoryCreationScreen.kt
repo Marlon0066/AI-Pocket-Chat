@@ -50,6 +50,7 @@ import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppDropdownField
 import com.situ.aichat.ui.designsystem.AppDropdownMenuItem
 import com.situ.aichat.ui.designsystem.AppSegmentedControl
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppSwitch
 import com.situ.aichat.ui.designsystem.AppTextArea
 import com.situ.aichat.ui.designsystem.AppTextField
@@ -134,7 +135,8 @@ fun StoryCreationScreen(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxWidth().padding(padding),
-            contentPadding = PaddingValues(16.dp),
+            // 屏 gutter 恒 20（设计语言 §2.5 军规）
+            contentPadding = PaddingValues(horizontal = AppSpacing.screenGutter, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             item { GenreSection(form, viewModel::update) }
