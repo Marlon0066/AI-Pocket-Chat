@@ -5,9 +5,13 @@ import com.situ.aichat.data.local.entity.MessageEntity
 import com.situ.aichat.data.local.entity.UserProfileEntity
 import com.situ.aichat.data.model.AppSettings
 import com.situ.aichat.prompt.PromptBuilder
+import com.situ.aichat.prompt.PromptScene
 import com.situ.aichat.prompt.PromptStrings
+import com.situ.aichat.tooling.ChatToolContext
+import com.situ.aichat.tooling.OfflineChatTool
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -38,6 +42,7 @@ class ToolCallingPromptAssemblyGoldenTest {
     private fun assembledSystemMessages(
         toolCalling: Boolean,
         deliveryMode: PromptBuilder.AssistantDeliveryMode = PromptBuilder.AssistantDeliveryMode.TEXT,
+        scene: PromptScene = PromptScene.ONLINE_CHAT,
     ): List<String> {
         val strings = PromptStrings(RuntimeEnvironment.getApplication())
         val character = CharacterEntity(uuid = "c1", name = "小雨", creationDate = 0L)
@@ -55,9 +60,17 @@ class ToolCallingPromptAssemblyGoldenTest {
             toolCallingEnabled = toolCalling,
             now = Instant.ofEpochMilli(1_700_000_000_000L),
             assistantDeliveryMode = deliveryMode,
+            scene = scene,
         )
         return messages.filter { it.role == "system" }.map { it.content.orEmpty() }
     }
+
+    /** 真语音通话回合的装配口径 = VoiceCallTurnService：deliveryMode=VOICE **且** scene=VOICE_CALL（暗号模式）。 */
+    private fun voiceCallSystemMessages(): List<String> = assembledSystemMessages(
+        toolCalling = false,
+        deliveryMode = PromptBuilder.AssistantDeliveryMode.VOICE,
+        scene = PromptScene.VOICE_CALL,
+    )
 
     private fun assembledSystemText(toolCalling: Boolean): String =
         assembledSystemMessages(toolCalling).joinToString("\n")
@@ -95,10 +108,55 @@ class ToolCallingPromptAssemblyGoldenTest {
         // 工具模式：0 次（schema 已在 tools 数组下发·双登广告 H4）。
         assertEquals("工具模式不该有约定记账规则", 0, assembledSystemMessages(toolCalling = true).count { it.contains(rule) })
         // 语音通话回合（暗号模式）：0 次——通话侧无人解析暗号，注入只会让 JSON 被念出来。
-        val voiceMsgs = assembledSystemMessages(toolCalling = false, deliveryMode = PromptBuilder.AssistantDeliveryMode.VOICE)
+        // 2026-09-18：通话改按 scene=VOICE_CALL 建模（与 VoiceCallTurnService 同口径）；约见面、线下邀约规则自此也不进通话，
+        // 正向锚改为守卫卡自身的反元守卫（通话照注）。
+        val voiceMsgs = voiceCallSystemMessages()
         assertEquals("通话回合不该有约定记账规则", 0, voiceMsgs.count { it.contains(rule) })
-        // 正向锚（防「守卫卡整段没装配」的假绿）：同一通话回合里约见面规则照旧在。
-        assertEquals("通话回合守卫卡本身应存在（约见面规则仍在）", 1, voiceMsgs.count { it.contains(future) })
+        assertEquals("通话回合守卫卡本身应存在（反元守卫仍在）", 1, voiceMsgs.count { it.contains("绝对禁令") })
+    }
+
+    // ── 2026-09-18 提示词册核对 A 条 / D-3：通话侧无人解析暗号 → 约见面、线下邀约规则都不进通话；
+    //    但聊天里的语音消息回合照常注入 ──
+
+    @Test fun future_rule_neverInVoiceCall_butGuardCardStillAssembled() {
+        val future = GoldenResources.read("future_rule.txt")
+        val voiceMsgs = voiceCallSystemMessages()
+        assertEquals("通话回合不该有约定未来见面规则（通话侧无人剥 [future_meeting]）", 0, voiceMsgs.count { it.contains(future) })
+        // 正向锚（防「守卫卡整段没装配」的假绿）：同一回合守卫卡仍在（反元守卫）。
+        assertEquals("通话回合守卫卡本身应存在（反元守卫仍在）", 1, voiceMsgs.count { it.contains("绝对禁令") })
+    }
+
+    @Test fun offline_invite_rule_neverInVoiceCall() {
+        // D-3（用户拍板 2026-09-18·通话里不做正式邀约）：通话侧不建邀约卡，[offline_invite|…] 还会被 TTS 按「~」切开念出来。
+        val voiceMsgs = voiceCallSystemMessages()
+        assertEquals("通话回合不该有线下暗号提示词", 0, voiceMsgs.count { it.contains(GoldenResources.read("offline_fallback.txt")) })
+        assertTrue("通话回合任何系统消息都不该教 [offline_invite", voiceMsgs.none { it.contains("[offline_invite") })
+        assertTrue("通话回合不该有线下见面功能段头", voiceMsgs.none { it.contains("【线下见面功能】") || it.contains("【线下见面规则】") })
+        // 正向锚：守卫卡（反元守卫）仍在——证明守卫卡装配了、只是没有线下段。
+        assertEquals("通话回合守卫卡本身应存在", 1, voiceMsgs.count { it.contains("绝对禁令") })
+    }
+
+    @Test fun offline_box_gives_no_guard_prompt_in_voice_call_in_either_mode() {
+        // 盒子直测：通话里工具版 / 暗号版都不给（通话本不发 tools，但门按「通话不邀约」语义关死，不靠 toolCalling 取值碰巧）。
+        for (toolCalling in listOf(true, false)) {
+            val call = ChatToolContext(
+                toolCallingEnabled = toolCalling, includeCalendarTool = true, canInitiateOffline = true, voiceCall = true,
+            )
+            assertNull("通话 toolCalling=$toolCalling 不该有线下守卫段", OfflineChatTool.stepFiveGuardPrompt(call))
+            // 对照：非通话照旧给（1:1 旧行为）。
+            val chat = call.copy(voiceCall = false)
+            val expected = if (toolCalling) GoldenResources.read("offline_tool.txt") else GoldenResources.read("offline_fallback.txt")
+            assertTrue("非通话 toolCalling=$toolCalling 应给线下守卫段", OfflineChatTool.stepFiveGuardPrompt(chat).orEmpty().contains(expected))
+        }
+    }
+
+    @Test fun chat_voiceMessage_turn_keeps_all_marker_rules() {
+        // 聊天主引擎计划发**语音消息**的回合也传 deliveryMode=VOICE，但 scene 是在线聊天——这条路照常经
+        // AssistantResponsePreprocessor 剥暗号并记账，三条暗号规则都必须照注（旧实现按 deliveryMode 判通话，把约定规则误挡）。
+        val msgs = assembledSystemMessages(toolCalling = false, deliveryMode = PromptBuilder.AssistantDeliveryMode.VOICE)
+        assertEquals("语音消息回合应有线下暗号提示词", 1, msgs.count { it.contains(GoldenResources.read("offline_fallback.txt")) })
+        assertEquals("语音消息回合应有约定未来见面规则", 1, msgs.count { it.contains(GoldenResources.read("future_rule.txt")) })
+        assertEquals("语音消息回合应有约定记账规则", 1, msgs.count { it.contains(GoldenResources.read("promise_rule.txt")) })
     }
 
     // ── 结构看门（消息边界 + 顺序·堵 contains 看不住的「合并/改序/重复」缝·尤为 C-5 接线护栏） ──

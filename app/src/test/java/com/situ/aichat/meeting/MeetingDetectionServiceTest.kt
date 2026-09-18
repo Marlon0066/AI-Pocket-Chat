@@ -201,6 +201,86 @@ class MeetingDetectionServiceTest {
         assertFalse("终态不暴露 id 防被当 target", p.contains("id=h1"))
     }
 
+    /**
+     * 多行插值不得带出模板缩进（2026-09-18 五处小修 #1）：旧写法「原始字符串里插值 + 末尾 trimIndent()」是先插值后 trimIndent，
+     * 对话（恒多行）/ 待定约定 ≥2 条 / 已赴约块 任一跨行 → 最小公共缩进=0 → 发给模型的每行都带 12 格行首空格。
+     */
+    @Test fun prompt_multiLineInterpolation_noIndentLeak() {
+        val p = MeetingDetectionService.buildScanPrompt(
+            conversationText = "[2026-06-24 周三 15:20] 阿明：周六一起看电影吧\n[2026-06-24 周三 15:21] 小樱：好呀",
+            existing = listOf(
+                ExistingAppointmentBrief("a1", "周六下午", "看电影"),
+                ExistingAppointmentBrief("a2", "周日晚上", "吃火锅"),
+            ),
+            characterName = "小樱", userName = "阿明", nowText = "2026-06-24 周三 15:30",
+            recentlyHonored = listOf(ExistingAppointmentBrief("h1", "8月30日 周日", "买裙子")),
+        )
+        val lines = p.lines()
+        // JSON 块内只有两格相对缩进；三格及以上 = 模板缩进泄漏。
+        assertTrue("有行带模板缩进：" + lines.filter { it.startsWith("   ") }, lines.none { it.startsWith("   ") })
+        assertTrue(p.startsWith("你是一个严格的信息抽取器。判断 阿明 和 小樱 在最近这段对话里"))
+        assertTrue(lines.contains("当前时间：2026-06-24 周三 15:30"))
+        assertTrue(lines.contains("【判定标准】"))
+        assertTrue(
+            p.contains(
+                "【已有待定约定】\n- id=a1 | 时间：周六下午 | 活动：看电影\n- id=a2 | 时间：周日晚上 | 活动：吃火锅\n\n【近期已赴约的见面】",
+            ),
+        )
+        assertTrue(lines.contains("- 时间：8月30日 周日 | 活动：买裙子（已赴约）"))
+        assertTrue(
+            p.contains("【最近对话】\n[2026-06-24 周三 15:20] 阿明：周六一起看电影吧\n[2026-06-24 周三 15:21] 小樱：好呀\n\n【输出】"),
+        )
+        assertTrue(lines.contains("  \"intent\": \"new | reschedule | cancel | confirm | none\","))
+        assertTrue(lines.contains("  \"invitation\": \"（小樱口吻的一句邀约，可空）\","))
+        assertEquals("没有任何未来约定时，输出 {\"intent\":\"none\"}。", lines.last())
+    }
+
+    /**
+     * #1 回归钉：插值全为单行时（旧实现唯一正确的情形），提示词与修前**逐字节相同**。
+     * 金标 = 修前实现对同一输入的实跑输出（2026-09-18 取证），不是照抄新实现。
+     */
+    @Test fun prompt_singleLineInputs_byteIdenticalToPreFixGolden() {
+        val p = MeetingDetectionService.buildScanPrompt(
+            conversationText = "[2026-06-24 周三 15:20] 阿明：周六一起看电影吧",
+            existing = listOf(ExistingAppointmentBrief("a1", "周六下午", "看电影")),
+            characterName = "小樱", userName = "阿明", nowText = "2026-06-24 周三 15:30",
+        )
+        val golden = """
+            你是一个严格的信息抽取器。判断 阿明 和 小樱 在最近这段对话里，是否**明确约定了未来某天**线下见面。
+
+            当前时间：2026-06-24 周三 15:30
+
+            【判定标准】
+            - 只算**确定的约定**：双方都明确同意，或一方提议、另一方答应。
+            - **排除客套寒暄**（如「改天约」「有空再说」「下次吧」）——这些不是约定。
+            - **排除当下立刻见面**（那是另一套流程）。这里只处理**未来某天**的约定。
+            - 也要识别对【已有待定约定】的：改期(reschedule)、取消(cancel)、确认(confirm)。
+
+            【已有待定约定】
+            - id=a1 | 时间：周六下午 | 活动：看电影
+
+            【最近对话】
+            [2026-06-24 周三 15:20] 阿明：周六一起看电影吧
+
+            【输出】只输出一个 JSON 对象，不要任何额外文字或解释：
+            {
+              "intent": "new | reschedule | cancel | confirm | none",
+              "target_id": "（reschedule/cancel/confirm 时填上面某条 id，否则空字符串）",
+              "iso_datetime": "（依据当前时间推算的具体时间，ISO8601 带时区，如 2026-06-27T15:00:00+08:00；只到天则给当天 19:00）",
+              "raw_when": "（对话里原话的时间说法，如 周六下午）",
+              "location": "（地点，没有就空字符串）",
+              "activity": "（一起做什么，没有就空字符串）",
+              "invitation": "（小樱口吻的一句邀约，可空）",
+              "tension_hint": "（≤12字、给用户看的隐晦暗示，可空）",
+              "hidden_tension": "（一句小樱藏着的小心事，用户不可见，可空）",
+              "proposed_by": "character | user",
+              "confidence": "high | medium | low"
+            }
+            没有任何未来约定时，输出 {"intent":"none"}。
+        """.trimIndent()
+        assertEquals(golden, p)
+    }
+
     // ── scanForCandidates（注入 fake completionFn） ──
 
     @Test fun scan_parsesValidResponse() = runBlocking {

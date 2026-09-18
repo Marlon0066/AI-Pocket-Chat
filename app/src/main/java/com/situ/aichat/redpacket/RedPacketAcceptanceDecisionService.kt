@@ -18,17 +18,11 @@ import com.situ.aichat.data.repository.ConversationRepository
 import com.situ.aichat.data.repository.MessageRepository
 import com.situ.aichat.gift.FestivalCalendar
 import com.situ.aichat.prompt.AssistantOutputGate
-import com.situ.aichat.prompt.memory.MemoryService
-import com.situ.aichat.util.JSONExtractor
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.pow
 import kotlinx.coroutines.delay
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.booleanOrNull
 
 /**
  * 角色收红包 LLM 决策服务（1:1 iOS `Services/RedPacketAcceptanceDecisionService.swift`，阶段 5.5 · Sub D.1）。
@@ -38,13 +32,16 @@ import kotlinx.serialization.json.booleanOrNull
  * 不进 chat 历史）；角色想说的话靠系统事件 + 下次对话带出，外加可选的 chatReply 延迟插一条 assistant 消息。
  *
  * **4 层稳定性**（对齐 ProactiveGiftLLMService）：① Prompt 严格 schema 约束 ② Schema 校验 retry-with-feedback
- * （[MAX_RETRIES_ON_SCHEMA_FAILURE] 次）③ 网络指数退避 1s→2s→4s（[MAX_RETRIES_ON_NETWORK_FAILURE] 次）
- * ④ **兜底默认收下**（[fallbackDecision] shouldAccept=true，保证用户发出的钱不被吞，不带 chatReply）。
+ * （[MAX_RETRIES_ON_SCHEMA_FAILURE] 次）③ 网络失败最多共调 [MAX_RETRIES_ON_NETWORK_FAILURE] 次、间隔 1s → 2s
+ * ④ **兜底**：几次都不合格但最近一次明确表态「拒收」→ 照拒收（[RedPacketDecisionSalvage]·只留合格字段）；
+ * 断网 / 无配置 / 无明确表态 / 表态收下 → **默认收下**（[fallbackDecision] shouldAccept=true，不带 chatReply）。
+ * 收或拒都不吞钱：收下进角色钱包，拒收原路退回。
  *
  * **T4 约束**：prompt 只透露金额**分档**（[RedPacketAmountCatalog.tier]），**不露精确数字**。
  *
  * iOS 是 `@MainActor enum`；安卓 `@Singleton`（注 [LlmClient]）。纯逻辑（parseAndValidate/buildPrompt/fallbackDecision/
- * formatDialogueLines）在 companion 单测；decide/decideAndApply 编排走 LLM + Room，靠独立复核 + 真机。
+ * formatDialogueLines）在 companion 单测；decide/decideAndApply 编排的兜底分支有 T2（RedPacketDecisionFallbackTest），
+ * 真 LLM 往返靠真机。
  */
 @Singleton
 class RedPacketAcceptanceDecisionService @Inject constructor(
@@ -62,11 +59,14 @@ class RedPacketAcceptanceDecisionService @Inject constructor(
         val shouldAccept: Boolean,
         /** 拒收时的短理由（≤30 字）；shouldAccept=true 时为 null。 */
         val rejectionReason: String?,
-        /** 决策理由（必填，供日志与 rejectionReason 兜底）。 */
+        /**
+         * 决策理由（必填，**只供日志**）。⚠️ 绝不拿它顶替给用户看的拒收理由——兜底拒收的这里是内部文字
+         * （[RedPacketDecisionSalvage.SALVAGE_REASON]），顶上去就会出现在红包详情与退回流水备注里（2026-09-18）。
+         */
         val reason: String,
-        /** true=兜底层产出，false=LLM 真的决定了。 */
+        /** true=兜底层产出（默认收下，或格式不合格但明确拒收的照拒收），false=LLM 合格回复。 */
         val isFromFallback: Boolean,
-        /** 角色对红包事件的对话式反应（≤40 字第一人称，可选；兜底层不带）。 */
+        /** 角色对红包事件的对话式反应（≤40 字第一人称，可选；默认收下兜底不带，兜底照拒收时合格才带）。 */
         val chatReply: String? = null,
     )
 
@@ -98,7 +98,8 @@ class RedPacketAcceptanceDecisionService @Inject constructor(
     // ── 公开 API ──
 
     /**
-     * 决策主入口（**返回一定不为 null**，失败走兜底默认收下）。[config] null = 无 API → 直接兜底。
+     * 决策主入口（**返回一定不为 null**）。[config] null = 无 API → 直接默认收下；LLM 全失败 → 明确拒收过则照拒收，
+     * 否则默认收下（见类注释 ④）。
      */
     suspend fun decide(context: Context, config: ApiConfigValues?): Decision {
         if (config == null) {
@@ -140,8 +141,9 @@ class RedPacketAcceptanceDecisionService @Inject constructor(
                 redPacketService.acceptRedPacket(recordUuid, now)
                 Log.i(TAG, "红包 $recordUuid 被 ${character.name} 收下;兜底=${decision.isFromFallback}")
             } else {
-                val reason = decision.rejectionReason?.trim().orEmpty()
-                val finalReason = reason.ifEmpty { decision.reason }
+                // 只用给用户看的拒收理由（会进红包详情 / 退回流水备注）；内部 reason 是日志用，绝不外露——
+                // 兜底照拒收时可能没有合格理由 → 空串 = 「红包被退回」（RedPacketService 既有支持）。
+                val finalReason = decision.rejectionReason?.trim().orEmpty()
                 redPacketService.rejectRedPacket(recordUuid, finalReason, now)
                 Log.i(TAG, "红包 $recordUuid 被 ${character.name} 拒收 · 理由=$finalReason;兜底=${decision.isFromFallback}")
             }
@@ -151,7 +153,7 @@ class RedPacketAcceptanceDecisionService @Inject constructor(
             return decision
         }
 
-        // 兜底层不带 chatReply（LLM 挂了就静默）；有则延迟 1.5s 插一条 assistant 消息
+        // 默认收下兜底不带 chatReply（LLM 挂了就静默）；有（含兜底照拒收时合格的那句）则延迟 1.5s 插一条 assistant 消息
         val reply = decision.chatReply?.trim()
         if (!reply.isNullOrEmpty()) {
             insertCharacterChatReplyWithDelay(record.conversationUuid, reply)
@@ -206,24 +208,35 @@ class RedPacketAcceptanceDecisionService @Inject constructor(
         )
     }
 
-    /** LLM 决策链：schema-retry-with-feedback（最多 [MAX_RETRIES_ON_SCHEMA_FAILURE] 次再试）。 */
+    /**
+     * LLM 决策链：schema-retry-with-feedback（最多 [MAX_RETRIES_ON_SCHEMA_FAILURE] 次再试）。全部不合格或中途断网时：
+     * 最近一条有明确表态的失败回复是「拒收」→ 照拒收（[RedPacketDecisionSalvage]）；否则 null → 调用方默认收下。
+     */
     private suspend fun tryLLMDecision(context: Context, config: ApiConfigValues): Decision? {
         var previousError: String? = null
+        var lastExplicitResponse: String? = null // 最近一条 shouldAccept 为 JSON 布尔的失败回复
         for (attempt in 0..MAX_RETRIES_ON_SCHEMA_FAILURE) {
             val (system, user) = buildPrompt(context, previousError)
-            val response = callLLMWithBackoff(system, user, context.characterName, config) ?: return null // 网络全失败 → 兜底
+            val response = callLLMWithBackoff(system, user, context.characterName, config)
+                ?: return salvageOrNull(lastExplicitResponse, context.characterName) // 网络全失败 → 看此前表态
             when (val outcome = parseAndValidate(response)) {
                 is ParseOutcome.Success -> return outcome.decision
                 is ParseOutcome.Failure -> {
                     previousError = outcome.error.description
+                    if (RedPacketDecisionSalvage.explicitAcceptIntent(response) != null) lastExplicitResponse = response
                     Log.i(TAG, "Schema 校验失败 (第 ${attempt + 1} 次):${outcome.error.description}")
                 }
             }
         }
-        return null
+        return salvageOrNull(lastExplicitResponse, context.characterName)
     }
 
-    /** 网络指数退避 1s→2s→4s（[MAX_RETRIES_ON_NETWORK_FAILURE] 次）。 */
+    private fun salvageOrNull(lastExplicitResponse: String?, characterName: String): Decision? =
+        RedPacketDecisionSalvage.salvagedRejection(lastExplicitResponse)?.also {
+            Log.w(TAG, "决策回复格式不合格但明确拒收,照拒收执行 for $characterName")
+        }
+
+    /** 网络指数退避：最多共调 [MAX_RETRIES_ON_NETWORK_FAILURE] 次，间隔 1s → 2s（最后一次失败不等）；全失败返回 null。 */
     private suspend fun callLLMWithBackoff(system: String, user: String, characterName: String, config: ApiConfigValues): String? {
         val messages = listOf(
             ChatMessageDto(role = "system", content = system),
@@ -255,7 +268,7 @@ class RedPacketAcceptanceDecisionService @Inject constructor(
         /** Schema 校验失败 retry-with-feedback 最多次数（1:1 iOS）。 */
         const val MAX_RETRIES_ON_SCHEMA_FAILURE = 2
 
-        /** 网络错误指数退避重试最多次数（1:1 iOS）。 */
+        /** 网络错误时最多共调几次（含首次；= 首次 + 2 次重试，间隔 1s → 2s·1:1 iOS）。 */
         const val MAX_RETRIES_ON_NETWORK_FAILURE = 3
 
         /** 决策温度（适度随机出个性，1:1 iOS 0.7）。 */
@@ -267,9 +280,16 @@ class RedPacketAcceptanceDecisionService @Inject constructor(
         /** 取最近对话候选条数（再过滤系统卡片后截 6 条）。 */
         private const val RECENT_FETCH_LIMIT = 30
 
-        private val json = Json { ignoreUnknownKeys = true }
+        /** chatReply 硬截断字数（1:1 iOS 40）；兜底 [RedPacketDecisionSalvage] 同口径。 */
+        const val CHAT_REPLY_MAX_LEN = 40
 
-        /** 兜底（Layer 4）：LLM 全失败默认收下（保证用户发出的钱不被吞），不带 chatReply（1:1 iOS `fallbackDecision`）。 */
+        /** rejectionReason 硬截断字数（1:1 iOS 30）；兜底 [RedPacketDecisionSalvage] 同口径。 */
+        const val REJECTION_REASON_MAX_LEN = 30
+
+        /**
+         * 兜底（Layer 4）之「默认收下」：无配置 / 断网 / 没有明确表态 / 最近表态是收下时用（1:1 iOS `fallbackDecision`），
+         * 不带 chatReply。最近明确表态是拒收的另走 [RedPacketDecisionSalvage.salvagedRejection]。
+         */
         fun fallbackDecision(): Decision = Decision(
             shouldAccept = true,
             rejectionReason = null,
@@ -283,9 +303,8 @@ class RedPacketAcceptanceDecisionService @Inject constructor(
          * 必填；chatReply 必填 ≤40 截断不含 red_packet/gift_；shouldAccept=false 时 rejectionReason 必填 ≤30 截断。
          */
         fun parseAndValidate(response: String): ParseOutcome {
-            val cleaned = MemoryService.strippingThinkingTags(response)
-            val jsonStr = JSONExtractor.extract(cleaned)
-            val obj = runCatching { json.parseToJsonElement(jsonStr) }.getOrNull() as? JsonObject
+            // 剥 think → 抽 JSON → 根对象（解析口径与兜底 [RedPacketDecisionSalvage] 共用·decisionJsonObject）
+            val obj = decisionJsonObject(response)
                 ?: return ParseOutcome.Failure(DecisionError.NotValidJSON("JSON 根对象不是 dict"))
 
             val shouldAccept = obj.boolField("shouldAccept")
@@ -302,10 +321,10 @@ class RedPacketAcceptanceDecisionService @Inject constructor(
             if (rawReply.isNullOrEmpty()) {
                 return ParseOutcome.Failure(DecisionError.MissingField("chatReply 必填(≤40 字,第一人称回用户一句话)"))
             }
-            if (rawReply.contains("red_packet") || rawReply.contains("gift_")) {
+            if (containsTechId(rawReply)) {
                 return ParseOutcome.Failure(DecisionError.InvalidField("chatReply 不得含技术 id 前缀"))
             }
-            val cappedReply = if (rawReply.length > 40) rawReply.take(40) else rawReply
+            val cappedReply = if (rawReply.length > CHAT_REPLY_MAX_LEN) rawReply.take(CHAT_REPLY_MAX_LEN) else rawReply
 
             return if (shouldAccept) {
                 ParseOutcome.Success(
@@ -315,10 +334,10 @@ class RedPacketAcceptanceDecisionService @Inject constructor(
                 if (rawRejection.isNullOrEmpty()) {
                     return ParseOutcome.Failure(DecisionError.InvalidField("shouldAccept=false 时 rejectionReason 必填(≤30 字)"))
                 }
-                if (rawRejection.contains("red_packet") || rawRejection.contains("gift_")) {
+                if (containsTechId(rawRejection)) {
                     return ParseOutcome.Failure(DecisionError.InvalidField("rejectionReason 不得含技术 id 前缀"))
                 }
-                val capped = if (rawRejection.length > 30) rawRejection.take(30) else rawRejection
+                val capped = if (rawRejection.length > REJECTION_REASON_MAX_LEN) rawRejection.take(REJECTION_REASON_MAX_LEN) else rawRejection
                 ParseOutcome.Success(
                     Decision(shouldAccept = false, rejectionReason = capped, reason = reason, isFromFallback = false, chatReply = cappedReply),
                 )
@@ -412,12 +431,6 @@ class RedPacketAcceptanceDecisionService @Inject constructor(
 
             return sys.joinToString("\n") to usr.joinToString("\n")
         }
-
-        // ── JSON 字段读取（对齐 iOS `json[key] as? Type` 严格语义） ──
-        private fun JsonObject.boolField(key: String): Boolean? =
-            (this[key] as? JsonPrimitive)?.takeIf { !it.isString }?.booleanOrNull
-
-        private fun JsonObject.stringField(key: String): String? =
-            (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
+        // JSON 字段读取 boolField / stringField 与根对象解析已搬到 RedPacketDecisionSalvage.kt（与兜底共用·只搬不改）。
     }
 }

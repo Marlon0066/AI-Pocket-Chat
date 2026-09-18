@@ -69,6 +69,8 @@ fun buildSystemPromptWithSuffixes(
     ourDaysTurnText: String = "",
     windowEarliestMillis: Long? = null,
     assistantDeliveryMode: PromptBuilder.AssistantDeliveryMode,
+    /** 真在语音通话里（透传进 [PromptBuilder.BuildContext.voiceCall]；默认 false = 旧行为）。 */
+    voiceCall: Boolean = false,
     toolCallingEnabled: Boolean,
     miniMaxVoiceTagsCapability: MiniMaxVoiceTagsCapability? = null,
     customStickers: List<CustomStickerEntity> = emptyList(),
@@ -112,6 +114,7 @@ fun buildSystemPromptWithSuffixes(
         ourDaysTurnText = ourDaysTurnText,
         windowEarliestMillis = windowEarliestMillis,
         assistantDeliveryMode = assistantDeliveryMode,
+        voiceCall = voiceCall,
         toolCallingEnabled = toolCallingEnabled,
         miniMaxVoiceTagsCapability = miniMaxVoiceTagsCapability,
         momentChatContext = momentChatContext,

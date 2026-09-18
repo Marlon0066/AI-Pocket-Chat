@@ -11,7 +11,7 @@ import kotlinx.serialization.json.JsonPrimitive
 /**
  * 导出为酒馆独立世界书 JSON（WB2·契约 §3.2）。
  * - 每条目按 ST `newWorldInfoEntryDefinition` 全字段输出（缺省字段补 §2.1 默认值 = 契约注明的白名单行为；
- *   可空字段照 ST 存盘习惯输出显式 null）；
+ *   可空字段与酒馆导出文件一致，输出显式 null）；
  * - extraJson（addMemo / outletName / triggers / characterFilter / 未知字段…）原样还原，已占用键不覆盖；
  * - entries 以 uid 为键（解析端已保证 uid 去重）、按 displayIndex 排序输出；
  * - 书级 name/description/scan_depth/token_budget/recursive_scanning 有值才输出 + 书级 extraJson 还原。

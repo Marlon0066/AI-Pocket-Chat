@@ -24,8 +24,10 @@ import com.situ.aichat.data.repository.SettingsRepository
 import com.situ.aichat.data.repository.StickerRepository
 import com.situ.aichat.economy.CharacterEconomicStateService
 import com.situ.aichat.gift.GiftHistoryPromptService
+import com.situ.aichat.meeting.FutureMeetingTool
 import com.situ.aichat.moments.MomentChatContextService
 import com.situ.aichat.offline.outgoingOfflineSessionId
+import com.situ.aichat.promise.PromiseChatTool
 import com.situ.aichat.prompt.AssistantOutputGate
 import com.situ.aichat.prompt.MessageKindInference
 import com.situ.aichat.prompt.MessageSplitter
@@ -57,6 +59,7 @@ import javax.inject.Singleton
  *  - **无打字动画 / 分段时延**：直接插入消息（对齐 iOS isViewVisible=false 跳过打字）。
  *  - **纯文字、不走语音**：后台无人听（同 BusyReplyService 不重导语音）。
  *  - **不发工具（日历/线下）**：线下已被恢复扫描过滤；日历需确认卡 UI，后台无从呈现 → 仅出纯文字回复。
+ *    暗号规则照注（装配与主路径同源），模型附的日历 / 线下 / 约见面 / 约定标记一律剥掉、动作丢弃，绝不落库。
  *  - **不触发逐回合维护**（记忆摘要/成长/关系/节拍/通知重排/补帖）：由下次前台回合或既有周期 Worker 兜账，
  *    后台触发会与活跃 VM 的 characterMetaMutex 争用并多烧 LLM。
  *  - 但**保留 mood 解析+落库**（顶栏情绪与正常回复一致）+ 表情包归一 + 向量记忆/日程/日历/朋友圈/经济/礼物上下文。
@@ -206,12 +209,22 @@ class RecoveryReplyGenerator @Inject constructor(
             config = config,
             messages = messages,
         )
-        // 与正常回复同序：parseMood → sanitize → 表情包归一（语音标签一律不保留，后台恢复纯文字）。
+        // 与正常回复同序：剥暗号 → parseMood → sanitize → 表情包归一（语音标签一律不保留，后台恢复纯文字）。
         // 卷一 A2c：**见面中**须保留线下叙事标签（[叙述]/[对话]/[场景：…]）——本管线也服务「见面期间的
         // 列表快捷回复 / 通知直接回复」，剥掉标签会让这条回复在沉浸剧场里缺席渲染结构（与主路径
         // ChatReplyDeliverer 的 preserveOfflineTags = isOffline 同源）。非见面照旧全剥。
         val inMeeting = convo.isInOfflineMode
-        val mood = ReplyParser.parseMood(rawReply, preserveOfflineTags = inMeeting, preserveMiniMaxVoiceTags = false)
+        // 暗号标记补剥（2026-09-18 提示词册核对 A 条）：本路 buildMessages 走暗号模式、非通话 → 守卫卡照注
+        // [future_meeting]{…} / [promise]{…} 两条规则，但本路没有主路径的 AssistantResponsePreprocessor，模型照规则
+        // 附了标记就会原样落库。与主路径同序剥（约见面 → 约定 → 宠物发言），动作一律丢弃——与本路不执行日历 / 线下
+        // 动作同理（见类注释）；约定由记忆摘要时的攒批对账、约见面由下次前台回合的识别扫描从对话里再认一遍。
+        val (afterMeeting, droppedMeetings) = FutureMeetingTool.parseProposalMarkers(rawReply)
+        val (afterPromise, droppedPromises) = PromiseChatTool.parseMarkers(afterMeeting)
+        val (markerFree, _) = ReplyParser.extractPetSpeech(afterPromise)
+        if (droppedMeetings.isNotEmpty() || droppedPromises.isNotEmpty()) {
+            Log.i(TAG, "未答恢复剥掉暗号动作 约见面=${droppedMeetings.size} 约定=${droppedPromises.size} conv=$conversationUuid")
+        }
+        val mood = ReplyParser.parseMood(markerFree, preserveOfflineTags = inMeeting, preserveMiniMaxVoiceTags = false)
         val sanitized = ReplyParser.sanitizeAssistantResponse(
             mood.cleanText, characterName = character.name, preserveOfflineTags = inMeeting, preserveMiniMaxVoiceTags = false,
         )

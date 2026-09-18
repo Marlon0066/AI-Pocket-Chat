@@ -183,39 +183,41 @@ object MeetingDetectionService {
                 "是在回味旧事而不是新约定——不要为它们输出 new；除此以外没有新约定就输出 {\"intent\":\"none\"}）\n" +
                 recentlyHonored.joinToString("\n") { "- 时间：${it.whenText} | 活动：${it.activity}（已赴约）" }
         }
-        return """
-            你是一个严格的信息抽取器。判断 ${uName} 和 ${charName} 在最近这段对话里，是否**明确约定了未来某天**线下见面。
-
-            当前时间：${nowText}
-
-            【判定标准】
-            - 只算**确定的约定**：双方都明确同意，或一方提议、另一方答应。
-            - **排除客套寒暄**（如「改天约」「有空再说」「下次吧」）——这些不是约定。
-            - **排除当下立刻见面**（那是另一套流程）。这里只处理**未来某天**的约定。
-            - 也要识别对【已有待定约定】的：改期(reschedule)、取消(cancel)、确认(confirm)。
-
-            【已有待定约定】
-            ${existingBlock}${honoredBlock}
-
-            【最近对话】
-            ${conversationText}
-
-            【输出】只输出一个 JSON 对象，不要任何额外文字或解释：
-            {
-              "intent": "new | reschedule | cancel | confirm | none",
-              "target_id": "（reschedule/cancel/confirm 时填上面某条 id，否则空字符串）",
-              "iso_datetime": "（依据当前时间推算的具体时间，ISO8601 带时区，如 2026-06-27T15:00:00+08:00；只到天则给当天 19:00）",
-              "raw_when": "（对话里原话的时间说法，如 周六下午）",
-              "location": "（地点，没有就空字符串）",
-              "activity": "（一起做什么，没有就空字符串）",
-              "invitation": "（${charName}口吻的一句邀约，可空）",
-              "tension_hint": "（≤12字、给用户看的隐晦暗示，可空）",
-              "hidden_tension": "（一句${charName}藏着的小心事，用户不可见，可空）",
-              "proposed_by": "character | user",
-              "confidence": "high | medium | low"
-            }
-            没有任何未来约定时，输出 {"intent":"none"}。
-        """.trimIndent()
+        // 逐行拼、不用「原始字符串 + trimIndent()」：后者先插值后去缩进，对话 / 待定约定 / 已赴约块任一跨行，
+        // 最小公共缩进就归零，模板每行的 12 格源码缩进会原样发给模型（2026-09-18 修复·单行输入逐字节不变有金标钉）。
+        return listOf(
+            "你是一个严格的信息抽取器。判断 $uName 和 $charName 在最近这段对话里，是否**明确约定了未来某天**线下见面。",
+            "",
+            "当前时间：$nowText",
+            "",
+            "【判定标准】",
+            "- 只算**确定的约定**：双方都明确同意，或一方提议、另一方答应。",
+            "- **排除客套寒暄**（如「改天约」「有空再说」「下次吧」）——这些不是约定。",
+            "- **排除当下立刻见面**（那是另一套流程）。这里只处理**未来某天**的约定。",
+            "- 也要识别对【已有待定约定】的：改期(reschedule)、取消(cancel)、确认(confirm)。",
+            "",
+            "【已有待定约定】",
+            existingBlock + honoredBlock,
+            "",
+            "【最近对话】",
+            conversationText,
+            "",
+            "【输出】只输出一个 JSON 对象，不要任何额外文字或解释：",
+            "{",
+            """  "intent": "new | reschedule | cancel | confirm | none",""",
+            """  "target_id": "（reschedule/cancel/confirm 时填上面某条 id，否则空字符串）",""",
+            """  "iso_datetime": "（依据当前时间推算的具体时间，ISO8601 带时区，如 2026-06-27T15:00:00+08:00；只到天则给当天 19:00）",""",
+            """  "raw_when": "（对话里原话的时间说法，如 周六下午）",""",
+            """  "location": "（地点，没有就空字符串）",""",
+            """  "activity": "（一起做什么，没有就空字符串）",""",
+            """  "invitation": "（${charName}口吻的一句邀约，可空）",""",
+            """  "tension_hint": "（≤12字、给用户看的隐晦暗示，可空）",""",
+            """  "hidden_tension": "（一句${charName}藏着的小心事，用户不可见，可空）",""",
+            """  "proposed_by": "character | user",""",
+            """  "confidence": "high | medium | low"""",
+            "}",
+            """没有任何未来约定时，输出 {"intent":"none"}。""",
+        ).joinToString("\n")
     }
 
     // ── 内部 ──

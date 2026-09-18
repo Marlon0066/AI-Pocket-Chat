@@ -21,6 +21,16 @@ interface NotificationTemplateDao {
     @Query("DELETE FROM notification_templates WHERE characterId = :characterId")
     suspend fun deleteForCharacter(characterId: String)
 
+    /**
+     * 原子替换该角色整池文案（删旧 + 插新同一事务）。生成器在新文案**到手之后**才调它——生成途中进程被杀，
+     * 旧池原样保留，不会留下空池（2026-09-18 修「先删后写」）。
+     */
+    @Transaction
+    suspend fun replaceForCharacter(characterId: String, templates: List<NotificationTemplateEntity>) {
+        deleteForCharacter(characterId)
+        insertAll(templates)
+    }
+
     @Query("SELECT * FROM notification_templates WHERE characterId = :characterId")
     suspend fun allForCharacter(characterId: String): List<NotificationTemplateEntity>
 

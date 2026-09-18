@@ -22,6 +22,7 @@ import com.situ.aichat.prompt.memory.MemoryService
 import com.situ.aichat.prompt.messageLlmSafeText
 import com.situ.aichat.sticker.StickerTagParser
 import com.situ.aichat.util.DateFormatters
+import com.situ.aichat.util.JSONExtractor
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.time.ZoneId
@@ -245,14 +246,19 @@ class ProactiveMessageComposer @Inject constructor(
 
         // MARK: - 解析（§3.6 锁定）
 
-        /** 解析单条：`{"message":"…"}` → 失败回退首个非空行；think 标签前置剥离；末尾走 [cleanSingleResponse]。 */
+        /**
+         * 解析单条：`{"message":"…"}`（原文，或经 [JSONExtractor] 剥代码围栏 / 取首尾花括号）→ 失败回退首个非空、
+         * 非围栏行；think 标签前置剥离；末尾走 [cleanSingleResponse]。围栏行必须跳过：未闭合围栏时 extract 原样
+         * 返回，「```json」会被当成通知正文发出去（2026-09-18 修）。
+         */
         internal fun parseSingle(raw: String): String? {
             val cleaned = MemoryService.strippingThinkingTags(raw).trim()
             if (cleaned.isEmpty()) return null
-            val wrapped = runCatching {
-                json.decodeFromString(SingleMessageWrapper.serializer(), cleaned)
-            }.getOrNull()?.message
-            val candidate = wrapped ?: cleaned.lineSequence().firstOrNull { it.isNotBlank() }
+            val wrapped = listOf(cleaned, JSONExtractor.extract(cleaned)).firstNotNullOfOrNull { candidate ->
+                runCatching { json.decodeFromString(SingleMessageWrapper.serializer(), candidate) }.getOrNull()?.message
+            }
+            val candidate = wrapped
+                ?: cleaned.lineSequence().firstOrNull { it.isNotBlank() && !it.trimStart().startsWith("```") }
             return candidate?.let { cleanSingleResponse(it) }
         }
 

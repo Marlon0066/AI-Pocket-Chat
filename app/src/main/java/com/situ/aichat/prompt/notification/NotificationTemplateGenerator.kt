@@ -53,8 +53,8 @@ class NotificationTemplateGenerator @Inject constructor(
         relationship: String?,
         config: ApiConfigValues?,
     ) {
-        templateDao.deleteForCharacter(character.uuid)
-
+        // 不在这里先删旧池：下面要调模型（最多 3 次 + 间隔），途中进程被杀会留下空池。
+        // 两条写路径（模型文案 / 默认文案）都在拿到新文案后经 replaceForCharacter 一个事务换掉整池。
         if (config == null || config.apiKey.isEmpty() || config.baseUrl.isEmpty() || config.modelName.isEmpty()) {
             Log.i(TAG, "未配置 API，使用默认文案：${character.name}")
             saveDefaultTemplates(character.uuid)
@@ -74,7 +74,7 @@ class NotificationTemplateGenerator @Inject constructor(
             }
             try {
                 val templates = callApiForTemplates(character, relationship, config, userName)
-                templateDao.insertAll(templates)
+                templateDao.replaceForCharacter(character.uuid, templates)
                 Log.i(TAG, "文案生成成功：${character.name}，共 ${templates.size} 条")
                 return
             } catch (e: Exception) {
@@ -140,18 +140,8 @@ class NotificationTemplateGenerator @Inject constructor(
 
     /** 把解析失败的回复发给 LLM 修复为合法 JSON（低温度、小 token）。对齐 iOS `repairJSON`。 */
     private suspend fun repairJson(raw: String, config: ApiConfigValues): Map<String, List<String>>? {
-        val repairPrompt = """
-            你是 JSON 修复器。以下文本应该是一个合法的 JSON 对象，包含 6 个键，每个键对应一个字符串数组：
-            {"streak_remind":[...],"streak_urgent":[...],"streak_broken":[...],"morning":[...],"evening":[...],"random":[...]}
-
-            修复规则：
-            1. 只输出修复后的合法 JSON，不要任何解释或 markdown 代码块
-            2. 保留原始文案内容，只修复 JSON 格式问题
-            3. 字符串内的双引号用 \" 转义
-            4. 确保所有括号和引号正确匹配
-        """.trimIndent()
         val messages = listOf(
-            ChatMessageDto(role = "system", content = repairPrompt),
+            ChatMessageDto(role = "system", content = buildRepairPrompt()),
             ChatMessageDto(role = "user", content = raw),
         )
         val repaired = runCatching {
@@ -248,7 +238,7 @@ class NotificationTemplateGenerator @Inject constructor(
                 NotificationTemplateEntity(characterId = characterId, category = category, content = it)
             }
         }
-        templateDao.insertAll(templates)
+        templateDao.replaceForCharacter(characterId, templates)
     }
 
     /** 保底默认文案（API 不可用 / 失败时使用）。en 逐字对齐 iOS；zh 为本地化译文（仅极少触发的兜底）。 */
@@ -282,6 +272,24 @@ class NotificationTemplateGenerator @Inject constructor(
             "pet_sick" to 2,
             "pet_milestone" to 2,
         )
+
+        /**
+         * JSON 修复提示词。键数与骨架由 [CATEGORY_REQUIREMENTS] 派生——原先写死「6 个键」且漏了宠物 3 类，
+         * 走修复路径时模型会把宠物分类丢掉（剩 20 条仍过半数门槛照常入库），宠物提醒随之无文案。
+         */
+        internal fun buildRepairPrompt(): String {
+            val skeleton = CATEGORY_REQUIREMENTS.joinToString(",", "{", "}") { (category, _) -> "\"$category\":[...]" }
+            return listOf(
+                "你是 JSON 修复器。以下文本应该是一个合法的 JSON 对象，包含 ${CATEGORY_REQUIREMENTS.size} 个键，每个键对应一个字符串数组：",
+                skeleton,
+                "",
+                "修复规则：",
+                "1. 只输出修复后的合法 JSON，不要任何解释或 markdown 代码块",
+                "2. 保留原始文案内容，只修复 JSON 格式问题",
+                "3. 字符串内的双引号用 \\\" 转义",
+                "4. 确保所有括号和引号正确匹配",
+            ).joinToString("\n")
+        }
 
         /** 多候选解析 LLM 回复为 `分类→文案数组`：清理后原文 + JSONExtractor 提取，均失败返回 null。纯函数。 */
         internal fun parseTemplatesMap(cleaned: String): Map<String, List<String>>? {

@@ -43,7 +43,8 @@ internal class MemoryAnalysisTrigger(
     private val userProfileDao: UserProfileDao,
     /**
      * 结构化记忆抽取**成功写回后**的回调（活人感二期 M3·重烤钩子·图纸 §3.3）：用来触发通知文案重烤，
-     * 让日常推送随最新称呼 / 内部梗 / 共同喜欢个性化。**仅成功路径调**（失败 / 静默不调·E10）。
+     * 让日常推送随最新称呼 / 内部梗 / 共同喜欢个性化。**仅成功路径调**（失败 / 静默不调·E10）；
+     * 0 字段丢弃路径（[StructuredMemoryCoordinator.extractAndPersist] 返回 false·记忆没变）同样不调。
      */
     private val onStructuredMemoryExtracted: (characterUuid: String) -> Unit,
 ) {
@@ -218,9 +219,8 @@ internal class MemoryAnalysisTrigger(
             userName = userName,
         )
         try {
-            attempt()
-            // 成功写回 → 触发重烤钩子（活人感二期 M3·E10：仅成功路径）。
-            onStructuredMemoryExtracted(characterUuid)
+            // 真写回了新记忆 → 触发重烤钩子（活人感二期 M3·E10：仅成功路径）；0 字段丢弃返回 false，不重烤。
+            if (attempt()) onStructuredMemoryExtracted(characterUuid)
         } catch (_: StructuredMemoryError) {
             // 解析失败 / 无消息：确定性错误，重试结果不会变
         } catch (e: Exception) {
@@ -228,9 +228,8 @@ internal class MemoryAnalysisTrigger(
             // 瞬态错误（网络超时/限流等）：延迟 2s 重试一次
             delay(2_000)
             try {
-                attempt()
-                // 重试成功写回 → 同样触发重烤钩子（E10）。
-                onStructuredMemoryExtracted(characterUuid)
+                // 重试真写回 → 同样触发重烤钩子（E10）；丢弃同样不重烤。
+                if (attempt()) onStructuredMemoryExtracted(characterUuid)
             } catch (e2: Exception) {
                 if (e2 is CancellationException) throw e2
                 // 重试仍失败：静默

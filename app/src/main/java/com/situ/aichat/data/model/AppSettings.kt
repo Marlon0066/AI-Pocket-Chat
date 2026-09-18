@@ -44,7 +44,7 @@ data class AppSettings(
     /** 向量检索余弦阈值（整数百分比 0-100，0=关闭）。对齐 iOS：默认 65（= 0.65）。 */
     val vectorSearchThreshold: Int = 65,
 
-    // 世界书触发设置（WB7c·契约 FABLE5_WORLDBOOK_PROPOSAL.md §12.7；默认值照 ST 全局默认 + D4 字符预算）
+    // 世界书触发设置（WB7c·契约 FABLE5_WORLDBOOK_PROPOSAL.md §12.7；默认值与酒馆全局默认一致 + D4 字符预算）
     /** 世界书扫描深度：回看最近 N 条消息找关键词。 */
     val worldInfoScanDepth: Int = 2,
     /** 世界书篇幅预算（字符·D4 拍板默认 6000 字）。 */

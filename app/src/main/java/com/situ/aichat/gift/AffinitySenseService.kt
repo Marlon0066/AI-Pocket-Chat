@@ -138,29 +138,31 @@ class AffinitySenseService @Inject constructor(
             val speakingStyle = character.speakingStyle.ifEmpty { "日常口语" }
             val systemSection = if (character.systemPrompt.isEmpty()) "" else "\n角色设定：${character.systemPrompt}"
 
-            val system = """
-                你是「${character.name}」。
-                人设：$personality$systemSection
-                说话风格：$speakingStyle
-                与"我"（用户）当前的关系：$relationship
-
-                请为你自己生成一组"收到我送的礼物时的心意反馈文案"。这些文案会在我送礼后的反应页上显示，
-                目的是让我感受到你真实的情绪反应，而不是看到"+10 好感度"这种冰冷的数字。
-
-                生成要求：
-                1. 按 3 档情感强度各给 8 条，再给 6 条"手作礼物专属副标签"：
-                   - low（轻微触动）：礼物普通，反应平淡但还是被打动一点
-                   - mid（明显开心）：送到心坎，看得出来心情变好
-                   - high（强烈感动）：非常贵 / 非常惊喜 / 罕见心意
-                   - handmade（手作副标签）：叠加在手作礼物时显示的短标签
-                2. 每条 8-18 字（handmade 副标签 3-8 字）
-                3. 用你的性格口吻和说话风格，第一或第三人称皆可（按更自然的选）
-                4. 避免笼统词（"好开心"、"谢谢你"），要有画面感或性格特征
-                5. 8 条之间要有差异，不要重复同一种表达
-
-                严格以 JSON 输出，不要任何其他文字、不要 markdown：
-                {"version":1,"low":["..."×8],"mid":["..."×8],"high":["..."×8],"handmade":["..."×6]}
-            """.trimIndent()
+            // 逐行拼、不用「原始字符串 + trimIndent()」：后者先插值后去缩进，systemSection 自带换行或人设等任一插值跨行，
+            // 最小公共缩进就归零，模板每行的 16 格源码缩进会原样发给模型（2026-09-18 修复·单行输入逐字节不变有金标钉）。
+            val system = listOf(
+                "你是「${character.name}」。",
+                "人设：$personality$systemSection",
+                "说话风格：$speakingStyle",
+                "与\"我\"（用户）当前的关系：$relationship",
+                "",
+                "请为你自己生成一组\"收到我送的礼物时的心意反馈文案\"。这些文案会在我送礼后的反应页上显示，",
+                "目的是让我感受到你真实的情绪反应，而不是看到\"+10 好感度\"这种冰冷的数字。",
+                "",
+                "生成要求：",
+                "1. 按 3 档情感强度各给 8 条，再给 6 条\"手作礼物专属副标签\"：",
+                "   - low（轻微触动）：礼物普通，反应平淡但还是被打动一点",
+                "   - mid（明显开心）：送到心坎，看得出来心情变好",
+                "   - high（强烈感动）：非常贵 / 非常惊喜 / 罕见心意",
+                "   - handmade（手作副标签）：叠加在手作礼物时显示的短标签",
+                "2. 每条 8-18 字（handmade 副标签 3-8 字）",
+                "3. 用你的性格口吻和说话风格，第一或第三人称皆可（按更自然的选）",
+                "4. 避免笼统词（\"好开心\"、\"谢谢你\"），要有画面感或性格特征",
+                "5. 8 条之间要有差异，不要重复同一种表达",
+                "",
+                "严格以 JSON 输出，不要任何其他文字、不要 markdown：",
+                """{"version":1,"low":["..."×8],"mid":["..."×8],"high":["..."×8],"handmade":["..."×6]}""",
+            ).joinToString("\n")
 
             val user = "现在请按上述规则为你自己生成这组文案。"
             return system to user

@@ -8,11 +8,11 @@ import kotlinx.serialization.json.JsonObject
 
 /**
  * 角色卡 V2/V3 内嵌世界书（character_book）解析（WB2·契约 §3.1-2）。
- * 映射**逐行照抄酒馆 `convertCharacterBook()` 语义**（world-info.js·2026-07-02 取样）：
+ * 映射**与酒馆导入角色卡世界书的结果保持一致**（参照其 `convertCharacterBook()` 行为·2026-07-02 核对）：
  * - 卡条目的 ST 专属设置藏在 `entry.extensions` 里（snake_case）：`extensions.position` 数字覆盖
  *   `position: 'before_char'/'after_char'` 字符串、probability/depth/selectiveLogic/sticky… 全从 extensions 读；
  * - **卡格式独有默认值分叉**：`selective` 缺省 = false（独立格式 = true）、`position` 缺省 = after(1)；
- * - `extensions` 整包保留（照 ST——它转换后也把 extensions 原样挂回条目上）；
+ * - `extensions` 整包保留（与酒馆一致——它导入后也把 extensions 原样挂回条目上）；
  *   卡独有字段（priority / name / 条目级 case_sensitive——ST 转换器同样忽略它）与未知字段一并进 extraJson 不丢。
  */
 internal object WorldBookCardParser {
@@ -68,7 +68,7 @@ internal object WorldBookCardParser {
             comment = obj.lenientString("comment") ?: "",
             content = obj.lenientString("content") ?: "",
             constant = obj.lenientBool("constant") ?: false,
-            // 卡格式默认 false（照 ST 转换器），≠ 独立格式默认 true。
+            // 卡格式默认 false（与酒馆导入一致），≠ 独立格式默认 true。
             selective = obj.lenientBool("selective") ?: false,
             vectorized = ext.lenientBool("vectorized") ?: false,
             selectiveLogic = ext.lenientInt("selectiveLogic") ?: 0,

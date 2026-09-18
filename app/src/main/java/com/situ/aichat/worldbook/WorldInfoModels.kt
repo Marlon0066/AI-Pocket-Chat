@@ -25,7 +25,7 @@ fun interface WorldInfoRng {
 enum class WorldInfoInsertionStrategy { EVENLY, CHARACTER_FIRST, GLOBAL_FIRST }
 
 /**
- * 全局设置。默认值照 ST 源码 `world-info.js` 全局默认（契约 §2.3）；预算按 D4 拍板字符化（默认 6000 字）。
+ * 全局设置。默认值与酒馆全局设置的默认值一致（契约 §2.3）；预算按 D4 拍板字符化（默认 6000 字）。
  * 书级 scan_depth / token_budget / recursive_scanning 只存储不生效——ST 自身同样不应用它们（引擎与 ST 行为对齐）。
  */
 data class WorldInfoSettings(

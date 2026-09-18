@@ -4,8 +4,8 @@ import com.situ.aichat.data.local.entity.WorldBookEntryEntity
 import kotlinx.serialization.json.JsonObject
 
 /**
- * 酒馆独立世界书条目 → 实体的核心映射（WB2）。字段名与默认值照 ST 源码
- * `newWorldInfoEntryDefinition` 对表（契约 §2.1），默认值单源 = [WorldBookEntryEntity] 构造默认。
+ * 酒馆独立世界书条目 → 实体的核心映射（WB2）。字段名与默认值按酒馆世界书格式
+ * 对齐（契约 §2.1），默认值单源 = [WorldBookEntryEntity] 构造默认。
  * 未消费字段（addMemo / outletName / automationId / triggers / characterFilter / match* / extensions / 未知）
  * 整包进 extraJson，导出时原样还原。
  */

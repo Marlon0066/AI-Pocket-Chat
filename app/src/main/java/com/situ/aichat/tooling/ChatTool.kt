@@ -40,7 +40,8 @@ internal data class ChatToolContext(
     val offlineMeeting: Boolean = false,
     /**
      * 本轮是否是语音通话回合（图纸 2026-09-06 约定工具调用化 §0.②-7）：通话侧无人解析文本暗号，
-     * 注入暗号规则只会让 JSON 被 TTS 念出来 → 约定暗号规则不注入。
+     * 注入暗号规则只会让 JSON 被 TTS 念出来 → 约定 / 约见面 / 线下邀约三条规则都不注入（约见面、线下自 2026-09-18）。
+     * 取值 = `scene == VOICE_CALL`，**不是** `deliveryMode == VOICE`（聊天里的语音消息回合照常剥暗号、照常注入）。
      */
     val voiceCall: Boolean = false,
 )
@@ -68,9 +69,12 @@ internal object OfflineChatTool : ChatTool {
         OfflineMeetingAction.toolDefinitions(ctx.canInitiateOffline)
             .filter { ctx.allowEndMeeting || it.function.name != "end_offline_meeting" }
 
-    /** 仅「角色可主动发起线下见面」时贡献：工具路→工具版、暗号路→降级版（1:1 旧 PromptBuilder 第 5 步）。 */
+    /**
+     * 仅「角色可主动发起线下见面」且非通话时贡献：工具路→工具版、暗号路→降级版（1:1 旧 PromptBuilder 第 5 步）。
+     * 通话里不做正式邀约（用户拍板 2026-09-18）：通话侧不建邀约卡，且 `[offline_invite|…]` 会被 TTS 按「~」切开念出来。
+     */
     override fun stepFiveGuardPrompt(ctx: ChatToolContext): String? =
-        if (!ctx.canInitiateOffline) null
+        if (!ctx.canInitiateOffline || ctx.voiceCall) null
         else if (ctx.toolCallingEnabled) OfflineMeetingAction.TOOL_CALLING_PROMPT
         else OfflineMeetingAction.FALLBACK_PROMPT
 }
@@ -80,9 +84,12 @@ internal object FutureMeetingChatTool : ChatTool {
     override fun toolDefinitions(ctx: ChatToolContext): List<ToolDefinitionDto> =
         listOf(FutureMeetingTool.toolDefinition)
 
-    /** 仅暗号路贡献降级文本规则；工具路靠 tools 数组里的 schema，无需 prompt（1:1 旧 PromptBuilder 第 5 步）。 */
+    /**
+     * 仅「暗号路且非通话」贡献降级文本规则；工具路靠 tools 数组里的 schema，无需 prompt（1:1 旧 PromptBuilder 第 5 步）。
+     * 通话侧无人解析 `[future_meeting]`（2026-09-18·同 [PromiseChatTool] 的 voiceCall 门），注入只会被 TTS 念出来 + 原样落库。
+     */
     override fun stepFiveGuardPrompt(ctx: ChatToolContext): String? =
-        if (!ctx.toolCallingEnabled) FutureMeetingTool.FALLBACK_MARKER_RULE else null
+        if (!ctx.toolCallingEnabled && !ctx.voiceCall) FutureMeetingTool.FALLBACK_MARKER_RULE else null
 }
 
 /**

@@ -18,6 +18,8 @@ import java.time.Instant
  * - 措辞（纯函数）：带真实用户名（{{user}} 同理·由角色直读的提示词用真名字更自然），无昵称回退「对方」。
  * - 装配接线：[PromptBuilder.buildMessages] 仅在「非通话中 且 历史含通话消息」时注入【历史提示】，
  *   且把 `userProfile?.nickname` 穿透进去（缺昵称 → 「对方」）。
+ * - 「通话中」= 真通话 scene=VOICE_CALL（2026-09-18 D-2）；聊天里发语音消息的回合 deliveryMode 也是 VOICE，
+ *   但不是通话，与文字回合同样注入。
  *
  * 备注：`【历史提示】` 段头是 [ReplyParser] 的输出剥离锚点——本改动只动正文人称、不碰段头。
  */
@@ -45,7 +47,12 @@ class VoiceCallHistoryHintTest {
 
     // ── 装配接线（Robolectric·present/absent + 名字穿透） ──
 
-    private fun assembledSystemText(withVoiceCallMsg: Boolean, nickname: String): String {
+    private fun assembledSystemText(
+        withVoiceCallMsg: Boolean,
+        nickname: String,
+        deliveryMode: PromptBuilder.AssistantDeliveryMode = PromptBuilder.AssistantDeliveryMode.TEXT,
+        scene: PromptScene = PromptScene.ONLINE_CHAT,
+    ): String {
         val strings = PromptStrings(RuntimeEnvironment.getApplication())
         val character = CharacterEntity(uuid = "c1", name = "小雨", creationDate = 0L)
         val user = UserProfileEntity(nickname = nickname)
@@ -71,6 +78,8 @@ class VoiceCallHistoryHintTest {
             appSettings = AppSettings(),
             strings = strings,
             now = Instant.ofEpochMilli(1_700_000_000_000L),
+            assistantDeliveryMode = deliveryMode,
+            scene = scene,
         ).filter { it.role == "system" }.joinToString("\n") { it.content.orEmpty() }
     }
 
@@ -88,5 +97,26 @@ class VoiceCallHistoryHintTest {
     @Test fun assembly_omits_hint_when_no_voice_call_history() {
         val s = assembledSystemText(withVoiceCallMsg = false, nickname = "小明")
         assertFalse("历史无通话消息 → 绝不注入历史提示", s.contains("【历史提示】"))
+    }
+
+    // ── 「通话中」判定（2026-09-18 D-2）：真通话 = scene=VOICE_CALL；聊天语音消息回合不是通话 ──
+
+    @Test fun assembly_omits_hint_during_real_voice_call() {
+        val s = assembledSystemText(
+            withVoiceCallMsg = true, nickname = "小明",
+            deliveryMode = PromptBuilder.AssistantDeliveryMode.VOICE, scene = PromptScene.VOICE_CALL,
+        )
+        // 正向锚（防「整份提示词没装配」的假绿）：守卫卡的反元守卫在。
+        assertTrue("通话回合系统提示应已装配", s.contains("绝对禁令"))
+        assertFalse("真通话中 → 不注入历史提示", s.contains("【历史提示】"))
+    }
+
+    @Test fun assembly_injects_hint_in_chat_voice_message_turn() {
+        // deliveryMode=VOICE 但 scene=在线聊天：聊天里计划发语音消息的回合，不是通话 → 与文字回合一样注入。
+        val s = assembledSystemText(
+            withVoiceCallMsg = true, nickname = "小明",
+            deliveryMode = PromptBuilder.AssistantDeliveryMode.VOICE, scene = PromptScene.ONLINE_CHAT,
+        )
+        assertTrue("语音消息回合 + 历史含通话消息 → 应注入历史提示", s.contains("来自之前与小明语音通话的消息"))
     }
 }

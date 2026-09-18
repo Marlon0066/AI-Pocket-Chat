@@ -13,7 +13,11 @@ import com.situ.aichat.R
  */
 object NotificationFallbackText {
 
-    /** 取一条该分类的保底文案；未知分类回退 streak_remind（对齐 iOS default 分支）。 */
+    /**
+     * 取一条该分类的保底文案；未知分类回退 streak_remind（对齐 iOS default 分支）。
+     * 宠物饿/病两类单列（2026-09-18）：落 else 会给宠物提醒配上「今天还没聊天」类文案，答非所问——
+     * 直接用默认文案池的同一份宠物短句，不另立资源。
+     */
     fun pick(context: Context, category: String): String {
         val arrayRes = when (category) {
             "streak_remind" -> R.array.notif_fallback_streak_remind
@@ -22,6 +26,8 @@ object NotificationFallbackText {
             "morning" -> R.array.notif_fallback_morning
             "evening" -> R.array.notif_fallback_evening
             "random" -> R.array.notif_fallback_random
+            "pet_hungry" -> R.array.notif_default_pet_hungry
+            "pet_sick" -> R.array.notif_default_pet_sick
             else -> R.array.notif_fallback_streak_remind
         }
         return context.resources.getStringArray(arrayRes).randomOrNull() ?: ""

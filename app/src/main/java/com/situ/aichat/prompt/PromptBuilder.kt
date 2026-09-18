@@ -149,6 +149,8 @@ object PromptBuilder {
         val ourDaysTurnText: String = "",
         val windowEarliestMillis: Long? = null,
         val assistantDeliveryMode: AssistantDeliveryMode,
+        /** 本轮是否真在语音通话里（scene=VOICE_CALL；≠ deliveryMode=VOICE，后者也含聊天语音消息回合）：通话侧无人解析暗号类标记。 */
+        val voiceCall: Boolean = false,
         val toolCallingEnabled: Boolean,
         /** MiniMax 语气标签前门判定（P10.1c）。null = 不注入；只有 shouldInjectTagsHint 时才追加教学。 */
         val miniMaxVoiceTagsCapability: MiniMaxVoiceTagsCapability? = null,
@@ -333,6 +335,9 @@ object PromptBuilder {
         // 模块语境二值化（两语境模型）：模块过滤与内容分版只问「是否线下」——语音/忙碌等一切
         // 非线下场景按在线聊天位走，勾选 UI（两行开关）与运行行为恒一致。时间分割线等场景语义仍用 effectiveScene。
         val moduleScene = if (isCurrentlyInOfflineMode) PromptScene.OFFLINE_MEETING else PromptScene.ONLINE_CHAT
+        // 真通话判定单源（2026-09-18）：只有 VoiceCallTurnService 传 VOICE_CALL。别拿 assistantDeliveryMode 判——聊天里计划发
+        // 语音消息的回合也是 VOICE，那条路照常剥暗号（ChatReplyDeliverer），不该被当成通话挡掉暗号规则。
+        val isVoiceCallScene = effectiveScene == PromptScene.VOICE_CALL
 
         // 0. 短期窗口预计算（方案 G2）
         val (filteredMessages, _, truncationNotes) = prepareFilteredRecentMessages(
@@ -381,6 +386,7 @@ object PromptBuilder {
             promises = promises,
             ourDays = ourDays, ourDaysTurnText = ourDaysTurnText, windowEarliestMillis = windowEarliestMillis, // 卷二
             assistantDeliveryMode = assistantDeliveryMode,
+            voiceCall = isVoiceCallScene,
             toolCallingEnabled = toolCallingEnabled,
             miniMaxVoiceTagsCapability = miniMaxVoiceTagsCapability,
             momentChatContext = momentChatContext,
@@ -424,11 +430,10 @@ object PromptBuilder {
             )
         }
 
-        // 2.2 历史回顾语义提示
-        val isCurrentlyInVoiceCall = assistantDeliveryMode == AssistantDeliveryMode.VOICE
+        // 2.2 历史回顾语义提示（通话中不注入：按真通话 isVoiceCallScene 判，聊天语音消息回合与文字回合同样注入·2026-09-18）
         // （原「历史含线下见面 → OFFLINE_HISTORY_HINT」分支已随「见面去重」后线下消息不再进在线窗口成死代码，
         //   2026-07-13 移除；线下叙事不再渗进在线历史，普通聊天由核心规则 r4 常驻兜底。）
-        if (!isCurrentlyInVoiceCall && filteredMessages.any { it.isPartOfVoiceCall }) {
+        if (!isVoiceCallScene && filteredMessages.any { it.isPartOfVoiceCall }) {
             chatMessages.add(ChatMessageDto(role = ROLE_SYSTEM, content = buildVoiceCallHistoryHint(userProfile?.nickname)))
         }
 
@@ -580,15 +585,15 @@ object PromptBuilder {
             }
             // ── 守卫卡（刀2 装订）：反元 → 工具，簇内相对序沿用旧布局，空行拼接为一条。
             // 工具守卫提示词（①·C-5·遍历活跃工具盒子 [chatToolRegistry] 取各自 step5 守卫段·≡旧硬编码）：
-            // - 线下见面（仅「角色可主动发起」时）：工具路→工具版规则、暗号路→[offline_invite|…] 降级指令（ReplyParser 剥标记·未建 M16 不破坏 UI）。
-            // - 约定未来见面（仅暗号路）：附 [future_meeting]{...} 标记规则（preprocess 剥除·不泄露成气泡）；工具路工具定义已在
+            // - 线下见面（仅「角色可主动发起」且非通话）：工具路→工具版规则、暗号路→[offline_invite|…] 降级指令（ReplyParser 剥标记·未建 M16 不破坏 UI）。
+            // - 约定未来见面（仅暗号路且非通话）：附 [future_meeting]{...} 标记规则（preprocess 剥除·不泄露成气泡）；工具路工具定义已在
             //   tools 数组下发、无需 prompt。不受「可主动发起见面」开关约束——未来约定双方都可提。
             // 日历不在此（经其感知模块注入）。线下见面期间（非本 else 分支）整段不注入。遍历顺序=registry 顺序，与旧注入顺序一致。
             val toolGuardCtx = ChatToolContext(
                 toolCallingEnabled = toolCallingEnabled,
                 includeCalendarTool = appSettings.calendarIntegrationEnabled,
                 canInitiateOffline = appSettings.characterCanInitiateOfflineMeeting,
-                voiceCall = isCurrentlyInVoiceCall, // 通话回合无人解析暗号 → 约定暗号规则不注入（图纸 2026-09-06 §0.②-7）
+                voiceCall = isVoiceCallScene, // 通话回合无人解析暗号 → 约定 / 约见面 / 线下邀约规则都不注入（图纸 2026-09-06 §0.②-7 · 2026-09-18）
             )
             val guardParts = mutableListOf(buildAntiMetaCognitiveGuard(character.name, userProfile?.nickname))
             for (tool in chatToolRegistry) {

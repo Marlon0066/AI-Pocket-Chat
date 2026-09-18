@@ -35,7 +35,7 @@ import kotlinx.serialization.json.intOrNull
  * ## 稳定性 4 层
  * 1. **Prompt 严格约束**：明确告知 JSON schema + 硬性约束。
  * 2. **Schema 校验**：解析后严格检查，不合规 → retry-with-feedback（[MAX_RETRIES_ON_SCHEMA_FAILURE] 次）。
- * 3. **网络重试**：LLM 调用失败 → 指数退避 1s→2s→4s（[MAX_RETRIES_ON_NETWORK_FAILURE] 次）。
+ * 3. **网络重试**：LLM 调用失败 → 最多共调 [MAX_RETRIES_ON_NETWORK_FAILURE] 次，两次之间退避 1s → 2s（第三次失败不再等、直接放弃）。
  * 4. **Rule-based 兜底**：全失败 → 从候选随机挑 1 件 + 预置模板文案（永不 shouldSend=false 除非候选与全局池皆空）。
  *
  * iOS 是 `@MainActor enum`；安卓改 `@Singleton` class（注 [LlmClient]）。决策的纯逻辑（parseAndValidate / fallback /
@@ -133,7 +133,7 @@ class ProactiveGiftLLMService @Inject constructor(
         return null
     }
 
-    /** 网络指数退避 1s→2s→4s（1:1 iOS `callLLMWithBackoff`，[MAX_RETRIES_ON_NETWORK_FAILURE] 次）。 */
+    /** 网络指数退避（1:1 iOS `callLLMWithBackoff`）：最多共调 [MAX_RETRIES_ON_NETWORK_FAILURE] 次，间隔 1s → 2s；全失败返回 null。 */
     private suspend fun callLLMWithBackoff(system: String, user: String, characterName: String, config: ApiConfigValues): String? {
         val messages = listOf(
             ChatMessageDto(role = "system", content = system),
@@ -152,7 +152,7 @@ class ProactiveGiftLLMService @Inject constructor(
             } catch (e: Exception) {
                 Log.i(TAG, "LLM 调用失败 (第 ${attempt + 1} 次):${e.message}")
                 if (attempt < MAX_RETRIES_ON_NETWORK_FAILURE - 1) {
-                    delay((2.0.pow(attempt) * 1000).toLong()) // 1s → 2s → 4s
+                    delay((2.0.pow(attempt) * 1000).toLong()) // 第 1 次失败后等 1s、第 2 次后等 2s；最后一次失败不等
                 }
             }
         }
@@ -165,7 +165,7 @@ class ProactiveGiftLLMService @Inject constructor(
         /** Schema 校验失败时的 retry-with-feedback 最多次数。 */
         const val MAX_RETRIES_ON_SCHEMA_FAILURE = 2
 
-        /** 网络错误时的指数退避重试最多次数。 */
+        /** 网络错误时最多共调几次（含首次；= 首次 + 2 次重试，间隔 1s → 2s）。 */
         const val MAX_RETRIES_ON_NETWORK_FAILURE = 3
 
         private val json = Json { ignoreUnknownKeys = true }

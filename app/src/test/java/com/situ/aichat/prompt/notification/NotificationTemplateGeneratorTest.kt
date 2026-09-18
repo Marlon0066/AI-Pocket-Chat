@@ -8,6 +8,7 @@ import com.situ.aichat.data.model.ApiProviderType
 import com.situ.aichat.data.model.StructuredMemory
 import com.situ.aichat.data.remote.llm.ApiConfigValues
 import com.situ.aichat.data.remote.llm.ChatMessageDto
+import com.situ.aichat.data.remote.llm.LlmClient
 import com.situ.aichat.diagnostics.ContextLogService
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -140,7 +141,7 @@ class NotificationTemplateGeneratorTest {
         modelName = "m",
     )
 
-    // 20 条（≥ 27/2 门槛）确保 parseResponse 不回落默认，走 insertAll 成功路径。
+    // 20 条（≥ 27/2 门槛）确保 parseResponse 不回落默认，走 replaceForCharacter 成功路径。
     private val validTemplatesJson =
         """{"streak_remind":["a","b","c","d","e"],"streak_urgent":["f","g","h"],""" +
             """"streak_broken":["i","j","k"],"morning":["l","m","n"],""" +
@@ -177,5 +178,58 @@ class NotificationTemplateGeneratorTest {
         val userMsg = capturedUserPrompt(null)
         assertTrue("空昵称 → 兜底「用户」", userMsg.contains("和用户的关系：恋人"))
         assertFalse("未兜底会渲染空名", userMsg.contains("和的关系"))
+    }
+
+    // ---- 2026-09-18 五处小修 #2：JSON 修复提示词必须列全 9 个分类键（原写死 6 键、漏宠物 3 类） ----
+
+    /**
+     * 首次回复解析失败 → 走 LLM 修复；截获修复那一次的 system 提示词。键名在此**重新打字**（不引用
+     * CATEGORY_REQUIREMENTS），漏任何一个 = 修复后的 JSON 可能丢掉该分类（宠物提醒随之无文案）。
+     */
+    @Test fun repairPrompt_listsAllNineCategoryKeys() = runBlocking {
+        val contextLog = mockk<ContextLogService>()
+        coEvery {
+            contextLog.completion(any(), any(), any(), any(), any(), any(), any(), any(), any())
+        } returns "文案如下：streak_remind 是……（不是 JSON）"
+        val llmClient = mockk<LlmClient>()
+        val repairMessages = slot<List<ChatMessageDto>>()
+        coEvery {
+            llmClient.completion(capture(repairMessages), any(), any(), any(), any(), any(), any())
+        } returns validTemplatesJson
+        val userProfileDao = mockk<UserProfileDao>()
+        coEvery { userProfileDao.get() } returns null
+        val gen = NotificationTemplateGenerator(
+            context = mockk(relaxed = true),
+            llmClient = llmClient,
+            contextLog = contextLog,
+            templateDao = mockk(relaxed = true),
+            userProfileDao = userProfileDao,
+        )
+
+        gen.generateAndSave(character(StructuredMemory.EMPTY), relationship = null, config = config)
+
+        val repairSystem = repairMessages.captured.first { it.role == "system" }.content.orEmpty()
+        val keys = listOf(
+            "streak_remind", "streak_urgent", "streak_broken", "morning", "evening", "random",
+            "pet_hungry", "pet_sick", "pet_milestone",
+        )
+        for (key in keys) assertTrue("修复提示词缺键 $key", repairSystem.contains("\"$key\":[...]"))
+        assertTrue("键数说明与 9 键一致", repairSystem.contains("包含 9 个键"))
+        assertFalse(repairSystem.contains("包含 6 个键"))
+    }
+
+    /** #2 全文钉：除键数与骨架补齐外，修复规则四条与修前逐字一致（第 3 条里的 \" 是字面反斜杠+引号）。 */
+    @Test fun buildRepairPrompt_fullText() {
+        val expected = """
+            你是 JSON 修复器。以下文本应该是一个合法的 JSON 对象，包含 9 个键，每个键对应一个字符串数组：
+            {"streak_remind":[...],"streak_urgent":[...],"streak_broken":[...],"morning":[...],"evening":[...],"random":[...],"pet_hungry":[...],"pet_sick":[...],"pet_milestone":[...]}
+
+            修复规则：
+            1. 只输出修复后的合法 JSON，不要任何解释或 markdown 代码块
+            2. 保留原始文案内容，只修复 JSON 格式问题
+            3. 字符串内的双引号用 \" 转义
+            4. 确保所有括号和引号正确匹配
+        """.trimIndent()
+        assertEquals(expected, NotificationTemplateGenerator.buildRepairPrompt())
     }
 }

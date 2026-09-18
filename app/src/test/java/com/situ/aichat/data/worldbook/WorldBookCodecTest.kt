@@ -17,7 +17,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * 世界书编解码 T1（WB2·契约 §2.1/§3）：字段映射与默认值照 ST 源码对表独立反推断言；
+ * 世界书编解码 T1（WB2·契约 §2.1/§3）：字段映射与默认值按酒馆格式独立断言；
  * round-trip 承诺 = 已知列逐项一致 + 未知字段原样保留 + 二次导出达到不动点（导出补默认值白名单行为）。
  */
 class WorldBookCodecTest {
@@ -314,7 +314,7 @@ class WorldBookCodecTest {
         assertEquals("g1", e.groupName)
         assertEquals(2, e.sticky)
         assertTrue(e.excludeRecursion)
-        assertNull("条目级 case_sensitive 照 ST 转换器忽略（只认 extensions 里的）", e.caseSensitive)
+        assertNull("条目级 case_sensitive 按酒馆导入规则忽略（只认 extensions 里的）", e.caseSensitive)
     }
 
     @Test
@@ -325,7 +325,7 @@ class WorldBookCodecTest {
         assertEquals("a1", extras["automationId"]?.jsonPrimitive?.content)
         assertEquals(JsonPrimitive(true), extras["matchScenario"])
         assertTrue(extras.containsKey("triggers"))
-        // extensions 整包保留（照 ST 转换器），含未消费的 custom_ext
+        // extensions 整包保留（与酒馆导入一致），含未消费的 custom_ext
         assertEquals("x", extras["extensions"]!!.jsonObject["custom_ext"]?.jsonPrimitive?.content)
         // 卡独有字段不丢
         assertEquals(JsonPrimitive(4), extras["priority"])
@@ -338,7 +338,7 @@ class WorldBookCodecTest {
     fun 角色卡_最小条目用卡格式默认值() {
         val e = WorldBookCodec.parse(cardFixture, "兜底名").entries.single { it.uid != 10 }
         assertEquals("id 缺失用数组下标", 1, e.uid)
-        assertEquals("position 缺失 = after(1)，照 ST 转换器（≠独立格式默认 0）", 1, e.position)
+        assertEquals("position 缺失 = after(1)，与酒馆导入一致（≠独立格式默认 0）", 1, e.position)
         assertFalse("卡格式 selective 默认 false（≠独立格式默认 true）", e.selective)
         assertTrue(e.enabled)
         assertEquals(100, e.probability)

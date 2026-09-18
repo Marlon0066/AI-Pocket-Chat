@@ -101,7 +101,10 @@ internal fun buildPetContent(ctx: PromptBuilder.BuildContext): String {
     if (tricks.isNotEmpty()) {
         lines.add("- 偶尔自豪地提到 ${pet.name} 的才艺——这些都是 $user 耐心教出来的")
     }
-    lines.add("- 可以用 [PET:内容] 让宠物简短说话。例：[PET:喵~] 或 [PET:汪汪！]。节制使用（最多每 4-5 次回复一次），15 字以内，符合物种的声音特点。")
+    // 通话回合不教 [PET:…]（2026-09-18）：通话侧无人提取宠物发言，写了就会被 TTS 念出来 + 原样落库；宠物状态其余照注。
+    if (!ctx.voiceCall) {
+        lines.add("- 可以用 [PET:内容] 让宠物简短说话。例：[PET:喵~] 或 [PET:汪汪！]。节制使用（最多每 4-5 次回复一次），15 字以内，符合物种的声音特点。")
+    }
 
     return lines.joinToString("\n")
 }

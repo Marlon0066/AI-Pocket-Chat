@@ -10,6 +10,7 @@ import com.situ.aichat.data.repository.CharacterRepository
 import com.situ.aichat.data.repository.PetRepository
 import com.situ.aichat.data.repository.SettingsRepository
 import com.situ.aichat.notification.NotificationAlarmScheduler
+import com.situ.aichat.notification.NotificationFallbackText
 import com.situ.aichat.notification.NotificationPayload
 import com.situ.aichat.notification.Notifier
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -22,7 +23,7 @@ import javax.inject.Singleton
  * 用 [PetReminderPredictor] 算出每只宠物下一条饿/病提醒的绝对时刻，烤进 [NotificationAlarmScheduler] 精确闹钟
  * （到点由 [com.situ.aichat.notification.NotificationAlarmReceiver] 经 [Notifier.postPet] 发出，App 被杀也弹）。
  * 文案用已生成的角色口吻模板（`pet_hungry`/`pet_sick`，随机取一条，**不标 used**——对齐 iOS `randomElement`，
- * 且本调度高频重排不该烧光模板池）。
+ * 且本调度高频重排不该烧光模板池）；池里缺该分类时回落 [NotificationFallbackText] 的宠物保底短句。
  *
  * 重排时机由 [PetReminderSync]（App 级观察宠物流，覆盖喂食/护理/衰减/聊天等所有写路径）+
  * [com.situ.aichat.work.NotificationRescheduleWorker]（开机/每日/启动，精确闹钟不跨重启）驱动。喂食/护理后状态
@@ -63,10 +64,16 @@ class PetReminderScheduler @Inject constructor(
             Log.i(TAG, "宠物提醒跳过·角色已删 char=${pet.characterUuid}")
             return // 角色已删 → 不排（1:1 iOS guard let character）
         }
-        val body = templateDao.forCategory(pet.characterUuid, plan.category).randomOrNull()?.content ?: run {
-            Log.i(TAG, "宠物提醒跳过·无文案模板 char=${pet.characterUuid} cat=${plan.category}")
-            return // 无文案 → 跳过（1:1 iOS）
-        }
+        // 池里缺该分类（修复 JSON 丢了宠物键 / 生成途中留下空池…）→ 回落宠物保底短句，不再整条跳过：
+        // 饿/病提醒是照顾功能，缺文案就不叫 = 宠物悄悄饿着（2026-09-18 改·原 1:1 iOS 跳过）。保底也取不到才跳过。
+        val body = templateDao.forCategory(pet.characterUuid, plan.category).randomOrNull()?.content
+            ?: NotificationFallbackText.pick(context, plan.category).takeIf { it.isNotBlank() }?.also {
+                Log.i(TAG, "宠物提醒·无文案模板→保底短句 char=${pet.characterUuid} cat=${plan.category}")
+            }
+            ?: run {
+                Log.i(TAG, "宠物提醒跳过·无文案模板且无保底 char=${pet.characterUuid} cat=${plan.category}")
+                return
+            }
 
         val key = requestKey(pet.characterUuid, plan.category)
         val payload = NotificationPayload(

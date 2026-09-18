@@ -14,7 +14,8 @@ import javax.inject.Singleton
  * `structuredMemoryJSON` + 更新元数据。消息收集复用「最近 200 条」(对齐 iOS GrowthAnalysisService.collectMessagesForAnalysis)。
  *
  * 丢弃路径（0 字段，多半 API 错误/响应损坏）：不重置 roundsSinceLastExtraction、不增 totalExtractionCount，
- * 但仍写 lastExtractionDate 让 30 分钟时间冷却接管，防瞬时抖动下反复触发形成调用风暴。
+ * 但仍写 lastExtractionDate 让 30 分钟时间冷却接管，防瞬时抖动下反复触发形成调用风暴；返回 false（记忆没变，
+ * 调用方不做「记忆变了」的后续）。
  */
 @Singleton
 class StructuredMemoryCoordinator @Inject constructor(
@@ -27,14 +28,16 @@ class StructuredMemoryCoordinator @Inject constructor(
      * 执行结构化记忆提取并写回。[characterUuid] 实时取最新角色（含触发处刚递增的轮次计数）。
      * **P12.6 D1**：整个「读-LLM-写」在 [CharacterWriteLock] 内串行（锁内重读最新角色），回写改用列级 UPDATE
      * （成功写 previous+current+元数据 3 列；丢弃路径仅写元数据 1 列），消除与计数器递增 / 其它分析的并发覆盖。
+     * @return true = 真写进了新的结构化记忆；false = 没写（角色已不在 / 0 字段丢弃）。调用方只在 true 时做
+     *   「记忆变了」的后续（如通知文案重烤·2026-09-18 起丢弃路径不再触发，对齐触发端 E10 契约）。
      * @throws StructuredMemoryError 无消息 / 解析失败（确定性，调用方不重试）。
      */
     suspend fun extractAndPersist(
         characterUuid: String,
         config: ApiConfigValues,
         userName: String,
-    ) = characterWriteLock.withCharacterLock(characterUuid) {
-        val character = characterDao.getByUuid(characterUuid) ?: return@withCharacterLock
+    ): Boolean = characterWriteLock.withCharacterLock(characterUuid) {
+        val character = characterDao.getByUuid(characterUuid) ?: return@withCharacterLock false
 
         // 复用成长分析的消息收集（最近 200 条；GrowthAnalysisService 为规范所有者）
         val messages = growthAnalysisService.collectMessagesForAnalysis(characterUuid)
@@ -59,7 +62,7 @@ class StructuredMemoryCoordinator @Inject constructor(
                 characterUuid,
                 metadata.copy(lastExtractionDate = System.currentTimeMillis()).encode(),
             )
-            return@withCharacterLock
+            return@withCharacterLock false
         }
 
         // 应用提取结果（新值非空才覆盖；firstConflict write-once）+ 元数据更新
@@ -75,6 +78,7 @@ class StructuredMemoryCoordinator @Inject constructor(
             current = merged.encode(),
             metadata = newMetadata.encode(),
         )
+        true
     }
 
     // MARK: - 应用 / 校验

@@ -253,13 +253,27 @@ class MemoryAnalysisTriggerTest {
 
     @Test
     fun 二期M3_抽取成功_重烤回调触发一次() {
-        // rounds=0 + interval=1 → 触发抽取；extractAndPersist relaxed 成功（不抛）→ 成功后回调一次。
+        // rounds=0 + interval=1 → 触发抽取；extractAndPersist 返回 true（真写回了新记忆）→ 回调一次。
         coEvery { characterRepo.get("c1") } returns CharacterEntity(uuid = "c1", name = "测试", creationDate = 0L)
+        coEvery { structuredCoordinator.extractAndPersist(any(), any(), any()) } returns true
         trigger.incrementStructuredMemoryRoundAndCheck(
             "c1", config, AppSettings(growthSystemEnabled = true, structuredMemoryInterval = 1), "用户",
         )
         coVerify { structuredCoordinator.extractAndPersist(characterUuid = "c1", config = config, userName = "用户") }
         verify(exactly = 1) { onStructuredMemoryExtracted("c1") }
+    }
+
+    @Test
+    fun 零字段丢弃_抽取照跑但记忆没变_不触发重烤回调() {
+        // 2026-09-18 提示词册核对 E 条：0 字段丢弃路径 extractAndPersist 正常返回 false（不抛）→ 不回调（E10）。
+        coEvery { characterRepo.get("c1") } returns CharacterEntity(uuid = "c1", name = "测试", creationDate = 0L)
+        coEvery { structuredCoordinator.extractAndPersist(any(), any(), any()) } returns false
+        trigger.incrementStructuredMemoryRoundAndCheck(
+            "c1", config, AppSettings(growthSystemEnabled = true, structuredMemoryInterval = 1), "用户",
+        )
+        // 正向证据：抽取确实跑了一次（不是没走到抽取点的假绿），且丢弃不是异常 → 不进 2s 重试。
+        coVerify(exactly = 1) { structuredCoordinator.extractAndPersist(characterUuid = "c1", config = config, userName = "用户") }
+        verify(exactly = 0) { onStructuredMemoryExtracted(any()) }
     }
 
     @Test

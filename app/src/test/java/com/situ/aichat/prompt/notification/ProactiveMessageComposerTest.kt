@@ -242,6 +242,33 @@ class ProactiveMessageComposerTest {
         assertEquals("外面下雨了，你带伞没", ProactiveMessageComposer.parseSingle(raw))
     }
 
+    // 2026-09-18 五处小修 #5：模型给 JSON 套代码围栏时，修前解码失败 → 兜底取首个非空行 = 「```json」，
+    // 这 7 个字符会过 60 字上限原样当通知正文发出去。
+
+    @Test fun parse_jsonFencedWithLanguageTag_extractsMessage() {
+        val raw = "```json\n{\"message\":\"外面下雨了，你带伞没\"}\n```"
+        assertEquals("外面下雨了，你带伞没", ProactiveMessageComposer.parseSingle(raw))
+    }
+
+    @Test fun parse_jsonInBareFence_extractsMessage() {
+        assertEquals("刚到家，累瘫了", ProactiveMessageComposer.parseSingle("```\n{\"message\":\"刚到家，累瘫了\"}\n```"))
+    }
+
+    @Test fun parse_jsonAfterPreamble_extractsMessageNotPreamble() {
+        assertEquals("晚安，早点睡", ProactiveMessageComposer.parseSingle("好的：\n{\"message\":\"晚安，早点睡\"}"))
+    }
+
+    /** 未闭合围栏 + 裸文本：JSONExtractor 取不出东西，兜底行也绝不能是围栏行本身。 */
+    @Test fun parse_unclosedFenceWithBareText_skipsFenceLine() {
+        assertEquals("刚忙完，想跟你说句话", ProactiveMessageComposer.parseSingle("```\n刚忙完，想跟你说句话"))
+        assertEquals("刚忙完，想跟你说句话", ProactiveMessageComposer.parseSingle("```text\n刚忙完，想跟你说句话\n"))
+    }
+
+    /** 只有围栏、没有正文 → 无效（null 交调用方重试 / 走兜底链），而不是发出「```」。 */
+    @Test fun parse_fenceOnly_isNull() {
+        assertNull(ProactiveMessageComposer.parseSingle("```json\n```"))
+    }
+
     @Test fun parse_blankOrEmpty_isNull() {
         assertNull(ProactiveMessageComposer.parseSingle(""))
         assertNull(ProactiveMessageComposer.parseSingle("   \n  "))

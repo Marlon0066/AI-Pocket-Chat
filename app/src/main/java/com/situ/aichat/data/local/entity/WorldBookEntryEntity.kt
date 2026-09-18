@@ -8,8 +8,8 @@ import java.util.UUID
 
 /**
  * 世界书条目（酒馆 World Info entry）——一张「触发关键词 + 设定内容 + 行为开关」的设定卡片。
- * 字段语义、枚举值、默认值**全部照酒馆源码对表**：契约 `FABLE5_WORLDBOOK_PROPOSAL.md` §2.1/§2.2
- * （selectiveLogic 0–3 / position 0–7 / 各默认值 = ST `newWorldInfoEntryDefinition` 原值），勿凭记忆改。
+ * 字段语义、枚举值、默认值**全部按酒馆世界书格式对齐**：契约 `FABLE5_WORLDBOOK_PROPOSAL.md` §2.1/§2.2
+ * （selectiveLogic 0–3 / position 0–7 / 各默认值与酒馆新建条目的默认值一致），勿凭记忆改。
  *
  * 列取舍（契约 §4.1）：**激活引擎要读的行为字段全部立列**；不实现功能的「保留档」字段
  * （outletName / automationId / triggers / characterFilter* / match* / addMemo / extensions / 未知字段）

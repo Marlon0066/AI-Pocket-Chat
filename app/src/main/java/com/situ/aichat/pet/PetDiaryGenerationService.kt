@@ -12,6 +12,7 @@ import com.situ.aichat.data.repository.ApiConfigRepository
 import com.situ.aichat.data.repository.DiaryRepository
 import com.situ.aichat.data.repository.PetRepository
 import com.situ.aichat.data.repository.SettingsRepository
+import com.situ.aichat.prompt.GeneratedContentValidator
 import com.situ.aichat.prompt.memory.MemoryService
 import com.situ.aichat.util.DateFormatters
 import java.time.ZoneId
@@ -25,8 +26,8 @@ import javax.inject.Singleton
  * App 回前台时由 [com.situ.aichat.ui.AppViewModel] 调用（见启动批量衰减接线）。
  *
  * 门控（1:1 iOS）：petSystemEnabled && petDiaryAutoGenerateEnabled（默认 **false**）&& 非沉浸（P10 stub）&&
- * 今日无宠物日记 && 有 API → 取第一只宠物 → buildPetDiaryPrompt → completion(temp 0.85) → 存
- * DiaryEntry(isPetDiary/petSpeciesRaw/moodEmoji)。
+ * 今日无宠物日记 && 有 API → 取第一只宠物 → buildPetDiaryPrompt → completion(temp 0.85) → 剥 think →
+ * [GeneratedContentValidator] 脏数据门 → 存 DiaryEntry(isPetDiary/petSpeciesRaw/moodEmoji)。
  */
 @Singleton
 class PetDiaryGenerationService @Inject constructor(
@@ -82,6 +83,12 @@ class PetDiaryGenerationService @Inject constructor(
             return
         }
         if (content.isBlank()) return
+        // 脏数据门（与日记 / 朋友圈 / 评论等内容类同一道闸）：服务商偶发把「Token count: 2937」「{"error": …}」这类
+        // 调试串当正文返回，不拦就会被存成当天的宠物日记，且今天不会再生成。日志只记原因，不打正文。
+        if (!GeneratedContentValidator.isLikelyValid(content)) {
+            Log.w(TAG, "宠物日记丢弃（${pet.name}）：${GeneratedContentValidator.describeInvalidReason(content)}")
+            return
+        }
 
         diaryRepository.upsert(
             DiaryEntryEntity(
