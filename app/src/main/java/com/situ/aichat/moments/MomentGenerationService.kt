@@ -88,6 +88,12 @@ class MomentGenerationService @Inject constructor(
     private val userProfileDao: UserProfileDao,
     private val conversationDao: ConversationDao,
 ) {
+    private var worldBookAmbient: com.situ.aichat.worldbook.WorldBookAmbientInjector? = null
+
+    @Inject
+    fun bindWorldBookAmbient(injector: com.situ.aichat.worldbook.WorldBookAmbientInjector) {
+        worldBookAmbient = injector
+    }
 
     private data class GateState(val running: Boolean, val startedAt: Long)
 
@@ -263,7 +269,8 @@ class MomentGenerationService @Inject constructor(
         zone: ZoneId,
         giftInspiration: String? = null,
     ): String? {
-        val userName = (userProfileDao.get()?.nickname ?: "").ifBlank { "用户" } // 图纸一·B5：发帖 reqContent 用真实用户名
+        val profile = userProfileDao.get()
+        val userName = (profile?.nickname ?: "").ifBlank { "用户" } // 图纸一·B5：发帖 reqContent 用真实用户名
         val recentOwnContents = momentRepo.recentPostsForCharacter(character.uuid, RECENT_POSTS)
             .joinToString("\n") { it.content }
         val recentUserPosts = momentRepo.recentUserPosts(RECENT_POSTS).map {
@@ -289,6 +296,18 @@ class MomentGenerationService @Inject constructor(
             stageDisplay = pet?.growthStage?.displayName,
             isRanAway = pet?.neglectPhase == PetNeglectPhase.RAN_AWAY,
         )
+        val ambientContext = listOfNotNull(
+            schedulePrompt.takeIf { it.isNotBlank() },
+            giftInspiration?.takeIf { it.isNotBlank() },
+            recentUserPosts.joinToString("\n") { it.content }.takeIf { it.isNotBlank() },
+        ).joinToString("\n")
+        val worldInfoSection = worldBookAmbient?.buildAmbientSection(
+            character = character,
+            userName = userName,
+            userBio = profile?.bio.orEmpty(),
+            contextText = ambientContext,
+            nowMillis = nowMillis,
+        )
 
         val systemPrompt = MomentPostPromptBuilder.build(
             strings = strings,
@@ -303,6 +322,7 @@ class MomentGenerationService @Inject constructor(
             petStatus = petStatus,    // moments-logic-1（14.4b）
             userName = userName,      // 图纸一·B5：reqContent %s 填真实用户名
             intentBlock = IntentExitRenderer.momentBlock(character.intentQueue.intents, userName, nowMillis), // 卷四 §4.5 ②：心里挂着的事
+            worldInfoSection = worldInfoSection,
         )
 
         val messages = listOf(

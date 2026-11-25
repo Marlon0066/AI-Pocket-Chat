@@ -222,6 +222,10 @@ internal class AssistantTurnEngine(
             userName = userName.ifEmpty { promptStrings.s(R.string.pb_user_fallback) },
             vectorThresholdPercent = settings.vectorSearchThreshold,
             settings = settings.toWorldInfoSettings(),
+            character = character,
+            userBio = userProfile?.bio.orEmpty(),
+            isOfflineMode = convo.isInOfflineMode,
+            currentOfflineSessionId = convo.currentOfflineSessionId,
         )
         // W5 世界联动（契约 §9【核心】）：注入「关系提炼 + 世界记忆」块——门控四连（未入世/开关关/世界未初始化/
         // 无边无记忆 → null）·纯读 + 一次 ONNX 嵌入·query=最新真实用户消息（与向量检索同源）。

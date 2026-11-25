@@ -1,5 +1,6 @@
 package com.situ.aichat.ui.sticker
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,17 +14,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,10 +25,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -47,15 +38,20 @@ import com.situ.aichat.sticker.StickerService
 import com.situ.aichat.ui.chat.StickerImage
 import com.situ.aichat.ui.components.SettingsSwitchRow
 import com.situ.aichat.ui.components.contentMaxWidth
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
+import com.situ.aichat.ui.designsystem.AppMediaRow
 import com.situ.aichat.ui.designsystem.AppSettingsRow
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
+import com.situ.aichat.ui.designsystem.AppTopBarAction
 import com.situ.aichat.ui.designsystem.AppTopBarIcons
+import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.designsystem.CardSegment
 import com.situ.aichat.ui.designsystem.appCardSegmentSurface
 import com.situ.aichat.ui.designsystem.appCardSurface
+import com.situ.aichat.ui.designsystem.grainSurface
 
 /**
  * 表情包管理（1:1 iOS `StickerManagementView` + `HiddenBuiltInStickersView`）：我的表情包（删除）+
@@ -81,19 +77,26 @@ fun StickerManagementScreen(
     var showHidden by remember { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
+    val colors = AppTheme.colors
     Scaffold(
+        containerColor = colors.surface.base,
         topBar = {
             AppTopBar(
                 title = "表情包管理",
                 onBack = onBack,
                 lifted = listState.canScrollBackward,
                 actions = {
-                    IconButton(onClick = onImport, enabled = !atLimit) { Icon(AppTopBarIcons.Add, contentDescription = stringResource(R.string.a11y_add_sticker_pack)) }
+                    AppTopBarAction(
+                        icon = AppTopBarIcons.Add,
+                        contentDescription = stringResource(R.string.a11y_add_sticker_pack),
+                        onClick = onImport,
+                        enabled = !atLimit,
+                    )
                 },
             )
         },
     ) { padding ->
-        LazyColumn(state = listState, modifier = Modifier.fillMaxSize().padding(padding).contentMaxWidth()) {
+        LazyColumn(state = listState, modifier = Modifier.fillMaxSize().grainSurface().padding(padding).contentMaxWidth()) {
             // 总开关：无标题卡壳单行（透明底 SettingsSwitchRow·§4.B2）。
             item {
                 Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 16.dp).appCardSurface().padding(vertical = 6.dp)) {
@@ -151,7 +154,7 @@ fun StickerManagementScreen(
                             value = "${hiddenStickers.size}",
                             trailing = {
                                 Icon(
-                                    if (showHidden) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                                    if (showHidden) AppActionIcons.ChevronUp else AppActionIcons.ChevronDown,
                                     contentDescription = null,
                                     tint = AppTheme.colors.text.tertiary,
                                 )
@@ -185,8 +188,8 @@ fun StickerManagementScreen(
             item {
                 Text(
                     "隐藏不想要的预置表情后，它不再出现在选择器和 AI 提示词中，但历史消息仍能正常显示，随时可以恢复。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = AppTypography.caption,
+                    color = colors.text.secondary,
                     modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 12.dp),
                 )
             }
@@ -196,23 +199,24 @@ fun StickerManagementScreen(
 
 @Composable
 private fun StickerSectionHeader(title: String, trailing: String) {
+    val colors = AppTheme.colors
     Row(
         modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(title, style = MaterialTheme.typography.titleSmall)
-        Text(trailing, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(title, style = AppTypography.titleSmall, color = colors.text.primary)
+        Text(trailing, style = AppTypography.caption, color = colors.text.secondary)
     }
 }
 
 @Composable
-private fun StickerEmptyHint(text: String) {
+internal fun StickerEmptyHint(text: String) {
     Text(
         text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        style = AppTypography.secondary,
+        color = AppTheme.colors.text.secondary,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
     )
 }
 
@@ -224,59 +228,50 @@ private fun Modifier.stickerSegment(segment: CardSegment): Modifier = this
     .appCardSegmentSurface(segment)
 
 @Composable
-private fun GifChip() {
-    Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(8.dp)) {
-        Text(
-            "GIF",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-        )
-    }
-}
-
-@Composable
-private fun CustomStickerRow(
-    sticker: CustomStickerEntity,
-    customStickers: List<CustomStickerEntity>,
-    onDelete: () -> Unit,
-) {
-    // TODO(图纸未覆盖): leading 是 44dp 表情缩略图，不是 AppSettingsRow 的 30dp 陶土瓦片（§4.8 点名的
-    //  「自定义 leading 尺寸」）；尾槽还是「GIF 徽标 + 文字钮」。停手登记（施工日志 D-12）。
-    ListItem(
-        leadingContent = { StickerThumb { StickerImage(sticker.stickerUuid, customStickers, 44.dp) } },
-        headlineContent = { Text(sticker.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        supportingContent = {
-            if (sticker.semanticDescription.isNotEmpty()) {
-                Text(sticker.semanticDescription, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-        },
-        trailingContent = {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (sticker.isAnimated) GifChip()
-                AppButton(onClick = onDelete, style = AppButtonStyle.Text) { Text("删除") }
-            }
-        },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+internal fun StickerGifChip() {
+    val colors = AppTheme.colors
+    Text(
+        "GIF",
+        style = AppTypography.label,
+        color = colors.text.secondary,
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(colors.surface.sunken)
+            .padding(horizontal = 6.dp, vertical = 2.dp),
     )
 }
 
 @Composable
-private fun BuiltInStickerRow(sticker: StickerInfo, trailingLabel: String, onAction: () -> Unit) {
-    // TODO(图纸未覆盖): 同上一行，44dp 缩略图 leading + 文字钮尾槽 → 停手登记（施工日志 D-12）。
-    ListItem(
-        leadingContent = { StickerThumb { StickerImage(sticker.id, emptyList(), 44.dp) } },
-        headlineContent = { Text(sticker.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        supportingContent = {
-            Text(sticker.semanticDescription, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        },
-        trailingContent = {
+internal fun CustomStickerRow(
+    sticker: CustomStickerEntity,
+    customStickers: List<CustomStickerEntity>,
+    onDelete: () -> Unit,
+) {
+    AppMediaRow(
+        title = sticker.name,
+        subtitle = sticker.semanticDescription.takeIf { it.isNotEmpty() },
+        leading = { StickerThumb { StickerImage(sticker.stickerUuid, customStickers, 44.dp) } },
+        trailing = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (sticker.isAnimated) GifChip()
+                if (sticker.isAnimated) StickerGifChip()
+                AppButton(onClick = onDelete, style = AppButtonStyle.Text) { Text("删除") }
+            }
+        },
+    )
+}
+
+@Composable
+internal fun BuiltInStickerRow(sticker: StickerInfo, trailingLabel: String, onAction: () -> Unit) {
+    AppMediaRow(
+        title = sticker.name,
+        subtitle = sticker.semanticDescription,
+        leading = { StickerThumb { StickerImage(sticker.id, emptyList(), 44.dp) } },
+        trailing = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (sticker.isAnimated) StickerGifChip()
                 AppButton(onClick = onAction, style = AppButtonStyle.Text) { Text(trailingLabel) }
             }
         },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
     )
 }
 

@@ -124,7 +124,7 @@ class LiuliCharacterEditContentTest {
         tops.zipWithNext().forEach { (a, b) -> assertTrue("${a.first}(${a.second}) 应在 ${b.first}(${b.second}) 之上", a.second < b.second) }
     }
 
-    @Test fun 新建态缺四项且世界为新建版() {
+    @Test fun 新建态含世界与世界观但缺三项() {
         compose.setContent {
             LiuliEditTestHost {
                 LiuliCharacterEditPage(isEditing = false, canSave = false, saving = false, onCancel = {}, onSave = {}, focusVoiceSection = false) { onY ->
@@ -135,14 +135,14 @@ class LiuliCharacterEditContentTest {
                         onCompilePersona = {}, onLoadSystemVoices = {}, onPreviewVoice = {}, onSetModuleOverride = {},
                         onEditModules = {}, onOpenMeetings = {}, onVoiceSectionY = onY,
                         worldGroup = { LiuliCharacterWorldCreateGroup(joined = false, onToggle = {}) },
-                        worldBookGroup = { Text(FAKE_WORLD_BOOK) }, // 新建态主体也不该调它
+                        worldBookGroup = { Text(FAKE_WORLD_BOOK) },
                     )
                 }
             }
         }
         compose.onNodeWithText("从人设生成").assertDoesNotExist()
         compose.onNodeWithText("提示词模块").assertDoesNotExist()
-        compose.onNodeWithText(FAKE_WORLD_BOOK).assertDoesNotExist()
+        compose.onNodeWithText(FAKE_WORLD_BOOK).assertExists()
         compose.onNodeWithText("见面回忆").assertDoesNotExist()
         compose.onNodeWithText("保存后 TA 就会住进云野镇。与「世界书」二选一。").assertExists()
         // 关系脚注走 create 句。

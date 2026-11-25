@@ -7,9 +7,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.DropdownMenuItem
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
@@ -99,12 +98,6 @@ fun DiarySettingsScreen(
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                 }
-                // 宠物日记自动生成（独立开关·不受用户日记开关门控）。
-                SettingsSwitchRow(
-                    title = stringResource(R.string.diary_settings_pet_autogen_label),
-                    checked = state.petAutoGenerateEnabled,
-                    onCheckedChange = { viewModel.setPetAutoGenerateEnabled(it) },
-                )
             }
 
             // R4 交换日记：笔友选择（空=自动「当天聊得最多」·O1 锁定「兼有」）。
@@ -170,7 +163,7 @@ fun DiarySettingsScreen(
                             ) {
                                 Text(ch.name, modifier = Modifier.weight(1f), style = AppTheme.typography.body)
                                 if (ch.selected) {
-                                    Icon(Icons.Filled.Check, contentDescription = null, tint = AppTheme.colors.accent.text)
+                                    Icon(AppActionIcons.Check, contentDescription = null, tint = AppTheme.colors.accent.text)
                                 }
                             }
                         }
@@ -254,7 +247,7 @@ private fun ExchangePartnerRow(
                 onClick = { onSelect(""); menuExpanded = false },
                 trailingIcon = {
                     if (partnerUuid.isEmpty() || characters.none { it.uuid == partnerUuid }) {
-                        Icon(Icons.Filled.Check, contentDescription = null, tint = AppTheme.colors.accent.text)
+                        Icon(AppActionIcons.Check, contentDescription = null, tint = AppTheme.colors.accent.text)
                     }
                 },
             )
@@ -264,7 +257,7 @@ private fun ExchangePartnerRow(
                     onClick = { onSelect(ch.uuid); menuExpanded = false },
                     trailingIcon = {
                         if (ch.uuid == partnerUuid) {
-                            Icon(Icons.Filled.Check, contentDescription = null, tint = AppTheme.colors.accent.text)
+                            Icon(AppActionIcons.Check, contentDescription = null, tint = AppTheme.colors.accent.text)
                         }
                     },
                 )

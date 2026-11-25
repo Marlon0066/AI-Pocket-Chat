@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.IosShare
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -51,6 +50,7 @@ import com.situ.aichat.ui.contextlog.shared.kidTailText
 import com.situ.aichat.ui.contextlog.shared.sentSubtitleText
 import com.situ.aichat.ui.contextlog.shared.timeTokensText
 import com.situ.aichat.ui.contextlog.shared.tokensExtraText
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
@@ -246,7 +246,7 @@ private fun ActionButtons(state: ContextLogEntryUiState, e: LogEntryEntity, onCo
     Column(Modifier.padding(horizontal = LiuliPageGeometry.gutter)) {
         Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.s)) {
             LiuliButton(onClick = { onCopyAll(e) }, style = LiuliButtonStyle.Glass, modifier = Modifier.weight(1f)) {
-                Icon(Icons.Outlined.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                Icon(AppActionIcons.Copy, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(AppSpacing.s))
                 Text(stringResource(R.string.contextlog_copy_all))
             }

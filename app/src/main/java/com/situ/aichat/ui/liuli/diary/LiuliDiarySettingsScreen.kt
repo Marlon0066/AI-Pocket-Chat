@@ -56,7 +56,6 @@ fun LiuliDiarySettingsScreen(
                 onSetAutoGenerate = viewModel::setAutoGenerateEnabled,
                 onOpenTimePicker = openPicker,
                 onSetAutoPublish = viewModel::setAutoPublishEnabled,
-                onSetPetAutoGenerate = viewModel::setPetAutoGenerateEnabled,
                 onSelectExchangePartner = viewModel::setExchangePartner,
                 onSetCommentEnabled = viewModel::setCommentEnabled,
                 onSetCommentDelay = viewModel::setCommentDelay,

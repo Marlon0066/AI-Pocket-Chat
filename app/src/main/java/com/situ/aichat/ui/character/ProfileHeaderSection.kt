@@ -132,11 +132,12 @@ internal fun StatsBar(
     ) {
         items.forEachIndexed { index, (label, value) ->
             if (index > 0) {
+                val dividerAlpha = if (AppTheme.colors.isDark) 0.16f else 0.10f
                 Box(
                     Modifier
                         .width(0.5.dp)
                         .height(28.dp)
-                        .background(AppTheme.colors.text.primary.copy(alpha = 0.10f)),
+                        .background(AppTheme.colors.text.primary.copy(alpha = dividerAlpha)),
                 )
             }
             StatItem(label = label, value = value, modifier = Modifier.weight(1f))

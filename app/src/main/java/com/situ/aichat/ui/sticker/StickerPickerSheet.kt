@@ -15,7 +15,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mood
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -41,6 +40,7 @@ import com.situ.aichat.sticker.DisabledBuiltInStickerStore
 import com.situ.aichat.sticker.StickerInfo
 import com.situ.aichat.sticker.StickerRecentStore
 import com.situ.aichat.sticker.StickerService
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppSegmentedControl
@@ -116,7 +116,7 @@ fun StickerPickerSheet(
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Icon(
-                        if (tab == 0) Icons.Filled.Schedule else Icons.Filled.Mood, // clock / face.dashed
+                        if (tab == 0) AppActionIcons.Clock else Icons.Filled.Mood, // clock / face.dashed
                         contentDescription = null,
                         tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                         modifier = Modifier.size(40.dp),

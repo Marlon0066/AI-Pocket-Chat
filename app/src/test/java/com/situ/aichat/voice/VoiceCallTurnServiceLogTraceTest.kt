@@ -80,7 +80,9 @@ class VoiceCallTurnServiceLogTraceTest {
         ttsConfigRepo = mockk(relaxed = true),
         llmClient = llmClient,
         contextLog = contextLog,
-        worldBookPromptService = mockk { coEvery { activateForTurn(any(), any(), any(), any(), any(), any(), any()) } returns null },
+        worldBookPromptService = mockk {
+            coEvery { activateForTurn(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns null
+        },
     )
 
     @Test

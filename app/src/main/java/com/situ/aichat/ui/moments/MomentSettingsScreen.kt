@@ -92,13 +92,6 @@ fun MomentSettingsScreen(
                     checked = state.autoLikeEnabled,
                     onCheckedChange = viewModel::setAutoLikeEnabled,
                 )
-                // 13.7e：「X 发了新动态」系统通知开关（默认开，仅后台周期发的帖推、每角色每天≤1、多角色合并）。
-                SettingsSwitchRow(
-                    title = stringResource(R.string.moment_settings_new_post_notif),
-                    subtitle = stringResource(R.string.moment_settings_new_post_notif_desc),
-                    checked = state.newPostNotificationEnabled,
-                    onCheckedChange = viewModel::setNewPostNotificationEnabled,
-                )
             }
         }
     }

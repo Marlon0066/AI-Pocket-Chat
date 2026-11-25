@@ -1,8 +1,6 @@
 package com.situ.aichat.ui.liuli.diary
 
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -18,6 +16,7 @@ import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.CharacterEntity
 import com.situ.aichat.data.local.entity.DiaryEntryWithComments
 import com.situ.aichat.data.local.entity.MonthlyReviewEntity
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.diary.DiaryEmptyState
 import com.situ.aichat.ui.diary.DiaryEntryFilter
 import com.situ.aichat.ui.diary.DiaryExchangeUiState
@@ -166,7 +165,7 @@ internal fun LiuliDiaryListPage(
         onBack = callbacks.onBack,
         collapsed = collapsed,
         actions = {
-            if (data.streakDays > 0) LiuliDiaryStreakPill(data.streakDays)
+            if (data.streakDays > 0) LiuliDiaryStreakPill(data.streakDays, callbacks.onShowStats)
             LiuliDiaryViewMenuAction(viewMode, onViewModeChange, callbacks.onShowStats)
         },
         subBar = if (data.entries.isNotEmpty()) {
@@ -174,7 +173,7 @@ internal fun LiuliDiaryListPage(
         } else {
             null
         },
-        fab = { LiuliFabPill(icon = Icons.Filled.Edit, label = stringResource(R.string.diary_fab_compose), onClick = callbacks.onCompose) },
+        fab = { LiuliFabPill(icon = AppActionIcons.Edit, label = stringResource(R.string.diary_fab_compose), onClick = callbacks.onCompose) },
         bottomEdge = DIARY_LIST_BOTTOM_EDGE,
     ) {
         when {

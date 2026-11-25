@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,6 +36,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.situ.aichat.R
 import com.situ.aichat.ui.components.contentMaxWidth
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.liuli.designsystem.LiuliButton
@@ -178,7 +178,7 @@ private fun ReliabilityGroup(
                     if (statusLabel != null) {
                         val color = if (statusOk) colors.status.onSuccess else colors.status.onError
                         Icon(
-                            imageVector = if (statusOk) Icons.Filled.CheckCircle else Icons.Filled.Warning,
+                            imageVector = if (statusOk) Icons.Filled.CheckCircle else AppActionIcons.Warning,
                             contentDescription = null,
                             tint = color,
                             modifier = Modifier.size(STATUS_ICON),

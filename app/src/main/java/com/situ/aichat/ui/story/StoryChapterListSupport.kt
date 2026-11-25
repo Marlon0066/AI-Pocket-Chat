@@ -17,7 +17,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,6 +43,7 @@ import com.situ.aichat.story.StoryReadingProgressLogic
 import com.situ.aichat.story.StoryStatus
 import com.situ.aichat.story.isUnlocked
 import com.situ.aichat.story.unlockRemainingMinutes
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.appCardSurface
 import kotlinx.coroutines.delay
@@ -186,7 +186,7 @@ internal fun StoryChapterRowText(chapter: StoryChapterEntity, isLatest: Boolean,
                 overflow = TextOverflow.Ellipsis,
             )
             if (isLatest) NewBadge()
-            if (!unlocked) Icon(Icons.Filled.Lock, contentDescription = null, tint = c.accent.text, modifier = Modifier.size(13.dp))
+            if (!unlocked) Icon(AppActionIcons.Lock, contentDescription = null, tint = c.accent.text, modifier = Modifier.size(13.dp))
         }
         chapter.teaser?.takeIf { it.isNotEmpty() }?.let { teaser ->
             Text(teaser, style = AppTheme.typography.secondary, color = c.text.secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -207,7 +207,7 @@ internal fun TimelineNode(kind: StoryChapterNodeKind) {
             StoryChapterNodeKind.LOCK -> Box(
                 Modifier.size(21.dp).clip(CircleShape).background(c.surface.sunken),
                 contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Filled.Lock, contentDescription = null, tint = c.text.secondary, modifier = Modifier.size(11.dp)) }
+            ) { Icon(AppActionIcons.Lock, contentDescription = null, tint = c.text.secondary, modifier = Modifier.size(11.dp)) }
         }
     }
 }

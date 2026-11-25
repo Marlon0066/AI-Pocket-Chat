@@ -24,8 +24,8 @@ import androidx.compose.material.icons.automirrored.outlined.DirectionsWalk
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.WifiOff
-import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.MoreHoriz
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -195,7 +195,7 @@ internal fun LiuliCountdownChip(
     ) {
         LiuliBanner(
             leading = {
-                Icon(Icons.Outlined.CalendarMonth, contentDescription = null, tint = colors.accent.text, modifier = Modifier.size(BANNER_ICON))
+                Icon(AppActionIcons.Calendar, contentDescription = null, tint = colors.accent.text, modifier = Modifier.size(BANNER_ICON))
             },
             text = {
                 // 倒数段 W640、其余 W520（§3.2「倒数条 …… 倒数段 W640」·整句仍是一个 Text 节点，读屏一次读完）。

@@ -18,8 +18,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,6 +36,7 @@ import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
+import com.situ.aichat.ui.designsystem.AppTopBarAction
 import com.situ.aichat.data.local.entity.StoryChapterEntity
 import com.situ.aichat.data.local.entity.StoryEntity
 import com.situ.aichat.story.StoryArcPlanning
@@ -75,9 +74,11 @@ fun StoryChapterListScreen(
                 onBack = onBack,
                 lifted = listState.canScrollBackward,
                 actions = {
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Filled.Tune, contentDescription = stringResource(R.string.story_menu_settings))
-                    }
+                    AppTopBarAction(
+                        icon = Icons.Filled.Tune,
+                        contentDescription = stringResource(R.string.story_menu_settings),
+                        onClick = onOpenSettings,
+                    )
                 },
             )
         },

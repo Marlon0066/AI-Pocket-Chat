@@ -5,6 +5,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,10 +20,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -139,7 +139,7 @@ internal fun splitDiaryParagraphs(content: String): List<String> =
 
 /** 可见性图标（仅自己可见=锁，AI 好友可见=人）。仅用 Material core 图标。 */
 internal fun diaryVisibilityIcon(visibilityRaw: String): ImageVector =
-    if (DiaryVisibility.fromRaw(visibilityRaw) == DiaryVisibility.PRIVATE) Icons.Filled.Lock else Icons.Filled.Person
+    if (DiaryVisibility.fromRaw(visibilityRaw) == DiaryVisibility.PRIVATE) AppActionIcons.Lock else AppActionIcons.Person
 
 /** 票据虚线（月分节裁切边 / 详情评论分隔·全案唯一「手账」装饰隐喻·契约 §1 手法2）。纯装饰无语义。 */
 @Composable
@@ -252,23 +252,40 @@ fun DiaryEntryRowCompact(entry: DiaryEntryEntity, commentCount: Int, modifier: M
 
 // MARK: - 角色点赞行（R3·详情页互动区）
 
-/** 「♥ + 点赞角色小头像（≤5）+ N 位觉得暖」。心形/头像装饰，语义靠计数文案；数据来自 reactions relation。 */
+/** 「♥ + 叠放小头像（≤5）+ N 位觉得暖」柔和胶囊条。心形/头像装饰，语义靠计数文案。 */
 @Composable
 internal fun DiaryReactionRow(
     reactions: List<DiaryReactionEntity>,
     charactersByUuid: Map<String, CharacterEntity>,
 ) {
     val colors = AppTheme.colors
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(colors.surface.sunken)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         Text(
             "♥",
             style = AppTheme.typography.secondary,
             color = colors.accent.text,
             modifier = Modifier.clearAndSetSemantics {},
         )
-        reactions.take(5).forEach { r ->
-            val character = charactersByUuid[r.characterUuid]
-            CharacterAvatar(name = character?.name ?: "?", avatarPath = character?.avatarPath, size = 22.dp)
+        Row(horizontalArrangement = Arrangement.spacedBy((-6).dp)) {
+            reactions.take(5).forEach { r ->
+                val character = charactersByUuid[r.characterUuid]
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .border(1.5.dp, colors.surface.sunken, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CharacterAvatar(name = character?.name ?: "?", avatarPath = character?.avatarPath, size = 22.dp)
+                }
+            }
         }
         Text(
             stringResource(R.string.diary_reactions_row, reactions.size),

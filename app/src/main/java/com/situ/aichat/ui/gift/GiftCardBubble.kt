@@ -13,9 +13,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material3.Icon
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -123,7 +122,7 @@ fun GiftCardBubble(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Filled.CardGiftcard, contentDescription = null, tint = colors.economy.gold, modifier = Modifier.size(14.dp))
+                Icon(AppActionIcons.Gift, contentDescription = null, tint = colors.economy.gold, modifier = Modifier.size(14.dp))
                 Text("心意", style = typography.caption, color = colors.text.secondary)
                 Text("${data.cost}", style = typography.amount, color = colors.economy.gold)
                 Text("金币", style = typography.caption, color = colors.text.secondary)

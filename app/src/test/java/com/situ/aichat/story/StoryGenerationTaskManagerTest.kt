@@ -2,12 +2,15 @@ package com.situ.aichat.story
 
 import com.situ.aichat.data.local.entity.StoryChapterEntity
 import com.situ.aichat.data.local.entity.StoryEntity
+import com.situ.aichat.data.model.AppSettings
+import com.situ.aichat.data.repository.SettingsRepository
 import com.situ.aichat.data.repository.StoryRepository
 import com.situ.aichat.foreground.LlmGenerationForegroundController
 import com.situ.aichat.notification.Notifier
 import io.mockk.coEvery
 import io.mockk.coJustRun
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
@@ -15,6 +18,7 @@ import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
@@ -47,6 +51,7 @@ class StoryGenerationTaskManagerTest {
     private val service = mockk<StoryGenerationService>()
     private val repo = mockk<StoryRepository>()
     private val foregroundController = mockk<LlmGenerationForegroundController>(relaxed = true)
+    private val settingsRepo = mockk<SettingsRepository>()
 
     private val storyId = "s1"
 
@@ -57,6 +62,7 @@ class StoryGenerationTaskManagerTest {
         coJustRun { Notifier.postStory(any(), any(), any(), any(), any()) }
         coJustRun { repo.updateStatus(any(), any(), any()) }
         coJustRun { repo.markGenerationFailed(any(), any(), any()) }
+        every { settingsRepo.appSettings } returns flowOf(AppSettings())
         // 卷一 V9：runGeneration 现在先读创作配置定超时档（思考 600s / 其余 300s）。
         // 默认桩 null → thinking=false → 300s，与本测各例既有行为一致。
         coEvery { service.creationConfig() } returns null
@@ -69,7 +75,7 @@ class StoryGenerationTaskManagerTest {
     private val readingProgressStore by lazy { StoryReadingProgressStore(RuntimeEnvironment.getApplication()) }
 
     private fun manager() = StoryGenerationTaskManager(
-        RuntimeEnvironment.getApplication(), service, repo, foregroundController, readingProgressStore,
+        RuntimeEnvironment.getApplication(), service, repo, foregroundController, readingProgressStore, settingsRepo,
     )
 
     private fun story(chapterLengthPreference: Int = 1000, cachedLatestChapterNumber: Int? = null) = StoryEntity(
@@ -427,6 +433,19 @@ class StoryGenerationTaskManagerTest {
 
         tm.awaitCleared()
         awaitNotified()
+    }
+
+    @Test
+    fun B4_关闭故事写好或失败提醒时不再推送系统通知() = runBlocking {
+        every { settingsRepo.appSettings } returns flowOf(AppSettings(notifStoryFinishedEnabled = false))
+        val tm = manager()
+        coEvery { repo.getStory(storyId) } returns story()
+        coEvery { service.generateFirstChapter(any(), any(), any(), any()) } returns chapter()
+
+        tm.startGeneration(story())
+        tm.awaitCleared()
+        verify(timeout = 5_000) { foregroundController.release() }
+        verify(exactly = 0) { Notifier.postStory(any(), any(), any(), any(), any()) }
     }
 
     private data class GenerationProgressSnapshot(val genPhase: StoryGenPhase, val progress: Double, val phase: String)

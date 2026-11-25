@@ -18,7 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.Dp
@@ -173,7 +173,8 @@ internal fun LiuliChatList(
                                 play = emotionPlay,
                                 onPlayed = { emotionPlayed.add(msg.messageUUID) },
                             )
-                            .then(if (flightRow) Modifier.alpha(0f) else Modifier),
+                            // 只挡绘制不挂 alpha(0f)，避免飞入落地后读屏树卡死在不可见态。
+                            .then(if (flightRow) Modifier.drawWithContent { } else Modifier),
                     ) {
                         val deliveryRead = if (msg.roleRaw == "user") msg.messageUUID in readUserMessageUuids else null
                         val canRegenerate = RegenerableTurn.canRegenerate(msg.messageUUID, regenerableUuids, isSending)

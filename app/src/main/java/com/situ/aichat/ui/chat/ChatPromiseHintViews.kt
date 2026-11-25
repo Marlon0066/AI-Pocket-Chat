@@ -23,8 +23,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Handshake
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -188,7 +188,7 @@ private fun PromiseHintCapsule(
                         .clickable(role = Role.Button, onClickLabel = res.getString(R.string.action_close)) { onDismiss() },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Filled.Close, contentDescription = null, tint = fg, modifier = Modifier.size(16.dp))
+                    Icon(AppActionIcons.Close, contentDescription = null, tint = fg, modifier = Modifier.size(16.dp))
                 }
             }
         }

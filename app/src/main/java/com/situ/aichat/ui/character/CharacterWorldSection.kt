@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -46,6 +45,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
 import com.situ.aichat.ui.components.rememberReduceMotion
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppDialog
@@ -70,17 +70,18 @@ fun CharacterWorldSection(viewModel: CharacterWorldViewModel = hiltViewModel()) 
     val wb = state.worldbookBound
     val native = state.nativeOrigin
     val joined = state.joined
-    val switchEnabled = !wb && !native
-    val rowDim = if (wb || native) 0.48f else 1f
+    val switchEnabled = !native
+    val rowDim = if (native) 0.48f else 1f
 
     var showLeaveDialog by remember { mutableStateOf(false) }
+    var showSwitchJoinDialog by remember { mutableStateOf(false) }
     var showCitySheet by remember { mutableStateOf(false) }
 
     SectionHeader(stringResource(R.string.char_world_section))
 
     Surface(shape = AppShapes.medium, tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
         Column {
-            // 开关行。
+            // 开关行（仅原住民锁死；挂着世界书也可点开确认弹窗一键摘书入世）。
             Row(
                 modifier = Modifier.fillMaxWidth().alpha(rowDim).padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -103,7 +104,11 @@ fun CharacterWorldSection(viewModel: CharacterWorldViewModel = hiltViewModel()) 
                     checked = joined,
                     enabled = switchEnabled,
                     onCheckedChange = { on ->
-                        if (on) viewModel.join() else showLeaveDialog = true
+                        when {
+                            !on -> showLeaveDialog = true
+                            wb -> showSwitchJoinDialog = true
+                            else -> viewModel.join()
+                        }
                     },
                 )
             }
@@ -140,7 +145,7 @@ fun CharacterWorldSection(viewModel: CharacterWorldViewModel = hiltViewModel()) 
                             )
                         }
                         Icon(
-                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            AppActionIcons.ChevronRight,
                             contentDescription = null,
                             tint = colors.text.secondary,
                         )
@@ -159,6 +164,21 @@ fun CharacterWorldSection(viewModel: CharacterWorldViewModel = hiltViewModel()) 
                 showLeaveDialog = false
             },
             onDismiss = { showLeaveDialog = false },
+        )
+    }
+
+    if (showSwitchJoinDialog) {
+        AppDialog(
+            onDismissRequest = { showSwitchJoinDialog = false },
+            title = stringResource(R.string.char_world_switch_join_title),
+            body = stringResource(R.string.char_world_switch_join_body),
+            confirmText = stringResource(R.string.char_world_switch_join_confirm),
+            onConfirm = {
+                viewModel.joinClearingWorldBooks()
+                showSwitchJoinDialog = false
+            },
+            dismissText = stringResource(R.string.action_cancel),
+            onDismiss = { showSwitchJoinDialog = false },
         )
     }
 

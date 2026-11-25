@@ -14,9 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,6 +33,7 @@ import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.StoryEntity
 import com.situ.aichat.story.StoryArcPlanning
 import com.situ.aichat.story.StoryEditableField
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppLoadingRing
@@ -235,7 +233,7 @@ private fun OutlineRegenRow(regenerating: Boolean, onClick: () -> Unit) {
             AppLoadingRing(size = AppLoadingRingSize.Small)
         } else {
             Icon(
-                Icons.Outlined.Refresh,
+                AppActionIcons.Refresh,
                 contentDescription = null,
                 tint = c.accent.text,
                 modifier = Modifier.size(16.dp),
@@ -284,7 +282,7 @@ private fun SubEntryRow(
                 color = c.text.primary,
                 modifier = Modifier.weight(1f),
             )
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = c.text.tertiary)
+            Icon(AppActionIcons.ChevronRight, contentDescription = null, tint = c.text.tertiary)
         }
         CardPreview(field.currentValue(story), emptyRes)
     }
@@ -312,7 +310,7 @@ private fun CardHeader(title: String, @StringRes tagRes: Int, isNew: Boolean, ch
         if (isNew) HubTagChip(stringResource(R.string.story_hub_tag_new), highlighted = true)
         HubTagChip(stringResource(tagRes), highlighted = false)
         if (chevron) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = c.text.tertiary)
+            Icon(AppActionIcons.ChevronRight, contentDescription = null, tint = c.text.tertiary)
         }
     }
 }

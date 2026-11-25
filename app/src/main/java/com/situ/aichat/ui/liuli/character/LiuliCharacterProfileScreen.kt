@@ -15,9 +15,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.runtime.Composable
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -249,7 +248,7 @@ internal fun LiuliCharacterProfileContent(
             LiuliPageCircleAction(
                 onClick = onEditCharacter,
                 contentDescription = stringResource(R.string.profile_edit_character),
-                icon = Icons.Filled.Edit,
+                icon = AppActionIcons.Edit,
             )
         },
         subBar = { LiuliTabStrip(selected = selectedTab, onSelect = { selectedTab = it }, glass = true) },

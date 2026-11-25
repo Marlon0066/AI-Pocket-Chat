@@ -2,7 +2,6 @@ package com.situ.aichat.ui.diary
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,8 +17,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -33,15 +30,14 @@ import com.situ.aichat.data.local.entity.DiaryEntryEntity
 import com.situ.aichat.data.model.DiaryVisibility
 import com.situ.aichat.ui.designsystem.AppTheme
 
-// 日记详情的内容件（琉璃 2.0 卷六·一 §3.4：自 [DiaryDetailScreen] 只搬不改·两张脸共用；信笺材质由外面给）。
+// 日记详情的内容件（两张脸共用；信笺材质由外面给·方向 C 升级）。
 
 /** 正文段落间距（③ U2·呼吸感）。 */
-internal val DiaryParagraphGap = 10.dp
+internal val DiaryParagraphGap = 11.dp
 
 /**
  * 正文渲染：③ 段落呼吸（[splitDiaryParagraphs] 分段 + 段间距 + 首行缩进两字·两方通用·U2③）；
- * ⑤ TA 的信（[isLetter]）垫暖信笺——柔米底（surface.sunken）+ 顶端 letterhead 细线（陶土 16%）·仅详情页（U2⑤）。
- * [letterSurface] = 信笺材质（琉璃 2.0 卷六·一「材质外给」：默认 = 暖陶柔米底，琉璃传稿纸）。
+ * ⑤ TA 的信（[isLetter]）垫暖信笺——柔米底（或琉璃磨砂稿纸）+ 顶部双线抬头 [DiaryLetterTopRule]。
  */
 @Composable
 internal fun DiaryDetailBody(
@@ -66,27 +62,19 @@ internal fun DiaryDetailBody(
         body()
         return
     }
-    val letterhead = colors.accent.primary.copy(alpha = 0.16f)
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .then(letterSurface)
-            .drawBehind {
-                val inset = 16.dp.toPx()
-                drawLine(
-                    color = letterhead,
-                    start = Offset(inset, 0f),
-                    end = Offset(size.width - inset, 0f),
-                    strokeWidth = 1.dp.toPx(),
-                )
-            }
-            .padding(18.dp),
+            .padding(horizontal = 20.dp, vertical = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
+        DiaryLetterTopRule()
         body()
     }
 }
 
-/** 元信息行：草稿徽章 + AI 生成 + 可见性（洇染头外·secondary 可用）。 */
+/** 元信息行：草稿徽章 + AI 生成 + 可见性 + 评论数（天头之下·次要层级克制展示）。 */
 @Composable
 internal fun DetailMetaRow(entry: DiaryEntryEntity, commentCount: Int) {
     val colors = AppTheme.colors
@@ -125,38 +113,67 @@ internal fun DetailMetaRow(entry: DiaryEntryEntity, commentCount: Int) {
     }
 }
 
-/** 图片画廊（每行 3 张方图·非 lazy）。 */
+/**
+ * 方向 C 自适应画报图库：
+ * - 1 张：克制微斜拍立得大图；
+ * - 2 张：等宽 1:1 精致双图；
+ * - 3 张：1 宽幅主图（16:10）+ 下方 2 枚方图（画报拼贴）；
+ * - 4+ 张：规整 3 列方图网格（末行补位防拉伸）。
+ */
 @Composable
 internal fun DiaryDetailImageGrid(images: List<String>) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        images.chunked(3).forEach { rowImages ->
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
-                rowImages.forEach { path ->
-                    DiaryThumbnail(path, modifier = Modifier.weight(1f).aspectRatio(1f), corner = 12.dp)
+    when (images.size) {
+        1 -> DiaryPolaroidPreview(path = images[0], imageHeight = 220.dp)
+        2 -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            images.forEach { path ->
+                DiaryThumbnail(path, modifier = Modifier.weight(1f).aspectRatio(1f), corner = 14.dp)
+            }
+        }
+        3 -> Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            DiaryThumbnail(
+                images[0],
+                modifier = Modifier.fillMaxWidth().aspectRatio(16f / 10f),
+                corner = 14.dp,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                DiaryThumbnail(images[1], modifier = Modifier.weight(1f).aspectRatio(1f), corner = 14.dp)
+                DiaryThumbnail(images[2], modifier = Modifier.weight(1f).aspectRatio(1f), corner = 14.dp)
+            }
+        }
+        else -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            images.chunked(3).forEach { rowImages ->
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                    rowImages.forEach { path ->
+                        DiaryThumbnail(path, modifier = Modifier.weight(1f).aspectRatio(1f), corner = 12.dp)
+                    }
+                    repeat(3 - rowImages.size) { Spacer(Modifier.weight(1f)) }
                 }
-                // 补齐不足 3 张的占位，保证最后一行图片不被拉伸。
-                repeat(3 - rowImages.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }
 }
 
-/** 印章小字（右对齐）：TA 的信 = 楷体署名「—— 名 · 写于 HH:mm」；用户日记 = 「记于 HH:mm」。 */
+/** 印章落款（右对齐）：TA 的信 = 楷体署名「—— 名 · 写于 HH:mm」+ 作者单字圆印；用户日记 = 「记于 HH:mm」。 */
 @Composable
 internal fun DiaryDetailSignature(authorDisplay: DiaryAuthorDisplay?, timestamp: Long) {
     val colors = AppTheme.colors
     if (authorDisplay != null) {
-        Text(
-            stringResource(
-                R.string.diary_exchange_signed,
-                authorDisplay.name,
-                formatDiaryDate(timestamp, "HH:mm"),
-            ),
-            style = AppTheme.typography.kaiQuote,
-            color = colors.accent.text,
-            textAlign = TextAlign.End,
+        Row(
             modifier = Modifier.fillMaxWidth(),
-        )
+            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                stringResource(
+                    R.string.diary_exchange_signed,
+                    authorDisplay.name,
+                    formatDiaryDate(timestamp, "HH:mm"),
+                ),
+                style = AppTheme.typography.kaiQuote,
+                color = colors.accent.text,
+            )
+            DiaryAuthorChopSeal(name = authorDisplay.name, size = 26.dp)
+        }
     } else {
         Text(
             stringResource(R.string.diary_written_at, formatDiaryDate(timestamp, "HH:mm")),

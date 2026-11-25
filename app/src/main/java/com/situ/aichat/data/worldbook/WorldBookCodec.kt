@@ -36,8 +36,9 @@ object WorldBookCodec {
      * @param fallbackName 书名兜底（通常传文件名去后缀）；文件里有 name 时优先用文件里的。
      */
     fun parse(jsonText: String, fallbackName: String): ParsedWorldBook {
+        val cleanedJson = jsonText.trimStart('\uFEFF')
         val root = try {
-            Json.parseToJsonElement(jsonText)
+            Json.parseToJsonElement(cleanedJson)
         } catch (e: Exception) {
             throw WorldBookParseException("这不是有效的 JSON 文件，可能选错了文件", e)
         }

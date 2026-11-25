@@ -15,8 +15,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AutoAwesome
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -127,7 +127,7 @@ private fun ContentCard(state: ScheduleCardState.Content, onOpenFullDay: () -> U
                 color = colors.accent.text,
             )
             Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                AppActionIcons.ChevronRight,
                 contentDescription = null,
                 modifier = Modifier.size(CHEVRON),
                 tint = colors.accent.text,

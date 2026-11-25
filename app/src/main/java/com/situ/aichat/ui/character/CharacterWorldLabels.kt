@@ -4,19 +4,19 @@ import androidx.annotation.StringRes
 import com.situ.aichat.R
 import com.situ.aichat.data.local.dao.WorldBookSummary
 
-/** 世界段「加入世界」副标（四态·W13 §4.1）。 */
+/** 世界段「加入世界」副标（四态：原住民 > 已加入 > 已挂世界书可一键切换 > 未加入）。 */
 @StringRes internal fun worldJoinSubtitleRes(worldbookBound: Boolean, nativeOrigin: Boolean, joined: Boolean): Int = when {
-    worldbookBound -> R.string.char_world_join_sub_wb
     nativeOrigin -> R.string.char_world_join_sub_native
     joined -> R.string.char_world_join_sub_on
+    worldbookBound -> R.string.char_world_join_sub_wb
     else -> R.string.char_world_join_sub_off
 }
 
-/** 世界段脚注（四态）。 */
+/** 世界段脚注（四态：原住民 > 已加入 > 已挂世界书可一键切换 > 未加入）。 */
 @StringRes internal fun worldFooterRes(worldbookBound: Boolean, nativeOrigin: Boolean, joined: Boolean): Int = when {
-    worldbookBound -> R.string.char_world_foot_wb
     nativeOrigin -> R.string.char_world_foot_native
     joined -> R.string.char_world_foot_on
+    worldbookBound -> R.string.char_world_foot_wb
     else -> R.string.char_world_foot_off
 }
 

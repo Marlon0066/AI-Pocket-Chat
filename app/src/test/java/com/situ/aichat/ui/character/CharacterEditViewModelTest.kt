@@ -8,12 +8,8 @@ import com.situ.aichat.data.local.entity.CharacterEntity
 import com.situ.aichat.data.model.AppSettings
 import com.situ.aichat.data.repository.CharacterRepository
 import com.situ.aichat.data.repository.CharacterWriteLock
-import com.situ.aichat.data.repository.ConversationRepository
 import com.situ.aichat.data.repository.SettingsRepository
-import com.situ.aichat.economy.CharacterEconomyMaintenanceService
-import com.situ.aichat.economy.CurrencyService
-import com.situ.aichat.tts.TtsConfigurationRepository
-import com.situ.aichat.tts.TtsPreviewer
+import com.situ.aichat.data.worldbook.WorldBookRepository
 import com.situ.aichat.work.NotificationTemplateWorker
 import com.situ.aichat.world.member.WorldMembershipService
 import io.mockk.coEvery
@@ -24,6 +20,7 @@ import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -34,9 +31,8 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
- * [CharacterEditViewModel] T2-3（W13 图纸 §7）：新建模式 save(joinWorld=true) 角色插入后委托
- * [WorldMembershipService.join]；joinWorld=false 零调用。MockK 假全部协作者·mockkObject 拦截
- * [NotificationTemplateWorker] 的 WorkManager 静态入队·Robolectric 主循环驱动 save 的 viewModelScope。
+ * [CharacterEditViewModel] T2-3（W13 图纸 §7 + 4A 新建选世界书）：
+ * 新建模式 joinWorld / initialWorldBookUuids 实时二选一联动与保存落库。
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -45,10 +41,10 @@ class CharacterEditViewModelTest {
     private fun idle() = shadowOf(Looper.getMainLooper()).idle()
 
     private lateinit var membershipService: WorldMembershipService
+    private lateinit var worldBookRepo: WorldBookRepository
 
     @Before
     fun setUp() {
-        // 建角色会静态入队通知文案 worker（WorkManager 未初始化会抛）→ 拦掉。
         mockkObject(NotificationTemplateWorker.Companion)
         every { NotificationTemplateWorker.enqueueForCharacter(any(), any()) } returns Unit
     }
@@ -56,9 +52,9 @@ class CharacterEditViewModelTest {
     @After
     fun tearDown() = unmockkObject(NotificationTemplateWorker.Companion)
 
-    /** 新建模式 VM（无 characterUuid → create 分支·全协作者 relaxed 假）。 */
     private fun buildCreateVm(): CharacterEditViewModel {
         membershipService = mockk(relaxed = true)
+        worldBookRepo = mockk(relaxed = true)
         return CharacterEditViewModel(
             characterRepo = mockk(relaxed = true),
             conversationRepo = mockk(relaxed = true),
@@ -68,6 +64,7 @@ class CharacterEditViewModelTest {
             ttsConfigRepo = mockk(relaxed = true),
             previewer = mockk(relaxed = true),
             membershipService = membershipService,
+            worldBookRepo = worldBookRepo,
             personaCompiler = mockk(relaxed = true),
             characterWriteLock = CharacterWriteLock(),
             appContext = mockk<Context>(relaxed = true),
@@ -82,6 +79,7 @@ class CharacterEditViewModelTest {
         vm.save {}
         idle()
         coVerify(exactly = 1) { membershipService.join(any(), any()) }
+        coVerify(exactly = 0) { worldBookRepo.bind(any(), any()) }
     }
 
     @Test
@@ -93,12 +91,35 @@ class CharacterEditViewModelTest {
         coVerify(exactly = 0) { membershipService.join(any(), any()) }
     }
 
-    // ---- 活人感一期 P1b · T2-1（E2）：新建预填默认示例对话 / 编辑既有绝不预填 ----
+    @Test
+    fun `新建选世界书_自动关joinWorld_save落库绑定且不join`() {
+        val vm = buildCreateVm()
+        vm.setCreateJoinWorld(true)
+        assertTrue(vm.state.value.joinWorld)
 
-    /**
-     * 新建模式 VM，appContext 用**真实** Robolectric application（getString 解析真资源），其余协作者 relaxed 假。
-     * create 预填分支在 init 内**同步**执行（非协程），构造完即可读 state。
-     */
+        vm.selectInitialWorldBookSole("book-1")
+        assertFalse("选中世界书必须自动关加入世界", vm.state.value.joinWorld)
+        assertEquals(listOf("book-1"), vm.state.value.initialWorldBookUuids)
+
+        vm.update { it.copy(name = "谢清晏") }
+        vm.save {}
+        idle()
+        coVerify(exactly = 1) { worldBookRepo.bind(any(), "book-1") }
+        coVerify(exactly = 0) { membershipService.join(any(), any()) }
+    }
+
+    @Test
+    fun `新建开joinWorld_自动清空预选世界书`() {
+        val vm = buildCreateVm()
+        vm.toggleInitialWorldBook("book-1", true)
+        vm.toggleInitialWorldBook("book-2", true)
+        assertEquals(listOf("book-1", "book-2"), vm.state.value.initialWorldBookUuids)
+
+        vm.setCreateJoinWorld(true)
+        assertTrue(vm.state.value.joinWorld)
+        assertTrue("开启加入世界必须清空预选世界书", vm.state.value.initialWorldBookUuids.isEmpty())
+    }
+
     private fun buildCreateVmRealContext(): CharacterEditViewModel =
         CharacterEditViewModel(
             characterRepo = mockk(relaxed = true),
@@ -109,6 +130,7 @@ class CharacterEditViewModelTest {
             ttsConfigRepo = mockk(relaxed = true),
             previewer = mockk(relaxed = true),
             membershipService = mockk(relaxed = true),
+            worldBookRepo = mockk(relaxed = true),
             personaCompiler = mockk(relaxed = true),
             characterWriteLock = CharacterWriteLock(),
             appContext = RuntimeEnvironment.getApplication(),
@@ -126,7 +148,6 @@ class CharacterEditViewModelTest {
 
     @Test
     fun `编辑模式_不预填示例对话保持既有值`() {
-        // 既有角色示例对话为空 → 编辑模式绝不预填（否则用户清空的示例会被默认模板复活）。
         val existing = CharacterEntity(uuid = "c1", name = "旧角色", creationDate = 0L, exampleDialogues = "")
         val characterRepo = mockk<CharacterRepository>(relaxed = true)
         coEvery { characterRepo.get("c1") } returns existing
@@ -143,12 +164,13 @@ class CharacterEditViewModelTest {
             ttsConfigRepo = mockk(relaxed = true),
             previewer = mockk(relaxed = true),
             membershipService = mockk(relaxed = true),
+            worldBookRepo = mockk(relaxed = true),
             personaCompiler = mockk(relaxed = true),
             characterWriteLock = CharacterWriteLock(),
             appContext = RuntimeEnvironment.getApplication(),
             savedStateHandle = SavedStateHandle(mapOf("characterUuid" to "c1")),
         )
-        idle() // 驱动 edit 分支的 init 协程加载
+        idle()
         assertEquals("编辑既有角色不应预填示例对话", "", vm.state.value.exampleDialogues)
     }
 }

@@ -13,14 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -44,10 +37,13 @@ import com.situ.aichat.content.FilterMode
 import com.situ.aichat.ui.components.SettingsSection
 import com.situ.aichat.ui.components.SettingsSwitchRow
 import com.situ.aichat.ui.components.contentMaxWidth
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppFormBar
+import com.situ.aichat.ui.designsystem.AppIconButton
 import com.situ.aichat.ui.designsystem.AppListDivider
+import com.situ.aichat.ui.designsystem.AppMediaRow
 import com.situ.aichat.ui.designsystem.AppSegmentedControl
 import com.situ.aichat.ui.designsystem.AppSettingsRow
 import com.situ.aichat.ui.designsystem.AppSpacing
@@ -55,6 +51,7 @@ import com.situ.aichat.ui.designsystem.AppSwitch
 import com.situ.aichat.ui.designsystem.AppTextArea
 import com.situ.aichat.ui.designsystem.AppTextField
 import com.situ.aichat.ui.designsystem.AppTopBar
+import com.situ.aichat.ui.designsystem.AppTopBarIcons
 import java.util.UUID
 
 /**
@@ -165,7 +162,7 @@ private fun ContentFilterListScreen(
                 }
                 AppSettingsRow(
                     title = stringResource(R.string.content_filter_add_custom),
-                    icon = Icons.Filled.Add,
+                    icon = AppTopBarIcons.Add,
                     onClick = onAdd,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -190,35 +187,25 @@ private fun CustomRuleRow(
     } else {
         rule.pattern
     }
-    // TODO(图纸未覆盖): 本行的副标题是**等宽字体**（正则原文，靠 Monospace 才看得清），AppSettingsRow 的副
-    //  走 settingsRowSubtitle 单一字阶、无字体槽；尾槽还是「开关 + 编辑 + 删除」三件套。按 §4.8「结构不符
-    //  的登记不硬套、也不给组件加参数」停手（施工日志 D-12）。
-    ListItem(
-        headlineContent = { Text(title) },
-        supportingContent = {
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                fontFamily = FontFamily.Monospace,
-            )
-        },
-        trailingContent = {
+    AppMediaRow(
+        title = title,
+        subtitle = subtitle,
+        subtitleFontFamily = FontFamily.Monospace,
+        trailing = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 AppSwitch(checked = rule.isEnabled, onCheckedChange = onToggle)
-                IconButton(onClick = onEdit) {
-                    Icon(
-                        Icons.Filled.Edit,
-                        contentDescription = stringResource(R.string.content_filter_edit_rule),
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        Icons.Filled.Delete,
-                        contentDescription = stringResource(R.string.content_filter_delete_rule),
-                        tint = MaterialTheme.colorScheme.error,
-                    )
-                }
+                AppIconButton(
+                    icon = AppActionIcons.Edit,
+                    contentDescription = stringResource(R.string.content_filter_edit_rule),
+                    onClick = onEdit,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                AppIconButton(
+                    icon = AppActionIcons.Delete,
+                    contentDescription = stringResource(R.string.content_filter_delete_rule),
+                    onClick = onDelete,
+                    tint = MaterialTheme.colorScheme.error,
+                )
             }
         },
         modifier = Modifier.fillMaxWidth(),

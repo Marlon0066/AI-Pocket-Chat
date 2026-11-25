@@ -2,8 +2,6 @@ package com.situ.aichat.ui.liuli.settings
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -17,6 +15,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.situ.aichat.R
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.liuli.designsystem.LiuliCircleButton
 import com.situ.aichat.ui.liuli.designsystem.LiuliMenuEntry
 import com.situ.aichat.ui.liuli.designsystem.LiuliPopupMenu
@@ -166,7 +165,7 @@ fun LiuliCatalogField(
                         if (loading) {
                             LiuliSpinner(size = FETCH_SPINNER)
                         } else {
-                            Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(FETCH_ICON))
+                            Icon(AppActionIcons.Refresh, contentDescription = null, modifier = Modifier.size(FETCH_ICON))
                         }
                     }
                 }

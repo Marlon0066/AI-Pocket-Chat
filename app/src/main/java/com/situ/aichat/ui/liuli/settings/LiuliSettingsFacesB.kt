@@ -8,6 +8,7 @@ import com.situ.aichat.ui.settings.ContentFilterSettingsScreen
 import com.situ.aichat.ui.settings.GrowthSettingsScreen
 import com.situ.aichat.ui.settings.ImmersiveSettingsScreen
 import com.situ.aichat.ui.settings.MemoryHubScreen
+import com.situ.aichat.ui.settings.MemoryPromptsSettingsScreen
 import com.situ.aichat.ui.settings.ReplyRuleSettingsScreen
 
 /**
@@ -30,12 +31,33 @@ fun SkinnedMemoryHubScreen(onBack: () -> Unit) {
 }
 
 @Composable
-fun SkinnedGrowthSettingsScreen(onBack: () -> Unit, onOpenObservatory: () -> Unit = {}) {
+fun SkinnedMemoryPromptsScreen(onBack: () -> Unit) {
     if (LocalAppSkin.current == AppSkin.LIULI) {
-        LiuliGrowthSettingsScreen(onBack = onBack, onOpenObservatory = onOpenObservatory)
+        LiuliMemoryPromptsScreen(onBack = onBack)
         return
     }
-    GrowthSettingsScreen(onBack = onBack, onOpenObservatory = onOpenObservatory)
+    MemoryPromptsSettingsScreen(onBack = onBack)
+}
+
+@Composable
+fun SkinnedGrowthSettingsScreen(
+    onBack: () -> Unit,
+    onOpenObservatory: () -> Unit = {},
+    onOpenNotifications: () -> Unit = {},
+) {
+    if (LocalAppSkin.current == AppSkin.LIULI) {
+        LiuliGrowthSettingsScreen(
+            onBack = onBack,
+            onOpenObservatory = onOpenObservatory,
+            onOpenNotifications = onOpenNotifications,
+        )
+        return
+    }
+    GrowthSettingsScreen(
+        onBack = onBack,
+        onOpenObservatory = onOpenObservatory,
+        onOpenNotifications = onOpenNotifications,
+    )
 }
 
 @Composable

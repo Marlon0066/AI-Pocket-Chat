@@ -15,12 +15,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.QrCode2
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,6 +41,7 @@ import com.situ.aichat.data.local.entity.detectedToolSupportLevel
 import com.situ.aichat.data.local.entity.effectiveAudioInputEnabled
 import com.situ.aichat.data.local.entity.effectiveIsThinkingModel
 import com.situ.aichat.data.local.entity.effectiveVisionEnabled
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.liuli.designsystem.LiuliButton
@@ -122,7 +118,7 @@ internal fun LiuliApiConfigCard(
                 LiuliBalanceLabel(balance)
             }
             if (supportsBalance) {
-                CardActionButton(Icons.Filled.Refresh, stringResource(R.string.api_balance_refresh), onRefreshBalance)
+                CardActionButton(AppActionIcons.Refresh, stringResource(R.string.api_balance_refresh), onRefreshBalance)
                 Box(Modifier.size(ACTION_GAP))
             }
             if (cfg.isActive) {
@@ -136,10 +132,10 @@ internal fun LiuliApiConfigCard(
                 LiuliButton(onClick = onActivate, style = LiuliButtonStyle.Text) { Text(ACTIVATE_LABEL) }
             }
             Box(Modifier.size(ACTION_GAP))
-            CardActionButton(Icons.Filled.Edit, stringResource(R.string.api_edit), onEdit)
+            CardActionButton(AppActionIcons.Edit, stringResource(R.string.api_edit), onEdit)
             Box(Modifier.size(ACTION_GAP))
             CardActionButton(
-                Icons.Filled.Delete,
+                AppActionIcons.Delete,
                 stringResource(R.string.action_delete),
                 onDelete,
                 tint = colors.status.onError,

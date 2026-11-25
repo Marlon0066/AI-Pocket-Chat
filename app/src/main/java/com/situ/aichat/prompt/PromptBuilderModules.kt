@@ -182,10 +182,16 @@ fun buildSystemPromptWithSuffixes(
         if (content.isNotEmpty()) {
             val isIdentityAnchor = !worldInfoAnchored &&
                 module.systemModuleType == SystemModuleType.CHARACTER_IDENTITY
-            if (isIdentityAnchor && worldInfoBefore.isNotBlank()) worldInfoSink.add(worldInfoBefore)
+            if (isIdentityAnchor && worldInfoBefore.isNotBlank()) {
+                worldInfoSink.add(worldInfoBefore)
+                if (!movesWorldInfo) segmentSink?.add(PromptBuilder.worldInfoSegment("世界书（角色前）", worldInfoBefore, ContextSegment.POSITION_PREFIX))
+            }
             prefixParts.add(content)
             segmentSink?.add(PromptBuilder.moduleSegment(module, content, ContextSegment.POSITION_PREFIX))
-            if (isIdentityAnchor && worldInfoAfter.isNotBlank()) worldInfoSink.add(worldInfoAfter)
+            if (isIdentityAnchor && worldInfoAfter.isNotBlank()) {
+                worldInfoSink.add(worldInfoAfter)
+                if (!movesWorldInfo) segmentSink?.add(PromptBuilder.worldInfoSegment("世界书（角色后）", worldInfoAfter, ContextSegment.POSITION_PREFIX))
+            }
             if (isIdentityAnchor) worldInfoAnchored = true
         }
         // 模块内容可能因只剩召回而为空（上面跳过），挪位段照样加。
@@ -203,8 +209,14 @@ fun buildSystemPromptWithSuffixes(
     }
     // 身份模块缺席/空内容的兜底：前桶置顶、后桶收尾（§2.2 映射的降级语义；省钱模式下「置顶 / 收尾」指挪位块内）。
     if (!worldInfoAnchored) {
-        if (worldInfoBefore.isNotBlank()) worldInfoSink.add(0, worldInfoBefore)
-        if (worldInfoAfter.isNotBlank()) worldInfoSink.add(worldInfoAfter)
+        if (worldInfoBefore.isNotBlank()) {
+            worldInfoSink.add(0, worldInfoBefore)
+            if (!movesWorldInfo) segmentSink?.add(0, PromptBuilder.worldInfoSegment("世界书（角色前）", worldInfoBefore, ContextSegment.POSITION_PREFIX))
+        }
+        if (worldInfoAfter.isNotBlank()) {
+            worldInfoSink.add(worldInfoAfter)
+            if (!movesWorldInfo) segmentSink?.add(PromptBuilder.worldInfoSegment("世界书（角色后）", worldInfoAfter, ContextSegment.POSITION_PREFIX))
+        }
     }
 
     // 安全兜底：所有模块都禁用 → 最小提示词。省钱模式把前置区内容全挪走时（moved 非空）不算「全禁用」——

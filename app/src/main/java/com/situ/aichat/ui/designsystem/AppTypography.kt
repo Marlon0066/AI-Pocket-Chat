@@ -87,17 +87,18 @@ object AppTypography {
     val dialogBody: TextStyle = base.copy(fontSize = 14.sp, lineHeight = 22.sp, fontWeight = W420)
 
     /**
-     * 设置行·题（[AppSettingsRow] 专用·六件套草图 §2.5 取值）：13sp / 行高 18 / **520**。
-     * 与 [secondary]（同 13sp 但 420）分列两枚：设置行的题是**可点行的主标签**，需要比副标题重一档。
-     * **字重归梯**：草图 CSS 写 500，设计语言 §2 字重梯只有 420/520/640 → 就近取 520（R1 🟡-2 登记为 D-17）。
+     * 设置行·题（[AppSettingsRow] 专用·B-8 拍板 2026-09-28 放大 13→14）：14sp / 行高 20 / **520**。
      */
-    val settingsRowTitle: TextStyle = base.copy(fontSize = 13.sp, lineHeight = 18.sp, fontWeight = W520)
+    val settingsRowTitle: TextStyle = base.copy(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = W520)
 
-    /** 设置行·副（[AppSettingsRow] 专用）：10.5sp / 行高 15.75（= 1.5×·对版稿 line-height:1.5）/ 420。 */
-    val settingsRowSubtitle: TextStyle = base.copy(fontSize = 10.5.sp, lineHeight = 15.75.sp, fontWeight = W420)
+    /** 设置行·副（[AppSettingsRow] 专用·B-8 拍板 10.5→12.5）：12.5sp / 行高 18 / 420。 */
+    val settingsRowSubtitle: TextStyle = base.copy(fontSize = 12.5.sp, lineHeight = 18.sp, fontWeight = W420)
 
-    /** 设置行·尾值（[AppSettingsRow] 专用·「暖陶 · 跟随系统」这类右侧现值）：11.5sp / 行高 15 / 420。 */
+    /** 设置行·尾值（保留 11.5sp 供既有聊天/胶囊复用，不破坏既有页面）。 */
     val settingsRowValue: TextStyle = base.copy(fontSize = 11.5.sp, lineHeight = 15.sp, fontWeight = W420)
+
+    /** 设置行·新尾值（B-8 专用，供 [AppSettingsRow] 尾值对齐 12.5sp）。 */
+    val settingsHubValue: TextStyle = base.copy(fontSize = 12.5.sp, lineHeight = 18.sp, fontWeight = W420)
 
     /**
      * 纸条正文（[AppSnackbarHost] 专用·六件套草图 §2.6 逐字取值）：12.5sp / 行高 17 / 420。

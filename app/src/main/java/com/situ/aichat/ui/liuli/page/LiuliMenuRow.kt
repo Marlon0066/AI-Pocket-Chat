@@ -4,13 +4,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.liuli.designsystem.LiuliMenuEntry
 import com.situ.aichat.ui.liuli.designsystem.LiuliPopupMenu
@@ -70,7 +69,7 @@ fun LiuliMenuRow(
             }
             Spacer(Modifier.width(CHEVRON_GAP))
             Icon(
-                Icons.Filled.KeyboardArrowDown,
+                AppActionIcons.ChevronDown,
                 contentDescription = null,
                 tint = colors.text.tertiary,
                 modifier = Modifier.size(CHEVRON),

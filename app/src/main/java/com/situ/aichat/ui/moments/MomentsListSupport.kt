@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
@@ -30,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.MomentPostWithRelations
 import com.situ.aichat.data.model.MomentAuthorType
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppMomentIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.appCardSurface
@@ -144,7 +143,7 @@ internal fun NotificationBanner(
             modifier = Modifier.weight(1f),
         )
         Icon(
-            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            AppActionIcons.ChevronRight,
             contentDescription = null,
             tint = colors.text.tertiary,
             modifier = Modifier.size(18.dp),

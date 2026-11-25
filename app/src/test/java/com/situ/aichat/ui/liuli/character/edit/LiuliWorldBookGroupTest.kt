@@ -19,7 +19,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** T2-9（琉璃 2.0 卷五 §7·E18）：世界观组无状态内容——五态卡 / 单选 / 多选 / 停用书 / 全局书提示。 */
+/** T2-9：世界观组无状态内容——原住民锁 / 已入世可点开选书并弹离世切换确认 / 单选 / 多选 / 停用书 / 全局书提示。 */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "zh-rCN-w411dp-h891dp")
 class LiuliWorldBookGroupTest {
@@ -30,6 +30,7 @@ class LiuliWorldBookGroupTest {
     private var sheet by mutableStateOf(false)
     private val soles = mutableListOf<String?>()
     private val toggles = mutableListOf<Pair<String, Boolean>>()
+    private val switches = mutableListOf<Pair<String, Boolean>>()
 
     private fun book(uuid: String, name: String, entries: Int = 3, enabled: Boolean = true, global: Boolean = false) =
         WorldBookSummary(book = WorldBookEntity(uuid = uuid, name = name, enabled = enabled, isGlobal = global), entryCount = entries, boundCount = 0)
@@ -50,22 +51,32 @@ class LiuliWorldBookGroupTest {
                         boundBooks = bound, joinedWorld = joined, nativeOrigin = native,
                         selectableBooks = listOf(qing, chang), globalBooks = global,
                         sheetVisible = sheet, onOpen = { opens++; sheet = true }, onDismissSheet = { sheet = false },
-                        onSelectSole = { soles += it }, onToggle = { u, b -> toggles += u to b }, onManageBooks = {},
+                        onSelectSole = { soles += it }, onToggle = { u, b -> toggles += u to b },
+                        onSwitchLeaveAndBind = { u, sole -> switches += u to sole },
+                        onManageBooks = {},
                     )
                 }
             }
         }
     }
 
-    @Test fun 五态卡文案() {
+    @Test fun 原住民卡锁死不可点() {
         show(native = true, joined = true)
         compose.onNodeWithText("原住民角色 · 不可绑定").assertHasNoClickAction()
     }
 
-    @Test fun 已加入世界锁() {
-        show(joined = true, bound = listOf(qing))
-        compose.onNodeWithText("已加入世界 · 与世界书二选一").assertHasNoClickAction()
-        compose.onNodeWithText("青云录").assertDoesNotExist()
+    @Test fun 已加入世界_可点开选书_点书弹出离世确认_确认回调切换() {
+        show(joined = true)
+        compose.onNodeWithText("当前在世界里 · 点一下选书并离开世界").performClick()
+        assertEquals(1, opens)
+        compose.onNodeWithText("选一本世界观").assertExists()
+        compose.onNodeWithText("青云录").performClick()
+        // 未确认前不直接落库
+        assertEquals(emptyList<Pair<String, Boolean>>(), switches)
+        compose.onNodeWithText("换用世界观并离开世界？").assertExists()
+        compose.onNodeWithText("离开世界并换用").performClick()
+        assertEquals(listOf("q" to true), switches)
+        compose.onNodeWithText("选一本世界观").assertDoesNotExist()
     }
 
     @Test fun 未绑单本多本() {

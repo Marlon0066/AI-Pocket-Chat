@@ -14,10 +14,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -122,7 +120,7 @@ internal fun LiuliProfileWalletCard(
                             contentDescription = stringResource(R.string.wallet_edit_title),
                             size = EDIT_BUTTON,
                         ) {
-                            Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(AppActionIcons.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
                         }
                     }
                 }
@@ -219,7 +217,7 @@ private fun MonthlyStatsRow(earn: Int, spend: Int) {
     val colors = AppTheme.colors
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
-            Icons.Filled.CalendarMonth,
+            AppActionIcons.Calendar,
             contentDescription = null,
             tint = colors.text.secondary,
             modifier = Modifier.size(SMALL_ICON),

@@ -44,17 +44,22 @@ class LiuliVolume5FacesTest {
 
     @Test fun 三十处包装与暖陶逐一同签名() {
         PINS.forEach(::check)
-        // 三十处路由 = 二十九个包装（`promptModules` 两条路由共用一枚）。
-        assertEquals(29, PINS.size)
+        // 三十五处包装（含卷一「高级」+ 卷二「语音」「记忆提示词」+ 卷三「日程」「宠物」「钱包」）。
+        assertEquals(35, PINS.size)
     }
 
     @Test fun 参数个数逐条钉死() {
         // 期望值从各暖陶屏的签名重新打字（不回读 PINS 表·防「表错了测试跟着错」）。
         assertEquals(1, declaredParams(FACES_B, "SkinnedMemoryHubScreen"))
-        assertEquals(2, declaredParams(FACES_B, "SkinnedGrowthSettingsScreen"))
-        assertEquals(5, declaredParams(FACES_C, "SkinnedApiConfigScreen"))
+        assertEquals(1, declaredParams(FACES_B, "SkinnedMemoryPromptsScreen"))
+        assertEquals(3, declaredParams(FACES_B, "SkinnedGrowthSettingsScreen"))
+        assertEquals(6, declaredParams(FACES_C, "SkinnedApiConfigScreen"))
         assertEquals(2, declaredParams(FACES_C, "SkinnedApiConfigEditScreen"))
         assertEquals(2, declaredParams(FACES_C, "SkinnedQrScanScreen"))
+        assertEquals(2, declaredParams(FACES_C, "SkinnedVoiceSettingsScreen"))
+        assertEquals(1, declaredParams(FACES_C, "SkinnedScheduleSettingsScreen"))
+        assertEquals(1, declaredParams(FACES_C, "SkinnedPetSettingsScreen"))
+        assertEquals(2, declaredParams(FACES_C, "SkinnedWalletSettingsScreen"))
         assertEquals(2, declaredParams(FACES_C, "SkinnedAboutScreen"))
         assertEquals(3, declaredParams(FACES_DIARY, "SkinnedDiaryPromptSettingsScreen"))
         assertEquals(2, declaredParams(FACES_BACKUP, "SkinnedBackupScreen"))
@@ -76,6 +81,7 @@ class LiuliVolume5FacesTest {
         val PINS = listOf(
             // C1 六屏（已有琉璃版）
             Pin(FACES_B, "SkinnedMemoryHubScreen", WARM_SETTINGS + "MemoryHubScreenKt", "MemoryHubScreen", 0),
+            Pin(FACES_B, "SkinnedMemoryPromptsScreen", WARM_SETTINGS + "MemoryPromptsSettingsScreenKt", "MemoryPromptsSettingsScreen", 0),
             Pin(FACES_B, "SkinnedGrowthSettingsScreen", WARM_SETTINGS + "GrowthSettingsScreenKt", "GrowthSettingsScreen", 1),
             Pin(FACES_B, "SkinnedImmersiveSettingsScreen", WARM_SETTINGS + "ImmersiveSettingsScreenKt", "ImmersiveSettingsScreen", 1),
             Pin(FACES_B, "SkinnedReplyRuleSettingsScreen", WARM_SETTINGS + "ReplyRuleSettingsScreenKt", "ReplyRuleSettingsScreen", 1),
@@ -88,13 +94,18 @@ class LiuliVolume5FacesTest {
             Pin(FACES_C, "SkinnedQrScanScreen", WARM_SETTINGS + "QrScanScreenKt", "QrScanScreen", 0),
             Pin(FACES_C, "SkinnedTtsConfigurationScreen", WARM_SETTINGS + "TtsConfigurationScreenKt", "TtsConfigurationScreen", 1),
             Pin(FACES_C, "SkinnedVoiceCallSettingsScreen", WARM_SETTINGS + "VoiceCallSettingsScreenKt", "VoiceCallSettingsScreen", 1),
+            Pin(FACES_C, "SkinnedVoiceSettingsScreen", WARM_SETTINGS + "VoiceSettingsScreenKt", "VoiceSettingsScreen", 1),
             Pin(FACES_C, "SkinnedStoryGlobalSettingsScreen", WARM_SETTINGS + "StoryGlobalSettingsScreenKt", "StoryGlobalSettingsScreen", 1),
             Pin(FACES_C, "SkinnedWorldSettingsScreen", WARM_SETTINGS + "WorldSettingsScreenKt", "WorldSettingsScreen", 1),
             Pin(FACES_C, "SkinnedAboutScreen", WARM_SETTINGS + "AboutScreenKt", "AboutScreen", 0),
             Pin(FACES_C, "SkinnedAgreementViewScreen", WARM_SETTINGS + "AboutScreenKt", "AgreementViewScreen", 0),
             Pin(FACES_C, "SkinnedSystemTogglesScreen", WARM_SETTINGS + "SystemTogglesScreenKt", "SystemTogglesScreen", 1),
+            Pin(FACES_C, "SkinnedScheduleSettingsScreen", WARM_SETTINGS + "ScheduleSettingsScreenKt", "ScheduleSettingsScreen", 1),
+            Pin(FACES_C, "SkinnedPetSettingsScreen", WARM_SETTINGS + "PetSettingsScreenKt", "PetSettingsScreen", 1),
+            Pin(FACES_C, "SkinnedWalletSettingsScreen", WARM_SETTINGS + "WalletSettingsScreenKt", "WalletSettingsScreen", 1),
             Pin(FACES_C, "SkinnedBackgroundReliabilityScreen", WARM_SETTINGS + "BackgroundReliabilityScreenKt", "BackgroundReliabilityScreen", 0),
             Pin(FACES_C, "SkinnedKernelObservatoryScreen", WARM_SETTINGS + "KernelObservatoryScreenKt", "KernelObservatoryScreen", 1),
+            Pin(FACES_C, "SkinnedAdvancedSettingsScreen", WARM_SETTINGS + "AdvancedSettingsScreenKt", "AdvancedSettingsScreen", 1),
             Pin(FACES_DIARY, "SkinnedDiarySettingsScreen", "com.situ.aichat.ui.diary.DiarySettingsScreenKt", "DiarySettingsScreen", 1),
             Pin(FACES_DIARY, "SkinnedDiaryPromptSettingsScreen", "com.situ.aichat.ui.diary.DiaryPromptSettingsScreenKt", "DiaryPromptSettingsScreen", 1),
             Pin(FACES_DIARY, "SkinnedDiaryPromptPreviewScreen", "com.situ.aichat.ui.diary.DiaryPromptPreviewScreenKt", "DiaryPromptPreviewScreen", 1),

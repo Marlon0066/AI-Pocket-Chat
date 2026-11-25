@@ -17,8 +17,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
+import com.situ.aichat.ui.designsystem.AppLoadingRing
+import com.situ.aichat.ui.designsystem.AppLoadingRingSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -128,9 +129,11 @@ fun AvatarCropScreen(
             when (val s = state) {
                 // Failed 也走转圈：上面的 LaunchedEffect 正在退场，这一帧不值得闪个错误态给用户看。
                 is CropSource.Loaded -> AvatarCropEditor(s.bitmap, onCancel, onConfirm)
-                // TODO(图纸未覆盖): 这枚转圈画在**用户照片上**，靠 color = Color.White 才看得见；AppLoadingRing
-                //  恒走 accent 陶土色、无 color 槽（§3 签名锁定）。换过去在浅色照片上会糊掉 → 停手登记（D-13）。
-                else -> CircularProgressIndicator(Modifier.align(Alignment.Center), color = Color.White)
+                else -> AppLoadingRing(
+                    modifier = Modifier.align(Alignment.Center),
+                    size = AppLoadingRingSize.Large,
+                    color = Color.White,
+                )
             }
         }
     }

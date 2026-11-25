@@ -30,6 +30,7 @@ import androidx.compose.ui.test.hasText
 internal class LiuliStoryGlobalContentTest : LiuliScreenTestBase() {
 
     private val opened = mutableListOf<String>()
+    private var resetCalls = 0
 
     private fun show(settings: AppSettings, thinking: Boolean) = host {
         LiuliStoryGlobalSettingsContent(
@@ -37,6 +38,7 @@ internal class LiuliStoryGlobalContentTest : LiuliScreenTestBase() {
             isThinking = thinking,
             onSetTemperature = {},
             onOpenField = { opened += it },
+            onResetDefaults = { resetCalls++ },
             onBack = {},
         )
     }
@@ -58,6 +60,16 @@ internal class LiuliStoryGlobalContentTest : LiuliScreenTestBase() {
         show(AppSettings(), thinking = false)
         assertEquals(0, countText("当前故事创作用的是思考模型：温度对它不生效，换普通模型即生效。"))
     }
+
+    @Test fun 回到出厂默认需先确认再回调() {
+        show(AppSettings(), thinking = false)
+        compose.onNodeWithText("回到出厂默认").performScrollTo().performClick()
+        compose.waitForIdle()
+        assertEquals(0, resetCalls)
+        compose.onAllNodesWithText("回到出厂默认")[1].performClick()
+        compose.waitForIdle()
+        assertEquals(1, resetCalls)
+    }
 }
 
 /**
@@ -77,7 +89,6 @@ internal class LiuliMomentSettingsContentTest : LiuliScreenTestBase() {
             onSetAutoComment = {},
             onSetCommentDelay = {},
             onSetAutoLike = {},
-            onSetNewPostNotification = {},
             onBack = {},
         )
     }
@@ -93,10 +104,10 @@ internal class LiuliMomentSettingsContentTest : LiuliScreenTestBase() {
         assertEquals(0, countText("关"))
     }
 
-    @Test fun 两枚行为开关都在() {
+    @Test fun 自动点赞在且新动态通知已迁出() {
         show(MomentSettingsState())
         assertEquals(1, countText("自动点赞"))
-        assertEquals(1, countText("新动态通知"))
+        assertEquals(0, countText("新动态通知"))
     }
 }
 
@@ -220,7 +231,6 @@ internal class LiuliDiarySettingsContentTest : LiuliScreenTestBase() {
                     onSetAutoGenerate = {},
                     onOpenTimePicker = openPicker,
                     onSetAutoPublish = {},
-                    onSetPetAutoGenerate = {},
                     onSelectExchangePartner = {},
                     onSetCommentEnabled = {},
                     onSetCommentDelay = {},
@@ -233,11 +243,10 @@ internal class LiuliDiarySettingsContentTest : LiuliScreenTestBase() {
         )
     }
 
-    @Test fun 自动生成关时时间行与直接发布都不在场() {
+    @Test fun 自动生成关时时间行与直接发布都不在场且宠物日记已迁出() {
         show(com.situ.aichat.ui.diary.DiarySettingsState(autoGenerateEnabled = false, commentEnabled = false))
         assertEquals(0, countText("生成时间"))
-        // 宠物日记那一枚不受门控 —— 必须还在。
-        assertEquals(1, countText("宠物日记自动生成"))
+        assertEquals(0, countText("宠物日记自动生成"))
     }
 
     @Test fun 自动生成开时时间行在场且回显() {
@@ -328,7 +337,6 @@ internal class LiuliWorldSettingsContentTest : LiuliScreenTestBase() {
         LiuliWorldSettingsContent(
             state = state,
             onSetVividness = { vividness += it },
-            onSetNotification = {},
             onSetRelationships = {},
             onSetRomance = {},
             onPickTimezone = {},
@@ -336,13 +344,12 @@ internal class LiuliWorldSettingsContentTest : LiuliScreenTestBase() {
         )
     }
 
-    @Test fun 六枚单选行都在() {
+    @Test fun 三档鲜活度单选行都在且世界通知已迁出() {
         show(WorldSettingsUiState())
-        // 三档鲜活度 + 三档通知 = 六个 RadioButton 语义节点。
         val radios = compose.onAllNodes(
             androidx.compose.ui.test.isSelectable(),
         ).fetchSemanticsNodes().size
-        assertTrue("单选行应至少六个（实得 $radios）", radios >= 6)
+        assertEquals("鲜活度三档单选应恰三个", 3, radios)
     }
 
     @Test fun 点鲜活度写回存储串() {

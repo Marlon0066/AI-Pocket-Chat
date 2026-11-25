@@ -16,7 +16,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,6 +42,7 @@ import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTextArea
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
+import com.situ.aichat.ui.designsystem.grainSurface
 
 /**
  * 记忆手动编辑页（图纸 2026-09-01「记忆与防污染加固批」件③·D-2/D-3/D-4/D-5 已过审）。
@@ -72,11 +72,11 @@ fun MemoryEditScreen(
     BackHandler(enabled = !state.saving) { viewModel.requestClose() }
 
     Scaffold(
+        containerColor = AppTheme.colors.surface.base,
         topBar = {
             AppFormBar(
                 title = stringResource(R.string.memory_edit_title),
                 lifted = scrollState.value > 0,
-                // ✕ → 文字「取消」（拍板④）；原 cd 挂的 memory_edit_discard_confirm 由确认弹窗继续使用。
                 onCancel = { viewModel.requestClose() },
                 trailing = {
                     AppButton(
@@ -94,8 +94,9 @@ fun MemoryEditScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .verticalScroll(scrollState) // 滚动承重在此（弹层键盘遮挡战役教训）
+                .background(colors.surface.base)
+                .grainSurface()
+                .verticalScroll(scrollState)
                 .contentMaxWidth()
                 .padding(horizontal = AppSpacing.screenGutter, vertical = 12.dp)
                 .imePadding(),
@@ -103,7 +104,7 @@ fun MemoryEditScreen(
         ) {
             Text(
                 stringResource(R.string.memory_edit_hint),
-                style = MaterialTheme.typography.bodySmall,
+                style = AppTypography.caption,
                 color = colors.text.tertiary,
             )
 
@@ -194,7 +195,7 @@ private fun MemorySectionEditor(
         ) {
             Text(
                 header,
-                style = MaterialTheme.typography.labelMedium,
+                style = AppTypography.label,
                 fontWeight = FontWeight.SemiBold,
                 color = colors.accent.text,
             )

@@ -12,9 +12,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -173,7 +172,7 @@ private fun PromiseResolvedMicroRow(p: PromiseEntity, mdPattern: String) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
         if (fulfilled) {
             Icon(
-                Icons.Filled.Check,
+                AppActionIcons.Check,
                 contentDescription = null,
                 modifier = Modifier.padding(top = 2.dp).size(CHECK),
                 tint = colors.status.onSuccess,

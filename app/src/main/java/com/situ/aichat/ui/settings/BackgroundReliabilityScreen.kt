@@ -12,7 +12,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +33,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.situ.aichat.R
 import com.situ.aichat.ui.components.contentMaxWidth
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppTopBar
@@ -145,7 +145,7 @@ private fun ReliabilityCard(
                     MaterialTheme.colorScheme.error
                 }
                 Icon(
-                    imageVector = if (statusOk) Icons.Filled.CheckCircle else Icons.Filled.Warning,
+                    imageVector = if (statusOk) Icons.Filled.CheckCircle else AppActionIcons.Warning,
                     contentDescription = null,
                     tint = color,
                 )

@@ -18,8 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.PushPin
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -197,14 +196,14 @@ private fun SwipeableChatRow(
     val pinned = row.conversation.isPinned
     val pinAction = SwipeAction(
         label = stringResource(if (pinned) R.string.chat_list_action_unpin else R.string.chat_list_action_pin),
-        icon = Icons.Filled.PushPin,
+        icon = AppActionIcons.Pin,
         containerColor = colors.tertiary,
         contentColor = colors.onTertiary,
         onClick = onTogglePin,
     )
     val deleteAction = SwipeAction(
         label = stringResource(R.string.action_delete),
-        icon = Icons.Filled.Delete,
+        icon = AppActionIcons.Delete,
         containerColor = colors.error,
         contentColor = colors.onError,
         onClick = onRequestDelete,
@@ -248,7 +247,7 @@ fun ChatRow(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (conv.isPinned) {
                     Icon(
-                        Icons.Filled.PushPin,
+                        AppActionIcons.Pin,
                         contentDescription = stringResource(R.string.chat_list_pinned_desc),
                         tint = colors.primary,
                         modifier = Modifier.size(14.dp),
@@ -341,7 +340,7 @@ private fun PinnedSectionHeader() {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            Icons.Filled.PushPin,
+            AppActionIcons.Pin,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.width(14.dp).height(14.dp),

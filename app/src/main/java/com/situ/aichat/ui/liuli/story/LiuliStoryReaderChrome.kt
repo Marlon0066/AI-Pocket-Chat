@@ -22,8 +22,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -49,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.StoryChapterEntity
 import com.situ.aichat.ui.components.rememberReduceMotion
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBarIcons
 import com.situ.aichat.ui.designsystem.AppTypography
@@ -224,7 +223,7 @@ internal fun LiuliStoryReaderDock(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(READER_DOCK_GAP),
         ) {
-            DockCircle(Icons.Filled.ChevronLeft, R.string.story_reader_prev, enabled = nav.hasPrev, onClick = onPrev)
+            DockCircle(AppActionIcons.ChevronLeft, R.string.story_reader_prev, enabled = nav.hasPrev, onClick = onPrev)
             Column(
                 Modifier.weight(1f).fillMaxHeight().liuliGlass(LiuliShapes.pill, dark).padding(horizontal = DOCK_PILL_PAD_H),
                 verticalArrangement = Arrangement.Center,
@@ -251,7 +250,7 @@ internal fun LiuliStoryReaderDock(
                     Text(stringResource(R.string.story_reader_continue_arc), fontWeight = FontWeight.Bold)
                 }
             } else {
-                DockCircle(Icons.Filled.ChevronRight, R.string.story_reader_next, enabled = nav.hasNext, onClick = onNext)
+                DockCircle(AppActionIcons.ChevronRight, R.string.story_reader_next, enabled = nav.hasNext, onClick = onNext)
             }
         }
     }

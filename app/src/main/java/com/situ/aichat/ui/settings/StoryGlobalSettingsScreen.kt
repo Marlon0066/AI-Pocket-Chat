@@ -1,7 +1,10 @@
 package com.situ.aichat.ui.settings
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -15,6 +18,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -25,19 +31,18 @@ import com.situ.aichat.story.StoryEditableField
 import com.situ.aichat.story.globalValueLabel
 import com.situ.aichat.ui.components.SettingsSliderRow
 import com.situ.aichat.ui.components.contentMaxWidth
+import com.situ.aichat.ui.designsystem.AppButton
+import com.situ.aichat.ui.designsystem.AppButtonStyle
+import com.situ.aichat.ui.designsystem.AppDialog
+import com.situ.aichat.ui.designsystem.AppDialogTone
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
 import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * App 设置「故事创作」子屏（故事二期卷四·提案 §10.1 = 全局创作偏好的**唯一的家**·mockup 屏 6 上半）。
- *
- * 四行：创作温度滑条 / 全局文字忌口 / 全局场面节拍 / 全局口味画像
- * （段序实验开关随 2026-08-03「B 序固化」整链拆除）。后三行点开进统一编辑页的全局哨兵变体（`storyFieldEditor/-/<哨兵键>`——storyId 段是占位符，
- * 全局分支根本不读它）。**存储与语义逐字节沿用书页「全局（暂驻）」组**，本屏只是换了个家。
- *
- * 长相复用同包的 [SettingsGroupCard] / [SettingsRow]（卷四把它们由 private 提到 internal，实现一字未动）。
+ * App 设置「故事创作」子屏（故事二期卷四·提案 §10.1 = 全局创作偏好的**唯一的家**；
+ * 设置全面重构卷三 B-6 补齐「回到出厂默认」确认弹窗）。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,6 +53,7 @@ fun StoryGlobalSettingsScreen(
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val isThinking by viewModel.storyModelIsThinking.collectAsStateWithLifecycle()
+    var showResetConfirm by remember { mutableStateOf(false) }
 
     val scrollState = rememberScrollState()
     Scaffold(
@@ -100,18 +106,43 @@ fun StoryGlobalSettingsScreen(
                 SettingsRow(
                     Icons.Filled.Insights,
                     stringResource(R.string.story_global_taste_title),
-                    // 口味画像没有出厂默认 → 值标只有「已设置 / 未设置」两种说法。
                     value = stringResource(globalValueLabel(settings.storyTasteProfile, hasFactoryDefault = false)),
                     onClick = { onOpenField(StoryEditableField.GLOBAL_TASTE_PROFILE_KEY) },
                 )
             }
-            // 组尾说明条（mockup 屏6 notestrip·R1 补齐）：讲清「全局 vs 单本书覆盖」的分工，组脚注惯例同书页 SettingsGroup.footer。
             Text(
                 stringResource(R.string.story_global_settings_footer),
                 style = AppTheme.typography.secondary,
                 color = AppTheme.colors.text.secondary,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 10.dp),
             )
+            AppButton(
+                onClick = { showResetConfirm = true },
+                style = AppButtonStyle.Tonal,
+                danger = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+            ) {
+                Text(stringResource(R.string.settings_story_reset_defaults))
+            }
+            Spacer(Modifier.height(16.dp))
         }
+    }
+
+    if (showResetConfirm) {
+        AppDialog(
+            onDismissRequest = { showResetConfirm = false },
+            title = stringResource(R.string.settings_story_reset_confirm_title),
+            body = stringResource(R.string.settings_story_reset_confirm_body),
+            confirmText = stringResource(R.string.settings_story_reset_defaults),
+            confirmTone = AppDialogTone.Danger,
+            onConfirm = {
+                showResetConfirm = false
+                viewModel.resetToDefaults()
+            },
+            dismissText = stringResource(R.string.action_cancel),
+            onDismiss = { showResetConfirm = false },
+        )
     }
 }

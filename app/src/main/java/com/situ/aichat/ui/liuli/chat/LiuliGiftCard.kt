@@ -10,9 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material3.Text
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,7 +70,7 @@ internal fun LiuliGiftCard(
     ) {
         LiuliCard(width = LiuliChatGeometry.cardWidth, onClick = if (clickEnabled) onDiyClick else null) {
             LiuliCardHeader(
-                icon = Icons.Filled.CardGiftcard,
+                icon = AppActionIcons.Gift,
                 title = if (isFromUser) "送你一份礼物" else "收到一份礼物",
                 subtitle = {
                     Row(verticalAlignment = Alignment.CenterVertically) {

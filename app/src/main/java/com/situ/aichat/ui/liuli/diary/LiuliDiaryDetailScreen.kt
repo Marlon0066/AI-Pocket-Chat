@@ -30,11 +30,11 @@ import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBarIcons
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.diary.DetailMetaRow
-import com.situ.aichat.ui.diary.DiaryDashedDivider
 import com.situ.aichat.ui.diary.DiaryDetailBody
 import com.situ.aichat.ui.diary.DiaryDetailImageGrid
 import com.situ.aichat.ui.diary.DiaryDetailSignature
 import com.situ.aichat.ui.diary.DiaryDetailViewModel
+import com.situ.aichat.ui.diary.DiaryDottedDivider
 import com.situ.aichat.ui.diary.DiaryReactionRow
 import com.situ.aichat.ui.diary.diaryAuthorDisplayOf
 import com.situ.aichat.ui.diary.diaryDetailBodyStyle
@@ -49,9 +49,9 @@ import com.situ.aichat.ui.liuli.page.LiuliPageCircleAction
 import com.situ.aichat.ui.liuli.page.LiuliPageGeometry
 import com.situ.aichat.ui.theme.LocalIsDarkTheme
 
-/** 详情正文左右 16 · 项间 16（= 暖陶）。 */
-private val DETAIL_PAD_H = 16.dp
-private val DETAIL_ITEM_GAP = 16.dp
+/** 详情正文左右 20 · 项间 18（方向 C 与 LiuliPageGeometry.gutter 统一）。 */
+private val DETAIL_PAD_H = LiuliPageGeometry.gutter
+private val DETAIL_ITEM_GAP = 18.dp
 
 /**
  * 琉璃日记详情（琉璃 2.0 卷六·一 §4.3·设计稿 D2 / D4）：与暖陶 [com.situ.aichat.ui.diary.DiaryDetailScreen] 共用同一个 VM 与
@@ -149,7 +149,7 @@ internal fun LiuliDiaryDetailPage(
             if (images.isNotEmpty()) DiaryDetailImageGrid(images)
             DiaryDetailSignature(authorDisplay, entry.timestamp)
             val noteAuthor = diaryExchangeNoteAuthor(entry, ewc.comments, charactersByUuid)
-            if (ewc.reactions.isNotEmpty() || ewc.comments.isNotEmpty() || noteAuthor != null) DiaryDashedDivider()
+            if (ewc.reactions.isNotEmpty() || ewc.comments.isNotEmpty() || noteAuthor != null) DiaryDottedDivider()
             if (ewc.reactions.isNotEmpty()) DiaryReactionRow(ewc.reactions, charactersByUuid)
             if (ewc.comments.isNotEmpty()) LiuliDiaryCommentSection(ewc.comments, charactersByUuid, onDeleteComment, onReply)
             if (noteAuthor != null) {

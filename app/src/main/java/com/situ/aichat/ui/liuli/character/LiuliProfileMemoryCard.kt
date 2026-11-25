@@ -18,7 +18,6 @@ import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Handshake
@@ -27,8 +26,8 @@ import androidx.compose.material.icons.filled.Mood
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.WavingHand
-import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.ErrorOutline
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -197,7 +196,7 @@ private fun MemoryRawSection(
                     enabled = !editInProgressBlocked,
                     modifier = Modifier.alpha(if (editInProgressBlocked) DISABLED_ALPHA else 1f),
                 ) {
-                    Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(13.dp))
+                    Icon(AppActionIcons.Edit, contentDescription = null, modifier = Modifier.size(13.dp))
                     Text(stringResource(R.string.profile_memory_edit_action))
                 }
             }
@@ -344,7 +343,7 @@ private fun buildMemoryChips(stats: StructuredMemoryStats.Result, sm: Structured
     val neutral = AppTheme.colors.text.secondary
 
     stats.firstMeetDate?.let {
-        chips += MemoryChipData(Icons.Filled.CalendarMonth, stringResource(R.string.profile_memory_first_meet), fmt(it, MEM_YMD), MemColor.Blue)
+        chips += MemoryChipData(AppActionIcons.Calendar, stringResource(R.string.profile_memory_first_meet), fmt(it, MEM_YMD), MemColor.Blue)
     }
     stats.busiestDay?.let {
         chips += MemoryChipData(

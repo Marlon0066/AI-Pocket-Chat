@@ -38,6 +38,8 @@ object MomentCommentPromptBuilder {
         existingComments: List<CommentContextLine>,
         replyTarget: CommentReplyTarget?,
         mentionedByPoster: Boolean = false,
+        /** Q2·2A：角色生效的世界书归并段（null/空 ⇒ 逐字节不变）。 */
+        worldInfoSection: String? = null,
     ): String {
         val parts = mutableListOf<String>()
 
@@ -48,6 +50,11 @@ object MomentCommentPromptBuilder {
         if (character.speakingStyle.isNotEmpty()) parts.add(strings.speakingStyle.format(character.speakingStyle))
         if (character.catchphrases.isNotEmpty()) parts.add(strings.catchphrases.format(character.catchphrases))
         if (character.initialInterests.isNotEmpty()) parts.add(strings.interests.format(character.initialInterests))
+        if (!worldInfoSection.isNullOrBlank()) {
+            parts.add("")
+            parts.add("## 世界观设定")
+            parts.add(worldInfoSection)
+        }
 
         parts.add("")
         parts.add(strings.friendPosted.format(postAuthorName))

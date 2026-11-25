@@ -30,10 +30,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -250,7 +248,7 @@ fun VoiceMessageBubble(
 @Composable
 private fun VoicePlayIcon(isPlaying: Boolean, tint: Color) {
     Icon(
-        imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+        imageVector = if (isPlaying) AppActionIcons.Pause else AppActionIcons.Play,
         contentDescription = if (isPlaying) stringResource(R.string.a11y_voice_pause) else stringResource(R.string.a11y_voice_play), // Y5②
         tint = tint,
         modifier = Modifier.size(22.dp),

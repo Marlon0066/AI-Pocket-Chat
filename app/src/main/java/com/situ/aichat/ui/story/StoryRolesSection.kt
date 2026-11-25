@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.StoryCharacterRoleEntity
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 
 /**
@@ -125,7 +124,7 @@ private fun RoleRow(name: String, roleType: String, source: String?, onClick: ()
         )
         RoleTypeBadge(roleType)
         source?.let { Text(it, style = AppTheme.typography.caption, color = c.text.secondary) }
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = c.text.tertiary)
+        Icon(AppActionIcons.ChevronRight, contentDescription = null, tint = c.text.tertiary)
     }
 }
 

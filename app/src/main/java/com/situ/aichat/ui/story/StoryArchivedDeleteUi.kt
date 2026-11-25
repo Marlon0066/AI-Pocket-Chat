@@ -2,8 +2,6 @@ package com.situ.aichat.ui.story
 
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -13,6 +11,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.StoryEntity
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppDialogTone
 import com.situ.aichat.ui.designsystem.AppTheme
@@ -42,7 +41,7 @@ internal fun StoryArchivedCardMenu(
             },
             leadingIcon = {
                 Icon(
-                    Icons.Outlined.Delete,
+                    AppActionIcons.Delete,
                     contentDescription = null,
                     tint = colors.status.onError,
                     modifier = Modifier.size(20.dp),

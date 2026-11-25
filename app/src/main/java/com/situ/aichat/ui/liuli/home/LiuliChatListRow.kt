@@ -7,9 +7,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,6 +23,7 @@ import com.situ.aichat.ui.chat.SwipeAction
 import com.situ.aichat.ui.chat.SwipeActionsRow
 import com.situ.aichat.ui.chat.chatListPreviewText
 import com.situ.aichat.ui.components.CharacterAvatar
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.liuli.designsystem.LiuliAvatarRing
@@ -63,7 +61,7 @@ fun LiuliChatListRow(
     val conv = row.conversation
     val pinAction = SwipeAction(
         label = stringResource(if (conv.isPinned) R.string.chat_list_action_unpin else R.string.chat_list_action_pin),
-        icon = Icons.Filled.PushPin,
+        icon = AppActionIcons.Pin,
         // 面底由 `LiuliSwipeActionFace` 自己画纸面，故这里给透明；contentColor 只喂图标（A-12）。
         containerColor = Color.Transparent,
         contentColor = colors.accent.text,
@@ -71,7 +69,7 @@ fun LiuliChatListRow(
     )
     val deleteAction = SwipeAction(
         label = stringResource(R.string.action_delete),
-        icon = Icons.Filled.Delete,
+        icon = AppActionIcons.Delete,
         containerColor = Color.Transparent,
         contentColor = colors.status.onError,
         onClick = onRequestDelete,
@@ -94,7 +92,7 @@ fun LiuliChatListRow(
             primary = {
                 if (conv.isPinned) {
                     Icon(
-                        Icons.Filled.PushPin,
+                        AppActionIcons.Pin,
                         contentDescription = stringResource(R.string.chat_list_pinned_desc),
                         tint = colors.accent.text,
                         modifier = Modifier.size(PIN_ICON),

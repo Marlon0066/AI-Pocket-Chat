@@ -4,11 +4,13 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
@@ -16,27 +18,25 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SelectableDates
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -46,13 +46,17 @@ import com.situ.aichat.R
 import com.situ.aichat.ui.character.AvatarCropScreen
 import com.situ.aichat.ui.components.CharacterAvatar
 import com.situ.aichat.ui.components.contentMaxWidth
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppFormBar
+import com.situ.aichat.ui.designsystem.AppIconButton
 import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTextArea
 import com.situ.aichat.ui.designsystem.AppTextField
 import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTypography
+import com.situ.aichat.ui.designsystem.grainSurface
 import com.situ.aichat.util.AvatarStore
 import java.text.DateFormat
 import java.util.Calendar
@@ -60,9 +64,7 @@ import java.util.Date
 import kotlinx.coroutines.launch
 
 /**
- * Edit the (singleton) user profile: avatar + nickname + bio + birthday (iOS `UserProfileEditView`).
- * City (P5, 高德) is deferred. nickname/bio feed the userPersona prompt module, so edits reflect in
- * chat. Visuals are native Material 3.
+ * 编辑个人资料（暖陶外衣）：头像 + 昵称 + 简介 + 相处偏好 + 生日。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,12 +74,12 @@ fun UserProfileEditScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val saving by viewModel.saving.collectAsStateWithLifecycle()
+    val colors = AppTheme.colors
 
     val context = LocalContext.current
-    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
     var pendingAvatarCropUri by remember { mutableStateOf<Uri?>(null) }
     val pickMedia = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        // 选完图先进圆形取景裁剪屏（甲 3）；「就这样」才存裁好的成品图，「取消」不改原头像。
         pendingAvatarCropUri = uri
     }
     pendingAvatarCropUri?.let { uri ->
@@ -96,6 +98,7 @@ fun UserProfileEditScreen(
     val scrollState = rememberScrollState()
 
     Scaffold(
+        containerColor = colors.surface.base,
         topBar = {
             AppFormBar(
                 title = stringResource(R.string.profile_edit_title),
@@ -112,15 +115,16 @@ fun UserProfileEditScreen(
         Column(
             modifier = Modifier
                 .padding(padding)
-                .fillMaxWidth()
+                .fillMaxSize()
+                .background(colors.surface.base)
+                .grainSurface()
                 .imePadding()
                 .verticalScroll(scrollState)
                 .contentMaxWidth()
-                .padding(horizontal = AppSpacing.screenGutter),
+                .padding(horizontal = AppSpacing.screenGutter, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // Avatar
-            Box(Modifier.fillMaxWidth().padding(top = 12.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(contentAlignment = Alignment.BottomEnd) {
                         CharacterAvatar(
@@ -131,14 +135,19 @@ fun UserProfileEditScreen(
                                 pickMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                             },
                         )
-                        Surface(color = MaterialTheme.colorScheme.primary, shape = CircleShape) {
+                        Box(
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(colors.accent.primary)
+                                .clickable {
+                                    pickMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                }
+                                .padding(6.dp),
+                        ) {
                             Icon(
                                 Icons.Filled.PhotoCamera,
                                 contentDescription = stringResource(R.string.char_avatar_change),
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.padding(6.dp).clickable {
-                                    pickMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                                },
+                                tint = colors.accent.onPrimary,
                             )
                         }
                     }
@@ -168,7 +177,6 @@ fun UserProfileEditScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            // 相处偏好（四小件·2026-07-16）：逐参照抄 bio 纹路（默认 minHeight 120dp·不设字数闸）。
             AppTextArea(
                 value = state.companionPreference,
                 onValueChange = { v -> viewModel.update { it.copy(companionPreference = v) } },
@@ -178,7 +186,6 @@ fun UserProfileEditScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            // Birthday
             if (state.birthdayMillis == null) {
                 AppButton(onClick = { showDatePicker = true }, modifier = Modifier.fillMaxWidth(), style = AppButtonStyle.Tonal) {
                     Text(stringResource(R.string.char_field_birthday) + "：" + stringResource(R.string.char_birthday_unset))
@@ -188,50 +195,70 @@ fun UserProfileEditScreen(
                     Column(Modifier.weight(1f).clickable { showDatePicker = true }) {
                         Text(
                             stringResource(R.string.char_field_birthday),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = AppTypography.caption,
+                            color = colors.text.secondary,
                         )
-                        Text(DateFormat.getDateInstance(DateFormat.LONG).format(Date(state.birthdayMillis!!)))
+                        Text(
+                            DateFormat.getDateInstance(DateFormat.LONG).format(Date(state.birthdayMillis!!)),
+                            style = AppTypography.body,
+                            color = colors.text.primary,
+                        )
                     }
-                    IconButton(onClick = { viewModel.update { it.copy(birthdayMillis = null) } }) {
-                        Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.char_birthday_clear))
-                    }
+                    AppIconButton(
+                        icon = AppActionIcons.Close,
+                        contentDescription = stringResource(R.string.char_birthday_clear),
+                        onClick = { viewModel.update { it.copy(birthdayMillis = null) } },
+                    )
                 }
             }
             Text(
                 stringResource(R.string.profile_footer_birthday),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = AppTypography.caption,
+                color = colors.text.secondary,
             )
         }
     }
 
     if (showDatePicker) {
-        val dpState = rememberDatePickerState(
-            initialSelectedDateMillis = state.birthdayMillis ?: System.currentTimeMillis(),
-            yearRange = 1900..Calendar.getInstance().get(Calendar.YEAR),
-            selectableDates = PastOrPresentDates,
+        UserBirthdayDatePickerDialog(
+            initialMillis = state.birthdayMillis,
+            onConfirm = { millis -> viewModel.update { it.copy(birthdayMillis = millis) } },
+            onDismiss = { showDatePicker = false },
         )
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            colors = DatePickerDefaults.colors(containerColor = AppTheme.colors.surface.raised),
-            confirmButton = {
-                AppButton(style = AppButtonStyle.Text, onClick = {
-                    viewModel.update { it.copy(birthdayMillis = dpState.selectedDateMillis) }
-                    showDatePicker = false
-                }) { Text(stringResource(R.string.action_confirm)) }
-            },
-            dismissButton = {
-                AppButton(style = AppButtonStyle.Text, onClick = { showDatePicker = false }) { Text(stringResource(R.string.action_cancel)) }
-            },
-        ) {
-            DatePicker(state = dpState)
-        }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-private object PastOrPresentDates : SelectableDates {
+@Composable
+internal fun UserBirthdayDatePickerDialog(
+    initialMillis: Long?,
+    onConfirm: (Long?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val dpState = rememberDatePickerState(
+        initialSelectedDateMillis = initialMillis ?: System.currentTimeMillis(),
+        yearRange = 1900..Calendar.getInstance().get(Calendar.YEAR),
+        selectableDates = PastOrPresentDates,
+    )
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        colors = DatePickerDefaults.colors(containerColor = AppTheme.colors.surface.raised),
+        confirmButton = {
+            AppButton(style = AppButtonStyle.Text, onClick = {
+                onConfirm(dpState.selectedDateMillis)
+                onDismiss()
+            }) { Text(stringResource(R.string.action_confirm)) }
+        },
+        dismissButton = {
+            AppButton(style = AppButtonStyle.Text, onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+    ) {
+        DatePicker(state = dpState)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+internal object PastOrPresentDates : SelectableDates {
     override fun isSelectableDate(utcTimeMillis: Long): Boolean = utcTimeMillis <= System.currentTimeMillis()
     override fun isSelectableYear(year: Int): Boolean = year <= Calendar.getInstance().get(Calendar.YEAR)
 }

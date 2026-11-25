@@ -18,13 +18,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -49,40 +44,39 @@ import com.situ.aichat.pet.PetWalkService
 import com.situ.aichat.pet.growthStage
 import com.situ.aichat.pet.metadata
 import com.situ.aichat.pet.petNeedHeadline
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppProgressBar
+import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppSheet
 import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTypography
 
-// 宠物详情底部弹窗（从 PetDetailScreen 抽出·只搬不改）：点养护栏「详情」打开的 ModalBottomSheet——
-// 需求领衔 + 信息卡（在一起/互动/成长值）+ 状态条（莫兰迪填充 + 趋势箭头）+ 成长进度 + 技能 +
-// 散步纪念品图鉴（6 列可折叠）+ 成就图鉴（5 列可折叠）。配套私有小卡 DetailCard/InfoItem/StatusRow。
+// 宠物详情底部弹窗（暖陶与琉璃共用，全走 AppTheme token）。
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun PetDetailSheet(pet: CharacterPetEntity, trends: PetStatusTrends, onDismiss: () -> Unit) {
+    val colors = AppTheme.colors
     AppSheet(onDismissRequest = onDismiss) {
         Column(
-            // 屏 gutter 恒 20（设计语言 §2.5 军规）
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = AppSpacing.screenGutter).padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text("${pet.name}的详情", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            // S4：需求领衔（sheet 顶·emoji + 第一人称文案·urgent → 深陶强调）
+            Text("${pet.name}的详情", style = AppTypography.titleSmall, color = colors.text.primary)
             val need = petNeedHeadline(pet)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(need.emoji, fontSize = 18.sp)
                 Text(
                     need.headline,
-                    fontSize = 14.sp,
+                    style = AppTypography.secondary,
                     fontWeight = FontWeight.Medium,
-                    color = if (need.action != null) AppTheme.colors.accent.text else AppTheme.colors.text.secondary,
+                    color = if (need.action != null) colors.accent.text else colors.text.secondary,
                 )
             }
-            var souvenirExpanded by remember { mutableStateOf(false) } // pet-ui-4 纪念品图鉴折叠态
-            var milestonesExpanded by remember { mutableStateOf(false) } // 14.4 成就图鉴折叠态
-            // 信息：在一起天数 / 互动 / 成长值
+            var souvenirExpanded by remember { mutableStateOf(false) }
+            var milestonesExpanded by remember { mutableStateOf(false) }
             val daysTogether = ((System.currentTimeMillis() - pet.adoptedDate) / 86_400_000L).toInt().coerceAtLeast(0) + 1
             DetailCard {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -91,67 +85,58 @@ internal fun PetDetailSheet(pet: CharacterPetEntity, trends: PetStatusTrends, on
                     InfoItem("${pet.growthPoints}", "成长值", "")
                 }
             }
-            // 状态条
             DetailCard {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val petC = AppTheme.colors.pet
+                    val petC = colors.pet
                     StatusRow("🍖 饱食度", 100 - pet.hunger, petC.satiety, trends.hunger)
                     StatusRow("💧 清洁度", pet.cleanliness, petC.cleanliness, trends.cleanliness)
                     StatusRow("❤️ 心情", pet.happiness, petC.mood, trends.happiness)
                     StatusRow("➕ 健康", pet.health, petC.health, trends.health)
                 }
             }
-            // 成长进度
             DetailCard {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     val threshold = PetGrowthThresholds.threshold(pet.growthStage)
                     val next = PetGrowthThresholds.nextStage(pet.growthStage)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("成长进度", fontWeight = FontWeight.Medium)
-                        Text(if (next != null) "下一阶段: ${next.displayName}" else "已满级", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("成长进度", style = AppTypography.label, fontWeight = FontWeight.Medium, color = colors.text.primary)
+                        Text(if (next != null) "下一阶段: ${next.displayName}" else "已满级", style = AppTypography.caption, color = colors.text.secondary)
                     }
                     if (threshold != null) {
                         AppProgressBar(progress = pet.growthPoints.toFloat() / threshold, modifier = Modifier.fillMaxWidth())
-                        Text("${pet.growthPoints} / $threshold", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("${pet.growthPoints} / $threshold", style = AppTypography.captionNumeric, color = colors.text.secondary)
                     } else {
                         AppProgressBar(progress = 1f, modifier = Modifier.fillMaxWidth())
-                        Text("特殊形态 · 满级", fontSize = 11.sp, color = AppTheme.colors.accent.text)
+                        Text("特殊形态 · 满级", style = AppTypography.caption, color = colors.accent.text)
                     }
                 }
             }
-            // 技能
             val tricks = pet.metadata.learnedTricks
             DetailCard {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("技能", fontWeight = FontWeight.Medium)
+                    Text("技能", style = AppTypography.label, fontWeight = FontWeight.Medium, color = colors.text.primary)
                     val learnedNames = PetTrickMilestones.milestones.filter { tricks.contains(it.trickId) }.map { it.name }
-                    Text(if (learnedNames.isEmpty()) "还没有学会任何技能" else learnedNames.joinToString("、"), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(if (learnedNames.isEmpty()) "还没有学会任何技能" else learnedNames.joinToString("、"), style = AppTypography.caption, color = colors.text.secondary)
                     val playCount = pet.metadata.playCount
                     val nextTrick = PetTrickMilestones.milestones.firstOrNull { !tricks.contains(it.trickId) }
                     if (nextTrick != null) {
-                        // pet-ui-4：下一个技能进度条（= iOS ProgressView(playCount/next.plays)）。
-                        AppProgressBar(
-                            progress = playCount.toFloat() / nextTrick.plays,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        Text("下一个技能：${nextTrick.name}（还需玩耍 ${(nextTrick.plays - playCount).coerceAtLeast(0)} 次）", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        AppProgressBar(progress = playCount.toFloat() / nextTrick.plays, modifier = Modifier.fillMaxWidth())
+                        Text("下一个技能：${nextTrick.name}（还需玩耍 ${(nextTrick.plays - playCount).coerceAtLeast(0)} 次）", style = AppTypography.caption, color = colors.text.secondary)
                     } else if (learnedNames.isNotEmpty()) {
-                        // pet-ui-4：所有技能已学会分支（= iOS "所有技能已学会！"）。
-                        Text("所有技能已学会！", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+                        Text("所有技能已学会！", style = AppTypography.caption, color = colors.accent.text)
                     }
                 }
             }
-            // 散步纪念品图鉴（pet-ui-4：可折叠 6 列网格 + 查看全部/收起，对齐 iOS souvenirCard）
             val collected = pet.metadata.souvenirs.map { it.name }.toSet()
             val allTypes = PetWalkService.allSouvenirTypes
-            val maxCollapsed = 12 // = iOS souvenirColumns(6) * collapsedRows(2)
+            val maxCollapsed = 12
             val showToggle = allTypes.size > maxCollapsed
             val displayItems = if (souvenirExpanded) allTypes else allTypes.take(maxCollapsed)
             DetailCard {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.animateContentSize()) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("散步纪念品", fontWeight = FontWeight.Medium)
-                        Text("${allTypes.count { collected.contains(it.name) }}/${allTypes.size} 件", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("散步纪念品", style = AppTypography.label, fontWeight = FontWeight.Medium, color = colors.text.primary)
+                        Text("${allTypes.count { collected.contains(it.name) }}/${allTypes.size} 件", style = AppTypography.caption, color = colors.text.secondary)
                     }
                     displayItems.chunked(6).forEach { rowItems ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -162,39 +147,32 @@ internal fun PetDetailSheet(pet: CharacterPetEntity, trends: PetStatusTrends, on
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.spacedBy(2.dp),
                                 ) {
-                                    Text(
-                                        if (isCollected) type.emoji else "❓",
-                                        fontSize = 22.sp,
-                                        modifier = Modifier.alpha(if (isCollected) 1f else 0.3f),
-                                    )
+                                    Text(if (isCollected) type.emoji else "❓", fontSize = 22.sp, modifier = Modifier.alpha(if (isCollected) 1f else 0.3f))
                                     Text(
                                         if (isCollected) type.name else "???",
                                         fontSize = 9.sp,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
-                                        color = if (isCollected) MaterialTheme.colorScheme.onSurfaceVariant
-                                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                        color = if (isCollected) colors.text.secondary else colors.text.tertiary.copy(alpha = 0.6f),
                                     )
                                 }
                             }
-                            // 末行补空格，保持每格等宽（对齐 iOS LazyVGrid 6 列）
                             repeat(6 - rowItems.size) { Spacer(Modifier.weight(1f)) }
                         }
                     }
                     if (showToggle) {
                         AppButton(style = AppButtonStyle.Text, onClick = { souvenirExpanded = !souvenirExpanded }, modifier = Modifier.fillMaxWidth()) {
-                            Text(if (souvenirExpanded) "收起" else "查看全部", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                            Text(if (souvenirExpanded) "收起" else "查看全部", style = AppTypography.caption, color = colors.accent.text)
                             Icon(
-                                if (souvenirExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                                if (souvenirExpanded) AppActionIcons.ChevronUp else AppActionIcons.ChevronDown,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = colors.accent.text,
                                 modifier = Modifier.size(16.dp),
                             )
                         }
                     }
                 }
             }
-            // 成就图鉴（14.4·PetMilestones 100 个·1:1 iOS milestonesCard）：5 列网格·已达成 1.0/未达成 0.2 透明·可折叠（前 2 行=10 个）。
             val achieved = PetMilestones.achievedIDs(
                 daysSinceAdoption = PetMilestones.daysSinceAdoption(pet.adoptedDate, System.currentTimeMillis()),
                 totalInteractions = pet.totalInteractions,
@@ -204,14 +182,14 @@ internal fun PetDetailSheet(pet: CharacterPetEntity, trends: PetStatusTrends, on
                 playCount = pet.metadata.playCount,
                 growthPoints = pet.growthPoints,
             )
-            val milestoneMaxCollapsed = 10 // = iOS milestoneColumns(5) * collapsedRows(2)
+            val milestoneMaxCollapsed = 10
             val milestoneShowToggle = PetMilestones.all.size > milestoneMaxCollapsed
             val milestoneItems = if (milestonesExpanded) PetMilestones.all else PetMilestones.all.take(milestoneMaxCollapsed)
             DetailCard {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.animateContentSize()) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("成就", fontWeight = FontWeight.Medium)
-                        Text("${achieved.size}/${PetMilestones.all.size}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("成就", style = AppTypography.label, fontWeight = FontWeight.Medium, color = colors.text.primary)
+                        Text("${achieved.size}/${PetMilestones.all.size}", style = AppTypography.caption, color = colors.text.secondary)
                     }
                     milestoneItems.chunked(5).forEach { rowItems ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -228,22 +206,20 @@ internal fun PetDetailSheet(pet: CharacterPetEntity, trends: PetStatusTrends, on
                                         fontSize = 9.sp,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
-                                        color = if (done) MaterialTheme.colorScheme.onSurface
-                                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                        color = if (done) colors.text.primary else colors.text.tertiary.copy(alpha = 0.6f),
                                     )
                                 }
                             }
-                            // 末行补空格保持等宽（对齐 iOS LazyVGrid 5 列）。
                             repeat(5 - rowItems.size) { Spacer(Modifier.weight(1f)) }
                         }
                     }
                     if (milestoneShowToggle) {
                         AppButton(style = AppButtonStyle.Text, onClick = { milestonesExpanded = !milestonesExpanded }, modifier = Modifier.fillMaxWidth()) {
-                            Text(if (milestonesExpanded) "收起" else "查看全部", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                            Text(if (milestonesExpanded) "收起" else "查看全部", style = AppTypography.caption, color = colors.accent.text)
                             Icon(
-                                if (milestonesExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                                if (milestonesExpanded) AppActionIcons.ChevronUp else AppActionIcons.ChevronDown,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = colors.accent.text,
                                 modifier = Modifier.size(16.dp),
                             )
                         }
@@ -256,23 +232,27 @@ internal fun PetDetailSheet(pet: CharacterPetEntity, trends: PetStatusTrends, on
 
 @Composable
 private fun DetailCard(content: @Composable () -> Unit) {
-    Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f), modifier = Modifier.fillMaxWidth()) {
-        Box(Modifier.padding(16.dp)) { content() }
-    }
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .clip(AppShapes.medium)
+            .background(AppTheme.colors.surface.sunken)
+            .padding(16.dp),
+    ) { content() }
 }
 
 @Composable
 private fun InfoItem(value: String, label: String, unit: String) {
+    val colors = AppTheme.colors
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(value, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-            if (unit.isNotEmpty()) Text(unit, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = AppTypography.titleSmall, color = colors.text.primary)
+            if (unit.isNotEmpty()) Text(unit, style = AppTypography.caption, color = colors.text.secondary)
         }
-        Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(label, style = AppTypography.caption, color = colors.text.secondary)
     }
 }
 
-/** S4：详情 sheet 状态行——莫兰迪填充条 + 趋势箭头（↑绿/↓陶·STABLE 留位不显）。 */
 @Composable
 private fun StatusRow(label: String, value: Int, color: Color, trend: StatusTrend) {
     val colors = AppTheme.colors

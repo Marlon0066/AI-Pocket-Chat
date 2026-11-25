@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,6 +26,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.designsystem.Palette
@@ -90,7 +89,7 @@ internal fun LiuliStripHeader(
         Text(subText, style = AppTypography.snackbarBody, color = colors.text.secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Spacer(Modifier.weight(1f))
         trailing()
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, Modifier.size(LiuliHomeGeometry.chevron), colors.text.tertiary)
+        Icon(AppActionIcons.ChevronRight, null, Modifier.size(LiuliHomeGeometry.chevron), colors.text.tertiary)
     }
 }
 

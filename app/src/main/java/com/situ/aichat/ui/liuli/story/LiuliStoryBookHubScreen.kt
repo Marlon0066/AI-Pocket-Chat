@@ -22,8 +22,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,6 +48,7 @@ import com.situ.aichat.data.local.entity.StoryEntity
 import com.situ.aichat.story.StoryEditableField
 import com.situ.aichat.story.StoryGlobalCraftValues
 import com.situ.aichat.ui.components.contentMaxWidth
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.liuli.designsystem.LiuliButton
@@ -219,7 +218,7 @@ private fun LiuliStoryRegenRow(regenerating: Boolean, onClick: () -> Unit) {
         Modifier.fillMaxWidth().clickable(enabled = !regenerating, onClick = onClick).padding(top = 10.dp).heightIn(min = 48.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (regenerating) LiuliSpinner(size = REGEN_ICON) else Icon(Icons.Outlined.Refresh, contentDescription = null, tint = c.accent.text, modifier = Modifier.size(REGEN_ICON))
+        if (regenerating) LiuliSpinner(size = REGEN_ICON) else Icon(AppActionIcons.Refresh, contentDescription = null, tint = c.accent.text, modifier = Modifier.size(REGEN_ICON))
         Spacer(Modifier.width(8.dp))
         Text(
             stringResource(if (regenerating) R.string.story_outline_regen_running else R.string.story_outline_regen_row),

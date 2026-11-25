@@ -7,9 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.situ.aichat.tts.TtsProviderType
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.liuli.designsystem.liuliCardMaterial
@@ -61,7 +59,7 @@ internal fun LiuliTtsTutorialCard(provider: TtsProviderType, modifier: Modifier 
                 modifier = Modifier.weight(1f),
             )
             Icon(
-                if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                if (expanded) AppActionIcons.ChevronUp else AppActionIcons.ChevronDown,
                 contentDescription = null,
                 tint = colors.text.tertiary,
                 modifier = Modifier.size(CHEVRON),

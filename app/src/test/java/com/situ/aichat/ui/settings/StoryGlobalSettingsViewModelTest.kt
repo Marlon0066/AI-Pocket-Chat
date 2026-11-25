@@ -171,4 +171,16 @@ class StoryGlobalSettingsViewModelTest {
         val vm = vm(assignments = emptyMap(), configs = listOf(thinking), active = thinking)
         assertTrue(vm.thinkingFlagAfterUpstreamRan())
     }
+
+    @Test fun b6_回到出厂默认_清空三个全局文本字段() {
+        val vm = vm()
+        vm.resetToDefaults()
+        await("三个全局文本清空") {
+            runCatching {
+                coVerify(exactly = 1) { settingsRepository.setStoryBannedExpressions(null) }
+                coVerify(exactly = 1) { settingsRepository.setStorySceneBeats(null) }
+                coVerify(exactly = 1) { settingsRepository.setStoryTasteProfile(null) }
+            }.isSuccess
+        }
+    }
 }

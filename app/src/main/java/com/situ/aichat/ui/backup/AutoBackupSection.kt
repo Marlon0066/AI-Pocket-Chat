@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,7 +25,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -35,18 +32,18 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.situ.aichat.R
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppSwitch
+import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.appCardSurface
 import com.situ.aichat.data.model.AutoBackupConfig
 import com.situ.aichat.notification.NotificationPermission
 import com.situ.aichat.work.BackgroundReliability
 import java.text.DateFormat
 import java.util.Date
-
-private val WarningAmber = Color(0xFFF5A623)
 
 /**
  * 「定时自动备份」设置区（13.6c；安卓超越 iOS）。开关 + SAF 持久目录选择 + 上次备份时间 + HyperOS 后台可靠性卡。
@@ -157,7 +154,7 @@ fun AutoBackupSection(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Warning, contentDescription = null, tint = WarningAmber, modifier = Modifier.size(18.dp))
+                    Icon(AppActionIcons.Warning, contentDescription = null, tint = AppTheme.colors.status.onWarning, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.auto_backup_reliability_title), style = MaterialTheme.typography.titleSmall)
                 }

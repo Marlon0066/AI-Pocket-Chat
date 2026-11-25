@@ -4,11 +4,32 @@ import androidx.compose.runtime.Composable
 import com.situ.aichat.data.model.AppSkin
 import com.situ.aichat.ui.liuli.designsystem.LocalAppSkin
 import com.situ.aichat.ui.wallet.RedeemCodeScreen
+import com.situ.aichat.ui.wallet.UserWalletScreen
 
 /**
- * 兑换码页的选脸包装（图纸 2026-09-06 卷五 A-1）。💰 **只换壳**：
- * `RedeemCodeViewModel → RedeemCodeService` 全链零碰。琉璃版排在 C4。
+ * 钱包族选脸包装（💰 只换壳，ViewModel / 记账 / 兑换码全链零碰）。
  */
+@Composable
+fun SkinnedUserWalletScreen(
+    onBack: () -> Unit,
+    onOpenGiftShop: () -> Unit,
+    onOpenRedeemCode: () -> Unit,
+) {
+    if (LocalAppSkin.current == AppSkin.LIULI) {
+        LiuliUserWalletScreen(
+            onBack = onBack,
+            onOpenGiftShop = onOpenGiftShop,
+            onOpenRedeemCode = onOpenRedeemCode,
+        )
+        return
+    }
+    UserWalletScreen(
+        onBack = onBack,
+        onOpenGiftShop = onOpenGiftShop,
+        onOpenRedeemCode = onOpenRedeemCode,
+    )
+}
+
 @Composable
 fun SkinnedRedeemCodeScreen(onClose: () -> Unit) {
     if (LocalAppSkin.current == AppSkin.LIULI) {

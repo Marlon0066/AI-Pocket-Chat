@@ -45,11 +45,11 @@ class SettingsRepository @Inject constructor(
             progressiveCompressionEnabled = p[KEY_PROGRESSIVE_COMPRESSION] ?: false,
             structuredMemoryInterval = p[KEY_STRUCTURED_MEMORY_INTERVAL] ?: 30,
             vectorSearchThreshold = p[KEY_VECTOR_SEARCH_THRESHOLD] ?: 65,
-            // 世界书触发设置（WB7c）——AssistantTurnEngine 每回合现读现用（热更新 §12.11-3）。
-            worldInfoScanDepth = p[KEY_WI_SCAN_DEPTH] ?: 2,
+            // 世界书触发设置（WB7c·2026-11-25 1A 拍板默认扫4条+开联动3轮；已持久化值不受影响）。
+            worldInfoScanDepth = p[KEY_WI_SCAN_DEPTH] ?: 4,
             worldInfoBudgetChars = p[KEY_WI_BUDGET_CHARS] ?: 6000,
-            worldInfoRecursiveScan = p[KEY_WI_RECURSIVE] ?: false,
-            worldInfoMaxRecursionSteps = p[KEY_WI_MAX_RECURSION] ?: 0,
+            worldInfoRecursiveScan = p[KEY_WI_RECURSIVE] ?: true,
+            worldInfoMaxRecursionSteps = p[KEY_WI_MAX_RECURSION] ?: 3,
             worldInfoInsertionStrategy = p[KEY_WI_STRATEGY] ?: "CHARACTER_FIRST",
             worldInfoCaseSensitive = p[KEY_WI_CASE_SENSITIVE] ?: false,
             worldInfoMatchWholeWords = p[KEY_WI_WHOLE_WORDS] ?: false,
@@ -108,6 +108,11 @@ class SettingsRepository @Inject constructor(
             economyNotificationTier = p[KEY_ECONOMY_NOTIFICATION_TIER] ?: "brief",
             // 关系里程碑庆祝通知（P1-33）——缺值 → 默认开。
             milestoneNotificationEnabled = p[KEY_MILESTONE_NOTIF_ENABLED] ?: true,
+            // 设置全面重构 B-4 四项通知开关——缺值 → 默认开。
+            notifRedPacketExpiringEnabled = p[KEY_NOTIF_RED_PACKET_EXPIRING] ?: true,
+            notifMeetingReminderEnabled = p[KEY_NOTIF_MEETING_REMINDER] ?: true,
+            notifStoryFinishedEnabled = p[KEY_NOTIF_STORY_FINISHED] ?: true,
+            notifMomentInteractionEnabled = p[KEY_NOTIF_MOMENT_INTERACTION] ?: true,
             // 主动消息夜间免打扰——排程侧与到点侧共用；缺值（含旧版升级用户）→ 默认开 23:00–07:30。
             quietHoursEnabled = p[KEY_NOTIF_QUIET_HOURS_ENABLED] ?: true,
             quietHoursStartMinute = p[KEY_NOTIF_QUIET_HOURS_START] ?: 1380,
@@ -197,6 +202,14 @@ class SettingsRepository @Inject constructor(
     suspend fun setAutoBackupTreeUri(treeUri: String) =
         dataStore.edit { it[KEY_AUTO_BACKUP_TREE_URI] = treeUri }
 
+    /** B-7：手动导出备份时「包含图片、语音和头像」持久化偏好（设备本地，默认开）。 */
+    val backupIncludeMedia: Flow<Boolean> = dataStore.data.map { p ->
+        p[KEY_BACKUP_INCLUDE_MEDIA] ?: true
+    }
+
+    suspend fun setBackupIncludeMedia(include: Boolean) =
+        dataStore.edit { it[KEY_BACKUP_INCLUDE_MEDIA] = include }
+
     /** 记一次完成：更新上次备份时间；[mediaAt] 非 null（本次含媒体）时同时更新上次含媒体备份时间。 */
     suspend fun setAutoBackupLastRun(at: Long, mediaAt: Long?) =
         dataStore.edit { p ->
@@ -279,6 +292,10 @@ class SettingsRepository @Inject constructor(
             p[KEY_NOTIFICATIONS_ENABLED] = s.notificationsEnabled
             p[KEY_ECONOMY_NOTIFICATION_TIER] = s.economyNotificationTier
             p[KEY_MILESTONE_NOTIF_ENABLED] = s.milestoneNotificationEnabled
+            p[KEY_NOTIF_RED_PACKET_EXPIRING] = s.notifRedPacketExpiringEnabled
+            p[KEY_NOTIF_MEETING_REMINDER] = s.notifMeetingReminderEnabled
+            p[KEY_NOTIF_STORY_FINISHED] = s.notifStoryFinishedEnabled
+            p[KEY_NOTIF_MOMENT_INTERACTION] = s.notifMomentInteractionEnabled
             p[KEY_NOTIF_QUIET_HOURS_ENABLED] = s.quietHoursEnabled
             p[KEY_NOTIF_QUIET_HOURS_START] = s.quietHoursStartMinute
             p[KEY_NOTIF_QUIET_HOURS_END] = s.quietHoursEndMinute
@@ -659,6 +676,22 @@ class SettingsRepository @Inject constructor(
     suspend fun setMilestoneNotificationEnabled(enabled: Boolean) =
         dataStore.edit { it[KEY_MILESTONE_NOTIF_ENABLED] = enabled }
 
+    /** B-4：红包快过期提醒开关（仅控提醒通知，不影响到期退回）。 */
+    suspend fun setNotifRedPacketExpiringEnabled(enabled: Boolean) =
+        dataStore.edit { it[KEY_NOTIF_RED_PACKET_EXPIRING] = enabled }
+
+    /** B-4：约见面到点提醒开关。 */
+    suspend fun setNotifMeetingReminderEnabled(enabled: Boolean) =
+        dataStore.edit { it[KEY_NOTIF_MEETING_REMINDER] = enabled }
+
+    /** B-4：故事写好或失败提醒开关。 */
+    suspend fun setNotifStoryFinishedEnabled(enabled: Boolean) =
+        dataStore.edit { it[KEY_NOTIF_STORY_FINISHED] = enabled }
+
+    /** B-4：朋友圈评论和点赞系统通知开关。 */
+    suspend fun setNotifMomentInteractionEnabled(enabled: Boolean) =
+        dataStore.edit { it[KEY_NOTIF_MOMENT_INTERACTION] = enabled }
+
     /** 主动消息夜间免打扰开关（窗内到点一律作废、不补发）。 */
     suspend fun setQuietHoursEnabled(enabled: Boolean) =
         dataStore.edit { it[KEY_NOTIF_QUIET_HOURS_ENABLED] = enabled }
@@ -989,5 +1022,12 @@ class SettingsRepository @Inject constructor(
         val KEY_AUTO_BACKUP_TREE_URI = stringPreferencesKey("auto_backup_tree_uri")
         val KEY_AUTO_BACKUP_LAST_AT = longPreferencesKey("auto_backup_last_at")
         val KEY_AUTO_BACKUP_LAST_MEDIA_AT = longPreferencesKey("auto_backup_last_media_at")
+        // B-7：手动导出包含媒体开关（设备本地）。
+        val KEY_BACKUP_INCLUDE_MEDIA = booleanPreferencesKey("backup_include_media")
+        // B-4：四项独立通知开关。
+        val KEY_NOTIF_RED_PACKET_EXPIRING = booleanPreferencesKey("notif_red_packet_expiring_enabled")
+        val KEY_NOTIF_MEETING_REMINDER = booleanPreferencesKey("notif_meeting_reminder_enabled")
+        val KEY_NOTIF_STORY_FINISHED = booleanPreferencesKey("notif_story_finished_enabled")
+        val KEY_NOTIF_MOMENT_INTERACTION = booleanPreferencesKey("notif_moment_interaction_enabled")
     }
 }

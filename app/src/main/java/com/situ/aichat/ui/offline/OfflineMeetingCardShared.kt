@@ -7,12 +7,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import com.situ.aichat.ui.designsystem.AppActionIcons
+import com.situ.aichat.ui.designsystem.AppLoadingRing
+import com.situ.aichat.ui.designsystem.AppLoadingRingSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,12 +72,15 @@ internal fun FallbackBadge(isRetrying: Boolean, onRetry: () -> Unit, tint: Color
         horizontalArrangement = Arrangement.spacedBy(3.dp),
     ) {
         if (isRetrying) {
-            // TODO(图纸未覆盖): 这枚转圈的 color 跟 [tint] 走（默认白 / 窗景卡传 spec.textColor / 长廊纸面卡传
-            //  accent 深档），是随卡片底色变的承重色；AppLoadingRing 无 color 槽 → 停手登记（D-13）。
-            CircularProgressIndicator(modifier = Modifier.size(11.dp), strokeWidth = 1.5.dp, color = tint)
+            AppLoadingRing(
+                modifier = Modifier.size(11.dp),
+                size = AppLoadingRingSize.Small,
+                color = tint,
+                strokeWidth = 1.5.dp,
+            )
             Text("生成中", style = MaterialTheme.typography.labelSmall, color = tint.copy(alpha = 0.9f))
         } else {
-            Icon(Icons.Filled.Refresh, contentDescription = null, tint = tint.copy(alpha = 0.9f), modifier = Modifier.size(12.dp))
+            Icon(AppActionIcons.Refresh, contentDescription = null, tint = tint.copy(alpha = 0.9f), modifier = Modifier.size(12.dp))
             Text("简版", style = MaterialTheme.typography.labelSmall, color = tint.copy(alpha = 0.9f))
         }
     }

@@ -14,8 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -35,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import com.situ.aichat.R
 import com.situ.aichat.offline.OfflineMeetingSession
 import com.situ.aichat.prompt.scheduleTimeOfDayLabel
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import java.time.Instant
 import java.time.ZoneId
@@ -141,7 +140,7 @@ fun MeetingSkyHeroCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (session.durationText.isNotEmpty()) {
                     Icon(
-                        Icons.Outlined.Schedule,
+                        AppActionIcons.Clock,
                         contentDescription = null,
                         tint = spec.textColor.copy(alpha = MeetingSkyTextBands.DURATION_ALPHA),
                         modifier = Modifier.size(13.dp),

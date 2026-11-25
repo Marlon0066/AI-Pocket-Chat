@@ -16,11 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -44,8 +40,8 @@ import com.situ.aichat.ui.components.rememberReduceMotion
  *
  * 底座 = foundation [BasicTextField]：IME / 光标 / 选择 / 语义全由它保证，本件只重定义视觉
  * （[FABLE5_DESIGN_LANGUAGE.md] §5「foundation 自绘视觉件」路子），不碰 a11y/手势。聚焦环颜色走
- * 效果轴（ζ1.0 永不过冲）淡入淡出，[rememberReduceMotion] 时瞬时落位。清除键经 M3 [IconButton]
- * 取 48dp 触达；[clearContentDescription] 给屏读。
+ * 效果轴（ζ1.0 永不过冲）淡入淡出，[rememberReduceMotion] 时瞬时落位。清除键走 [AppIconButton]
+ * 保 48dp 触达；[clearContentDescription] 给屏读。
  */
 @Composable
 fun AppSearchField(
@@ -85,7 +81,7 @@ fun AppSearchField(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
-                    imageVector = Icons.Filled.Search,
+                    imageVector = AppActionIcons.Search,
                     contentDescription = null,
                     tint = colors.accent.text,
                     modifier = Modifier.size(20.dp),
@@ -102,14 +98,13 @@ fun AppSearchField(
                     innerTextField()
                 }
                 if (value.isNotEmpty()) {
-                    IconButton(onClick = { onValueChange("") }) {
-                        Icon(
-                            imageVector = Icons.Filled.Close,
-                            contentDescription = clearContentDescription,
-                            tint = colors.text.secondary,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    }
+                    AppIconButton(
+                        icon = AppActionIcons.Close,
+                        contentDescription = clearContentDescription,
+                        onClick = { onValueChange("") },
+                        tint = colors.text.secondary,
+                        iconSize = 18.dp,
+                    )
                 }
             }
         },

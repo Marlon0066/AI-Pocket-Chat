@@ -72,6 +72,7 @@ class MomentsMeetingGateTest {
         characterRepo = mockk(relaxed = true)
         val settingsRepo: SettingsRepository = mockk(relaxed = true)
         coEvery { settingsRepo.getAppSettings() } returns AppSettings(scheduleSystemEnabled = false)
+        every { settingsRepo.appSettings } returns kotlinx.coroutines.flow.flowOf(AppSettings(scheduleSystemEnabled = false))
         val apiConfigRepo: ApiConfigRepository = mockk(relaxed = true)
         coEvery { apiConfigRepo.resolveConfigValues(any()) } returns mockk<ApiConfigValues>(relaxed = true)
         coEvery { characterRepo.getAll() } returns listOf(CharacterEntity(uuid = "c1", name = "小雨", creationDate = 0L))
@@ -82,7 +83,12 @@ class MomentsMeetingGateTest {
             context = context, momentRepo = momentRepo, contextLog = mockk(relaxed = true),
             userProfileDao = mockk(relaxed = true), scheduleDao = mockk(relaxed = true),
         )
-        val notifications = MomentInteractionNotifications(context = context, momentRepo = momentRepo, characterRepo = characterRepo)
+        val notifications = MomentInteractionNotifications(
+            context = context,
+            momentRepo = momentRepo,
+            characterRepo = characterRepo,
+            settingsRepository = settingsRepo,
+        )
         interactionService = MomentInteractionService(
             context = context, momentRepo = momentRepo, characterRepo = characterRepo,
             apiConfigRepo = apiConfigRepo, settingsRepo = settingsRepo, sleepChecker = sleepChecker,
@@ -229,5 +235,29 @@ class MomentsMeetingGateTest {
         setForeground(false)
         MomentNewPostNotifier(context, characterRepo).notifyNewPosts(listOf(post()), nowMillis = now)
         io.mockk.verify(exactly = 1) { Notifier.postNewMomentPost(any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun B4_关闭朋友圈评论点赞通知时仍落库但不弹系统通知() = runBlocking {
+        val disabledRepo = mockk<SettingsRepository> {
+            every { appSettings } returns kotlinx.coroutines.flow.flowOf(
+                AppSettings(notifMomentInteractionEnabled = false),
+            )
+        }
+        val notifier = MomentInteractionNotifications(
+            context = context,
+            momentRepo = momentRepo,
+            characterRepo = characterRepo,
+            settingsRepository = disabledRepo,
+        )
+        notifier.create(
+            type = com.situ.aichat.data.model.MomentNotificationType.LIKE_ON_USER_POST,
+            characterUuid = "c1",
+            post = post(),
+            contentPreview = "",
+            nowMillis = now,
+        )
+        coVerify(exactly = 1) { momentRepo.addNotification(any(), any(), any(), any()) }
+        io.mockk.verify(exactly = 0) { Notifier.postMomentInteraction(any(), any(), any(), any(), any()) }
     }
 }

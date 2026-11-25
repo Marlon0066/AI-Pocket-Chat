@@ -8,10 +8,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.situ.aichat.story.StoryFieldValueLabel
 import com.situ.aichat.story.StoryFieldValueStyle
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppSwitch
 import com.situ.aichat.ui.designsystem.AppTheme
@@ -85,7 +83,7 @@ internal fun NavRow(label: String, value: String, onClick: () -> Unit) {
     ) {
         Text(label, style = AppTheme.typography.body, color = c.text.primary)
         Text(value, style = AppTheme.typography.secondary, color = c.text.secondary, modifier = Modifier.weight(1f))
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = c.text.tertiary)
+        Icon(AppActionIcons.ChevronRight, contentDescription = null, tint = c.text.tertiary)
     }
 }
 
@@ -113,7 +111,7 @@ internal fun ChoiceOptionRow(label: String, selected: Boolean, onClick: () -> Un
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, style = AppTheme.typography.body, color = c.text.primary, modifier = Modifier.weight(1f))
-        if (selected) Icon(Icons.Filled.Check, contentDescription = null, tint = c.accent.text)
+        if (selected) Icon(AppActionIcons.Check, contentDescription = null, tint = c.accent.text)
     }
 }
 

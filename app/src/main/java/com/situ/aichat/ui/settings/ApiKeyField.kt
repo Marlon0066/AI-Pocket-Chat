@@ -3,8 +3,6 @@ package com.situ.aichat.ui.settings
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -15,6 +13,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import com.situ.aichat.R
+import com.situ.aichat.ui.designsystem.AppIconButton
 import com.situ.aichat.ui.designsystem.AppTextField
 
 /**
@@ -43,12 +42,11 @@ fun ApiKeyField(
         singleLine = true,
         visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
         trailingIcon = {
-            IconButton(onClick = { visible = !visible }) {
-                Icon(
-                    imageVector = if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                    contentDescription = stringResource(if (visible) R.string.api_key_hide else R.string.api_key_show),
-                )
-            }
+            AppIconButton(
+                icon = if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                contentDescription = stringResource(if (visible) R.string.api_key_hide else R.string.api_key_show),
+                onClick = { visible = !visible },
+            )
         },
     )
 }

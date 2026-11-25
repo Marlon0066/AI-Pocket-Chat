@@ -344,10 +344,10 @@ interface MessageDao {
      */
     @Query(
         "SELECT COUNT(*) FROM messages WHERE conversationUuid = :conversationUuid " +
-            "AND roleRaw != 'system' AND content != '' " +
+            "AND roleRaw != 'system' AND content != '' AND isHeldForDelivery = 0 " +
             "AND messageKindRaw NOT IN ('offline_invite_card','offline_end_card','call_record_card'," +
             "'offline_marker_start','offline_marker_end','system_event_card','gift_card','red_packet'," +
-            "'future_meeting_proposal','future_meeting_change')",
+            "'future_meeting_proposal','future_meeting_change','system_hint')",
     )
     suspend fun countScannableForWorldBook(conversationUuid: String): Int
 

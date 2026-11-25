@@ -31,13 +31,8 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -61,9 +56,12 @@ import com.situ.aichat.data.calendar.CalendarAction
 import com.situ.aichat.data.local.entity.CustomStickerEntity
 import com.situ.aichat.data.local.entity.MessageEntity
 import com.situ.aichat.ui.components.LocalAppHaptics
+import com.situ.aichat.ui.designsystem.AppActionIcons
+import com.situ.aichat.ui.designsystem.AppIconButton
 import com.situ.aichat.ui.designsystem.AppPanelIcons
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTopBarIcons
 import com.situ.aichat.ui.designsystem.GlassBackdrop
 import com.situ.aichat.ui.designsystem.GlassDivider
 import com.situ.aichat.ui.designsystem.OnGlass
@@ -249,26 +247,21 @@ internal fun ChatBottomBar(
                                         animationSpec = if (reduceMotion) snap() else tween(220),
                                         label = "plusRotation",
                                     )
-                                    IconButton(onClick = {
-                                        if (inputPanel.panelOpen) inputPanel.requestKeyboard()
-                                        else inputPanel.openPanel(imeInsets.exclude(navBarInsets).getBottom(density), panelFallbackPx) // 事件时读（P4）
-                                    }) {
-                                        // C7·P4 方案 A 裸图标（输入排契约 §2·用户终选）：去 40dp sunken 底——胶囊成输入排唯一
-                                        // 底色件更透气；图标 26dp 微升平衡失去的分量；48dp 触达区=IconButton 默认不变。
-                                        // 开态 45° 转「×」+ tint 转 accent.text（不加底=最轻）；有壁纸=裸图标直接落玻璃托盘、
-                                        // tint 走 OnGlass 亮度自适应（现机制·开合同色只转角）。
-                                        Icon(
-                                            Icons.Filled.Add,
-                                            // 审计 Y3②：cd 随面板开合——读屏可预期双击效果（开=打开功能面板/合=关闭）。
-                                            contentDescription = if (inputPanel.panelOpen) stringResource(R.string.a11y_close_panel) else stringResource(R.string.a11y_open_panel),
-                                            tint = when {
-                                                wpFrosted != null -> onGlassBottom
-                                                inputPanel.panelOpen -> AppTheme.colors.accent.text
-                                                else -> AppTheme.colors.text.secondary
-                                            },
-                                            modifier = Modifier.size(PlusBareIconSize).rotate(plusRotation),
-                                        )
-                                    }
+                                    AppIconButton(
+                                        icon = AppTopBarIcons.Add,
+                                        contentDescription = if (inputPanel.panelOpen) stringResource(R.string.a11y_close_panel) else stringResource(R.string.a11y_open_panel),
+                                        onClick = {
+                                            if (inputPanel.panelOpen) inputPanel.requestKeyboard()
+                                            else inputPanel.openPanel(imeInsets.exclude(navBarInsets).getBottom(density), panelFallbackPx) // 事件时读（P4）
+                                        },
+                                        tint = when {
+                                            wpFrosted != null -> onGlassBottom
+                                            inputPanel.panelOpen -> AppTheme.colors.accent.text
+                                            else -> AppTheme.colors.text.secondary
+                                        },
+                                        iconSize = PlusBareIconSize,
+                                        iconModifier = Modifier.rotate(plusRotation),
+                                    )
                                     Spacer(Modifier.width(8.dp))
                                     ChatInputField(
                                         value = input,
@@ -328,7 +321,7 @@ internal fun ChatBottomBar(
                             ) { showSend ->
                                 if (showSend) {
                                     ChatPrimaryActionButton(
-                                        icon = Icons.AutoMirrored.Filled.Send,
+                                        icon = AppActionIcons.Send,
                                         contentDescription = stringResource(R.string.a11y_send),
                                         onClick = {
                                             // 复核修（LOW）：仅发送被接受才清输入框——空文本拒绝时保留现状。

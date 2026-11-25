@@ -209,4 +209,25 @@ class WorldBookDaoTest {
         assertEquals(3, dao.entriesForBooks(listOf("b1", "b2")).size)
         assertEquals(1, dao.entriesForBooks(listOf("b1")).size)
     }
+
+    @Test
+    fun 入世角色_连全局书与残留绑定书一并隔离_离世后恢复() = runBlocking {
+        db.characterDao().upsert(
+            CharacterEntity(uuid = "c-world", name = "入世角色", creationDate = 0L, joinedWorld = true),
+        )
+        dao.upsertBook(book("global-on", global = true))
+        dao.upsertBook(book("bound-on"))
+        dao.bind(WorldBookBindingEntity("c-world", "bound-on"))
+
+        // 3A：joinedWorld = 1 时彻底隔离世界书（含全局书）
+        assertEquals(emptyList<String>(), dao.activeBooksForCharacter("c-world").map { it.uuid })
+
+        // 离开世界后恢复生效
+        db.characterDao().updateWorldMembership("c-world", joined = false, joinedAt = null)
+        assertEquals(setOf("global-on", "bound-on"), dao.activeBooksForCharacter("c-world").map { it.uuid }.toSet())
+
+        // unbindAllForCharacter 清空专属绑定但保留全局书
+        dao.unbindAllForCharacter("c-world")
+        assertEquals(listOf("global-on"), dao.activeBooksForCharacter("c-world").map { it.uuid })
+    }
 }

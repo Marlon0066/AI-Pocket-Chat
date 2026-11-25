@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DriveFileRenameOutline
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,6 +53,7 @@ import com.situ.aichat.story.StoryTemplate
 import com.situ.aichat.story.StoryTemplates
 import com.situ.aichat.ui.components.LocalAppHaptics
 import com.situ.aichat.ui.components.clickableScale
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppDialogTone
 import com.situ.aichat.ui.designsystem.AppShapes
@@ -250,7 +250,7 @@ private fun UserTemplateMenu(expanded: Boolean, onDismiss: () -> Unit, onRename:
         Box(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp).height(0.75.dp).background(storyGlassMenuHairline()))
         DropdownMenuItem(
             text = { Text(stringResource(R.string.story_template_delete), style = AppTheme.typography.body, color = colors.status.onError) },
-            leadingIcon = { Icon(Icons.Outlined.Delete, contentDescription = null, tint = colors.status.onError, modifier = Modifier.size(20.dp)) },
+            leadingIcon = { Icon(AppActionIcons.Delete, contentDescription = null, tint = colors.status.onError, modifier = Modifier.size(20.dp)) },
             onClick = onDelete,
             modifier = Modifier.heightIn(min = 48.dp),
         )

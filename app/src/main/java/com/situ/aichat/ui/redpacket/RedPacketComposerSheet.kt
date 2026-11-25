@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import com.situ.aichat.data.model.RedPacketAmountCatalog
 import com.situ.aichat.gift.FestivalCalendar
 import com.situ.aichat.redpacket.RedPacketSendOutcome
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppChoiceChip
@@ -167,7 +166,7 @@ fun RedPacketComposerSheet(
 
             // 余额 + 发送
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Icon(Icons.Filled.MonetizationOn, contentDescription = null, tint = GiftColors.Gold, modifier = Modifier.size(16.dp))
+                Icon(AppActionIcons.Coin, contentDescription = null, tint = GiftColors.Gold, modifier = Modifier.size(16.dp))
                 Text("钱包余额 $balance 金币", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             AppButton(onClick = { submit() }, style = AppButtonStyle.Primary, enabled = canSend, modifier = Modifier.fillMaxWidth()) {

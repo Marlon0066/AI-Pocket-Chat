@@ -16,8 +16,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,6 +30,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.situ.aichat.ui.components.rememberReduceMotion
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.voice.CallState
 
 /**
@@ -112,7 +111,7 @@ fun VoiceCallAvatar(
                             .background(VoiceCallPalette.warmWhite.copy(alpha = 0.08f)),
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.Person,
+                            imageVector = AppActionIcons.Person,
                             contentDescription = null,
                             tint = VoiceCallPalette.warmWhite.copy(alpha = 0.36f),
                             modifier = Modifier.fillMaxSize().padding(18.dp),

@@ -19,8 +19,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,6 +44,7 @@ import com.situ.aichat.story.StoryArchiveDigest
 import com.situ.aichat.story.StoryEndingType
 import com.situ.aichat.data.local.entity.StoryEntity
 import com.situ.aichat.ui.components.clickableScale
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppDialog
@@ -107,7 +106,7 @@ fun StoryArchiveDetailScreen(
                 .clickableScale(onClick = onBack),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_close), tint = c.text.secondary, modifier = Modifier.size(16.dp))
+            Icon(AppActionIcons.Close, contentDescription = stringResource(R.string.action_close), tint = c.text.secondary, modifier = Modifier.size(16.dp))
         }
     }
 

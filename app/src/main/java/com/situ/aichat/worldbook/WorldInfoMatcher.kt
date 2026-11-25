@@ -13,6 +13,8 @@ import com.situ.aichat.data.worldbook.decodeStringList
  */
 internal class WorldInfoMatcher(
     private val settings: WorldInfoSettings,
+    private val characterName: String = "",
+    private val userName: String = "",
     /** 批3 3-7：单个正则键单次匹配的时间预算（测试注入 0 以确定性触发降级；生产走默认值）。 */
     private val regexMatchBudgetNanos: Long = REGEX_MATCH_BUDGET_NANOS,
 ) {
@@ -28,8 +30,20 @@ internal class WorldInfoMatcher(
     /** 扫描缓冲：最近 [depth] 条消息（depth ≤ 0 = 空缓冲，即 ST「深度 0 只认递归」语义）。 */
     fun buildBuffer(messages: List<ScanMessage>, depth: Int): String {
         if (depth <= 0) return ""
-        return messages.takeLast(depth).joinToString("\n") { m ->
+        val slice = messages.takeLast(depth)
+        val base = slice.joinToString("\n") { m ->
             if (settings.includeNames && m.senderName.isNotBlank()) "${m.senderName}: ${m.text}" else m.text
+        }
+        // 首轮尚未产生 assistant 回复时，若开启了 includeNames 且给了角色名，补角色名行对齐第 2 轮起的行为。
+        return if (
+            settings.includeNames &&
+            characterName.isNotBlank() &&
+            slice.isNotEmpty() &&
+            slice.none { it.senderName == characterName }
+        ) {
+            "$characterName\n$base"
+        } else {
+            base
         }
     }
 
@@ -37,13 +51,13 @@ internal class WorldInfoMatcher(
     fun matchEntry(entry: WorldBookEntryEntity, buffer: String): KeyMatch {
         val caseSensitive = entry.caseSensitive ?: settings.caseSensitive
         val wholeWords = entry.matchWholeWords ?: settings.matchWholeWords
-        val primary = decodeStringList(entry.keysJson).filter { it.isNotBlank() }
+        val primary = decodeStringList(entry.keysJson).map(::expandKeyMacros).filter { it.isNotBlank() }
         if (primary.isEmpty() || buffer.isEmpty()) return KeyMatch(false, 0)
 
         val primaryHits = primary.count { matchKey(it, buffer, caseSensitive, wholeWords) }
         if (primaryHits == 0) return KeyMatch(false, 0)
 
-        val secondary = decodeStringList(entry.secondaryKeysJson).filter { it.isNotBlank() }
+        val secondary = decodeStringList(entry.secondaryKeysJson).map(::expandKeyMacros).filter { it.isNotBlank() }
         if (!entry.selective || secondary.isEmpty()) return KeyMatch(true, primaryHits)
 
         val secondaryHits = secondary.count { matchKey(it, buffer, caseSensitive, wholeWords) }
@@ -84,6 +98,25 @@ internal class WorldInfoMatcher(
     /** ST 判据：以 `/` 开头且还有第二个 `/`（其后是 flags）才算正则形态。 */
     private fun isRegexForm(key: String): Boolean =
         key.length > 2 && key.startsWith("/") && key.lastIndexOf('/') > 0
+
+    /**
+     * 展开关键词内的 `{{char}}` / `{{user}}`（大小写无关）：正则键对替换文本做 `Regex.escape` 防角色名含元字符崩坏，
+     * 普通键按字面替换。无 `{{` 快速短路零分配。
+     */
+    private fun expandKeyMacros(rawKey: String): String {
+        if (!rawKey.contains("{{")) return rawKey
+        val regexKey = isRegexForm(rawKey)
+        var resolved = rawKey
+        if (characterName.isNotEmpty()) {
+            val replacement = if (regexKey) Regex.escape(characterName) else characterName
+            resolved = resolved.replace("{{char}}", replacement, ignoreCase = true)
+        }
+        if (userName.isNotEmpty()) {
+            val replacement = if (regexKey) Regex.escape(userName) else userName
+            resolved = resolved.replace("{{user}}", replacement, ignoreCase = true)
+        }
+        return resolved
+    }
 
     private fun compileRegexKey(key: String): Regex? {
         val lastSlash = key.lastIndexOf('/')

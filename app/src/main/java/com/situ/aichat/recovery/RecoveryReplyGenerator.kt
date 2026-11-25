@@ -175,6 +175,10 @@ class RecoveryReplyGenerator @Inject constructor(
             userName = (userProfile?.nickname ?: "").ifEmpty { context.getString(R.string.pb_user_fallback) },
             vectorThresholdPercent = settings.vectorSearchThreshold,
             settings = settings.toWorldInfoSettings(),
+            character = character,
+            userBio = userProfile?.bio.orEmpty(),
+            isOfflineMode = convo.isInOfflineMode,
+            currentOfflineSessionId = convo.currentOfflineSessionId,
         )
         val messages = PromptBuilder.buildMessages(
             character = character,

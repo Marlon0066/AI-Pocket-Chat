@@ -19,13 +19,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddPhotoAlternate
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -51,8 +46,10 @@ import androidx.compose.ui.unit.dp
 import com.situ.aichat.R
 import com.situ.aichat.data.model.GiftCardData
 import com.situ.aichat.data.model.GiftSender
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
+import com.situ.aichat.ui.designsystem.AppIconButton
 import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppSheet
 import com.situ.aichat.ui.designsystem.AppSlider
@@ -176,9 +173,13 @@ fun DIYGiftCreationSheet(
                             modifier = Modifier.fillMaxWidth().heightIn(max = 180.dp).clip(RoundedCornerShape(12.dp)),
                             contentScale = ContentScale.Crop,
                         )
-                        IconButton(onClick = { imageUri = null }, modifier = Modifier.align(Alignment.TopEnd)) {
-                            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.a11y_remove_image), tint = Color.White)
-                        }
+                        AppIconButton(
+                            icon = AppActionIcons.Close,
+                            contentDescription = stringResource(R.string.a11y_remove_image),
+                            onClick = { imageUri = null },
+                            tint = Color.White,
+                            modifier = Modifier.align(Alignment.TopEnd),
+                        )
                     }
                 } else {
                     Surface(
@@ -188,7 +189,7 @@ fun DIYGiftCreationSheet(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Row(modifier = Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Filled.AddPhotoAlternate, contentDescription = null, tint = GiftColors.Gold)
+                            Icon(AppActionIcons.AddPhoto, contentDescription = null, tint = GiftColors.Gold)
                             Text("添加图片", style = MaterialTheme.typography.bodyMedium)
                         }
                     }
@@ -200,7 +201,7 @@ fun DIYGiftCreationSheet(
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text("花多少金币", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Box(Modifier.weight(1f))
-                    Icon(Icons.Filled.MonetizationOn, contentDescription = null, tint = GiftColors.Gold, modifier = Modifier.size(16.dp))
+                    Icon(AppActionIcons.Coin, contentDescription = null, tint = GiftColors.Gold, modifier = Modifier.size(16.dp))
                     Text(" $cost 金币", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 }
                 AppSlider(

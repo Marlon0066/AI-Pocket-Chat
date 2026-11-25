@@ -47,7 +47,6 @@ fun LiuliMomentSettingsScreen(
         onSetAutoComment = viewModel::setAutoCommentFrequency,
         onSetCommentDelay = viewModel::setCommentDelay,
         onSetAutoLike = viewModel::setAutoLikeEnabled,
-        onSetNewPostNotification = viewModel::setNewPostNotificationEnabled,
         onBack = onBack,
         modifier = modifier,
     )
@@ -61,7 +60,6 @@ internal fun LiuliMomentSettingsContent(
     onSetAutoComment: (Int) -> Unit,
     onSetCommentDelay: (Int) -> Unit,
     onSetAutoLike: (Boolean) -> Unit,
-    onSetNewPostNotification: (Boolean) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
@@ -131,13 +129,6 @@ internal fun LiuliMomentSettingsContent(
                             checked = state.autoLikeEnabled,
                             onCheckedChange = onSetAutoLike,
                             divider = false,
-                        )
-                        // 13.7e：「X 发了新动态」系统通知开关（默认开·每角色每天 ≤ 1·多角色合并）。
-                        LiuliToggleRow(
-                            title = stringResource(R.string.moment_settings_new_post_notif),
-                            subtitle = stringResource(R.string.moment_settings_new_post_notif_desc),
-                            checked = state.newPostNotificationEnabled,
-                            onCheckedChange = onSetNewPostNotification,
                         )
                     }
                 }

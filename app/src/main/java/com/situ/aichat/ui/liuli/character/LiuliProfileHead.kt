@@ -2,8 +2,8 @@ package com.situ.aichat.ui.liuli.character
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Handshake
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.situ.aichat.R
@@ -90,7 +90,7 @@ internal fun profileActionItems(
     val ourDays = stringResource(R.string.our_days_title)
     val starfield = stringResource(R.string.starfield_title)
     return listOf(
-        LiuliActionItem(Icons.Filled.CalendarMonth, schedule, schedule, onOpenSchedule),
+        LiuliActionItem(AppActionIcons.Calendar, schedule, schedule, onOpenSchedule),
         LiuliActionItem(Icons.Filled.Handshake, promises, promises, onOpenPromises),
         LiuliActionItem(AppFeatureIcons.Days, ourDays, ourDays, onOpenOurDays),
         LiuliActionItem(Icons.Filled.AutoAwesome, starfield, starfield, onOpenStarfield),

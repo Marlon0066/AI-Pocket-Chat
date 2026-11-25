@@ -213,6 +213,9 @@ class VoiceCallTurnService @Inject constructor(
             userName = userName.ifEmpty { promptStrings.s(R.string.pb_user_fallback) },
             vectorThresholdPercent = settings.vectorSearchThreshold,
             settings = settings.toWorldInfoSettings(),
+            character = character,
+            userBio = userProfile?.bio.orEmpty(),
+            isOfflineMode = false,
         )
         val buildResult = PromptBuilder.buildMessagesWithSegments(
             character = character,

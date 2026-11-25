@@ -141,4 +141,31 @@ class WorldBookEntryEditViewModelTest {
         await("删除完成") { deleted }
         assertNull(repo.getEntry(draft.uuid))
     }
+
+    @Test
+    fun 未回车关键词_计入isDirty_点保存自动收词入库() = runBlocking {
+        val vm = newVm()
+        vm.pendingPrimaryKeyInput = "剑冢, 藏经阁"
+        vm.pendingSecondaryKeyInput = "禁制"
+        assertTrue("输入框有未回车词条时 isDirty 应为真", vm.isDirty)
+
+        var saved = false
+        vm.save { saved = true }
+        await("保存完成") { saved }
+
+        assertEquals("", vm.pendingPrimaryKeyInput)
+        assertEquals("", vm.pendingSecondaryKeyInput)
+        assertFalse(vm.isDirty)
+
+        val stored = db.worldBookDao().entriesForBook(bookUuid).single()
+        assertEquals(listOf("剑冢", "藏经阁"), vm.keys(stored))
+        assertEquals(listOf("禁制"), vm.secondaryKeys(stored))
+    }
+
+    @Test
+    fun 正则量词逗号_整条保留绝不拆断() {
+        val vm = newVm()
+        vm.addKeys("/\\d{1,3}层/i")
+        assertEquals(listOf("/\\d{1,3}层/i"), vm.keys(vm.draft!!))
+    }
 }

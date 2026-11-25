@@ -13,9 +13,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,6 +24,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.liuli.page.liuliFootprint
@@ -77,7 +75,7 @@ fun LiuliSearchSlot(
                     .padding(horizontal = SLOT_PAD_H),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Filled.Search, contentDescription = null, tint = colors.text.secondary, modifier = Modifier.size(LEADING_ICON))
+                Icon(AppActionIcons.Search, contentDescription = null, tint = colors.text.secondary, modifier = Modifier.size(LEADING_ICON))
                 Spacer(Modifier.width(SLOT_GAP))
                 Box(Modifier.weight(1f)) {
                     if (value.isEmpty()) {
@@ -106,7 +104,7 @@ fun LiuliSearchSlot(
                                 .background(colors.text.tertiary.copy(alpha = CLEAR_CIRCLE_ALPHA)),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(Icons.Filled.Close, contentDescription = null, tint = colors.text.secondary, modifier = Modifier.size(CLEAR_ICON))
+                            Icon(AppActionIcons.Close, contentDescription = null, tint = colors.text.secondary, modifier = Modifier.size(CLEAR_ICON))
                         }
                     }
                 }

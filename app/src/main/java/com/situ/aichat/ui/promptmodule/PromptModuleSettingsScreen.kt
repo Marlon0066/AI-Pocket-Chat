@@ -16,16 +16,11 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -50,15 +45,19 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
 import com.situ.aichat.ui.designsystem.AppActionChip
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppChoiceChip
 import com.situ.aichat.ui.designsystem.AppDialog
+import com.situ.aichat.ui.designsystem.AppIconButton
 import com.situ.aichat.ui.designsystem.AppMenu
 import com.situ.aichat.ui.designsystem.AppMenuItem
+import com.situ.aichat.ui.designsystem.AppPillFab
 import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.designsystem.AppTextField
 import com.situ.aichat.ui.designsystem.AppTopBar
+import com.situ.aichat.ui.designsystem.AppTopBarIcons
 import com.situ.aichat.prompt.PromptModule
 import com.situ.aichat.prompt.PromptModulePosition
 import com.situ.aichat.prompt.PromptScene
@@ -140,10 +139,14 @@ fun PromptModuleSettingsScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = {
-                editing = viewModel.newCustomModuleTemplate()
-                editingIsNew = true
-            }) { Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.pm_add_module)) }
+            AppPillFab(
+                icon = AppTopBarIcons.Add,
+                label = stringResource(R.string.pm_add_module),
+                onClick = {
+                    editing = viewModel.newCustomModuleTemplate()
+                    editingIsNew = true
+                },
+            )
         },
     ) { padding ->
         LazyColumn(
@@ -305,13 +308,13 @@ private fun ModuleRow(
             .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onToggle, enabled = !isDisabledByParentToggle) {
-            if (module.isEnabled) {
-                Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            } else {
-                Icon(Icons.Outlined.Circle, contentDescription = null, tint = MaterialTheme.colorScheme.outline)
-            }
-        }
+        AppIconButton(
+            icon = if (module.isEnabled) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
+            contentDescription = null,
+            onClick = onToggle,
+            enabled = !isDisabledByParentToggle,
+            tint = if (module.isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+        )
         Column(Modifier.weight(1f)) {
             Text(
                 module.name,
@@ -346,12 +349,18 @@ private fun ModuleRow(
             // 四期·图纸二 §4.3：省钱模式开着时，前置区的角色记忆行说明「相关的旧聊天」已挪位并改写成叙述句。
             if (saverHint) Text(stringResource(R.string.pm_saver_module_hint), style = AppTypography.caption, color = AppTheme.colors.status.onSuccess, modifier = Modifier.padding(top = 3.dp))
         }
-        IconButton(onClick = onMoveUp, enabled = !isFirst) {
-            Icon(Icons.Filled.ArrowUpward, contentDescription = stringResource(R.string.pm_move_up))
-        }
-        IconButton(onClick = onMoveDown, enabled = !isLast) {
-            Icon(Icons.Filled.ArrowDownward, contentDescription = stringResource(R.string.pm_move_down))
-        }
+        AppIconButton(
+            icon = Icons.Filled.ArrowUpward,
+            contentDescription = stringResource(R.string.pm_move_up),
+            onClick = onMoveUp,
+            enabled = !isFirst,
+        )
+        AppIconButton(
+            icon = AppActionIcons.ArrowDown,
+            contentDescription = stringResource(R.string.pm_move_down),
+            onClick = onMoveDown,
+            enabled = !isLast,
+        )
     }
 }
 
@@ -435,7 +444,7 @@ private fun NarrativePresetCard(levelRaw: String, onClick: () -> Unit) {
                 )
             }
             Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                AppActionIcons.ChevronRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )

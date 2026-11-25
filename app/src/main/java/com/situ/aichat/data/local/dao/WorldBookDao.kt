@@ -55,10 +55,11 @@ interface WorldBookDao {
     @Query("SELECT * FROM world_books ORDER BY updatedAt DESC")
     suspend fun getAllBooks(): List<WorldBookEntity>
 
-    /** 某角色本轮生效的书 = 启用的（全局书 ∪ 该角色绑定的书）。插入策略排序在引擎侧做，不在 SQL 层。 */
+    /** 某角色本轮生效的书 = 未加入世界时启用的（全局书 ∪ 该角色绑定的书）；已入世角色（joinedWorld = 1）彻底隔离不注入世界书（Q3·3A）。 */
     @Query(
-        "SELECT * FROM world_books WHERE enabled = 1 AND (isGlobal = 1 " +
-            "OR uuid IN (SELECT bookUuid FROM world_book_bindings WHERE characterUuid = :characterUuid))",
+        "SELECT * FROM world_books WHERE enabled = 1 " +
+            "AND NOT EXISTS (SELECT 1 FROM characters c WHERE c.uuid = :characterUuid AND c.joinedWorld = 1) " +
+            "AND (isGlobal = 1 OR uuid IN (SELECT bookUuid FROM world_book_bindings WHERE characterUuid = :characterUuid))",
     )
     suspend fun activeBooksForCharacter(characterUuid: String): List<WorldBookEntity>
 
@@ -106,6 +107,9 @@ interface WorldBookDao {
 
     @Query("DELETE FROM world_book_bindings WHERE characterUuid = :characterUuid AND bookUuid = :bookUuid")
     suspend fun unbind(characterUuid: String, bookUuid: String)
+
+    @Query("DELETE FROM world_book_bindings WHERE characterUuid = :characterUuid")
+    suspend fun unbindAllForCharacter(characterUuid: String)
 
     @Query("SELECT bookUuid FROM world_book_bindings WHERE characterUuid = :characterUuid ORDER BY createdAt ASC")
     suspend fun boundBookUuids(characterUuid: String): List<String>

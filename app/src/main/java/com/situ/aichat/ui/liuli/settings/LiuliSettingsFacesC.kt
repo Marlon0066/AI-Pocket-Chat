@@ -4,17 +4,22 @@ import androidx.compose.runtime.Composable
 import com.situ.aichat.data.model.AppSkin
 import com.situ.aichat.ui.liuli.designsystem.LocalAppSkin
 import com.situ.aichat.ui.settings.AboutScreen
+import com.situ.aichat.ui.settings.AdvancedSettingsScreen
 import com.situ.aichat.ui.settings.AgreementViewScreen
 import com.situ.aichat.ui.settings.ApiConfigEditScreen
 import com.situ.aichat.ui.settings.ApiConfigScreen
 import com.situ.aichat.ui.settings.ApiFunctionAssignmentScreen
 import com.situ.aichat.ui.settings.BackgroundReliabilityScreen
 import com.situ.aichat.ui.settings.KernelObservatoryScreen
+import com.situ.aichat.ui.settings.PetSettingsScreen
 import com.situ.aichat.ui.settings.QrScanScreen
+import com.situ.aichat.ui.settings.ScheduleSettingsScreen
 import com.situ.aichat.ui.settings.StoryGlobalSettingsScreen
 import com.situ.aichat.ui.settings.SystemTogglesScreen
 import com.situ.aichat.ui.settings.TtsConfigurationScreen
 import com.situ.aichat.ui.settings.VoiceCallSettingsScreen
+import com.situ.aichat.ui.settings.VoiceSettingsScreen
+import com.situ.aichat.ui.settings.WalletSettingsScreen
 import com.situ.aichat.ui.settings.WorldSettingsScreen
 
 /**
@@ -35,6 +40,7 @@ fun SkinnedApiConfigScreen(
     onOpenScan: () -> Unit = {},
     scannedConfig: String? = null,
     onScanConsumed: () -> Unit = {},
+    onOpenApiFunctions: () -> Unit = {},
 ) {
     if (LocalAppSkin.current == AppSkin.LIULI) {
         LiuliApiConfigScreen(
@@ -43,6 +49,7 @@ fun SkinnedApiConfigScreen(
             onOpenScan = onOpenScan,
             scannedConfig = scannedConfig,
             onScanConsumed = onScanConsumed,
+            onOpenApiFunctions = onOpenApiFunctions,
         )
         return
     }
@@ -52,6 +59,7 @@ fun SkinnedApiConfigScreen(
         onOpenScan = onOpenScan,
         scannedConfig = scannedConfig,
         onScanConsumed = onScanConsumed,
+        onOpenApiFunctions = onOpenApiFunctions,
     )
 }
 
@@ -98,6 +106,15 @@ fun SkinnedVoiceCallSettingsScreen(onBack: () -> Unit) {
         return
     }
     VoiceCallSettingsScreen(onBack = onBack)
+}
+
+@Composable
+fun SkinnedVoiceSettingsScreen(onBack: () -> Unit, onOpenTtsConfig: () -> Unit) {
+    if (LocalAppSkin.current == AppSkin.LIULI) {
+        LiuliVoiceSettingsScreen(onBack = onBack, onOpenTtsConfig = onOpenTtsConfig)
+        return
+    }
+    VoiceSettingsScreen(onBack = onBack, onOpenTtsConfig = onOpenTtsConfig)
 }
 
 // ── C3：故事全局 + 世界 ────────────────────────────────────────────────────────
@@ -150,6 +167,36 @@ fun SkinnedSystemTogglesScreen(onBack: () -> Unit) {
 }
 
 @Composable
+fun SkinnedScheduleSettingsScreen(onBack: () -> Unit) {
+    if (LocalAppSkin.current == AppSkin.LIULI) {
+        LiuliScheduleSettingsScreen(onBack = onBack)
+        return
+    }
+    ScheduleSettingsScreen(onBack = onBack)
+}
+
+@Composable
+fun SkinnedPetSettingsScreen(onBack: () -> Unit) {
+    if (LocalAppSkin.current == AppSkin.LIULI) {
+        LiuliPetSettingsScreen(onBack = onBack)
+        return
+    }
+    PetSettingsScreen(onBack = onBack)
+}
+
+@Composable
+fun SkinnedWalletSettingsScreen(
+    onBack: () -> Unit,
+    onOpenNotifications: () -> Unit = {},
+) {
+    if (LocalAppSkin.current == AppSkin.LIULI) {
+        LiuliWalletSettingsScreen(onBack = onBack, onOpenNotifications = onOpenNotifications)
+        return
+    }
+    WalletSettingsScreen(onBack = onBack, onOpenNotifications = onOpenNotifications)
+}
+
+@Composable
 fun SkinnedBackgroundReliabilityScreen(onBack: () -> Unit) {
     if (LocalAppSkin.current == AppSkin.LIULI) {
         LiuliBackgroundReliabilityScreen(onBack = onBack)
@@ -165,4 +212,34 @@ fun SkinnedKernelObservatoryScreen(onBack: () -> Unit) {
         return
     }
     KernelObservatoryScreen(onBack = onBack)
+}
+
+@Composable
+fun SkinnedAdvancedSettingsScreen(
+    onBack: () -> Unit,
+    onOpenPromptModules: () -> Unit,
+    onOpenMemoryPrompts: () -> Unit,
+    onOpenContentFilter: () -> Unit,
+    onOpenContextLog: () -> Unit,
+    onOpenPerfCollect: () -> Unit,
+) {
+    if (LocalAppSkin.current == AppSkin.LIULI) {
+        LiuliAdvancedSettingsScreen(
+            onBack = onBack,
+            onOpenPromptModules = onOpenPromptModules,
+            onOpenMemoryPrompts = onOpenMemoryPrompts,
+            onOpenContentFilter = onOpenContentFilter,
+            onOpenContextLog = onOpenContextLog,
+            onOpenPerfCollect = onOpenPerfCollect,
+        )
+        return
+    }
+    AdvancedSettingsScreen(
+        onBack = onBack,
+        onOpenPromptModules = onOpenPromptModules,
+        onOpenMemoryPrompts = onOpenMemoryPrompts,
+        onOpenContentFilter = onOpenContentFilter,
+        onOpenContextLog = onOpenContextLog,
+        onOpenPerfCollect = onOpenPerfCollect,
+    )
 }

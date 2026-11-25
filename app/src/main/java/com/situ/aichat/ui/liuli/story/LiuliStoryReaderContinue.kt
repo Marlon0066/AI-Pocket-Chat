@@ -15,9 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.situ.aichat.R
 import com.situ.aichat.ui.components.LocalAppHaptics
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.liuli.designsystem.LiuliButton
 import com.situ.aichat.ui.liuli.designsystem.LiuliButtonStyle
@@ -97,7 +95,7 @@ internal fun LiuliStoryContinueZone(
         ) {
             // 主胶囊三模式都走紫渐变实底（草图 ⑤「主胶囊换琉璃紫渐变实底」）；点击恒 onFlowClick（禁新开生成路径·同暖陶）。
             LiuliButton(onClick = { haptics.light(); onFlowClick() }, style = LiuliButtonStyle.Prominent, enabled = !locked) {
-                Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
+                Icon(AppActionIcons.Play, contentDescription = null, modifier = Modifier.size(16.dp))
                 Text(stringResource(storyContinueFlowLabelRes(zone.mode)))
             }
             if (finaleProgress == null) {
@@ -122,7 +120,7 @@ private fun LiuliStoryInputCard(isDark: Boolean, enabled: Boolean, onClick: () -
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Icon(Icons.Outlined.Edit, null, tint = AppTheme.colors.accent.text, modifier = Modifier.size(20.dp))
+        Icon(AppActionIcons.Edit, null, tint = AppTheme.colors.accent.text, modifier = Modifier.size(20.dp))
         Text(stringResource(R.string.story_continue_director_hint), color = StoryReaderLayout.secondaryTextColor(isDark), fontSize = 15.sp)
     }
 }
@@ -149,7 +147,7 @@ internal fun LiuliStoryDraftCard(
             LiuliReaderTagChip(stringResource(storyDraftTagRes(draftUserEdited)))
             Spacer(Modifier.weight(1f))
             // 小笔图标只是「可改」的暗示，不是独立按钮（整卡 clickable 已接导演台·同暖陶）。
-            Icon(Icons.Outlined.Edit, contentDescription = null, tint = StoryReaderLayout.secondaryTextColor(isDark), modifier = Modifier.size(14.dp))
+            Icon(AppActionIcons.Edit, contentDescription = null, tint = StoryReaderLayout.secondaryTextColor(isDark), modifier = Modifier.size(14.dp))
         }
         Text(
             draftBeats,
@@ -184,7 +182,7 @@ internal fun LiuliStoryDirectionCard(
             Spacer(Modifier.width(6.dp))
             LiuliReaderTagChip(stringResource(R.string.story_continue_direction_tag))
             Spacer(Modifier.weight(1f))
-            Icon(Icons.Outlined.Edit, contentDescription = null, tint = StoryReaderLayout.secondaryTextColor(isDark), modifier = Modifier.size(14.dp))
+            Icon(AppActionIcons.Edit, contentDescription = null, tint = StoryReaderLayout.secondaryTextColor(isDark), modifier = Modifier.size(14.dp))
         }
         Text(
             directionText,

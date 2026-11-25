@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.HorizontalDivider
@@ -37,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import com.situ.aichat.R
 import com.situ.aichat.data.model.CallRecordData
 import com.situ.aichat.ui.components.CharacterAvatar
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppTheme
 import java.time.Instant
@@ -120,7 +120,7 @@ fun CallRecordCardBubble(
                 )
                 DurationPill(seconds = data.duration)
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    imageVector = AppActionIcons.ChevronRight,
                     contentDescription = null,
                     tint = colors.text.tertiary,
                     modifier = Modifier.rotate(chevronRotation),
@@ -189,7 +189,7 @@ private fun VoiceSetupTailRow(onClick: () -> Unit) {
             modifier = Modifier.weight(1f),
         )
         Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            imageVector = AppActionIcons.ChevronRight,
             contentDescription = null,
             tint = colors.status.onWarning.copy(alpha = 0.7f),
             modifier = Modifier.size(14.dp),

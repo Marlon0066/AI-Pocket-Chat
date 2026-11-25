@@ -2,6 +2,7 @@ package com.situ.aichat.world.member
 
 import androidx.room.withTransaction
 import com.situ.aichat.data.local.AppDatabase
+import com.situ.aichat.data.local.entity.WorldBookBindingEntity
 import com.situ.aichat.data.local.entity.WorldEventEntity
 import com.situ.aichat.util.StringListJson
 import com.situ.aichat.world.WorldBootstrap
@@ -11,8 +12,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * 世界成员三动作（W13 图纸 §3.1/§3.2·契约 §6）：把某正式角色「加入/离开/搬家」这颗世界。每动作**单
- * `db.withTransaction`**（照 W6 [com.situ.aichat.world.cast.WorldRecruitService] 先例·进程死 = 全回滚）：
+ * 世界成员动作（W13 图纸 §3.1/§3.2 + 世界×世界书自由切换）：把某正式角色「加入/离开/搬家」或与世界书单事务互切。
+ * 每动作**单 `db.withTransaction`**（照 W6 [com.situ.aichat.world.cast.WorldRecruitService] 先例·进程死 = 全回滚）：
  * 定点列更新（**禁整行 @Update**·钱路审计教训）+ 关系边休眠翻转 + 一条世界事件落库（开机小报自然播报）。
  * join 的静默建世 [WorldBootstrap.ensureCreated] **刻意提到事务外**（锁内自持 Mutex 写库·嵌进事务 = 双挂死·复核 R1 🟡-1）。
  *
@@ -27,7 +28,7 @@ class WorldMembershipService @Inject constructor(
     private val bootstrap: WorldBootstrap,
 ) {
 
-    /** 三动作结果：成功 / 挂世界书拒绝 / 原住民出身拒绝 / 无操作（已在目标态·同城·查无）。 */
+    /** 动作结果：成功 / 挂世界书拒绝 / 原住民出身拒绝 / 无操作（已在目标态·同城·查无）。 */
     sealed interface Result {
         data object Ok : Result
         data object WorldbookBound : Result
@@ -39,30 +40,34 @@ class WorldMembershipService @Inject constructor(
      * 加入世界（§3.1）：先在**事务外**静默建世 [WorldBootstrap.ensureCreated]（幂等·决策 41④ 先例），再进单
      * 事务做守卫与写入——ensureCreated 自持 Mutex 且锁内写库，**绝不能**包进 `db.withTransaction`（持事务等
      * Mutex ↔ 世界屏/世界卡 init 的 ensureCreated 持 Mutex 等唯一写连接 = 双挂死·复核 R1 🟡-1）。
-     * 事务内：已加入 → NoOp；挂世界书 → WorldbookBound（防御纵深·UI 已灰）；否则定点写
+     * 事务内：已加入 → NoOp；挂世界书 → WorldbookBound（防御纵深·未确认摘书前拒绝）；否则定点写
      * joinedWorld=1/worldJoinedAt=nowMs（住址保留上次值·出厂 city_yunye）→ 恢复休眠边（重新加入·契约决策
      * 16）→ join 世界事件。
      */
     suspend fun join(characterUuid: String, nowMs: Long): Result {
-        // 事务外建世：ensureCreated 锁内写库，嵌进 db.withTransaction 会与世界屏 init 双挂死（复核 R1 🟡-1）。
         val state = bootstrap.ensureCreated(nowMs)
         return db.withTransaction {
             val character = db.characterDao().getByUuid(characterUuid) ?: return@withTransaction Result.NoOp
             if (character.joinedWorld) return@withTransaction Result.NoOp
             if (db.worldBookDao().boundBookUuids(characterUuid).isNotEmpty()) return@withTransaction Result.WorldbookBound
-            db.characterDao().updateWorldMembership(characterUuid, joined = true, joinedAt = nowMs)
-            db.worldSocialDao().setDormantFor(characterUuid, dormant = false)
-            val cityName = cityNameOf(state.seed, character.worldHomeCityId)
-            db.worldDao().upsertEvent(
-                WorldEventEntity(
-                    uuid = eventUuid(JOIN_KIND, characterUuid, nowMs),
-                    kindRaw = JOIN_KIND,
-                    involvedIdsJson = StringListJson.encode(listOf(characterUuid)),
-                    cityId = character.worldHomeCityId,
-                    summary = "${character.name} 来到了$cityName",
-                    happenedAt = nowMs,
-                ),
-            )
+            performJoinInTx(character.uuid, character.name, character.worldHomeCityId, state.seed, nowMs)
+            Result.Ok
+        }
+    }
+
+    /**
+     * 确认切换：单事务「摘除该角色全部世界书绑定 + 加入世界」。原住民出身 → NativeOrigin；查无角色 → NoOp。
+     * 若角色本已在世界里（历史脏态自愈），仍清空残留绑定并返回 Ok，不重复写 join 事件。
+     */
+    suspend fun joinClearingWorldBooks(characterUuid: String, nowMs: Long): Result {
+        val state = bootstrap.ensureCreated(nowMs)
+        return db.withTransaction {
+            val character = db.characterDao().getByUuid(characterUuid) ?: return@withTransaction Result.NoOp
+            if (db.worldNativeDao().getByRecruitedUuid(characterUuid) != null) return@withTransaction Result.NativeOrigin
+            db.worldBookDao().unbindAllForCharacter(characterUuid)
+            if (!character.joinedWorld) {
+                performJoinInTx(character.uuid, character.name, character.worldHomeCityId, state.seed, nowMs)
+            }
             Result.Ok
         }
     }
@@ -75,19 +80,33 @@ class WorldMembershipService @Inject constructor(
         val character = db.characterDao().getByUuid(characterUuid) ?: return@withTransaction Result.NoOp
         if (db.worldNativeDao().getByRecruitedUuid(characterUuid) != null) return@withTransaction Result.NativeOrigin
         if (!character.joinedWorld) return@withTransaction Result.NoOp
-        db.characterDao().updateWorldMembership(characterUuid, joined = false, joinedAt = null)
-        db.worldSocialDao().setDormantFor(characterUuid, dormant = true)
-        db.worldDao().deleteTravel(characterUuid)
-        db.worldDao().upsertEvent(
-            WorldEventEntity(
-                uuid = eventUuid(LEAVE_KIND, characterUuid, nowMs),
-                kindRaw = LEAVE_KIND,
-                involvedIdsJson = StringListJson.encode(listOf(characterUuid)),
-                cityId = character.worldHomeCityId,
-                summary = "${character.name} 离开了，大家有点想 TA",
-                happenedAt = nowMs,
-            ),
-        )
+        performLeaveInTx(character.uuid, character.name, character.worldHomeCityId, nowMs)
+        Result.Ok
+    }
+
+    /**
+     * 确认切换：单事务「（若在世界则）离开世界 + 挂载目标世界书」。原住民出身 → NativeOrigin；查无角色 → NoOp。
+     * @param sole true = 角色编辑页单选收敛（先清空旧绑定再绑 [bookUuid]）；false = 书详情页/多选增量追加。
+     */
+    suspend fun leaveAndBindWorldBook(
+        characterUuid: String,
+        bookUuid: String?,
+        sole: Boolean = true,
+        nowMs: Long,
+    ): Result = db.withTransaction {
+        val character = db.characterDao().getByUuid(characterUuid) ?: return@withTransaction Result.NoOp
+        if (db.worldNativeDao().getByRecruitedUuid(characterUuid) != null) return@withTransaction Result.NativeOrigin
+        if (character.joinedWorld) {
+            performLeaveInTx(character.uuid, character.name, character.worldHomeCityId, nowMs)
+        }
+        if (sole) {
+            db.worldBookDao().unbindAllForCharacter(characterUuid)
+        }
+        if (bookUuid != null) {
+            db.worldBookDao().bind(
+                WorldBookBindingEntity(characterUuid = characterUuid, bookUuid = bookUuid, createdAt = nowMs),
+            )
+        }
         Result.Ok
     }
 
@@ -114,6 +133,49 @@ class WorldMembershipService @Inject constructor(
             ),
         )
         Result.Ok
+    }
+
+    private suspend fun performJoinInTx(
+        characterUuid: String,
+        characterName: String,
+        homeCityId: String,
+        seed: Long,
+        nowMs: Long,
+    ) {
+        db.characterDao().updateWorldMembership(characterUuid, joined = true, joinedAt = nowMs)
+        db.worldSocialDao().setDormantFor(characterUuid, dormant = false)
+        val cityName = cityNameOf(seed, homeCityId)
+        db.worldDao().upsertEvent(
+            WorldEventEntity(
+                uuid = eventUuid(JOIN_KIND, characterUuid, nowMs),
+                kindRaw = JOIN_KIND,
+                involvedIdsJson = StringListJson.encode(listOf(characterUuid)),
+                cityId = homeCityId,
+                summary = "$characterName 来到了$cityName",
+                happenedAt = nowMs,
+            ),
+        )
+    }
+
+    private suspend fun performLeaveInTx(
+        characterUuid: String,
+        characterName: String,
+        homeCityId: String,
+        nowMs: Long,
+    ) {
+        db.characterDao().updateWorldMembership(characterUuid, joined = false, joinedAt = null)
+        db.worldSocialDao().setDormantFor(characterUuid, dormant = true)
+        db.worldDao().deleteTravel(characterUuid)
+        db.worldDao().upsertEvent(
+            WorldEventEntity(
+                uuid = eventUuid(LEAVE_KIND, characterUuid, nowMs),
+                kindRaw = LEAVE_KIND,
+                involvedIdsJson = StringListJson.encode(listOf(characterUuid)),
+                cityId = homeCityId,
+                summary = "$characterName 离开了，大家有点想 TA",
+                happenedAt = nowMs,
+            ),
+        )
     }
 
     /** 城名解析（图集查无 → 回退 id·实际 home/目标城恒经图集验真，不会命中）。 */

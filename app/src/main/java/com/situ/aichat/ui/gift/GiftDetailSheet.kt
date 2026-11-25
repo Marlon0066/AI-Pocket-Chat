@@ -11,10 +11,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CardGiftcard
-import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material3.ExperimentalMaterial3Api
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -116,7 +114,7 @@ fun GiftDetailSheet(
                     enabled = canSend,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Icon(Icons.Filled.CardGiftcard, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(AppActionIcons.Gift, contentDescription = null, modifier = Modifier.size(18.dp))
                     Text(
                         text = sendButtonTitle(item, character, canAfford),
                         fontWeight = FontWeight.SemiBold,
@@ -183,7 +181,7 @@ private fun PriceCard(item: GiftItem, balance: Int, canAfford: Boolean) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text("价格", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.MonetizationOn, contentDescription = null, tint = GiftColors.Gold, modifier = Modifier.size(20.dp))
+                    Icon(AppActionIcons.Coin, contentDescription = null, tint = GiftColors.Gold, modifier = Modifier.size(20.dp))
                     Text(
                         " ${item.price}",
                         style = MaterialTheme.typography.titleLarge,

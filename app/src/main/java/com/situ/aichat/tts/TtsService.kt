@@ -132,6 +132,7 @@ class TtsService(
             return when (providerType) {
                 TtsProviderType.SYSTEM -> {
                     val systemVoice = (profile?.voiceIdentifier ?: "").trim()
+                        .ifEmpty { (config?.defaultSystemVoiceIdentifier ?: "").trim() }
                     if (systemVoice.isEmpty()) TtsResolvedProvider.None
                     else TtsResolvedProvider.System(systemVoice)
                 }
@@ -141,6 +142,7 @@ class TtsService(
                 TtsProviderType.MINIMAX -> {
                     if (config == null) return TtsResolvedProvider.None
                     val remoteVoice = (profile?.remoteVoiceID ?: "").trim()
+                        .ifEmpty { config.defaultRemoteVoiceID.trim() }
                     val effectiveBaseUrl = config.baseURL.trim().ifEmpty { providerType.defaultBaseUrl }
                     val overrides = if (providerType == TtsProviderType.MINIMAX && profile != null) {
                         buildMiniMaxOverridesFromRawValues(

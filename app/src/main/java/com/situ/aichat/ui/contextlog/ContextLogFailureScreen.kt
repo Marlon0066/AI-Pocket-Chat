@@ -19,10 +19,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.KeyboardArrowDown
-import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material3.Icon
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -148,7 +146,7 @@ private fun RawErrorCard(f: LogFailureView) {
         ) {
             Text(label, style = AppTheme.typography.label, color = AppTheme.colors.text.secondary, modifier = Modifier.weight(1f))
             Icon(
-                if (open) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
+                if (open) AppActionIcons.ChevronUp else AppActionIcons.ChevronDown,
                 contentDescription = null, tint = AppTheme.colors.text.secondary, modifier = Modifier.size(18.dp),
             )
         }

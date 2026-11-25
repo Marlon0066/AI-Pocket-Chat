@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -23,6 +21,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.situ.aichat.R
+import com.situ.aichat.ui.designsystem.AppActionIcons
 
 /**
  * 章末「本章计划草稿」卡（图纸 2026-08-05 U-2·样图画面②）——AI 在上一章末随 METADATA 捎带预排的
@@ -68,7 +67,7 @@ internal fun StoryDraftCard(
                 Spacer(Modifier.weight(1f))
                 // 小笔图标只是「可改」的暗示，不是独立按钮（整卡 clickable 已接导演台）
                 Icon(
-                    Icons.Outlined.Edit,
+                    AppActionIcons.Edit,
                     contentDescription = null,
                     tint = StoryReaderLayout.secondaryTextColor(isDark),
                     modifier = Modifier.size(14.dp),

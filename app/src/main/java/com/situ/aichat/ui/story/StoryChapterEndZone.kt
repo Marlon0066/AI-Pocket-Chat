@@ -22,7 +22,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
@@ -42,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.StoryChapterEntity
 import com.situ.aichat.ui.components.LocalAppHaptics
+import com.situ.aichat.ui.designsystem.AppActionIcons
 
 /**
  * 章末「本章操作行 + 三档快评行」（故事二期卷三·图纸 §4.1–§4.3·mockup 屏 3）。
@@ -171,7 +171,7 @@ private fun ChapterActionsRow(
                 modifier = Modifier.width(ACTIONS_MENU_WIDTH),
             ) {
                 if (canRewrite) {
-                    MenuActionRow(Icons.Filled.Refresh, stringResource(R.string.story_chapter_action_rewrite), content, accent) {
+                    MenuActionRow(AppActionIcons.Refresh, stringResource(R.string.story_chapter_action_rewrite), content, accent) {
                         onExpandedChange(false); onRewrite()
                     }
                 }

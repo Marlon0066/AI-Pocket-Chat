@@ -24,9 +24,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FormatQuote
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Visibility
@@ -52,6 +49,7 @@ import com.situ.aichat.data.local.entity.CharacterEntity
 import com.situ.aichat.data.model.PersonalitySpectrum
 import com.situ.aichat.data.model.RelationshipQuality
 import com.situ.aichat.ui.components.rememberReduceMotion
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import java.time.Instant
@@ -101,10 +99,10 @@ internal fun CharacterInfoCard(character: CharacterEntity, modifier: Modifier = 
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f)) {
-                CardSectionHeader(Icons.Filled.Person, MaterialTheme.colorScheme.primary, stringResource(R.string.profile_charinfo_title))
+                CardSectionHeader(AppActionIcons.Person, MaterialTheme.colorScheme.primary, stringResource(R.string.profile_charinfo_title))
             }
             Icon(
-                Icons.Filled.KeyboardArrowDown,
+                AppActionIcons.ChevronDown,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp).rotate(chevronRotation),
@@ -139,10 +137,10 @@ private fun CharInfoDetail(character: CharacterEntity) {
     Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         AccentInfoRow(MemColor.Pink, Icons.Filled.Visibility, stringResource(R.string.profile_charinfo_appearance), character.appearanceDescription)
         AccentInfoRow(MemColor.Indigo, Icons.AutoMirrored.Filled.MenuBook, stringResource(R.string.profile_charinfo_backstory), character.backstory)
-        AccentInfoRow(MemColor.Cyan, Icons.Filled.FormatQuote, stringResource(R.string.profile_charinfo_speaking), character.speakingStyle)
+        AccentInfoRow(MemColor.Cyan, AppActionIcons.Quote, stringResource(R.string.profile_charinfo_speaking), character.speakingStyle)
         AccentTagRow(MemColor.Teal, Icons.AutoMirrored.Filled.Chat, stringResource(R.string.profile_charinfo_catchphrase), splitTags(character.catchphrases))
         AccentTagRow(MemColor.Orange, Icons.Filled.Star, stringResource(R.string.profile_charinfo_interests), splitTags(character.initialInterests))
-        AccentInfoRow(MemColor.Purple, Icons.Filled.FormatQuote, stringResource(R.string.profile_charinfo_examples), character.exampleDialogues)
+        AccentInfoRow(MemColor.Purple, AppActionIcons.Quote, stringResource(R.string.profile_charinfo_examples), character.exampleDialogues)
     }
 }
 
@@ -230,18 +228,18 @@ private fun RadarEmptyHint(textRes: Int, onEdit: () -> Unit) {
     }
 }
 
-/** 记忆碎片配色（对齐 iOS SwiftUI 命名色，原生 hex）。 */
+/** 记忆碎片与资料页莫兰迪点缀配色（低饱和温润色板，去谷歌/iOS 荧光原色）。 */
 internal object MemColor {
-    val Blue = Color(0xFF0A84FF)
-    val Green = Color(0xFF34C759)
-    val Indigo = Color(0xFF5E5CE6)
-    val Cyan = Color(0xFF32ADE6)
-    val Orange = Color(0xFFFF9F0A)
-    val Pink = Color(0xFFFF2D55)
-    val Purple = Color(0xFFAF52DE)
-    val Yellow = Color(0xFFD9A100)
-    val Teal = Color(0xFF30B0C7)
-    val Mint = Color(0xFF00C7BE)
-    val Red = Color(0xFFFF3B30)
-    val Brown = Color(0xFFA2845E)
+    val Blue = Color(0xFF5A7FA3)
+    val Green = Color(0xFF5D8A66)
+    val Indigo = Color(0xFF6B6CA3)
+    val Cyan = Color(0xFF528C9E)
+    val Orange = Color(0xFFC28247)
+    val Pink = Color(0xFFB86375)
+    val Purple = Color(0xFF8B6BA3)
+    val Yellow = Color(0xFFB8923E)
+    val Teal = Color(0xFF4F8787)
+    val Mint = Color(0xFF4F948A)
+    val Red = Color(0xFFB85A56)
+    val Brown = Color(0xFF94775E)
 }

@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.DirectionsWalk
-import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -30,6 +29,7 @@ import com.situ.aichat.data.local.entity.MeetingAppointmentEntity
 import com.situ.aichat.data.model.MeetingTimeGranularity
 import com.situ.aichat.meeting.MeetingDisplayFormatter
 import com.situ.aichat.ui.designsystem.AppMenu
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppMenuItem
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppTheme
@@ -81,7 +81,7 @@ fun MeetingCountdownChip(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(7.dp),
     ) {
-        Icon(Icons.Outlined.CalendarMonth, contentDescription = null, tint = colors.accent.text, modifier = Modifier.size(16.dp))
+        Icon(AppActionIcons.Calendar, contentDescription = null, tint = colors.accent.text, modifier = Modifier.size(16.dp))
         Text(
             text = "${countdown}和${name}见面" + if (detail.isNotBlank()) " · $detail" else "",
             style = typography.label,

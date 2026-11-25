@@ -19,17 +19,12 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
@@ -40,6 +35,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,23 +59,29 @@ import com.situ.aichat.data.model.KnownModelCapabilityTable
 import com.situ.aichat.data.model.ToolSupportLevel
 import com.situ.aichat.data.remote.llm.ApiBalanceResult
 import com.situ.aichat.share.ApiConfigShareCodec
+import com.situ.aichat.ui.components.SettingsSwitchRow
 import com.situ.aichat.ui.components.contentMaxWidth
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppDialog
+import com.situ.aichat.ui.designsystem.AppDialogTone
 import com.situ.aichat.ui.designsystem.AppDropdownField
 import com.situ.aichat.ui.designsystem.AppDropdownMenuItem
 import com.situ.aichat.ui.designsystem.AppDropdownTextField
+import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppLoadingRing
 import com.situ.aichat.ui.designsystem.AppLoadingRingSize
 import com.situ.aichat.ui.designsystem.AppMenu
 import com.situ.aichat.ui.designsystem.AppMenuItem
+import com.situ.aichat.ui.designsystem.AppSaverIcons
+import com.situ.aichat.ui.designsystem.AppSettingsRow
 import com.situ.aichat.ui.designsystem.AppSnackbarHost
 import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTextField
 import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.ui.designsystem.appCardSurface
 import com.situ.aichat.util.QrCodec
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,6 +91,7 @@ fun ApiConfigScreen(
     onOpenScan: () -> Unit = {},
     scannedConfig: String? = null,
     onScanConsumed: () -> Unit = {},
+    onOpenApiFunctions: () -> Unit = {},
     viewModel: ApiConfigViewModel = hiltViewModel(),
 ) {
     val configs by viewModel.configs.collectAsStateWithLifecycle()
@@ -98,6 +101,9 @@ fun ApiConfigScreen(
     val assignments by viewModel.assignments.collectAsStateWithLifecycle() // settings-api-3 功能承接提示
     val undetermined by viewModel.undetermined.collectAsStateWithLifecycle() // settings-api-6 检测不确定提示
     val exportPayload by viewModel.exportPayload.collectAsStateWithLifecycle() // 13.10b 扫码导出
+    val cacheSaverEnabled by viewModel.cacheSaverEnabled.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+    var pendingDelete by remember { mutableStateOf<ApiConfigEntity?>(null) }
 
     // Auto-refresh balances once the config list first appears (mirrors iOS refresh-on-appear).
     LaunchedEffect(configs.isNotEmpty()) {
@@ -153,12 +159,11 @@ fun ApiConfigScreen(
                 lifted = listState.canScrollBackward,
                 actions = {
                     // 13.10b 扫码导入：扫二维码一键填好配置（相机/相册）。
-                    IconButton(onClick = onOpenScan) {
-                        Icon(
-                            Icons.Filled.QrCodeScanner,
-                            contentDescription = stringResource(R.string.api_scan_import),
-                        )
-                    }
+                    com.situ.aichat.ui.designsystem.AppTopBarAction(
+                        icon = Icons.Filled.QrCodeScanner,
+                        contentDescription = stringResource(R.string.api_scan_import),
+                        onClick = onOpenScan,
+                    )
                 },
             )
         },
@@ -173,9 +178,30 @@ fun ApiConfigScreen(
                 .padding(horizontal = AppSpacing.screenGutter),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            item(key = "service-extras") {
+                Column(modifier = Modifier.fillMaxWidth().appCardSurface()) {
+                    AppSettingsRow(
+                        title = stringResource(R.string.api_fn_assign_title),
+                        subtitle = stringResource(R.string.api_fn_assign_subtitle),
+                        icon = Icons.Filled.Tune,
+                        showChevron = true,
+                        onClick = onOpenApiFunctions,
+                    )
+                    AppListDivider(startInset = 56.dp)
+                    SettingsSwitchRow(
+                        title = stringResource(R.string.pm_saver_title),
+                        subtitle = stringResource(R.string.pm_saver_subtitle),
+                        icon = AppSaverIcons.Yen,
+                        checked = cacheSaverEnabled,
+                        onCheckedChange = viewModel::setCacheSaverEnabled,
+                    )
+                }
+            }
             // 表单区（服务商→保存并启用）合并为一个 item 内的无标题卡壳（§4.B1·操作页 16 gutter 由 LazyColumn
             // 提供·卡内 16·字段组 spacedBy 12 沿用；模型+能力提示保持原组紧凑）。
             item {
+                val missingFieldsTemplate = stringResource(R.string.settings_api_missing_fields)
+                val httpsRequiredMsg = stringResource(R.string.api_url_https_required)
                 Column(
                     modifier = Modifier.fillMaxWidth().appCardSurface().padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -210,7 +236,7 @@ fun ApiConfigScreen(
                         },
                         label = "Base URL",
                         isError = urlInsecure,
-                        supportingText = if (urlInsecure) stringResource(R.string.api_url_https_required) else null,
+                        supportingText = if (urlInsecure) httpsRequiredMsg else null,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     // 模型 + 能力提示保持原组紧凑（原同一 item·hint 自带 top 4）。
@@ -233,12 +259,24 @@ fun ApiConfigScreen(
                     )
                     AppButton(
                         onClick = {
-                            if (apiKey.isNotBlank() && baseUrl.isNotBlank() && model.isNotBlank() && isHttpsBaseUrl(baseUrl)) {
-                                // 不在此乐观清空；成功(SavedCreate)才清空，失败保留已填密钥（settings-api-5）。
-                                viewModel.save(provider, baseUrl, model, apiKey)
+                            val missing = buildList {
+                                if (baseUrl.isBlank()) add("Base URL")
+                                if (model.isBlank()) add("模型名")
+                                if (apiKey.isBlank()) add("API Key")
+                            }
+                            when {
+                                missing.isNotEmpty() -> scope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        String.format(missingFieldsTemplate, missing.joinToString("、")),
+                                    )
+                                }
+                                !isHttpsBaseUrl(baseUrl) -> scope.launch {
+                                    snackbarHostState.showSnackbar(httpsRequiredMsg)
+                                }
+                                else -> viewModel.save(provider, baseUrl, model, apiKey)
                             }
                         },
-                        style = AppButtonStyle.Text,
+                        style = AppButtonStyle.Primary,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text("保存并启用")
@@ -267,11 +305,26 @@ fun ApiConfigScreen(
                         onExportQr = { viewModel.exportQr(cfg.uuid) },
                         onRedetect = { viewModel.redetect(cfg.uuid) },
                         onRefreshBalance = { viewModel.refreshBalance(cfg.uuid) },
-                        onDelete = { viewModel.delete(cfg) },
+                        onDelete = { pendingDelete = cfg },
                     )
                 }
             }
         }
+    }
+
+    pendingDelete?.let { cfg ->
+        AppDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = stringResource(R.string.settings_api_delete_confirm_title),
+            body = stringResource(R.string.settings_api_delete_confirm_body, "${cfg.providerName} · ${cfg.modelName}"),
+            confirmText = stringResource(R.string.action_delete),
+            confirmTone = AppDialogTone.Danger,
+            dismissText = stringResource(R.string.action_cancel),
+            onConfirm = {
+                viewModel.delete(cfg)
+                pendingDelete = null
+            },
+        )
     }
 
     // 13.10b 扫码导出：「生成二维码」后弹窗显示二维码 + 明文密钥警示。
@@ -367,12 +420,11 @@ private fun ConfigCard(
                     BalanceLabel(balance)
                 }
                 if (supportsBalance) {
-                    IconButton(onClick = onRefreshBalance) {
-                        Icon(
-                            Icons.Filled.Refresh,
-                            contentDescription = stringResource(R.string.api_balance_refresh),
-                        )
-                    }
+                    com.situ.aichat.ui.designsystem.AppIconButton(
+                        icon = com.situ.aichat.ui.designsystem.AppActionIcons.Refresh,
+                        contentDescription = stringResource(R.string.api_balance_refresh),
+                        onClick = onRefreshBalance,
+                    )
                 }
                 if (cfg.isActive) {
                     Icon(
@@ -383,21 +435,27 @@ private fun ConfigCard(
                 } else {
                     AppButton(onClick = onActivate, style = AppButtonStyle.Text) { Text("启用") }
                 }
-                IconButton(onClick = onEdit) {
-                    Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.api_edit))
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.action_delete))
-                }
+                com.situ.aichat.ui.designsystem.AppIconButton(
+                    icon = com.situ.aichat.ui.designsystem.AppActionIcons.Edit,
+                    contentDescription = stringResource(R.string.api_edit),
+                    onClick = onEdit,
+                )
+                com.situ.aichat.ui.designsystem.AppIconButton(
+                    icon = com.situ.aichat.ui.designsystem.AppActionIcons.Delete,
+                    contentDescription = stringResource(R.string.action_delete),
+                    onClick = onDelete,
+                )
                 // settings-api-4：复制配置（安卓地道收进溢出菜单，等价 iOS 左滑/长按两入口）。
                 Box {
-                    IconButton(onClick = { menuOpen = true }) {
-                        Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.api_more))
-                    }
+                    com.situ.aichat.ui.designsystem.AppIconButton(
+                        icon = com.situ.aichat.ui.designsystem.AppTopBarIcons.More,
+                        contentDescription = stringResource(R.string.api_more),
+                        onClick = { menuOpen = true },
+                    )
                     AppMenu(expanded = menuOpen, onDismiss = { menuOpen = false }) {
                         AppMenuItem(
                             text = stringResource(R.string.api_duplicate),
-                            leadingIcon = Icons.Filled.ContentCopy,
+                            leadingIcon = com.situ.aichat.ui.designsystem.AppActionIcons.Copy,
                             onClick = { onClone(); menuOpen = false },
                         )
                         // 13.10b 扫码导出：生成含本配置的二维码供另一台设备扫码导入。

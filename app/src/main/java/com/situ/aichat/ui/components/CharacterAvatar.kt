@@ -13,22 +13,21 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.util.AvatarStore
 
 /**
  * Shared circular character avatar. Shows the stored image at [avatarPath] when present, otherwise a
- * monogram of the first character of [name] over a per-name gradient ([AvatarColor], 1:1 iOS AvatarView).
+ * monogram of the first character of [name] over a per-name Morandi gradient ([AvatarColor]).
  * Decoding happens off the main thread via [AvatarStore.load], keyed by path.
  *
- * Three render states, matching iOS (only `avatarData == nil` shows the letter):
+ * Three render states (only missing avatar shows the letter):
  *  - has a decoded image → the image;
  *  - no avatar path → the monogram letter on the gradient;
  *  - has a path but still decoding → just the gradient (no letter), so we never flash a letter before the image.
@@ -40,6 +39,7 @@ fun CharacterAvatar(
     size: Dp,
     modifier: Modifier = Modifier,
 ) {
+    val isDark = AppTheme.colors.isDark
     val bitmap by produceState<ImageBitmap?>(initialValue = null, avatarPath) {
         value = AvatarStore.load(avatarPath)?.asImageBitmap()
     }
@@ -47,7 +47,7 @@ fun CharacterAvatar(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
-            .background(AvatarColor.brush(name)),
+            .background(AvatarColor.brush(name, dark = isDark)),
         contentAlignment = Alignment.Center,
     ) {
         val image = bitmap
@@ -60,7 +60,7 @@ fun CharacterAvatar(
             )
             avatarPath.isNullOrEmpty() -> Text(
                 text = name.take(1).uppercase().ifEmpty { "·" },
-                color = Color.White,
+                color = AvatarColor.monogramInk(dark = isDark),
                 fontWeight = FontWeight.SemiBold,
                 fontSize = (size.value * 0.42f).sp,
             )

@@ -47,7 +47,6 @@ fun LiuliWorldSettingsScreen(
     LiuliWorldSettingsContent(
         state = state,
         onSetVividness = viewModel::setVividness,
-        onSetNotification = viewModel::setNotification,
         onSetRelationships = viewModel::setRelationships,
         onSetRomance = viewModel::setRomance,
         onPickTimezone = viewModel::setTimezone,
@@ -61,7 +60,6 @@ fun LiuliWorldSettingsScreen(
 internal fun LiuliWorldSettingsContent(
     state: WorldSettingsUiState,
     onSetVividness: (String) -> Unit,
-    onSetNotification: (String) -> Unit,
     onSetRelationships: (Boolean) -> Unit,
     onSetRomance: (Boolean) -> Unit,
     onPickTimezone: (String?) -> Unit,
@@ -96,7 +94,6 @@ internal fun LiuliWorldSettingsContent(
                         state = state,
                         callbacks = LiuliWorldSettingsCallbacks(
                             onSetVividness = onSetVividness,
-                            onSetNotification = onSetNotification,
                             onOpenTimezoneSheet = { showTzSheet = true },
                             onSetRelationships = onSetRelationships,
                             onSetRomance = onSetRomance,

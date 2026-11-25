@@ -2,6 +2,7 @@ package com.situ.aichat.ui.liuli.page
 
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -9,7 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalDensity
 
 /**
- * 「大标题带收起了没」的三个判据（卷三 §4.2 的两个 + 卷四 A-8 的头图版）。
+ * 「大标题带收起了没」的四个判据（卷三 §4.2 的两个 + 卷四 A-8 的头图版 + 网格版）。
  *
  * 卷四 A-2 把前两个从 `ui/liuli/home` **只搬不改**搬到本文件并公有化：主页四 Tab 与二级屏共用同一套判据。
  * 阈值改读 [LiuliPageGeometry]（与 `LiuliHomeGeometry` 同值·由 `LiuliPageGeometryTest` 钉住），
@@ -30,6 +31,20 @@ fun rememberLargeTitleCollapsed(listState: LazyListState): Boolean {
     val collapsed by remember(listState, titleHeightPx) {
         derivedStateOf {
             listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset >= titleHeightPx
+        }
+    }
+    return collapsed
+}
+
+/** 网格页（`LazyVerticalGrid`）的大标题收起判据：与 [rememberLargeTitleCollapsed] 同口径。 */
+@Composable
+fun rememberGridCollapsed(gridState: LazyGridState): Boolean {
+    val titleHeightPx = with(LocalDensity.current) {
+        (LiuliPageGeometry.titleTop + LiuliPageGeometry.titleHeight).roundToPx()
+    }
+    val collapsed by remember(gridState, titleHeightPx) {
+        derivedStateOf {
+            gridState.firstVisibleItemIndex > 0 || gridState.firstVisibleItemScrollOffset >= titleHeightPx
         }
     }
     return collapsed

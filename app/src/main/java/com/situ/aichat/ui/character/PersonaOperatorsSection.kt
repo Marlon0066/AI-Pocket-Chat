@@ -7,10 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,6 +17,8 @@ import androidx.compose.ui.unit.dp
 import com.situ.aichat.R
 import com.situ.aichat.data.model.PersonaOperator
 import com.situ.aichat.data.model.PersonaVocab
+import com.situ.aichat.ui.designsystem.AppActionIcons
+import com.situ.aichat.ui.designsystem.AppIconButton
 import com.situ.aichat.ui.designsystem.AppSwitch
 import com.situ.aichat.ui.designsystem.AppTheme
 
@@ -72,17 +70,14 @@ internal fun PersonaOperatorsSection(operators: List<PersonaOperator>, onChange:
                     },
                 )
                 // 删除走行尾按钮，**不做左滑删除**：编辑屏整体是纵向滚动表单，左滑与既有滚动/返回手势有冲突面。
-                IconButton(
+                AppIconButton(
+                    icon = AppActionIcons.Close,
+                    contentDescription = stringResource(R.string.persona_operators_delete),
                     onClick = { onChange(operators.filterNot { it.id == op.id }) },
+                    tint = colors.text.tertiary,
+                    iconSize = 22.dp,
                     modifier = Modifier.size(ROW_MIN_HEIGHT),
-                ) {
-                    Icon(
-                        Icons.Filled.Close,
-                        contentDescription = stringResource(R.string.persona_operators_delete),
-                        tint = colors.text.tertiary,
-                        modifier = Modifier.size(24.dp),
-                    )
-                }
+                )
             }
         }
     }

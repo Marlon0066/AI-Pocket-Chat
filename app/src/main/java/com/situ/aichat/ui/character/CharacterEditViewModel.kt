@@ -36,6 +36,7 @@ import com.situ.aichat.tts.TtsProviderType
 import com.situ.aichat.tts.TtsService
 import com.situ.aichat.tts.provider.TtsRemoteConfigValues
 import com.situ.aichat.util.WallpaperStore
+import com.situ.aichat.data.worldbook.WorldBookRepository
 import com.situ.aichat.work.NotificationTemplateWorker
 import com.situ.aichat.world.member.WorldMembershipService
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -101,6 +102,8 @@ data class CharacterEditState(
     // W13：新建模式「加入世界」暂存开关（编辑模式由 CharacterWorldViewModel 直接管，本字段仅 create 用·图纸 §3.3）。
     // save() 成功插入后按此调 membershipService.join，故 toNewEntity/applyTo 都不写 joinedWorld 列。
     val joinWorld: Boolean = false,
+    // 4A：新建模式预选世界书 uuid 列表（与 joinWorld 二选一联动；save() 插入角色后立即绑定）。
+    val initialWorldBookUuids: List<String> = emptyList(),
 ) {
     val canSave: Boolean get() = name.isNotBlank()
 
@@ -227,6 +230,7 @@ class CharacterEditViewModel @Inject constructor(
     private val ttsConfigRepo: TtsConfigurationRepository,
     private val previewer: TtsPreviewer,
     private val membershipService: WorldMembershipService,
+    private val worldBookRepo: WorldBookRepository,
     private val personaCompiler: PersonaCompileUseCase,
     /** 修缮卷 J10：编辑页保存段（人设四列 + 成长两列）进角色写锁、锁内 fresh 读只写改过的维（F20）。 */
     private val characterWriteLock: CharacterWriteLock,
@@ -315,6 +319,31 @@ class CharacterEditViewModel @Inject constructor(
 
     fun update(transform: (CharacterEditState) -> CharacterEditState) {
         _state.value = transform(_state.value)
+    }
+
+    /** 新建模式切换「加入世界」：开启时自动清空预选世界书，保持同一时刻二选一。 */
+    fun setCreateJoinWorld(joined: Boolean) = update { cur ->
+        cur.copy(
+            joinWorld = joined,
+            initialWorldBookUuids = if (joined) emptyList() else cur.initialWorldBookUuids,
+        )
+    }
+
+    /** 新建模式单选世界书：选中非空书时自动关闭「加入世界」。 */
+    fun selectInitialWorldBookSole(bookUuid: String?) = update { cur ->
+        cur.copy(
+            initialWorldBookUuids = listOfNotNull(bookUuid),
+            joinWorld = if (bookUuid != null) false else cur.joinWorld,
+        )
+    }
+
+    /** 新建模式多选世界书：有任意选中书时自动关闭「加入世界」。 */
+    fun toggleInitialWorldBook(bookUuid: String, bound: Boolean) = update { cur ->
+        val next = if (bound) (cur.initialWorldBookUuids + bookUuid).distinct() else cur.initialWorldBookUuids - bookUuid
+        cur.copy(
+            initialWorldBookUuids = next,
+            joinWorld = if (next.isNotEmpty()) false else cur.joinWorld,
+        )
     }
 
     // MARK: - 语音试听 + 系统音色（P10.1c）
@@ -440,9 +469,12 @@ class CharacterEditViewModel @Inject constructor(
                 // 创建：insert 内部按关系名播种「初始设定」里程碑（recordRelationship 守卫空名，1:1 iOS）。
                 // 成长原型校准（§3.3 入口①）：slidersTouched=滑块动过→圣旨跳过棘轮抬分（保留狗血剧本意图）。
                 characterRepo.insert(entity, initialRelationshipName = s.relationshipName.trim(), relationshipSlidersTouched = s.relationshipQuality != RelationshipQuality.INITIAL)
-                // W13：新建模式勾了「加入世界」→ 角色落库后调成员服务加入（单事务·静默建世+休眠恢复+join 事件·图纸 §3.3）。
-                // 插入之后、onSaved 回调之前执行；若进程死于两步之间 = 角色存在但未加入（编辑页可再开·E6）。
-                if (s.joinWorld) membershipService.join(entity.uuid, System.currentTimeMillis())
+                // 4A / W13：新建模式若选了世界书则直接落库绑定（与世界二选一）；否则若勾了「加入世界」则调成员服务加入。
+                if (s.initialWorldBookUuids.isNotEmpty()) {
+                    s.initialWorldBookUuids.forEach { bookUuid -> worldBookRepo.bind(entity.uuid, bookUuid) }
+                } else if (s.joinWorld) {
+                    membershipService.join(entity.uuid, System.currentTimeMillis())
+                }
                 // P6.1c：建角色即为其生成通知文案（后台 worker；离线/无配置回退默认文案）。
                 NotificationTemplateWorker.enqueueForCharacter(appContext, entity.uuid)
                 // P1-43：创建即时推断月薪+入职储蓄（=iOS Actions.swift:219-232 异步 Task）。fire-and-forget

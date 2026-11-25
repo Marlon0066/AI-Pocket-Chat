@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.situ.aichat.offline.OfflineContentBlock
 import com.situ.aichat.ui.components.CharacterAvatar
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppTypography
 
@@ -270,7 +269,7 @@ private fun TimeSkipView(text: String, shadow: Shadow?) {
         ) {
             DashedLine()
             Icon(
-                Icons.Outlined.Schedule,
+                AppActionIcons.Clock,
                 contentDescription = null,
                 tint = OfflineTheater.textFaint,
                 modifier = Modifier.height(14.dp),

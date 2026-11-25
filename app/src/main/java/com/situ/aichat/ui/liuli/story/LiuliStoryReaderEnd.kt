@@ -20,7 +20,6 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -46,6 +45,7 @@ import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.StoryChapterEntity
 import com.situ.aichat.data.local.entity.StoryEntity
 import com.situ.aichat.ui.components.LocalAppHaptics
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.Palette
 import com.situ.aichat.ui.liuli.designsystem.LiuliMaterials
@@ -272,7 +272,7 @@ private fun LiuliFreeInputCard(enabled: Boolean, isDark: Boolean, onClick: () ->
             },
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Filled.Edit, null, tint = accent.text, modifier = Modifier.size(13.dp))
+            Icon(AppActionIcons.Edit, null, tint = accent.text, modifier = Modifier.size(13.dp))
         }
         Text(stringResource(R.string.story_choice_free_input), color = StoryReaderLayout.secondaryTextColor(isDark), modifier = Modifier.weight(1f))
     }

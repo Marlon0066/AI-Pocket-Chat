@@ -8,10 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,8 +23,10 @@ import com.situ.aichat.R
 import com.situ.aichat.data.model.CustomGain
 import com.situ.aichat.data.model.PersonaGains
 import com.situ.aichat.data.model.PersonaVocab
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
+import com.situ.aichat.ui.designsystem.AppIconButton
 import com.situ.aichat.ui.designsystem.AppSegmentedControl
 import com.situ.aichat.ui.designsystem.AppTextField
 import com.situ.aichat.ui.designsystem.AppTheme
@@ -259,14 +257,14 @@ private fun GainRow(
             }
             if (onDelete != null) {
                 Row(Modifier.weight(1f), horizontalArrangement = Arrangement.End) {
-                    IconButton(onClick = onDelete, modifier = Modifier.size(ROW_MIN_HEIGHT)) {
-                        Icon(
-                            Icons.Filled.Close,
-                            contentDescription = stringResource(R.string.persona_gains_custom_delete),
-                            tint = colors.text.tertiary,
-                            modifier = Modifier.size(24.dp),
-                        )
-                    }
+                    AppIconButton(
+                        icon = AppActionIcons.Close,
+                        contentDescription = stringResource(R.string.persona_gains_custom_delete),
+                        onClick = onDelete,
+                        tint = colors.text.tertiary,
+                        iconSize = 22.dp,
+                        modifier = Modifier.size(ROW_MIN_HEIGHT),
+                    )
                 }
             }
         }

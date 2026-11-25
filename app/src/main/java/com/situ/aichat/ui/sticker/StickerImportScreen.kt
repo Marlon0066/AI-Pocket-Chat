@@ -13,9 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,12 +28,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.situ.aichat.ui.components.contentMaxWidth
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
-import com.situ.aichat.ui.components.contentMaxWidth
 import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppTextField
+import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
+import com.situ.aichat.ui.designsystem.AppTypography
+import com.situ.aichat.ui.designsystem.grainSurface
 
 /**
  * 自定义表情包导入（1:1 iOS `StickerImportView`）：选图（相册 / 文件）→ 严格判定 GIF → 名称（必填）+
@@ -49,6 +50,7 @@ fun StickerImportScreen(
     viewModel: StickerImportViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val colors = AppTheme.colors
     var showSource by remember { mutableStateOf(false) }
 
     val pickFromGallery = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
@@ -61,6 +63,7 @@ fun StickerImportScreen(
     val scrollState = rememberScrollState()
 
     Scaffold(
+        containerColor = colors.surface.base,
         topBar = {
             AppTopBar(
                 title = "添加表情包",
@@ -73,7 +76,13 @@ fun StickerImportScreen(
         },
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(scrollState).contentMaxWidth().padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .grainSurface()
+                .padding(padding)
+                .verticalScroll(scrollState)
+                .contentMaxWidth()
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -90,7 +99,7 @@ fun StickerImportScreen(
                 Text(if (state.bytes == null) "选择图片" else "重新选择")
             }
             if (state.isAnimated) {
-                Text("✓ 检测到 GIF 动图", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                Text("✓ 检测到 GIF 动图", style = AppTypography.secondary, color = colors.accent.text)
             }
             AppTextField(
                 value = state.name,
@@ -106,8 +115,8 @@ fun StickerImportScreen(
             )
             Text(
                 "例如：名称「狗头保命」，描述「开玩笑、别当真、保护性自嘲」",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = AppTypography.caption,
+                color = colors.text.secondary,
             )
         }
     }

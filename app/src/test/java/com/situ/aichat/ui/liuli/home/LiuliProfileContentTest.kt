@@ -137,7 +137,7 @@ class LiuliProfileContentTest {
 
     @Test fun 设置条副标原字且各卡回调恰一次() {
         show()
-        compose.onNodeWithText("个性化 · API · 聊天 · 记忆 · 语音 · 数据").assertIsDisplayed()
+        compose.onNodeWithText("AI 服务 · 外观 · 聊天 · 记忆 · 系统").assertIsDisplayed()
         compose.onNodeWithText("设置").performClick()
         compose.onNodeWithText("我的钱包").performClick()
         compose.onNodeWithText("礼物店").performClick()

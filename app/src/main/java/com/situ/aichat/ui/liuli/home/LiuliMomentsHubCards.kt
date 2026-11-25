@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.situ.aichat.R
 import com.situ.aichat.ui.components.CharacterAvatar
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppFeatureIcons
 import com.situ.aichat.ui.designsystem.AppNavIcons
 import com.situ.aichat.ui.designsystem.AppTheme
@@ -68,7 +67,7 @@ fun LiuliApiMissingBanner(modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Icon(Icons.Filled.Warning, contentDescription = null, tint = colors.status.onWarning, modifier = Modifier.size(WARN_ICON))
+        Icon(AppActionIcons.Warning, contentDescription = null, tint = colors.status.onWarning, modifier = Modifier.size(WARN_ICON))
         Text(stringResource(R.string.moment_api_missing), style = AppTypography.secondary, color = colors.status.onWarning)
     }
 }

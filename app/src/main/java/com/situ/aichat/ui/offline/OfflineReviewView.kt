@@ -11,20 +11,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -39,12 +35,14 @@ import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.MessageEntity
 import com.situ.aichat.offline.OfflineContentBlock
 import com.situ.aichat.offline.OfflineContentParser
+import com.situ.aichat.ui.designsystem.AppIconButton
+import com.situ.aichat.ui.designsystem.AppSpacing
+import com.situ.aichat.ui.designsystem.AppTopBarIcons
 
 /**
  * 线下见面只读回顾（1:1 iOS `OfflineReviewView`）：背景同沉浸剧场，把该次见面的全部消息预解析成内容块
  * 静态渲染（无逐块淡入），顶部 ✦ 装饰 + 见面信息、底部「见面结束」。供见面回忆卡点击进入。
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OfflineReviewView(
     messages: List<MessageEntity>,
@@ -61,8 +59,7 @@ fun OfflineReviewView(
     onBack: () -> Unit,
 ) {
     val themeColor = parseOfflineThemeColor(themeColorHex)
-    // 见面回顾真·全屏沉浸：背景 fillMaxSize 自然铺到状态栏/导航栏后（壁纸重构②·NavHost 去垫付后不再 clawback）；
-    // 前景 M3 Scaffold+TopAppBar 自管 inset。
+    // 见面回顾真·全屏沉浸：背景 fillMaxSize 自然铺到状态栏/导航栏后；顶栏走透明剧场横梁。
     Box(Modifier.fillMaxSize()) {
         OfflineBackgroundView(
             backgroundStyle = backgroundStyle,
@@ -75,20 +72,30 @@ fun OfflineReviewView(
         Scaffold(
             containerColor = Color.Transparent,
             topBar = {
-                TopAppBar(
-                    title = { Text("见面回顾", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = OfflineTheater.textBright, modifier = Modifier.semantics { heading() }) },
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = OfflineTheater.textBright)
-                        }
-                    },
-                    // §4.7 剧场态 chrome 透明化：透明容器 + 标题/返回 icon 舞台亮字（其余块渲染自动继承舞台·装饰不动）。
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent,
-                        titleContentColor = OfflineTheater.textBright,
-                        navigationIconContentColor = OfflineTheater.textBright,
-                    ),
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .height(56.dp),
+                ) {
+                    AppIconButton(
+                        icon = AppTopBarIcons.Back,
+                        contentDescription = stringResource(R.string.action_back),
+                        onClick = onBack,
+                        tint = OfflineTheater.textBright,
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .padding(start = AppSpacing.gutterForRoundButton),
+                    )
+                    Text(
+                        "见面回顾",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        color = OfflineTheater.textBright,
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .semantics { heading() },
+                    )
+                }
             },
         ) { padding ->
             LazyColumn(

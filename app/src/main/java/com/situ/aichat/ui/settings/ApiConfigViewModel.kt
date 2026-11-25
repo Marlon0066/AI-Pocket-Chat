@@ -19,6 +19,7 @@ import com.situ.aichat.data.remote.llm.modelcatalog.sanitizeCatalogErrorMessage
 import com.situ.aichat.data.repository.ApiConfigRepository
 import com.situ.aichat.data.repository.ApiFunctionRouter
 import com.situ.aichat.data.repository.ConfigSaveResult
+import com.situ.aichat.data.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -28,6 +29,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -78,6 +80,7 @@ class ApiConfigViewModel @Inject constructor(
     private val repo: ApiConfigRepository,
     private val modelCatalog: ModelCatalogService,
     private val functionRouter: ApiFunctionRouter,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
     val configs: StateFlow<List<ApiConfigEntity>> =
@@ -85,6 +88,16 @@ class ApiConfigViewModel @Inject constructor(
 
     val activeConfig: StateFlow<ApiConfigEntity?> =
         repo.observeActive().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** 缓存省钱模式开关（设置全面重构卷二：AI 服务页直控，共用 SettingsRepository 同一存储键）。 */
+    val cacheSaverEnabled: StateFlow<Boolean> =
+        settingsRepository.appSettings
+            .map { it.cacheSaverEnabled }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    fun setCacheSaverEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setCacheSaverEnabled(enabled) }
+    }
 
     /** 功能→配置 显式分配映射，配置卡「用于：…」承接提示用（settings-api-3）。 */
     val assignments: StateFlow<Map<ApiFunction, String>> =

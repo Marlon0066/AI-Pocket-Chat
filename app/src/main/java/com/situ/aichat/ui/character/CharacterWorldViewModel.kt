@@ -14,6 +14,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -24,10 +25,8 @@ data class RegionUi(val id: String, val name: String)
 data class CityUi(val id: String, val name: String, val isUserHome: Boolean, val isCurrentAddress: Boolean)
 
 /**
- * 编辑页世界段状态（图纸 §3.3·仅编辑模式·characterUuid 取 SavedStateHandle）。四态派生：普通关/开/世界书锁/
- * 原住民锁；住址由图集解析。动作委托 [WorldMembershipService]，每次动作后重载。
- *
- * `selectedRegionId` = 图纸 §3.3 UiState 的补全项（§4.2 城市 sheet 需高亮当前大区·见 §11 施工日志）。
+ * 编辑页世界段状态（图纸 §3.3·仅编辑模式·characterUuid 取 SavedStateHandle）。
+ * 响应式订阅角色行、世界书绑定与世界状态：同屏摘/挂世界书或离开/加入世界均实时同步刷新，零陈旧快照。
  */
 data class CharacterWorldUiState(
     val loaded: Boolean = false,
@@ -57,45 +56,50 @@ class CharacterWorldViewModel @Inject constructor(
     private val _state = MutableStateFlow(CharacterWorldUiState())
     val state: StateFlow<CharacterWorldUiState> = _state.asStateFlow()
 
-    // 图集查询用（世界建成后 seed 固定·WorldAtlas.of 内部单座缓存·反复取零成本）。
     private var seed: Long? = null
     private var userHomeCityId: String = WorldIds.HOME_CITY_ID
 
     init {
-        reload()
+        observeReactiveState()
     }
 
-    fun reload() {
-        viewModelScope.launch { loadInternal() }
-    }
-
-    private suspend fun loadInternal() {
-        val character = characterDao.getByUuid(characterUuid)
-        if (character == null) {
-            _state.value = CharacterWorldUiState(loaded = true)
-            return
+    private fun observeReactiveState() {
+        viewModelScope.launch {
+            combine(
+                characterDao.observeByUuid(characterUuid),
+                worldNativeDao.observeAll(),
+                worldDao.observeState(),
+                worldBookRepository.observeBoundBookUuidsForCharacter(characterUuid),
+            ) { character, natives, worldState, boundUuids ->
+                if (character == null) {
+                    CharacterWorldUiState(loaded = true)
+                } else {
+                    seed = worldState?.seed
+                    userHomeCityId = worldState?.userHomeCityId ?: WorldIds.HOME_CITY_ID
+                    val atlas = seed?.let { WorldAtlas.of(it) }
+                    val homeCityId = character.worldHomeCityId
+                    val homeCity = atlas?.cityById(homeCityId)
+                    val homeRegionId = homeCity?.regionId ?: atlas?.regions?.firstOrNull()?.id ?: ""
+                    val currentSelectedRegion = _state.value.selectedRegionId.takeIf { sel ->
+                        sel.isNotEmpty() && atlas?.regions?.any { it.id == sel } == true
+                    } ?: homeRegionId
+                    CharacterWorldUiState(
+                        loaded = true,
+                        joined = character.joinedWorld,
+                        nativeOrigin = natives.any { it.recruitedCharacterUuid == characterUuid },
+                        worldbookBound = boundUuids.isNotEmpty(),
+                        homeCityId = homeCityId,
+                        homeCityName = homeCity?.name ?: "云野镇",
+                        sameCityAsUser = homeCityId == userHomeCityId,
+                        regions = atlas?.regions?.map { RegionUi(it.id, it.name) } ?: emptyList(),
+                        citiesOfRegion = citiesFor(currentSelectedRegion, homeCityId),
+                        selectedRegionId = currentSelectedRegion,
+                    )
+                }
+            }.collect { next ->
+                _state.value = next
+            }
         }
-        val nativeOrigin = worldNativeDao.getByRecruitedUuid(characterUuid) != null
-        val worldbookBound = worldBookRepository.boundBookUuids(characterUuid).isNotEmpty()
-        val worldState = worldDao.getState()
-        seed = worldState?.seed
-        userHomeCityId = worldState?.userHomeCityId ?: WorldIds.HOME_CITY_ID
-        val atlas = seed?.let { WorldAtlas.of(it) }
-        val homeCityId = character.worldHomeCityId
-        val homeCity = atlas?.cityById(homeCityId)
-        val homeRegionId = homeCity?.regionId ?: atlas?.regions?.firstOrNull()?.id ?: ""
-        _state.value = CharacterWorldUiState(
-            loaded = true,
-            joined = character.joinedWorld,
-            nativeOrigin = nativeOrigin,
-            worldbookBound = worldbookBound,
-            homeCityId = homeCityId,
-            homeCityName = homeCity?.name ?: "云野镇",
-            sameCityAsUser = homeCityId == userHomeCityId,
-            regions = atlas?.regions?.map { RegionUi(it.id, it.name) } ?: emptyList(),
-            citiesOfRegion = citiesFor(homeRegionId, homeCityId),
-            selectedRegionId = homeRegionId,
-        )
     }
 
     /** 某大区的城列表（含程序城·奇观不入列·图纸 §4.2）。 */
@@ -119,27 +123,31 @@ class CharacterWorldViewModel @Inject constructor(
         )
     }
 
-    /** 开关 off→on：加入世界（图纸 §3.3·关→开无需确认）。 */
+    /** 开关 off→on（未绑世界书时直接加入）。 */
     fun join() {
         viewModelScope.launch {
             membershipService.join(characterUuid, System.currentTimeMillis())
-            loadInternal()
         }
     }
 
-    /** 离开确认后：离开世界（图纸 §3.3·on→off 先弹确认由 UI 管）。 */
+    /** 确认切换后：单事务摘除世界书并加入世界。 */
+    fun joinClearingWorldBooks() {
+        viewModelScope.launch {
+            membershipService.joinClearingWorldBooks(characterUuid, System.currentTimeMillis())
+        }
+    }
+
+    /** 离开确认后：离开世界。 */
     fun leave() {
         viewModelScope.launch {
             membershipService.leave(characterUuid, System.currentTimeMillis())
-            loadInternal()
         }
     }
 
-    /** 搬家确认后：搬到目标城（图纸 §3.3·同城/查无由服务判 NoOp）。 */
+    /** 搬家确认后：搬到目标城（同城/查无由服务判 NoOp）。 */
     fun move(toCityId: String) {
         viewModelScope.launch {
             membershipService.move(characterUuid, toCityId, System.currentTimeMillis())
-            loadInternal()
         }
     }
 }

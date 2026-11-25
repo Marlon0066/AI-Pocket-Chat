@@ -5,7 +5,9 @@ import com.situ.aichat.R
 import com.situ.aichat.data.local.dao.MeetingAppointmentDao
 import com.situ.aichat.data.local.entity.CharacterEntity
 import com.situ.aichat.data.local.entity.MeetingAppointmentEntity
+import com.situ.aichat.data.model.AppSettings
 import com.situ.aichat.data.repository.CharacterRepository
+import com.situ.aichat.data.repository.SettingsRepository
 import com.situ.aichat.notification.NotificationAlarmScheduler
 import com.situ.aichat.notification.NotificationPayload
 import com.situ.aichat.notification.Notifier
@@ -13,14 +15,15 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
 
 /**
- * 到点通知调度器行为测（Phase 10）：全量对账 [MeetupNotificationService.rescheduleAll] 只为 confirmed-future 排闹钟、
- * 其余（proposed / 过点 / 终态 / 超额）一律撤；删角色防御撤；payload 字段（标题 / 会话 / category / requestKey / 时刻 / 头像）
+ * 到点通知调度器行为测（Phase 10 + 卷四 B-4）：全量对账 [MeetupNotificationService.rescheduleAll] 只为 confirmed-future 排闹钟、
+ * 其余（proposed / 过点 / 终态 / 超额）一律撤；删角色防御撤；关开关撤全量；payload 字段（标题 / 会话 / category / requestKey / 时刻 / 头像）
  * 正确；以及纯函数挑选 / key / 正文模板。alarmScheduler / dao / characterRepo / context 用 MockK 假掉。
  */
 class MeetupNotificationServiceTest {
@@ -65,9 +68,28 @@ class MeetupNotificationServiceTest {
         dao: MeetingAppointmentDao,
         alarm: NotificationAlarmScheduler,
         characterRepo: CharacterRepository = characterRepo(),
+        meetingReminderEnabled: Boolean = true,
     ): MeetupNotificationService {
         val context = mockk<Context>(relaxed = true) // getString → "" 足够（正文内容另有纯函数测）
-        return MeetupNotificationService(context, dao, characterRepo, alarm)
+        val settingsRepo = mockk<SettingsRepository> {
+            every { appSettings } returns flowOf(AppSettings(notifMeetingReminderEnabled = meetingReminderEnabled))
+        }
+        return MeetupNotificationService(context, dao, characterRepo, alarm, settingsRepo)
+    }
+
+    @Test fun rescheduleAll_disabledInSettings_cancelsAllAndSchedulesNone() = runBlocking {
+        val dao = mockk<MeetingAppointmentDao>()
+        val alarm = mockk<NotificationAlarmScheduler>(relaxed = true)
+        coEvery { dao.getAllAppointments() } returns listOf(
+            appt("future1", "confirmed", now + 1_000),
+            appt("future2", "confirmed", now + 2_000),
+        )
+
+        service(dao, alarm, meetingReminderEnabled = false).rescheduleAll(now)
+
+        verify { alarm.cancel("meetup_future1") }
+        verify { alarm.cancel("meetup_future2") }
+        verify(exactly = 0) { alarm.scheduleExact(any(), any(), any()) }
     }
 
     @Test fun rescheduleAll_schedulesConfirmedFuture_cancelsEverythingElse() = runBlocking {

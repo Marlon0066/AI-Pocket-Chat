@@ -27,12 +27,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -63,6 +60,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.MessageEntity
+import com.situ.aichat.ui.designsystem.AppActionIcons
+import com.situ.aichat.ui.designsystem.AppIconButton
 import com.situ.aichat.ui.components.AppMotion
 import com.situ.aichat.ui.components.CharacterAvatar
 import com.situ.aichat.ui.components.rememberReduceMotion
@@ -246,13 +245,12 @@ internal fun ReplyPreview(senderLabel: String, content: String, onClear: () -> U
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            IconButton(onClick = onClear) {
-                Icon(
-                    Icons.Filled.Close,
-                    contentDescription = stringResource(R.string.a11y_cancel_quote),
-                    tint = colors.text.secondary,
-                )
-            }
+            AppIconButton(
+                icon = AppActionIcons.Close,
+                contentDescription = stringResource(R.string.a11y_cancel_quote),
+                onClick = onClear,
+                tint = colors.text.secondary,
+            )
         }
     }
 }
@@ -349,7 +347,7 @@ internal fun QuoteTextOnlyHint(
                     )
                     Spacer(Modifier.width(2.dp))
                     Icon(
-                        Icons.Filled.FormatQuote,
+                        AppActionIcons.Quote,
                         contentDescription = null,
                         tint = colors.accent.text,
                         modifier = Modifier.size(15.dp),

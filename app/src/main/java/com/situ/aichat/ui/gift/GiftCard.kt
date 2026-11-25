@@ -8,10 +8,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -20,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.situ.aichat.gift.GiftItem
+import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.appCardSurface
 
 /**
@@ -41,6 +40,8 @@ fun GiftCard(
     onClick: (() -> Unit)? = null,
 ) {
     val canAfford = balance >= item.price
+    val colors = AppTheme.colors
+    val typography = AppTheme.typography
     Column(
         modifier = modifier
             .appCardSurface()
@@ -53,36 +54,35 @@ fun GiftCard(
         }
         Text(
             text = item.name,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
+            style = typography.label,
+            color = colors.text.primary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Text(
             text = item.subtitle,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = typography.caption,
+            color = colors.text.secondary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                imageVector = Icons.Filled.MonetizationOn,
+                imageVector = AppActionIcons.Coin,
                 contentDescription = null,
                 tint = if (canAfford) GiftColors.Gold else GiftColors.Unafford,
                 modifier = Modifier.size(14.dp),
             )
             Text(
                 text = " ${item.price}",
-                style = MaterialTheme.typography.titleSmall,
+                style = typography.label,
                 fontWeight = FontWeight.Bold,
-                color = if (canAfford) MaterialTheme.colorScheme.onSurface else GiftColors.Unafford,
+                color = if (canAfford) colors.text.primary else GiftColors.Unafford,
             )
             Text(
                 text = " 金币",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = typography.caption,
+                color = colors.text.secondary,
             )
         }
     }

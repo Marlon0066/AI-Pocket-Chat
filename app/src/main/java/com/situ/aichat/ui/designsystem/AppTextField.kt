@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -40,7 +41,8 @@ import com.situ.aichat.ui.components.rememberReduceMotion
  * **label 范式 = 框上方静态标签**（方案 A 拍板 2026-06-19·软填充无描边缺口可供 M3 浮动标签依附）。
  *
  * 错误态 [isError] 时环色与 label/[supportingText] 转 `status.onError`（优先于聚焦环）。支持
- * [prefix]/[suffix] 单位、[trailingIcon] 槽位（眼睛/loading/清除）、[visualTransformation]（密码遮蔽）。
+ * [prefix]/[suffix] 单位、[trailingIcon] 槽位（眼睛/loading/清除）、[visualTransformation]（密码遮蔽）、
+ * 可选 [textStyle]（如兑换码等宽居中）。
  * 底座 = foundation [BasicTextField]（IME/光标/选择/语义由它保证·只重定义视觉·设计语言 §5）；
  * 聚焦/错误环走效果轴（ζ1.0 永不过冲）淡入，[rememberReduceMotion] 时瞬时落位。
  *
@@ -63,6 +65,7 @@ fun AppTextField(
     prefix: String? = null,
     suffix: String? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
+    textStyle: TextStyle? = null,
 ) {
     val colors = AppTheme.colors
     val interactionSource = remember { MutableInteractionSource() }
@@ -79,6 +82,7 @@ fun AppTextField(
         label = "appTextFieldRing",
     )
     val accentOrError = if (isError) colors.status.onError else colors.text.secondary
+    val baseStyle = textStyle ?: AppTypography.body
 
     Column(modifier = modifier) {
         if (label != null) {
@@ -95,7 +99,7 @@ fun AppTextField(
             modifier = Modifier.fillMaxWidth(),
             enabled = enabled,
             singleLine = singleLine,
-            textStyle = AppTypography.body.copy(
+            textStyle = baseStyle.copy(
                 color = if (enabled) colors.text.primary else colors.text.tertiary,
             ),
             cursorBrush = SolidColor(colors.accent.primary),
@@ -119,7 +123,12 @@ fun AppTextField(
                     }
                     Box(Modifier.weight(1f)) {
                         if (value.isEmpty() && placeholder != null) {
-                            Text(placeholder, style = AppTypography.body, color = colors.text.secondary)
+                            Text(
+                                placeholder,
+                                style = baseStyle,
+                                color = colors.text.secondary,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
                         }
                         innerTextField()
                     }

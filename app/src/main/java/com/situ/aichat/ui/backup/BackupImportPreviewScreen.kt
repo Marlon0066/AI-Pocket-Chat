@@ -21,7 +21,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -38,7 +37,6 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -50,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.produceState
 import com.situ.aichat.R
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppLoadingRing
@@ -69,10 +68,6 @@ import com.situ.aichat.ui.designsystem.appCardSurface
 import com.situ.aichat.ui.designsystem.grainSurface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-
-// iOS 用硬编码 .yellow/.green 区分「冲突警告 / 将新导入」——这里同义取暖黄 + 系统绿（非主题色，刻意醒目）。
-private val ConflictAmber = Color(0xFFF5A623)
-private val NewGreen = Color(0xFF34C759)
 
 /**
  * 导入冲突预览屏（1:1 iOS `CharacterBackupImportPreviewView`）：逐角色显示头像/名/消息数 + 冲突黄标&三策略 Picker
@@ -244,7 +239,7 @@ private fun CharacterPreviewRowView(
                     Modifier.semantics(mergeDescendants = true) { stateDescription = strategyState },
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(Icons.Filled.Warning, contentDescription = null, tint = ConflictAmber, modifier = Modifier.size(16.dp))
+                    Icon(AppActionIcons.Warning, contentDescription = null, tint = AppTheme.colors.status.onWarning, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(
                         stringResource(R.string.backup_preview_conflict, row.existingName ?: row.name),
@@ -264,7 +259,7 @@ private fun CharacterPreviewRowView(
                     Modifier.semantics(mergeDescendants = true) {},
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = NewGreen, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = AppTheme.colors.status.onSuccess, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(R.string.backup_preview_new), style = MaterialTheme.typography.bodySmall)
                 }
@@ -313,6 +308,7 @@ private fun ImportResultSummary(result: ImportResult.Success) {
 /** 预览头像：直接解码 zip 内字节（预览段未重存媒体）；无字节 → 名字首字母单字 + 渐变（复用 [AvatarColor]）。 */
 @Composable
 private fun PreviewAvatar(name: String, bytes: ByteArray?, size: Dp) {
+    val isDark = AppTheme.colors.isDark
     val bitmap by produceState<ImageBitmap?>(initialValue = null, bytes) {
         value = bytes?.let {
             withContext(Dispatchers.Default) {
@@ -324,7 +320,7 @@ private fun PreviewAvatar(name: String, bytes: ByteArray?, size: Dp) {
         modifier = Modifier
             .size(size)
             .clip(CircleShape)
-            .background(AvatarColor.brush(name))
+            .background(AvatarColor.brush(name, dark = isDark))
             // P1-19：整体装饰压停（名字由行文本承载）——cd=null 盖不住首字母兜底 Text 的泄漏停，须容器级清空；
             // 本 Box 不可点 → 无 clickable 链序坑（惯例参照 ContactsScreen:271）。
             .clearAndSetSemantics {},
@@ -340,7 +336,7 @@ private fun PreviewAvatar(name: String, bytes: ByteArray?, size: Dp) {
             )
             bytes == null -> Text(
                 text = name.take(1).uppercase().ifEmpty { "·" },
-                color = Color.White,
+                color = AvatarColor.monogramInk(dark = isDark),
                 fontWeight = FontWeight.SemiBold,
                 fontSize = (size.value * 0.42f).sp,
             )

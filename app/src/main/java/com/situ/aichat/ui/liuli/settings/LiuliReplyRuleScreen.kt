@@ -21,6 +21,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
 import com.situ.aichat.data.model.AppSettings
+import com.situ.aichat.ui.chat.ChatMessageDispatcher
 import com.situ.aichat.ui.components.contentMaxWidth
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
@@ -28,10 +29,10 @@ import com.situ.aichat.ui.liuli.page.LiuliGroup
 import com.situ.aichat.ui.liuli.page.LiuliLargeTitle
 import com.situ.aichat.ui.liuli.page.LiuliPage
 import com.situ.aichat.ui.liuli.page.LiuliPageGeometry
+import com.situ.aichat.ui.liuli.page.LiuliRangeStepper
 import com.situ.aichat.ui.liuli.page.LiuliRowBase
 import com.situ.aichat.ui.liuli.page.LiuliSliderRow
-import com.situ.aichat.ui.liuli.page.LiuliStepperRow
-import com.situ.aichat.ui.liuli.page.LiuliValueRow
+import com.situ.aichat.ui.liuli.page.LiuliToggleRow
 import com.situ.aichat.ui.liuli.page.rememberLargeTitleCollapsed
 import com.situ.aichat.ui.settings.ReplyRuleRange
 import com.situ.aichat.ui.settings.ReplyRuleSettingsViewModel
@@ -39,13 +40,8 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * 回复规则设置页（琉璃·图纸 2026-09-06 卷五 §4.1 屏 4·A-4 ① 步进器首用）。与暖陶
- * `ReplyRuleSettingsScreen` 共用 [ReplyRuleSettingsViewModel]。
- *
- * 四枚步进器的互钳范围走暖陶 [ReplyRuleRange]（internal 纯函数·直接 import，不复制）：最少值上界 =
- * 最多值 − 1、最多值下界 = 最少值 + 1，各端再受 `AppSettings` 的 bounds 限制。
- *
- * 「当前范围」那一行在暖陶是 `CurrentRangeRow`（标题 + 右值·不可点），琉璃对应 [LiuliValueRow]（`onClick = null`）。
+ * 琉璃 2.0 回复设置页（设置全面重构卷二）：
+ * 与暖陶同步——合并等待时间 + 回复条数范围钮 + 创造力 + 说话方式（短句口吻 / 情绪动画）。
  */
 @Composable
 fun LiuliReplyRuleScreen(
@@ -62,14 +58,14 @@ fun LiuliReplyRuleScreen(
         chatModelIsThinking = chatModelIsThinking,
         onSetWaitSeconds = viewModel::setChatSendWaitSeconds,
         onSetSegmentRange = viewModel::setReplySegmentRange,
-        onSetVoiceRoundRange = viewModel::setVoiceReplyRoundRange,
         onSetTemperature = viewModel::setLlmTemperature,
+        onSetTextingTone = viewModel::setTextingToneEnabled,
+        onSetEmotionAnimation = viewModel::setEmotionAnimationEnabled,
         onBack = onBack,
         modifier = modifier,
     )
 }
 
-/** 回复规则页内容层（纯参数·可测）。 */
 @Composable
 internal fun LiuliReplyRuleContent(
     settings: AppSettings,
@@ -77,15 +73,15 @@ internal fun LiuliReplyRuleContent(
     chatModelIsThinking: Boolean,
     onSetWaitSeconds: (Float) -> Unit,
     onSetSegmentRange: (Int, Int) -> Unit,
-    onSetVoiceRoundRange: (Int, Int) -> Unit,
     onSetTemperature: (Double) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onSetTextingTone: (Boolean) -> Unit = {},
+    onSetEmotionAnimation: (Boolean) -> Unit = {},
     listState: LazyListState = rememberLazyListState(),
 ) {
     val title = stringResource(R.string.reply_rule_title)
     val seg = settings.sanitizedReplySegmentRange
-    val voice = settings.sanitizedVoiceReplyRoundRange
     val bottomInset = LiuliPageGeometry.pageBottom + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     LiuliPage(
@@ -106,7 +102,6 @@ internal fun LiuliReplyRuleContent(
                         .fillMaxWidth()
                         .padding(horizontal = LiuliPageGeometry.gutter, vertical = LiuliPageGeometry.titleGap),
                 ) {
-                    // 合并等待窗（输入排契约 §3.2-11）：发送后等待期内连发合并、停手才答。
                     LiuliGroup(
                         header = stringResource(R.string.chat_send_wait_section_title),
                         footer = stringResource(R.string.chat_send_wait_footer),
@@ -116,66 +111,36 @@ internal fun LiuliReplyRuleContent(
                             valueLabel = stringResource(R.string.chat_send_wait_value_seconds, waitSeconds),
                             value = waitSeconds,
                             valueRange = 0.5f..5f,
-                            steps = 8, // 0.5–5.0 共 10 档 → 8 个中间步（步进 0.5）
+                            steps = 8,
+                            defaultValue = ChatMessageDispatcher.DEFAULT_WAIT_SECONDS,
+                            startLabel = stringResource(R.string.settings_reply_wait_start),
+                            endLabel = stringResource(R.string.settings_reply_wait_end),
                             divider = false,
                             onValueChange = { onSetWaitSeconds((it * 2).roundToInt() / 2f) },
                         )
                     }
 
-                    // 回复条数（文字消息拆条）。
                     LiuliGroup(
                         header = stringResource(R.string.reply_rule_section_segments),
                         footer = stringResource(R.string.reply_rule_segments_footer),
                     ) {
-                        LiuliValueRow(
+                        LiuliRangeStepper(
                             title = stringResource(R.string.reply_rule_current_range),
-                            value = stringResource(R.string.reply_rule_segments_range, seg.first, seg.last),
+                            rangeSummary = stringResource(R.string.reply_rule_segments_range, seg.first, seg.last),
+                            minValue = seg.first,
+                            minRange = ReplyRuleRange.minStepperRange(seg.last, AppSettings.REPLY_SEGMENT_MIN_BOUND),
+                            minValueText = stringResource(R.string.reply_rule_segments_value, seg.first),
+                            onMinChange = { onSetSegmentRange(it, seg.last) },
+                            maxValue = seg.last,
+                            maxRange = ReplyRuleRange.maxStepperRange(seg.first, AppSettings.REPLY_SEGMENT_MAX_BOUND),
+                            maxValueText = stringResource(R.string.reply_rule_segments_value, seg.last),
+                            onMaxChange = { onSetSegmentRange(seg.first, it) },
+                            minLabel = stringResource(R.string.reply_rule_min_segments),
+                            maxLabel = stringResource(R.string.reply_rule_max_segments),
                             divider = false,
-                        )
-                        LiuliStepperRow(
-                            title = stringResource(R.string.reply_rule_min_segments),
-                            value = seg.first,
-                            range = ReplyRuleRange.minStepperRange(seg.last, AppSettings.REPLY_SEGMENT_MIN_BOUND),
-                            valueText = stringResource(R.string.reply_rule_segments_value, seg.first),
-                            onChange = { onSetSegmentRange(it, seg.last) },
-                        )
-                        LiuliStepperRow(
-                            title = stringResource(R.string.reply_rule_max_segments),
-                            value = seg.last,
-                            range = ReplyRuleRange.maxStepperRange(seg.first, AppSettings.REPLY_SEGMENT_MAX_BOUND),
-                            valueText = stringResource(R.string.reply_rule_segments_value, seg.last),
-                            onChange = { onSetSegmentRange(seg.first, it) },
                         )
                     }
 
-                    // 语音条回复轮次。
-                    LiuliGroup(
-                        header = stringResource(R.string.reply_rule_section_voice),
-                        footer = stringResource(R.string.reply_rule_voice_footer),
-                    ) {
-                        LiuliValueRow(
-                            title = stringResource(R.string.reply_rule_current_range),
-                            value = stringResource(R.string.reply_rule_rounds_range, voice.first, voice.last),
-                            divider = false,
-                        )
-                        LiuliStepperRow(
-                            title = stringResource(R.string.reply_rule_min_rounds),
-                            value = voice.first,
-                            range = ReplyRuleRange.minStepperRange(voice.last, AppSettings.VOICE_REPLY_ROUND_MIN_BOUND),
-                            valueText = stringResource(R.string.reply_rule_rounds_value, voice.first),
-                            onChange = { onSetVoiceRoundRange(it, voice.last) },
-                        )
-                        LiuliStepperRow(
-                            title = stringResource(R.string.reply_rule_max_rounds),
-                            value = voice.last,
-                            range = ReplyRuleRange.maxStepperRange(voice.first, AppSettings.VOICE_REPLY_ROUND_MAX_BOUND),
-                            valueText = stringResource(R.string.reply_rule_rounds_value, voice.last),
-                            onChange = { onSetVoiceRoundRange(voice.first, it) },
-                        )
-                    }
-
-                    // 回复创造力（温度）：D-3 聊天功能解析为思考模型时追加琥珀提示行——滑杆**不禁用**，
-                    // 值仍保存，换回普通模型即生效（逐字照暖陶 :150）。
                     LiuliGroup(
                         header = stringResource(R.string.reply_rule_section_creativity),
                         footer = stringResource(R.string.model_temperature_footer),
@@ -186,6 +151,9 @@ internal fun LiuliReplyRuleContent(
                             value = settings.sanitizedLlmTemperature.toFloat(),
                             valueRange = 0f..2f,
                             steps = 19,
+                            defaultValue = AppSettings.DEFAULT_LLM_TEMPERATURE.toFloat(),
+                            startLabel = stringResource(R.string.settings_reply_temp_start),
+                            endLabel = stringResource(R.string.settings_reply_temp_end),
                             divider = false,
                             onValueChange = { onSetTemperature((it * 10).roundToInt() / 10.0) },
                         )
@@ -199,6 +167,22 @@ internal fun LiuliReplyRuleContent(
                                 )
                             }
                         }
+                    }
+
+                    LiuliGroup(header = stringResource(R.string.settings_group_chat_behavior)) {
+                        LiuliToggleRow(
+                            title = stringResource(R.string.settings_texting_tone_title),
+                            subtitle = stringResource(R.string.settings_texting_tone_desc),
+                            checked = settings.textingToneEnabled,
+                            onCheckedChange = onSetTextingTone,
+                            divider = false,
+                        )
+                        LiuliToggleRow(
+                            title = stringResource(R.string.chat_effect_emotion_title),
+                            subtitle = stringResource(R.string.chat_effect_emotion_subtitle),
+                            checked = settings.emotionAnimationEnabled,
+                            onCheckedChange = onSetEmotionAnimation,
+                        )
                     }
                 }
             }

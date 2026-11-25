@@ -23,21 +23,32 @@ internal object WorldBookStEntryMapper {
 
     fun map(obj: JsonObject, bookUuid: String, fallbackUid: Int, fallbackDisplayIndex: Int): WorldBookEntryEntity {
         val defaults = WorldBookEntryEntity()
+        val primaryKeys = obj.lenientKeywordList("key") ?: obj.lenientKeywordList("keys") ?: emptyList()
+        val secondaryKeys = obj.lenientKeywordList("keysecondary")
+            ?: obj.lenientKeywordList("secondary_keys")
+            ?: emptyList()
+        val pos = obj.lenientInt("position") ?: when (obj.lenientString("position")) {
+            "before_char" -> 0
+            "after_char" -> 1
+            else -> defaults.position
+        }
         return WorldBookEntryEntity(
             bookUuid = bookUuid,
-            uid = obj.lenientInt("uid") ?: fallbackUid,
+            uid = obj.lenientInt("uid") ?: obj.lenientInt("id") ?: fallbackUid,
             displayIndex = obj.lenientInt("displayIndex") ?: fallbackDisplayIndex,
-            keysJson = encodeStringList(obj.lenientStringList("key") ?: emptyList()),
-            secondaryKeysJson = encodeStringList(obj.lenientStringList("keysecondary") ?: emptyList()),
+            keysJson = encodeStringList(primaryKeys),
+            secondaryKeysJson = encodeStringList(secondaryKeys),
             selective = obj.lenientBool("selective") ?: defaults.selective,
             selectiveLogic = obj.lenientInt("selectiveLogic") ?: defaults.selectiveLogic,
             constant = obj.lenientBool("constant") ?: defaults.constant,
             vectorized = obj.lenientBool("vectorized") ?: defaults.vectorized,
-            comment = obj.lenientString("comment") ?: defaults.comment,
+            comment = obj.lenientString("comment")?.takeIf { it.isNotEmpty() }
+                ?: obj.lenientString("name")
+                ?: defaults.comment,
             content = obj.lenientString("content") ?: defaults.content,
-            enabled = !(obj.lenientBool("disable") ?: false),
-            insertionOrder = obj.lenientInt("order") ?: defaults.insertionOrder,
-            position = obj.lenientInt("position") ?: defaults.position,
+            enabled = obj.lenientBool("disable")?.not() ?: obj.lenientBool("enabled") ?: defaults.enabled,
+            insertionOrder = obj.lenientInt("order") ?: obj.lenientInt("insertion_order") ?: defaults.insertionOrder,
+            position = pos,
             depth = obj.lenientInt("depth") ?: defaults.depth,
             role = obj.lenientInt("role") ?: defaults.role,
             ignoreBudget = obj.lenientBool("ignoreBudget") ?: defaults.ignoreBudget,

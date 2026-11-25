@@ -25,6 +25,8 @@ class GrowthSettingsViewModel @Inject constructor(
     val state: StateFlow<AppSettings> = settings.appSettings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppSettings())
 
+    fun setGrowthSystemEnabled(enabled: Boolean) = launch { settings.setGrowthSystemEnabled(enabled) }
+    fun setRelationshipAutoAdvanceEnabled(enabled: Boolean) = launch { settings.setRelationshipAutoAdvanceEnabled(enabled) }
     fun setGrowthAnalysisInterval(rounds: Int) = launch { settings.setGrowthAnalysisInterval(rounds) }
     fun setGrowthLogMaxCount(count: Int) = launch { settings.setGrowthLogMaxCount(count) }
     fun setMoodHistoryMaxCount(count: Int) = launch { settings.setMoodHistoryMaxCount(count) }

@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -35,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.situ.aichat.data.model.RedPacketAmountCatalog
 import com.situ.aichat.gift.FestivalCalendar
 import com.situ.aichat.redpacket.RedPacketSendOutcome
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.liuli.designsystem.LiuliButton
@@ -166,7 +165,7 @@ internal fun LiuliRedPacketComposerSheet(
             errorText?.let { Text(it, style = AppTypography.snackbarBody, color = colors.status.onError) }
 
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Icon(Icons.Filled.MonetizationOn, contentDescription = null, tint = colors.economy.gold, modifier = Modifier.size(16.dp))
+                Icon(AppActionIcons.Coin, contentDescription = null, tint = colors.economy.gold, modifier = Modifier.size(16.dp))
                 Text("钱包余额 $balance 金币", style = AppTypography.snackbarBody, color = onGlass.secondary)
             }
             LiuliButton(

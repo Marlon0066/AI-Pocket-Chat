@@ -15,9 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -207,7 +206,7 @@ private fun TimelineFutureExtension(dotCenterY: Dp) {
                 )
             }
             Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                AppActionIcons.ChevronRight,
                 contentDescription = null,
                 tint = ink.copy(alpha = ARROW_ALPHA),
                 modifier = Modifier.size(10.dp),

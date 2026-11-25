@@ -67,6 +67,12 @@ class ReplyRuleSettingsViewModel @Inject constructor(
     /** 创造力（温度）——搬自记忆页，存储 key 与钳位不变（持久化经 [SettingsRepository.setLlmTemperature]）。 */
     fun setLlmTemperature(value: Double) = launch { settings.setLlmTemperature(value) }
 
+    /** 自然短句口吻（搬自旧设置主页·持久化经 [SettingsRepository.setTextingToneEnabled]）。 */
+    fun setTextingToneEnabled(enabled: Boolean) = launch { settings.setTextingToneEnabled(enabled) }
+
+    /** 消息情绪动画（搬自旧设置主页·持久化经 [SettingsRepository.setEmotionAnimationEnabled]）。 */
+    fun setEmotionAnimationEnabled(enabled: Boolean) = launch { settings.setEmotionAnimationEnabled(enabled) }
+
     private inline fun launch(crossinline block: suspend () -> Unit) {
         viewModelScope.launch { block() }
     }

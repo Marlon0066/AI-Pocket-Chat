@@ -13,11 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Icon
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -99,7 +96,7 @@ internal fun LiuliDraftBar(
             background = colors.surface.raised.copy(alpha = DISC_ALPHA),
             border = hairline,
             tint = onGlass.primary,
-            icon = Icons.Filled.Close,
+            icon = AppActionIcons.Close,
             onClick = onCancel,
         )
         LiuliDraftDisc(
@@ -109,7 +106,7 @@ internal fun LiuliDraftBar(
             background = colors.accent.container,
             border = Color.Transparent,
             tint = colors.accent.onContainer,
-            icon = if (isPlaying) Icons.Filled.Stop else Icons.Filled.PlayArrow,
+            icon = if (isPlaying) AppActionIcons.Stop else AppActionIcons.Play,
             onClick = onPlay,
         )
         LiuliVoiceWaveform(

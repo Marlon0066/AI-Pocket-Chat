@@ -94,4 +94,20 @@ object PromptMacros {
         }
         return result
     }
+
+    /**
+     * 世界书正文宏替换：对社区词条常见的 `{{char}}` / `{{user}}` / `{{now}}` 做大小写无关替换（兼容 `{{CHAR}}`/`{{Char}}`），
+     * 其余扩展宏原样字面替换；无 `{{` 快速短路。
+     */
+    fun resolveWorldMacros(template: String, macros: Map<String, String>): String {
+        if (template.isEmpty() || !template.contains("{{")) return template
+        var result = template
+        for ((macro, value) in macros) {
+            val ignoreCase = macro.equals(CHAR, ignoreCase = true) ||
+                macro.equals(USER, ignoreCase = true) ||
+                macro.equals(NOW, ignoreCase = true)
+            result = result.replace(macro, value, ignoreCase = ignoreCase)
+        }
+        return result
+    }
 }

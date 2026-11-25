@@ -18,11 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -47,6 +43,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.situ.aichat.ui.components.LocalAppHaptics
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppTextArea
@@ -154,7 +151,7 @@ fun OfflineImmersiveInputView(
             // §4.6「上一步」= 中性主色 OnGlass.PrimaryOnDark（禁用态 @0.4f 保留原 M3 dim 观感）。
             val backColor = OnGlass.PrimaryOnDark.copy(alpha = if (isFirstStep) 0.4f else 1f)
             AppButton(style = AppButtonStyle.Text, onClick = { if (!isFirstStep) currentStep -= 1 }, enabled = !isFirstStep) {
-                Icon(Icons.Filled.ChevronLeft, contentDescription = null, tint = backColor, modifier = Modifier.width(16.dp))
+                Icon(AppActionIcons.ChevronLeft, contentDescription = null, tint = backColor, modifier = Modifier.width(16.dp))
                 Text("上一步", style = MaterialTheme.typography.titleSmall, color = backColor)
             }
             Spacer(Modifier.weight(1f))
@@ -169,7 +166,7 @@ fun OfflineImmersiveInputView(
             if (!isLastStep) {
                 AppButton(style = AppButtonStyle.Text, onClick = { currentStep += 1 }) {
                     Text("下一步", style = MaterialTheme.typography.titleSmall, color = themeColor)
-                    Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = themeColor, modifier = Modifier.width(16.dp))
+                    Icon(AppActionIcons.ChevronRight, contentDescription = null, tint = themeColor, modifier = Modifier.width(16.dp))
                 }
             }
         }
@@ -211,9 +208,9 @@ private fun FilledTagsRow(stepTexts: List<String>, currentStep: Int, themeColor:
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 if (isPast && filled) {
-                    Icon(Icons.Filled.Check, contentDescription = null, tint = fg, modifier = Modifier.width(8.dp))
+                    Icon(AppActionIcons.Check, contentDescription = null, tint = fg, modifier = Modifier.width(8.dp))
                 } else if (isPast) {
-                    Icon(Icons.Filled.Close, contentDescription = null, tint = fg, modifier = Modifier.width(8.dp))
+                    Icon(AppActionIcons.Close, contentDescription = null, tint = fg, modifier = Modifier.width(8.dp))
                 }
                 Text(step.label, style = MaterialTheme.typography.labelSmall, color = fg)
             }

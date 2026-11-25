@@ -31,6 +31,8 @@ data class LiuliMemoryCallbacks(
     val onSetProgressive: (Boolean) -> Unit,
     val onSetStructuredInterval: (Int) -> Unit,
     val onSetVectorThreshold: (Int) -> Unit,
+    val onSetMeetingMemoryInjectCount: (Int) -> Unit = {},
+    val onSetMeetingMemoryMaxLength: (Int) -> Unit = {},
 )
 
 @Composable
@@ -108,15 +110,14 @@ internal fun ColumnScope.liuliMemoryParamGroups(s: AppSettings, callbacks: Liuli
             onManualInput = callbacks.onSetSummaryMaxLength, // 手填不做 100 吸附（同暖陶）
             onValueChange = { callbacks.onSetSummaryMaxLength((it / 100f).roundToInt() * 100) },
         )
-        // 智能渐进压缩：用户自定义提取 prompt 时开关让位 → 置灰 + 显示关（存储值不变，清空自定义后恢复）。
+        // 智能渐进压缩：用户自定义提取 prompt 时开关让位 → 置灰 + 显示锁图标原因（存储值不变）。
         val canUseProgressive = s.memoryExtractionPrompt.isEmpty()
         LiuliToggleRow(
             title = stringResource(R.string.mem_progressive_title),
-            subtitle = stringResource(
-                if (canUseProgressive) R.string.mem_progressive_subtitle else R.string.mem_progressive_disabled_hint,
-            ),
+            subtitle = stringResource(R.string.mem_progressive_subtitle),
             checked = s.progressiveCompressionEnabled && canUseProgressive,
             enabled = canUseProgressive,
+            disabledReason = if (!canUseProgressive) stringResource(R.string.mem_progressive_disabled_hint) else null,
             onCheckedChange = callbacks.onSetProgressive,
         )
     }
@@ -151,6 +152,31 @@ internal fun ColumnScope.liuliMemoryParamGroups(s: AppSettings, callbacks: Liuli
             // 向量阈值是百分比，手填仍钳 0~100（>100% 无意义·有意微偏 iOS·同暖陶注释）。
             onManualInput = callbacks.onSetVectorThreshold,
             onValueChange = { callbacks.onSetVectorThreshold((it / 5f).roundToInt() * 5) },
+        )
+    }
+
+    LiuliGroup(
+        header = "见面记忆",
+        footer = "注入最近 N 次见面的完整摘要，更早的合并为一行存档；「记忆上限」是注入文本的字数预算，超出时最早的完整摘要自动降为存档行。",
+    ) {
+        LiuliSliderRow(
+            title = "注入最近见面次数",
+            valueLabel = "${s.meetingMemoryInjectCount} 次",
+            value = s.meetingMemoryInjectCount.toFloat(),
+            valueRange = 1f..10f,
+            steps = 8,
+            divider = false,
+            onValueChange = { callbacks.onSetMeetingMemoryInjectCount(it.roundToInt()) },
+        )
+        LiuliSliderRow(
+            title = "见面记忆上限",
+            valueLabel = "${s.meetingMemoryMaxLength} $chars",
+            value = s.meetingMemoryMaxLength.toFloat(),
+            valueRange = 200f..3000f,
+            steps = 27,
+            info = stringResource(R.string.mem_meeting_info),
+            onManualInput = callbacks.onSetMeetingMemoryMaxLength,
+            onValueChange = { callbacks.onSetMeetingMemoryMaxLength((it / 100f).roundToInt() * 100) },
         )
     }
 }

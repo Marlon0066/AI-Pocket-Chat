@@ -21,11 +21,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ArrowCircleDown
 import androidx.compose.material.icons.filled.ArrowCircleUp
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.ConfirmationNumber
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.EmojiEvents
@@ -40,7 +38,6 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -64,6 +61,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppListDivider
@@ -79,8 +77,6 @@ import com.situ.aichat.data.model.CurrencyTransactionCategory
 import com.situ.aichat.data.model.CurrencyTransactionKind
 import com.situ.aichat.economy.WalletLedger
 import com.situ.aichat.ui.components.AnimatedCoinText
-
-private val LedgerEarn = Color(0xFF34C759) // iOS ledgerEarn #34C759
 
 /**
  * 我的钱包屏（14.6a·1:1 iOS `WalletView`·💰只读）：Hero 余额卡（余额大数字 + 本月收/支）+ 账本（筛选全部/收入/
@@ -115,7 +111,7 @@ fun UserWalletScreen(
                 lifted = listState.canScrollBackward,
                 actions = {
                     AppButton(onClick = onOpenGiftShop, style = AppButtonStyle.Text) {
-                        Icon(Icons.Filled.CardGiftcard, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(AppActionIcons.Gift, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(4.dp))
                         Text(stringResource(R.string.wallet_gift_shop))
                     }
@@ -203,19 +199,21 @@ private fun LedgerHeaderSegment(
     filter: WalletLedger.Filter,
     onFilterChange: (WalletLedger.Filter) -> Unit,
 ) {
+    val colors = AppTheme.colors
+    val typography = AppTheme.typography
     LedgerSegment(CardSegment.Top) {
         Column(
             Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.wallet_ledger), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.wallet_ledger), style = typography.titleSmall, color = colors.text.primary)
                 Spacer(Modifier.weight(1f))
                 if (totalCount > 0) {
                     Text(
                         stringResource(R.string.wallet_ledger_count, totalCount),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = typography.caption,
+                        color = colors.text.secondary,
                     )
                 }
             }
@@ -232,6 +230,8 @@ private fun LedgerHeaderSegment(
 
 @Composable
 private fun BalanceCard(balance: Int, monthlyEarn: Int, monthlySpend: Int, balanceLoaded: Boolean, modifier: Modifier = Modifier) {
+    val colors = AppTheme.colors
+    val typography = AppTheme.typography
     Column(
         modifier
             .fillMaxWidth()
@@ -250,8 +250,8 @@ private fun BalanceCard(balance: Int, monthlyEarn: Int, monthlySpend: Int, balan
             ) {
                 Text(
                     stringResource(R.string.wallet_my_coins),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = typography.label,
+                    color = colors.text.secondary,
                 )
                 Spacer(Modifier.height(2.dp))
                 Row(verticalAlignment = Alignment.Bottom) {
@@ -259,14 +259,14 @@ private fun BalanceCard(balance: Int, monthlyEarn: Int, monthlySpend: Int, balan
                     // animateChanges 门控（复核修 LOW#2）：占位 100→真值不滚，只滚已加载后的真实变更。
                     AnimatedCoinText(
                         balance,
-                        style = LocalTextStyle.current.copy(fontSize = 42.sp, fontWeight = FontWeight.Bold),
+                        style = LocalTextStyle.current.copy(fontSize = 42.sp, fontWeight = FontWeight.Bold, color = colors.text.primary),
                         animateChanges = balanceLoaded,
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
                         stringResource(R.string.wallet_coins_unit),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = typography.label,
+                        color = colors.text.secondary,
                         modifier = Modifier.padding(bottom = 8.dp),
                     )
                 }
@@ -282,7 +282,7 @@ private fun BalanceCard(balance: Int, monthlyEarn: Int, monthlySpend: Int, balan
                     .padding(horizontal = 16.dp)
                     .width(0.5.dp)
                     .height(30.dp)
-                    .background(AppTheme.colors.surface.stroke),
+                    .background(colors.surface.stroke),
             )
             MonthlyStatColumn(stringResource(R.string.wallet_month_expense), monthlySpend, isEarn = false, Modifier.weight(1f))
         }
@@ -291,6 +291,8 @@ private fun BalanceCard(balance: Int, monthlyEarn: Int, monthlySpend: Int, balan
 
 @Composable
 private fun RedeemCodeBanner(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val colors = AppTheme.colors
+    val typography = AppTheme.typography
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -302,26 +304,27 @@ private fun RedeemCodeBanner(onClick: () -> Unit, modifier: Modifier = Modifier)
     ) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.size(36.dp).background(Color(0xFFC8A878).copy(alpha = 0.18f), CircleShape),
+            modifier = Modifier.size(36.dp).background(colors.economy.gold.copy(alpha = 0.16f), CircleShape),
         ) {
-            Icon(Icons.Filled.ConfirmationNumber, contentDescription = null, tint = Color(0xFFC8A878), modifier = Modifier.size(18.dp))
+            Icon(Icons.Filled.ConfirmationNumber, contentDescription = null, tint = colors.economy.gold, modifier = Modifier.size(18.dp))
         }
         Column(Modifier.weight(1f)) {
-            Text(stringResource(R.string.redeem_entry_title), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-            Text(stringResource(R.string.redeem_entry_subtitle), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.redeem_entry_title), style = typography.label, color = colors.text.primary)
+            Text(stringResource(R.string.redeem_entry_subtitle), style = typography.caption, color = colors.text.secondary)
         }
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(AppActionIcons.ChevronRight, contentDescription = null, tint = colors.text.tertiary)
     }
 }
 
 @Composable
 private fun WalletIcon() {
+    val colors = AppTheme.colors
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .size(48.dp)
             .background(
-                brush = Brush.linearGradient(listOf(Color(0xFFF5D38F), Color(0xFFC9892F))),
+                brush = Brush.linearGradient(listOf(colors.economy.goldGradientStart, colors.economy.goldGradientEnd)),
                 shape = RoundedCornerShape(14.dp),
             ),
     ) {
@@ -331,16 +334,17 @@ private fun WalletIcon() {
 
 @Composable
 private fun MonthlyStatColumn(title: String, amount: Int, isEarn: Boolean, modifier: Modifier = Modifier) {
-    val color = if (isEarn) LedgerEarn else MaterialTheme.colorScheme.onSurface
+    val colors = AppTheme.colors
+    val typography = AppTheme.typography
+    val color = if (isEarn) colors.status.onSuccess else colors.text.primary
     // 无障碍（14.7e）：标题(本月收入/支出)已含方向，+/- 号对 TalkBack 读成「加/减」噪音；合成一句「本月收入 N 金币」。
     val statDesc = "$title ${"%,d".format(amount)} ${stringResource(R.string.wallet_coins_unit)}"
     Column(modifier.clearAndSetSemantics { contentDescription = statDesc }) {
-        Text(title, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(title, style = typography.caption, color = colors.text.secondary)
         Spacer(Modifier.height(3.dp))
         Text(
             (if (isEarn) "+" else "-") + "%,d".format(amount),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            style = typography.titleSmall,
             color = color,
         )
     }
@@ -348,22 +352,24 @@ private fun MonthlyStatColumn(title: String, amount: Int, isEarn: Boolean, modif
 
 @Composable
 private fun EmptyLedger(filter: WalletLedger.Filter) {
+    val colors = AppTheme.colors
+    val typography = AppTheme.typography
     Column(
         modifier = Modifier.fillMaxWidth().padding(vertical = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Icon(Icons.Filled.Inbox, contentDescription = null, modifier = Modifier.size(32.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+        Icon(Icons.Filled.Inbox, contentDescription = null, modifier = Modifier.size(32.dp), tint = colors.text.tertiary)
         Text(
             stringResource(if (filter == WalletLedger.Filter.ALL) R.string.wallet_ledger_empty else R.string.wallet_ledger_empty_filtered, stringResource(filterLabel(filter))),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = typography.body,
+            color = colors.text.secondary,
         )
         if (filter == WalletLedger.Filter.ALL) {
             Text(
                 stringResource(R.string.wallet_ledger_empty_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                style = typography.caption,
+                color = colors.text.tertiary,
             )
         }
     }
@@ -371,6 +377,8 @@ private fun EmptyLedger(filter: WalletLedger.Filter) {
 
 @Composable
 private fun LedgerRow(tx: CurrencyTransactionEntity, nowMillis: Long) {
+    val colors = AppTheme.colors
+    val typography = AppTheme.typography
     val category = CurrencyTransactionCategory.fromRaw(tx.categoryRaw)
     val isEarn = CurrencyTransactionKind.fromRaw(tx.kindRaw) == CurrencyTransactionKind.EARN
     val note = tx.note.ifEmpty { category.displayName }
@@ -387,19 +395,19 @@ private fun LedgerRow(tx: CurrencyTransactionEntity, nowMillis: Long) {
         CategoryIcon(category)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(note, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(note, style = typography.label, color = colors.text.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
                 WalletLedger.dateLabel(tx.timestamp, nowMillis),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = typography.caption,
+                color = colors.text.secondary,
             )
         }
         Spacer(Modifier.width(8.dp))
         Text(
             (if (isEarn) "+" else "-") + "%,d".format(tx.amount),
-            style = MaterialTheme.typography.bodyMedium,
+            style = typography.label,
             fontWeight = FontWeight.SemiBold,
-            color = if (isEarn) LedgerEarn else MaterialTheme.colorScheme.onSurface,
+            color = if (isEarn) colors.status.onSuccess else colors.text.primary,
         )
     }
 }
@@ -423,7 +431,7 @@ private fun categoryIconStyle(category: CurrencyTransactionCategory): Pair<Image
     CurrencyTransactionCategory.MILESTONE -> Icons.Filled.EmojiEvents to Color(0xFFD6A84A)
     CurrencyTransactionCategory.RED_PACKET -> Icons.Filled.Mail to Color(0xFFD4605D)
     CurrencyTransactionCategory.SALARY -> Icons.Filled.Payments to Color(0xFF6EA7C7)
-    CurrencyTransactionCategory.GIFT -> Icons.Filled.CardGiftcard to Color(0xFFC05A3A)
+    CurrencyTransactionCategory.GIFT -> AppActionIcons.Gift to Color(0xFFC05A3A)
     CurrencyTransactionCategory.INITIAL -> Icons.Filled.AutoAwesome to Color(0xFF9B7ABF)
     CurrencyTransactionCategory.UNEXPECTED_INCOME -> Icons.Filled.ArrowCircleDown to Color(0xFF7AB18A)
     CurrencyTransactionCategory.UNEXPECTED_EXPENSE -> Icons.Filled.ArrowCircleUp to Color(0xFFD4605D)
@@ -432,6 +440,10 @@ private fun categoryIconStyle(category: CurrencyTransactionCategory): Pair<Image
     CurrencyTransactionCategory.WORLD_TRAVEL -> Icons.Filled.Explore to Color(0xFF5AA6A0)
     CurrencyTransactionCategory.OTHER -> Icons.Filled.MoreHoriz to Color(0xFF9E9E9E)
 }
+
+internal fun walletCategoryIconStyle(category: CurrencyTransactionCategory): Pair<ImageVector, Color> = categoryIconStyle(category)
+
+internal fun walletFilterLabel(filter: WalletLedger.Filter): Int = filterLabel(filter)
 
 private fun filterLabel(filter: WalletLedger.Filter): Int = when (filter) {
     WalletLedger.Filter.ALL -> R.string.wallet_filter_all

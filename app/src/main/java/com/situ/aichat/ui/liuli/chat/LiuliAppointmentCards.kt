@@ -5,8 +5,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material.icons.outlined.EditCalendar
 import androidx.compose.material.icons.outlined.EventBusy
 import androidx.compose.material.icons.outlined.HighlightOff
@@ -49,7 +49,7 @@ internal fun LiuliAppointmentProposalCard(
 
     LiuliCard(width = LiuliChatGeometry.cardWideWidth, modifier = modifier) {
         LiuliCardHeader(
-            icon = Icons.Outlined.CalendarMonth,
+            icon = AppActionIcons.Calendar,
             title = "${name}想和你约个时间",
             subtitle = data.whenDisplay?.takeIf { it.isNotBlank() }?.let { whenText ->
                 { Text(whenText, style = AppTypography.secondary, color = colors.accent.text) }

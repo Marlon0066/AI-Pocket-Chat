@@ -17,7 +17,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -44,6 +43,7 @@ import com.situ.aichat.R
 import com.situ.aichat.ui.components.SettingsSection
 import com.situ.aichat.ui.components.SettingsSwitchRow
 import com.situ.aichat.ui.components.contentMaxWidth
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppTopBar
@@ -131,13 +131,17 @@ fun CalendarAwarenessScreen(
                         }
                     },
                 )
-                if (state.integrationEnabled) {
-                    SettingsSwitchRow(
-                        title = stringResource(R.string.cal_action_confirm_label),
-                        checked = state.actionConfirmation,
-                        onCheckedChange = { viewModel.setActionConfirmation(it) },
-                    )
-                }
+                SettingsSwitchRow(
+                    title = stringResource(R.string.cal_action_confirm_label),
+                    checked = state.integrationEnabled && state.actionConfirmation,
+                    enabled = state.integrationEnabled,
+                    disabledReason = if (!state.integrationEnabled) {
+                        stringResource(R.string.settings_cal_disabled_reason)
+                    } else {
+                        null
+                    },
+                    onCheckedChange = { viewModel.setActionConfirmation(it) },
+                )
             }
 
             // 仅在集成开启时展示运行时授权 UI + 隐私提示（关闭时无需授权）。
@@ -171,7 +175,7 @@ fun CalendarAwarenessScreen(
                                     MaterialTheme.colorScheme.error
                                 }
                                 Icon(
-                                    imageVector = if (granted) Icons.Filled.CheckCircle else Icons.Filled.Warning,
+                                    imageVector = if (granted) Icons.Filled.CheckCircle else AppActionIcons.Warning,
                                     contentDescription = null,
                                     tint = color,
                                 )

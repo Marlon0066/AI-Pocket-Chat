@@ -25,11 +25,9 @@ import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -61,6 +59,7 @@ import com.situ.aichat.ui.components.LocalAppHaptics
 import com.situ.aichat.ui.components.contentMaxWidth
 import com.situ.aichat.ui.designsystem.AppLoadingRing
 import com.situ.aichat.ui.designsystem.AppLoadingRingSize
+import com.situ.aichat.ui.designsystem.AppTextField
 import com.situ.aichat.ui.designsystem.AppTopBar
 import kotlinx.coroutines.delay
 import com.situ.aichat.R
@@ -147,18 +146,15 @@ fun RedeemCodeScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            // 输入框（自动大写·居中等宽）
-            // TODO(图纸未覆盖): 兑换码输入框靠 `textStyle`（等宽 + 居中）把 AIC-XXXXX-XXXXX-XXXXX 排整齐，
-            //  placeholder 也是同样式的 composable；AppTextField 的 placeholder 只收 String、**没有 textStyle 槽**，
-            //  §9 又禁止给组件加参数硬套 → 停手登记（施工日志 D-16）。钱路屏，K-10 只换外壳不改逻辑。
-            OutlinedTextField(
+            // 输入框（自动大写·居中等宽·钱路逻辑字节不变）
+            AppTextField(
                 value = input,
                 onValueChange = {
                     input = it.uppercase().take(MAX_INPUT)
                     viewModel.onInputChanged()
                 },
                 enabled = inputEnabled,
-                placeholder = { Text("AIC-XXXXX-XXXXX-XXXXX", fontFamily = FontFamily.Monospace, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                placeholder = "AIC-XXXXX-XXXXX-XXXXX",
                 singleLine = true,
                 textStyle = MaterialTheme.typography.titleMedium.copy(fontFamily = FontFamily.Monospace, textAlign = TextAlign.Center),
                 // P0-25：键盘直出 ASCII 大写（对齐 iOS asciiCapable+.characters）+ 回车(Go)即兑换。
@@ -190,9 +186,12 @@ fun RedeemCodeScreen(
             ) {
                 when (phase) {
                     is RedeemCodeViewModel.Phase.Redeeming -> {
-                        // TODO(图纸未覆盖): 同 PetShopScreen —— 实心钮里的白色转圈（钱路屏·K-10 只换外壳），
-                        //  AppLoadingRing 无 color 槽 → 停手登记（D-13）。
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
+                        AppLoadingRing(
+                            modifier = Modifier.size(18.dp),
+                            size = AppLoadingRingSize.Small,
+                            color = Color.White,
+                            strokeWidth = 2.dp,
+                        )
                     }
                     is RedeemCodeViewModel.Phase.Success -> {
                         Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))

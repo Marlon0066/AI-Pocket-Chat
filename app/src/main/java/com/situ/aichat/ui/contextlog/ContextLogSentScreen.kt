@@ -19,12 +19,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.KeyboardArrowDown
-import androidx.compose.material.icons.outlined.KeyboardArrowUp
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.VerticalAlignBottom
 import androidx.compose.material.icons.outlined.VerticalAlignTop
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -168,8 +165,8 @@ internal fun ContextLogSentContent(
                     title = stringResource(R.string.clog_sent_title), onBack = onBack, lifted = listState.canScrollBackward,
                     actions = {
                         if (view != null) {
-                            AppTopBarAction(Icons.Outlined.Search, stringResource(R.string.clog_reader_search), { c.enterSearch() })
-                            AppTopBarAction(Icons.Outlined.ContentCopy, stringResource(R.string.clog_reader_copy_all), onCopyAll)
+                            AppTopBarAction(AppActionIcons.Search, stringResource(R.string.clog_reader_search), { c.enterSearch() })
+                            AppTopBarAction(AppActionIcons.Copy, stringResource(R.string.clog_reader_copy_all), onCopyAll)
                         }
                     },
                 )
@@ -238,8 +235,8 @@ private fun SearchTopBar(c: LogReaderControls, nav: List<LogReaderHit>, search: 
         AppTopBar(
             title = stringResource(R.string.clog_sent_title), onBack = { c.exitSearch() }, lifted = false,
             actions = {
-                AppTopBarAction(Icons.Outlined.KeyboardArrowUp, stringResource(R.string.clog_reader_prev_hit), { c.current = (c.current - 1).mod(nav.size) }, enabled = nav.isNotEmpty())
-                AppTopBarAction(Icons.Outlined.KeyboardArrowDown, stringResource(R.string.clog_reader_next_hit), { c.current = (c.current + 1).mod(nav.size) }, enabled = nav.isNotEmpty())
+                AppTopBarAction(AppActionIcons.ChevronUp, stringResource(R.string.clog_reader_prev_hit), { c.current = (c.current - 1).mod(nav.size) }, enabled = nav.isNotEmpty())
+                AppTopBarAction(AppActionIcons.ChevronDown, stringResource(R.string.clog_reader_next_hit), { c.current = (c.current + 1).mod(nav.size) }, enabled = nav.isNotEmpty())
             },
         )
         Row(

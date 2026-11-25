@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -24,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.liuli.designsystem.LiuliButton
 import com.situ.aichat.ui.liuli.designsystem.LiuliButtonStyle
 import com.situ.aichat.ui.liuli.page.LiuliPage
@@ -88,7 +87,7 @@ internal fun LiuliStoryArchiveDetailPage(
         title = state?.story?.title.orEmpty(),
         onBack = onClose,
         collapsed = rememberScrollCollapsed(scrollState) && state != null,
-        leading = { LiuliPageCircleAction(onClick = onClose, contentDescription = stringResource(R.string.action_close), icon = Icons.Filled.Close) },
+        leading = { LiuliPageCircleAction(onClick = onClose, contentDescription = stringResource(R.string.action_close), icon = AppActionIcons.Close) },
         bottomBar = if (state != null) {
             { LiuliStoryArchiveActions(onShare, onExport, onContinueWriting) }
         } else {

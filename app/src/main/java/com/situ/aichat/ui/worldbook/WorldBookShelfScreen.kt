@@ -26,13 +26,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -60,17 +56,21 @@ import com.situ.aichat.data.local.dao.WorldBookSummary
 import com.situ.aichat.data.worldbook.WorldBookTemplate
 import com.situ.aichat.ui.components.clickableScale
 import com.situ.aichat.ui.components.contentMaxWidth
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppFeatureIcons
 import com.situ.aichat.ui.designsystem.AppMenu
 import com.situ.aichat.ui.designsystem.AppMenuItem
+import com.situ.aichat.ui.designsystem.AppSettingsRow
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppSwitch
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
+import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.designsystem.appCardSurface
+import com.situ.aichat.ui.designsystem.grainSurface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -139,37 +139,41 @@ fun WorldBookShelfScreen(
     }
 
     val listState = rememberLazyListState()
+    val colors = AppTheme.colors
     Scaffold(
+        containerColor = colors.surface.base,
         topBar = {
             AppTopBar(
                 title = stringResource(R.string.wb_shelf_title),
                 onBack = onBack,
                 lifted = listState.canScrollBackward,
                 actions = {
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Filled.Tune, contentDescription = stringResource(R.string.wb_cd_trigger_settings))
-                    }
+                    com.situ.aichat.ui.designsystem.AppTopBarAction(
+                        icon = Icons.Filled.Tune,
+                        contentDescription = stringResource(R.string.wb_cd_trigger_settings),
+                        onClick = onOpenSettings,
+                    )
                 },
             )
         },
     ) { padding ->
         LazyColumn(
             state = listState,
-            modifier = Modifier.padding(padding).fillMaxSize().contentMaxWidth(),
+            modifier = Modifier.fillMaxSize().grainSurface().padding(padding).contentMaxWidth(),
             contentPadding = PaddingValues(horizontal = AppSpacing.screenGutter, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             item(key = "actions") {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     ShelfActionTile(
-                        icon = Icons.Filled.FileDownload,
+                        icon = AppActionIcons.Download,
                         titleRes = R.string.wb_import,
                         subtitleRes = R.string.wb_import_subtitle,
                         modifier = Modifier.weight(1f),
                         onClick = { importPicker.launch(arrayOf("*/*")) },
                     )
                     ShelfActionTile(
-                        icon = Icons.Filled.Edit,
+                        icon = AppActionIcons.Edit,
                         titleRes = R.string.wb_create,
                         subtitleRes = R.string.wb_create_subtitle,
                         modifier = Modifier.weight(1f),
@@ -177,13 +181,24 @@ fun WorldBookShelfScreen(
                     )
                 }
             }
+            item(key = "triggerSettings") {
+                Box(modifier = Modifier.fillMaxWidth().appCardSurface()) {
+                    AppSettingsRow(
+                        title = stringResource(R.string.wb_cd_trigger_settings),
+                        subtitle = stringResource(R.string.settings_wb_trigger_row_sub),
+                        icon = Icons.Filled.Tune,
+                        showChevron = true,
+                        onClick = onOpenSettings,
+                    )
+                }
+            }
             if (books.isEmpty()) {
-                item(key = "empty") { EmptyShelfState() }
+                item(key = "empty") { WorldBookEmptyShelfState() }
             } else {
                 item(key = "sectionMy") {
                     Text(
                         stringResource(R.string.wb_my_books),
-                        style = MaterialTheme.typography.titleSmall,
+                        style = AppTypography.titleSmall,
                         color = AppTheme.colors.text.secondary,
                         modifier = Modifier.padding(start = 4.dp, top = 6.dp),
                     )
@@ -211,7 +226,7 @@ fun WorldBookShelfScreen(
                 item(key = "sectionTemplates") {
                     Text(
                         stringResource(R.string.wb_templates_section),
-                        style = MaterialTheme.typography.titleSmall,
+                        style = AppTypography.titleSmall,
                         color = AppTheme.colors.text.secondary,
                         modifier = Modifier.padding(start = 4.dp, top = 6.dp),
                     )
@@ -299,10 +314,10 @@ private fun ShelfActionTile(
                 Icon(icon, contentDescription = null, tint = colors.accent.text, modifier = Modifier.size(22.dp))
             }
             Column {
-                Text(stringResource(titleRes), style = MaterialTheme.typography.titleSmall, color = colors.text.primary)
+                Text(stringResource(titleRes), style = AppTypography.titleSmall, color = colors.text.primary)
                 Text(
                     stringResource(subtitleRes),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = AppTypography.caption,
                     color = colors.text.secondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -354,7 +369,7 @@ private fun BookCard(
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
                             book.name.ifBlank { stringResource(R.string.wb_entry_untitled) },
-                            style = MaterialTheme.typography.titleMedium,
+                            style = AppTypography.titleMedium,
                             color = colors.text.primary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -363,7 +378,7 @@ private fun BookCard(
                         if (book.isGlobal) {
                             Text(
                                 stringResource(R.string.wb_badge_global),
-                                style = MaterialTheme.typography.labelSmall,
+                                style = AppTypography.label,
                                 color = colors.text.secondary,
                                 modifier = Modifier
                                     .clip(AppShapes.full)
@@ -377,7 +392,7 @@ private fun BookCard(
                         summary.boundCount == 0 -> stringResource(R.string.wb_book_meta_unbound, summary.entryCount)
                         else -> stringResource(R.string.wb_book_meta, summary.entryCount, summary.boundCount)
                     }
-                    Text(meta, style = MaterialTheme.typography.bodySmall, color = colors.text.secondary, maxLines = 1)
+                    Text(meta, style = AppTypography.caption, color = colors.text.secondary, maxLines = 1)
                 }
                 val enableCd = stringResource(R.string.wb_enable_book)
                 AppSwitch(
@@ -441,21 +456,21 @@ private fun TemplateCard(template: WorldBookTemplate, onCopy: () -> Unit) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     template.name,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = AppTypography.titleMedium,
                     color = colors.text.primary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     template.description,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = AppTypography.caption,
                     color = colors.text.secondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     stringResource(R.string.wb_template_meta, template.entries.size),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = AppTypography.caption,
                     color = colors.text.tertiary,
                     maxLines = 1,
                 )
@@ -469,7 +484,7 @@ private fun TemplateCard(template: WorldBookTemplate, onCopy: () -> Unit) {
 
 /** 空态：暖圆底书本图标 + 引导两行（双动作 tile 常驻在上方，不重复给按钮）。 */
 @Composable
-private fun EmptyShelfState() {
+internal fun WorldBookEmptyShelfState() {
     val colors = AppTheme.colors
     Column(
         modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
@@ -483,10 +498,10 @@ private fun EmptyShelfState() {
             Icon(AppFeatureIcons.Worldbook, contentDescription = null, tint = colors.accent.text, modifier = Modifier.size(30.dp))
         }
         Spacer(Modifier.height(6.dp))
-        Text(stringResource(R.string.wb_empty_title), style = MaterialTheme.typography.titleMedium, color = colors.text.primary)
+        Text(stringResource(R.string.wb_empty_title), style = AppTypography.titleMedium, color = colors.text.primary)
         Text(
             stringResource(R.string.wb_empty_subtitle),
-            style = MaterialTheme.typography.bodySmall,
+            style = AppTypography.caption,
             color = colors.text.secondary,
             textAlign = TextAlign.Center,
         )

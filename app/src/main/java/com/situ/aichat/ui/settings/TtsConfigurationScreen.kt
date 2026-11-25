@@ -14,9 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -43,6 +40,7 @@ import com.situ.aichat.tts.pricing.TtsCostEstimate
 import com.situ.aichat.tts.provider.MiniMaxCatalog
 import com.situ.aichat.tts.provider.MiniMaxRegion
 import com.situ.aichat.ui.components.contentMaxWidth
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppChoiceChip
@@ -447,7 +445,7 @@ private fun TtsProviderTutorial(provider: TtsProviderType) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(header, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
             Icon(
-                if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                if (expanded) AppActionIcons.ChevronUp else AppActionIcons.ChevronDown,
                 contentDescription = null,
             )
         }

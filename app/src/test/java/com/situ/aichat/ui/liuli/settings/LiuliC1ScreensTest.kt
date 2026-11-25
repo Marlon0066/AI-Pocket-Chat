@@ -66,8 +66,6 @@ internal class LiuliMemoryHubContentTest : LiuliScreenTestBase() {
     private fun show(settings: AppSettings) = host {
         LiuliMemoryHubContent(
             settings = settings,
-            extraction = "提取模板",
-            injection = "注入模板",
             memoryCallbacks = LiuliMemoryCallbacks(
                 onSetShortTermLength = { setLength += it },
                 onSetAutoSummarizeInterval = {},
@@ -76,7 +74,17 @@ internal class LiuliMemoryHubContentTest : LiuliScreenTestBase() {
                 onSetProgressive = { progressive += it },
                 onSetStructuredInterval = {},
                 onSetVectorThreshold = {},
+                onSetMeetingMemoryInjectCount = {},
+                onSetMeetingMemoryMaxLength = {},
             ),
+            onBack = {},
+        )
+    }
+
+    private fun showPrompts() = host {
+        LiuliMemoryPromptsContent(
+            extraction = "提取模板",
+            injection = "注入模板",
             promptCallbacks = LiuliMemoryPromptCallbacks(
                 onExtractionChange = {},
                 onInjectionChange = {},
@@ -100,12 +108,17 @@ internal class LiuliMemoryHubContentTest : LiuliScreenTestBase() {
         compose.onNodeWithText("智能渐进压缩").performClick()
         compose.waitForIdle()
         org.junit.Assert.assertEquals(emptyList<Boolean>(), progressive)
-        // 正向证据：副标换成了「让位」那一句（否则「点不动」可能只是没点到）。
         org.junit.Assert.assertEquals(1, countText("你自定义了提取提示词，压缩方式改由你的模板决定，此开关暂不适用；恢复默认提示词后即可正常使用。"))
     }
 
-    @org.junit.Test fun 九个宏字面量一个不少() {
+    @org.junit.Test fun 记忆页包含见面记忆() {
         show(AppSettings())
+        org.junit.Assert.assertEquals(1, countText("见面记忆"))
+        org.junit.Assert.assertEquals(1, countText("注入最近见面次数"))
+    }
+
+    @org.junit.Test fun 独立记忆提示词页九个宏字面量一个不少() {
+        showPrompts()
         listOf(
             "{{聊天记录}}", "{{已有记忆}}", "{{当前时间}}", "{{最大字数}}", "{{当前字数}}",
             "{{压缩策略}}", "{{记忆内容}}", "{{char}}", "{{user}}",
@@ -114,11 +127,10 @@ internal class LiuliMemoryHubContentTest : LiuliScreenTestBase() {
         }
     }
 
-    @org.junit.Test fun 两枚恢复默认各自回调() {
-        show(AppSettings())
+    @org.junit.Test fun 独立记忆提示词页两枚恢复默认各自回调() {
+        showPrompts()
         val buttons = compose.onAllNodesWithText("恢复默认")
         org.junit.Assert.assertEquals(2, buttons.fetchSemanticsNodes().size)
-        // 两枚钮都在首屏之外——不先滚过去，performClick 会静默不命中（PITFALLS §1e 假绿）。
         buttons[0].performScrollTo().performClick()
         compose.waitForIdle()
         compose.onAllNodesWithText("恢复默认")[1].performScrollTo().performClick()
@@ -136,35 +148,41 @@ internal class LiuliMemoryHubContentTest : LiuliScreenTestBase() {
 internal class LiuliGrowthContentTest : LiuliScreenTestBase() {
 
     private var observatoryTaps = 0
+    private var notifTaps = 0
 
     private fun show(enabled: Boolean, debug: Boolean) = host {
         LiuliGrowthSettingsContent(
             settings = AppSettings(growthSystemEnabled = enabled),
             debugBuild = debug,
+            onSetGrowthEnabled = {},
+            onSetRelationshipAdvance = {},
             onSetAnalysisInterval = {},
             onSetMoodHistoryMax = {},
             onSetLogMax = {},
             onSetInterestCooldown = {},
             onOpenObservatory = { observatoryTaps++ },
+            onOpenNotifications = { notifTaps++ },
             onBack = {},
         )
     }
 
-    @org.junit.Test fun 成长关时整个参数区不在场() {
+    @org.junit.Test fun 成长关时参数仍可见且显示置灰原因() {
         show(enabled = false, debug = false)
-        org.junit.Assert.assertEquals(0, countText("性格分析频率"))
-        org.junit.Assert.assertEquals(0, countText("情绪记录数量"))
-        org.junit.Assert.assertEquals(0, countText("成长记录数量"))
-        // 正向证据：引导句在（否则「都不在」也可能是整屏没渲染出来）。
-        org.junit.Assert.assertEquals(1, countText("开启「角色成长」后可调整成长分析参数（在「系统功能」里开启）。"))
+        org.junit.Assert.assertEquals(1, countText("性格分析频率"))
+        org.junit.Assert.assertEquals(1, countText("情绪记录数量"))
+        org.junit.Assert.assertEquals(1, countText("成长记录数量"))
+        org.junit.Assert.assertEquals(1, countText("先开启上方的角色成长，才能调整这些参数"))
     }
 
-    @org.junit.Test fun 成长开时三枚滑杆都在() {
+    @org.junit.Test fun 成长开时三枚滑杆与通知入口都在() {
         show(enabled = true, debug = false)
         org.junit.Assert.assertEquals(1, countText("性格分析频率"))
         org.junit.Assert.assertEquals(1, countText("情绪记录数量"))
         org.junit.Assert.assertEquals(1, countText("成长记录数量"))
         org.junit.Assert.assertEquals(0, countText("开发者"))
+        compose.onNodeWithText("关系里程碑通知").performScrollTo().performClick()
+        compose.waitForIdle()
+        org.junit.Assert.assertEquals(1, notifTaps)
     }
 
     @org.junit.Test fun debug构建才出开发者组且点得动() {
@@ -246,17 +264,16 @@ internal class LiuliImmersiveContentTest : LiuliScreenTestBase() {
         org.junit.Assert.assertEquals(0, countText("✦ 星光"))
     }
 
-    @org.junit.Test fun 背景自定义图片档只出说明() {
+    @org.junit.Test fun 旧存量自定义图片档自动回退为柔和粒子() {
         show(narrativeRaw = "plain", backgroundRaw = "customImage")
-        org.junit.Assert.assertEquals(1, countText("自定义背景图请在对应角色的档案中设置（每个角色独立）；未设置时回退到柔和粒子。"))
-        org.junit.Assert.assertEquals(0, countText("✦ 星光"))
+        org.junit.Assert.assertEquals(0, countText("自定义图片"))
+        org.junit.Assert.assertEquals(1, countText("✦ 星光"))
         org.junit.Assert.assertEquals(0, countText("背景色"))
     }
 }
 
 /**
- * T2：回复规则页（屏 4）。E3：四枚步进器的互钳（最少值到 `max−1` 封顶 / 最多值到 `min+1` 触底）·
- * 思考模型时多一行琥珀警示且滑杆**不禁用**。
+ * T2：回复规则页（屏 4·卷二已将语音轮次迁至独立「语音」页，本页聚焦回复条数范围与说话方式）。
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "zh-rCN-w411dp-h891dp")
@@ -271,7 +288,6 @@ internal class LiuliReplyRuleContentTest : LiuliScreenTestBase() {
             chatModelIsThinking = thinking,
             onSetWaitSeconds = {},
             onSetSegmentRange = { a, b -> segmentRanges += a to b },
-            onSetVoiceRoundRange = { _, _ -> },
             onSetTemperature = {},
             onBack = {},
         )
@@ -279,8 +295,7 @@ internal class LiuliReplyRuleContentTest : LiuliScreenTestBase() {
 
     @org.junit.Test fun 当前范围行按真值回显() {
         show(min = 2, max = 5, thinking = false)
-        // 「当前范围」在两组各出一次；条数那一组的值是「2-5 条」。
-        org.junit.Assert.assertEquals(2, countText("当前范围"))
+        org.junit.Assert.assertEquals(1, countText("当前范围"))
         org.junit.Assert.assertEquals(1, countText("2-5 条"))
     }
 
@@ -334,9 +349,11 @@ internal class LiuliCalendarContentTest : LiuliScreenTestBase() {
         )
     }
 
-    @org.junit.Test fun 集成关时操作确认与权限区都不在场() {
+    @org.junit.Test fun 集成关时操作确认保持可见变灰示因且权限区不在场() {
         show(enabled = false, granted = false)
-        org.junit.Assert.assertEquals(0, countText("操作确认"))
+        org.junit.Assert.assertEquals(1, countText("操作确认"))
+        org.junit.Assert.assertEquals(1, countText("先开启上方的「日历集成」"))
+        compose.onNodeWithText("操作确认").assertIsNotEnabled()
         org.junit.Assert.assertEquals(0, countText("未授权"))
         org.junit.Assert.assertEquals(
             0,

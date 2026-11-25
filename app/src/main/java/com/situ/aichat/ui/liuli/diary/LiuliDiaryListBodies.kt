@@ -185,12 +185,21 @@ internal fun LiuliDiaryCalendarList(
     onFilterChange: (DiaryEntryFilter) -> Unit,
     callbacks: LiuliDiaryListCallbacks,
 ) {
+    val dark = LocalIsDarkTheme.current
     val zone = remember { ZoneId.systemDefault() }
     val calendar = rememberDiaryCalendarState(zone)
     val calendarData = remember(filtered) { diaryCalendarData(filtered, zone) }
     LiuliDiaryLazyList(state) {
         liuliDiaryListHeader(title, data.apiMissing, filter, onFilterChange)
-        item("calendar") { DiaryCalendarMonth(calendar, calendarData, zone, Modifier.padding(horizontal = LiuliPageGeometry.gutter)) }
+        item("calendar") {
+            DiaryCalendarMonth(
+                state = calendar,
+                data = calendarData,
+                zone = zone,
+                modifier = Modifier.padding(horizontal = LiuliPageGeometry.gutter),
+                cardSurface = Modifier.liuliDiaryCard(dark),
+            )
+        }
         items(calendarData.entriesByDay[calendar.selectedDate].orEmpty(), key = { it.entry.uuid }) { ewc ->
             LiuliDiaryEntryCard(
                 ewc,
@@ -223,6 +232,7 @@ internal fun LiuliDiaryEntryCard(
         authorName = authorDisplay?.name,
         isOrphan = authorDisplay?.isOrphan == true,
         surface = Modifier.liuliDiaryCard(dark),
+        letterSurface = Modifier.liuliLetterCard(dark),
         interaction = Modifier.combinedClickable(
             onClickLabel = stringResource(R.string.a11y_diary_open),
             onClick = { callbacks.onOpenEntry(uuid) },

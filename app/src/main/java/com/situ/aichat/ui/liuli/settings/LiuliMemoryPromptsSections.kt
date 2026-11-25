@@ -5,8 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,6 +15,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.situ.aichat.R
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.designsystem.MacroHighlightTransformation
@@ -129,7 +128,7 @@ private fun PromptBlock(
             )
             // 卡内文字钮去掉自带的 12 左右内距，让字与上面的说明句同一条基线（复核 R1）。
             LiuliButton(onClick = onReset, style = LiuliButtonStyle.Text, contentPadding = PaddingValues(0.dp)) {
-                Icon(Icons.Filled.Refresh, contentDescription = null)
+                Icon(AppActionIcons.Refresh, contentDescription = null)
                 Text(stringResource(R.string.mem_prompts_reset_default))
             }
         }

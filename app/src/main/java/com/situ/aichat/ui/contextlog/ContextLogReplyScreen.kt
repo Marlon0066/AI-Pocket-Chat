@@ -9,9 +9,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material3.Scaffold
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -67,7 +66,7 @@ internal fun ContextLogReplyContent(state: ContextLogEntryUiState, onBack: () ->
         topBar = {
             AppTopBar(
                 title = stringResource(R.string.clog_reply_full), onBack = onBack, lifted = listState.canScrollBackward,
-                actions = { if (text.isNotEmpty()) AppTopBarAction(Icons.Outlined.ContentCopy, stringResource(R.string.clog_reader_copy_all), { onCopy(text) }) },
+                actions = { if (text.isNotEmpty()) AppTopBarAction(AppActionIcons.Copy, stringResource(R.string.clog_reader_copy_all), { onCopy(text) }) },
             )
         },
     ) { padding ->

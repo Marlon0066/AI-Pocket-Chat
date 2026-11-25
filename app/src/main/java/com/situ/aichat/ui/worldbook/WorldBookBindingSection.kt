@@ -11,13 +11,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,122 +32,25 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
-import com.situ.aichat.data.local.dao.CharacterDao
 import com.situ.aichat.data.local.dao.WorldBookSummary
-import com.situ.aichat.data.local.dao.WorldNativeDao
 import com.situ.aichat.data.local.entity.WorldBookEntity
-import com.situ.aichat.data.worldbook.WorldBookRepository
-import com.situ.aichat.ui.components.clickableScale
 import com.situ.aichat.ui.character.WorldBookCardState
 import com.situ.aichat.ui.character.worldBookCardState
+import com.situ.aichat.ui.components.clickableScale
+import com.situ.aichat.ui.designsystem.AppActionIcons
+import com.situ.aichat.ui.designsystem.AppCheckbox
+import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppFeatureIcons
 import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppRadio
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppSheet
 import com.situ.aichat.ui.designsystem.AppTheme
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
-/**
- * 角色 × 世界观绑定（WB7c·契约 §12.5）：主脸 = 单选「选一本世界观」；叠加多本收进阶入口。
- * 绑定 ≤1 本时 sheet 是单选（选新书 = 收敛为这一本，不会静默丢别的——因为没有别的）；
- * 已叠加多本时 sheet 直接进多选逐本增删。characterUuid 取自角色编辑路由的 SavedStateHandle。
- * D8 与世界系统二选一互斥的对向校验已接入（[joinedWorld]/[nativeOrigin] + [isJoinedWorldNow] 守卫·契约 §11-2·W13 复核 R1 🟡-2）。
- */
-@HiltViewModel
-class WorldBookBindingViewModel @Inject constructor(
-    private val repository: WorldBookRepository,
-    private val characterDao: CharacterDao,
-    private val worldNativeDao: WorldNativeDao,
-    savedStateHandle: SavedStateHandle,
-) : ViewModel() {
-
-    private val characterUuid: String = savedStateHandle["characterUuid"] ?: ""
-
-    /**
-     * 该角色是否已「加入世界」（D8 与世界系统 per-角色二选一互斥·契约 §11-2·W13 图纸 §3.3）。一次读 +
-     * [refreshJoinedWorld]（进段重组刷新）——已加入 → 绑定段灰显、点击不开 sheet、副标改 world_locked。
-     * 绑定动作与开 sheet 前另经 [isJoinedWorldNow] 直读库守卫（挡同屏陈旧态击穿·复核 R1 🟡-2）。
-     */
-    private val _joinedWorld = MutableStateFlow(false)
-    val joinedWorld: StateFlow<Boolean> = _joinedWorld.asStateFlow()
-
-    /**
-     * 该角色是否原住民出身（招募入世·契约 §11·W13 复核 R1 🟡-2③）。原住民不可绑世界书——段副标优先落
-     * `wb_binding_native_locked`（比笼统的 world_locked 更准）。init 与 [refreshJoinedWorld] 时刷新。
-     */
-    private val _nativeOrigin = MutableStateFlow(false)
-    val nativeOrigin: StateFlow<Boolean> = _nativeOrigin.asStateFlow()
-
-    init {
-        refreshJoinedWorld()
-    }
-
-    fun refreshJoinedWorld() {
-        viewModelScope.launch {
-            _joinedWorld.value = characterDao.getByUuid(characterUuid)?.joinedWorld == true
-            _nativeOrigin.value = worldNativeDao.getByRecruitedUuid(characterUuid) != null
-        }
-    }
-
-    /**
-     * 绑定动作 / 开 sheet 前的 fresh 守卫（复核 R1 🟡-2）：直读库当前 joinedWorld（顺手回写 StateFlow 令卡即刻
-     * 灰锁），挡住「世界段与世界书段同屏、先开加入世界后 joinedWorld 陈旧 false」时的单向击穿窗。
-     */
-    suspend fun isJoinedWorldNow(): Boolean {
-        val joined = characterDao.getByUuid(characterUuid)?.joinedWorld == true
-        _joinedWorld.value = joined
-        return joined
-    }
-
-    /** 该角色绑定的书（按绑定先后·带条目数）。 */
-    val boundBooks: StateFlow<List<WorldBookSummary>> =
-        repository.observeBoundBookUuidsForCharacter(characterUuid)
-            .combine(repository.observeBookSummaries()) { uuids, all ->
-                uuids.mapNotNull { uuid -> all.firstOrNull { it.book.uuid == uuid } }
-            }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    /** 可选列表 = 非全局书（全局书自动生效不参与选择）。 */
-    val selectableBooks: StateFlow<List<WorldBookSummary>> = repository.observeBookSummaries()
-        .map { list -> list.filter { !it.book.isGlobal } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    /** 启用中的全局书（sheet 里只作提示行）。 */
-    val globalBooks: StateFlow<List<WorldBookEntity>> = repository.observeAllBooks()
-        .map { list -> list.filter { it.isGlobal && it.enabled } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    fun selectSole(bookUuid: String?) {
-        viewModelScope.launch {
-            if (isJoinedWorldNow()) return@launch // 陈旧态守卫（复核 R1 🟡-2）：已加入则不落库
-            repository.setSoleBinding(characterUuid, bookUuid)
-        }
-    }
-
-    fun toggle(bookUuid: String, bound: Boolean) {
-        viewModelScope.launch {
-            if (isJoinedWorldNow()) return@launch // 陈旧态守卫（复核 R1 🟡-2）：已加入则不落库
-            if (bound) repository.bind(characterUuid, bookUuid) else repository.unbind(characterUuid, bookUuid)
-        }
-    }
-}
-
-/** 角色编辑页「世界观」段的入口行卡（SectionHeader/Footer 由宿主渲染保持段落风格统一）。 */
+/** 角色编辑页「世界观」段的入口行卡（编辑模式·响应式同步 + 入世一键切换）。 */
 @Composable
 fun WorldBookBindingSection(
     onManageBooks: () -> Unit,
@@ -159,20 +59,133 @@ fun WorldBookBindingSection(
     val boundBooks by viewModel.boundBooks.collectAsStateWithLifecycle()
     val joinedWorld by viewModel.joinedWorld.collectAsStateWithLifecycle()
     val nativeOrigin by viewModel.nativeOrigin.collectAsStateWithLifecycle()
-    val colors = AppTheme.colors
+    val selectableBooks by viewModel.selectableBooks.collectAsStateWithLifecycle()
+    val globalBooks by viewModel.globalBooks.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var showSheet by remember { mutableStateOf(false) }
-    // D8 互斥（W13 图纸 §3.3）：进段重组时刷新「是否已加入世界」——他处开关翻转后回本页即时反映。
+    var pendingSwitch by remember { mutableStateOf<PendingWorldBookSwitch?>(null) }
+
     LaunchedEffect(Unit) { viewModel.refreshJoinedWorld() }
 
+    WorldBookBindingCard(
+        boundBooks = boundBooks,
+        joinedWorld = joinedWorld,
+        nativeOrigin = nativeOrigin,
+        isCreateMode = false,
+        onClick = {
+            scope.launch {
+                if (!viewModel.isNativeOriginNow()) showSheet = true
+            }
+        },
+    )
+
+    if (showSheet && !nativeOrigin) {
+        WorldBookBindingSheetContent(
+            boundBooks = boundBooks,
+            selectableBooks = selectableBooks,
+            globalBooks = globalBooks,
+            onSelectSole = { bookUuid ->
+                if (bookUuid != null && joinedWorld) {
+                    val bookName = selectableBooks.firstOrNull { it.book.uuid == bookUuid }?.book?.name.orEmpty()
+                    pendingSwitch = PendingWorldBookSwitch(bookUuid = bookUuid, bookName = bookName, sole = true)
+                } else {
+                    viewModel.selectSole(bookUuid)
+                    showSheet = false
+                }
+            },
+            onToggle = { bookUuid, bound ->
+                if (bound && joinedWorld) {
+                    val bookName = selectableBooks.firstOrNull { it.book.uuid == bookUuid }?.book?.name.orEmpty()
+                    pendingSwitch = PendingWorldBookSwitch(bookUuid = bookUuid, bookName = bookName, sole = false)
+                } else {
+                    viewModel.toggle(bookUuid, bound)
+                }
+            },
+            onManageBooks = {
+                showSheet = false
+                onManageBooks()
+            },
+            onDismiss = { showSheet = false },
+        )
+    }
+
+    pendingSwitch?.let { target ->
+        AppDialog(
+            onDismissRequest = { pendingSwitch = null },
+            title = stringResource(R.string.wb_binding_switch_leave_title),
+            body = stringResource(R.string.wb_binding_switch_leave_body, target.bookName),
+            confirmText = stringResource(R.string.wb_binding_switch_leave_confirm),
+            onConfirm = {
+                viewModel.switchLeaveAndBind(target.bookUuid, sole = target.sole)
+                if (target.sole) showSheet = false
+                pendingSwitch = null
+            },
+            dismissText = stringResource(R.string.action_cancel),
+            onDismiss = { pendingSwitch = null },
+        )
+    }
+}
+
+/** 新建角色页「世界观」选书段（4A·尚未入世落库，选书自动关加入世界，无需弹窗打扰）。 */
+@Composable
+fun WorldBookCreateBindingSection(
+    selectedBookUuids: List<String>,
+    joinedWorld: Boolean,
+    onSelectSole: (String?) -> Unit,
+    onToggle: (String, Boolean) -> Unit,
+    onManageBooks: () -> Unit,
+    viewModel: WorldBookBindingViewModel = hiltViewModel(),
+) {
+    val selectableBooks by viewModel.selectableBooks.collectAsStateWithLifecycle()
+    val globalBooks by viewModel.globalBooks.collectAsStateWithLifecycle()
+    val boundBooks = remember(selectedBookUuids, selectableBooks) {
+        selectedBookUuids.mapNotNull { id -> selectableBooks.firstOrNull { it.book.uuid == id } }
+    }
+    var showSheet by remember { mutableStateOf(false) }
+
+    WorldBookBindingCard(
+        boundBooks = boundBooks,
+        joinedWorld = joinedWorld && boundBooks.isEmpty(),
+        nativeOrigin = false,
+        isCreateMode = true,
+        onClick = { showSheet = true },
+    )
+
+    if (showSheet) {
+        WorldBookBindingSheetContent(
+            boundBooks = boundBooks,
+            selectableBooks = selectableBooks,
+            globalBooks = globalBooks,
+            onSelectSole = { bookUuid ->
+                onSelectSole(bookUuid)
+                showSheet = false
+            },
+            onToggle = onToggle,
+            onManageBooks = {
+                showSheet = false
+                onManageBooks()
+            },
+            onDismiss = { showSheet = false },
+        )
+    }
+}
+
+@Composable
+private fun WorldBookBindingCard(
+    boundBooks: List<WorldBookSummary>,
+    joinedWorld: Boolean,
+    nativeOrigin: Boolean,
+    isCreateMode: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = AppTheme.colors
     Surface(
         shape = AppShapes.medium,
         tonalElevation = 2.dp,
         modifier = Modifier
             .fillMaxWidth()
-            .alpha(if (joinedWorld) 0.48f else 1f)
-            // 点击前直读库守卫（复核 R1 🟡-2）：同屏先开加入世界、joinedWorld 陈旧 false 时也挡住开 sheet。
-            .then(if (joinedWorld) Modifier else Modifier.clickableScale { scope.launch { if (!viewModel.isJoinedWorldNow()) showSheet = true } }),
+            .alpha(if (nativeOrigin) 0.48f else 1f)
+            .then(if (nativeOrigin) Modifier else Modifier.clickableScale(onClick = onClick)),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
@@ -187,7 +200,6 @@ fun WorldBookBindingSection(
             }
             Column(modifier = Modifier.weight(1f)) {
                 when (val card = worldBookCardState(nativeOrigin = nativeOrigin, joinedWorld = joinedWorld, bound = boundBooks)) {
-                    // 副标优先级（复核 R1 🟡-2③）：原住民出身 → native_locked，其次已加入 → world_locked。
                     WorldBookCardState.NativeLocked -> Text(
                         stringResource(R.string.wb_binding_native_locked),
                         style = MaterialTheme.typography.bodyMedium,
@@ -211,48 +223,48 @@ fun WorldBookBindingSection(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
+                        val meta = stringResource(R.string.wb_book_meta_unbound, card.entryCount)
                         Text(
-                            stringResource(R.string.wb_book_meta_unbound, card.entryCount),
+                            if (isCreateMode) "$meta · ${stringResource(R.string.wb_binding_create_sub_selected)}" else meta,
                             style = MaterialTheme.typography.bodySmall,
                             color = colors.text.secondary,
                         )
                     }
-                    is WorldBookCardState.Multi -> Text(
-                        stringResource(R.string.wb_binding_multi, card.firstName, card.extra),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = colors.text.primary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    is WorldBookCardState.Multi -> {
+                        Text(
+                            stringResource(R.string.wb_binding_multi, card.firstName, card.extra),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = colors.text.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        if (isCreateMode) {
+                            Text(
+                                stringResource(R.string.wb_binding_create_sub_selected),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colors.text.secondary,
+                            )
+                        }
+                    }
                 }
             }
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = colors.text.secondary)
+            Icon(AppActionIcons.ChevronRight, contentDescription = null, tint = colors.text.secondary)
         }
-    }
-
-    if (showSheet && !joinedWorld) {
-        WorldBookBindingSheet(
-            viewModel = viewModel,
-            onManageBooks = {
-                showSheet = false
-                onManageBooks()
-            },
-            onDismiss = { showSheet = false },
-        )
     }
 }
 
 /** 选择弹层：单选主脸（≤1 本时）/ 多选（已叠加或点开进阶入口后）。 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun WorldBookBindingSheet(
-    viewModel: WorldBookBindingViewModel,
+private fun WorldBookBindingSheetContent(
+    boundBooks: List<WorldBookSummary>,
+    selectableBooks: List<WorldBookSummary>,
+    globalBooks: List<WorldBookEntity>,
+    onSelectSole: (String?) -> Unit,
+    onToggle: (String, Boolean) -> Unit,
     onManageBooks: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val boundBooks by viewModel.boundBooks.collectAsStateWithLifecycle()
-    val selectableBooks by viewModel.selectableBooks.collectAsStateWithLifecycle()
-    val globalBooks by viewModel.globalBooks.collectAsStateWithLifecycle()
     val colors = AppTheme.colors
     var multiMode by remember { mutableStateOf(false) }
     val effectiveMulti = multiMode || boundBooks.size > 1
@@ -273,10 +285,7 @@ private fun WorldBookBindingSheet(
                     dimmed = false,
                     selected = boundUuids.isEmpty(),
                     multi = false,
-                    onPick = {
-                        viewModel.selectSole(null)
-                        onDismiss()
-                    },
+                    onPick = { onSelectSole(null) },
                 )
             }
             selectableBooks.forEach { summary ->
@@ -291,10 +300,9 @@ private fun WorldBookBindingSheet(
                     multi = effectiveMulti,
                     onPick = {
                         if (effectiveMulti) {
-                            viewModel.toggle(summary.book.uuid, summary.book.uuid !in boundUuids)
+                            onToggle(summary.book.uuid, summary.book.uuid !in boundUuids)
                         } else {
-                            viewModel.selectSole(summary.book.uuid)
-                            onDismiss()
+                            onSelectSole(summary.book.uuid)
                         }
                     },
                 )
@@ -342,7 +350,7 @@ private fun WorldBookBindingSheet(
                             color = colors.text.secondary,
                         )
                     }
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = colors.text.secondary)
+                    Icon(AppActionIcons.ChevronRight, contentDescription = null, tint = colors.text.secondary)
                 }
             }
             Text(
@@ -359,7 +367,7 @@ private fun WorldBookBindingSheet(
     }
 }
 
-/** 弹层里的一行书：单选 = RadioButton / 多选 = Checkbox；停用书淡显但可选。 */
+/** 弹层里的一行书：单选 = [AppRadio] / 多选 = [AppCheckbox]；停用书淡显但可选。 */
 @Composable
 private fun BindingRow(
     title: String,
@@ -380,7 +388,7 @@ private fun BindingRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         if (multi) {
-            Checkbox(checked = selected, onCheckedChange = { onPick() })
+            AppCheckbox(checked = selected, onCheckedChange = { onPick() })
         } else {
             AppRadio(selected = selected, onClick = onPick)
         }

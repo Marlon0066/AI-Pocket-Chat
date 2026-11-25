@@ -2,6 +2,8 @@ package com.situ.aichat.worldbook
 
 import com.situ.aichat.data.local.entity.WorldBookEntryEntity
 import com.situ.aichat.data.worldbook.decodeStringList
+import com.situ.aichat.data.worldbook.lenientBool
+import com.situ.aichat.data.worldbook.parseExtras
 
 /**
  * 世界书激活引擎（WB3·契约 §4.2 八步算法·纯逻辑零 Android 依赖）。
@@ -11,11 +13,6 @@ import com.situ.aichat.data.worldbook.decodeStringList
  * 流程：主扫（时效门 → 蓝灯/向量/关键词 → 概率）→ 分组决胜 → minActivations 扩窗 →
  * 递归轮（激活内容并入扫描源·delayUntilRecursion 按层级解锁·干涸或达步数上限即止）→
  * 时效状态产出 → 预算裁剪 → 分桶。
- *
- * 有意口径（KDoc 即事实源）：
- * - 递归轮的扫描源 = 聊天缓冲 + 已激活内容（超集语义：delayUntilRecursion 条目也能命中聊天文本）；
- * - 概率掷骰**每次生成至多一次**：掷输的条目本轮不再重掷（递归轮不给二次机会，防多掷偏置）；
- * - 书级 scan_depth / recursive_scanning / token_budget 只存不用（ST 自身亦不应用，行为对齐）。
  */
 class WorldInfoActivator(private val rng: WorldInfoRng = WorldInfoRng.fromRandom()) {
 
@@ -26,7 +23,11 @@ class WorldInfoActivator(private val rng: WorldInfoRng = WorldInfoRng.fromRandom
         val outletSkipped = candidates.count { it.position == 7 }
         val eligible = candidates.filter { it.position != 7 }
 
-        val matcher = WorldInfoMatcher(settings)
+        val matcher = WorldInfoMatcher(
+            settings = settings,
+            characterName = input.characterName,
+            userName = input.userName,
+        )
         val timed = WorldInfoTimedEffects(input.timedStates, input.conversationMessageCount)
         val groups = WorldInfoGroupResolver(rng, settings.useGroupScoring)
 
@@ -36,8 +37,24 @@ class WorldInfoActivator(private val rng: WorldInfoRng = WorldInfoRng.fromRandom
         var sweeps = 0
 
         val bufferCache = HashMap<Int, String>()
+        val extraSourceCache = HashMap<String, String>()
         fun chatBuffer(depth: Int) = bufferCache.getOrPut(depth) { matcher.buildBuffer(input.messages, depth) }
-        fun effectiveDepth(e: WorldBookEntryEntity) = e.scanDepth ?: settings.scanDepth
+        fun effectiveDepth(e: WorldBookEntryEntity): Int =
+            e.scanDepth ?: booksByUuid[e.bookUuid]?.scanDepth ?: settings.scanDepth
+
+        fun entryExtraBuffer(e: WorldBookEntryEntity): String {
+            if (input.matchSources.isEmpty || e.extraJson.isEmpty() || !e.extraJson.contains("match")) return ""
+            return extraSourceCache.getOrPut(e.uuid) { buildExtraMatchBuffer(e.extraJson, input.matchSources) }
+        }
+
+        fun withExtraSources(base: String, e: WorldBookEntryEntity): String {
+            val extra = entryExtraBuffer(e)
+            return when {
+                extra.isEmpty() -> base
+                base.isEmpty() -> extra
+                else -> "$base\n$extra"
+            }
+        }
 
         /** 一轮扫描：时效门 → 命中判定 → 概率 → 分组决胜 → 落账 + 并入递归源。 */
         fun sweep(
@@ -57,7 +74,7 @@ class WorldInfoActivator(private val rng: WorldInfoRng = WorldInfoRng.fromRandom
                     e.constant -> true
                     e.vectorized -> e.uuid in input.vectorMatchedEntryUuids
                     else -> {
-                        val m = matcher.matchEntry(e, bufferFor(e))
+                        val m = matcher.matchEntry(e, withExtraSources(bufferFor(e), e))
                         matchCount = m.matchCount
                         m.matched
                     }
@@ -75,7 +92,9 @@ class WorldInfoActivator(private val rng: WorldInfoRng = WorldInfoRng.fromRandom
             winners.forEach { c ->
                 activated[c.entry.uuid] = c
                 if (!c.entry.preventRecursion && c.entry.content.isNotBlank()) {
-                    recursionText.append(c.entry.content).append('\n')
+                    recursionText
+                        .append(expandInlineEntityMacros(c.entry.content, input.characterName, input.userName))
+                        .append('\n')
                 }
             }
             return winners
@@ -99,8 +118,15 @@ class WorldInfoActivator(private val rng: WorldInfoRng = WorldInfoRng.fromRandom
             }
         }
 
-        // ── 第 3 步：递归轮（层级解锁 + 步数上限） ──
-        if (settings.recursiveScan) {
+        // ── 第 3 步：递归轮（全局开关或书级 recursiveScanning 开启；层级解锁 + 步数上限） ──
+        val bookRecursive = booksByUuid.values.any { it.recursiveScanning == true }
+        val recursiveEnabled = settings.recursiveScan || bookRecursive
+        val maxSteps = if (!settings.recursiveScan && bookRecursive && settings.maxRecursionSteps == 0) {
+            DEFAULT_BOOK_RECURSION_CAP
+        } else {
+            settings.maxRecursionSteps
+        }
+        if (recursiveEnabled) {
             var level = 1
             var steps = 0
             fun nextUnlockLevel(): Int? = eligible
@@ -120,7 +146,7 @@ class WorldInfoActivator(private val rng: WorldInfoRng = WorldInfoRng.fromRandom
                 }
                 if (newly.isNotEmpty()) {
                     steps++
-                    if (settings.maxRecursionSteps > 0 && steps >= settings.maxRecursionSteps) break
+                    if (maxSteps > 0 && steps >= maxSteps) break
                     continue
                 }
                 level = nextUnlockLevel() ?: break
@@ -160,4 +186,47 @@ class WorldInfoActivator(private val rng: WorldInfoRng = WorldInfoRng.fromRandom
         bookName = book.name,
         contentLength = entry.content.length,
     )
+
+    private fun buildExtraMatchBuffer(extraJson: String, sources: WorldInfoMatchSources): String {
+        val obj = parseExtras(extraJson)
+        if (obj.isEmpty()) return ""
+        val ext = obj["extensions"] as? kotlinx.serialization.json.JsonObject
+        fun flag(camel: String, snake: String): Boolean =
+            obj.lenientBool(camel) ?: ext?.lenientBool(snake) ?: false
+
+        return buildList {
+            if (flag("matchCharacterDescription", "match_character_description") && sources.characterDescription.isNotBlank()) {
+                add(sources.characterDescription)
+            }
+            if (flag("matchCharacterPersonality", "match_character_personality") && sources.characterPersonality.isNotBlank()) {
+                add(sources.characterPersonality)
+            }
+            if (flag("matchCharacterDepthPrompt", "match_character_depth_prompt") && sources.characterDepthPrompt.isNotBlank()) {
+                add(sources.characterDepthPrompt)
+            }
+            if (flag("matchScenario", "match_scenario") && sources.scenario.isNotBlank()) {
+                add(sources.scenario)
+            }
+            if (flag("matchCreatorNotes", "match_creator_notes") && sources.creatorNotes.isNotBlank()) {
+                add(sources.creatorNotes)
+            }
+            if (flag("matchPersonaDescription", "match_persona_description") && sources.personaDescription.isNotBlank()) {
+                add(sources.personaDescription)
+            }
+        }.joinToString("\n")
+    }
+
+    private companion object {
+        /** 书级显式开启递归但全局未配上限时的安全默认轮数上限。 */
+        const val DEFAULT_BOOK_RECURSION_CAP = 3
+    }
+}
+
+/** 展开文本中的 `{{char}}` / `{{user}}`（大小写无关；无 `{{` 快速短路零分配）。 */
+internal fun expandInlineEntityMacros(text: String, characterName: String, userName: String): String {
+    if (!text.contains("{{")) return text
+    var resolved = text
+    if (characterName.isNotEmpty()) resolved = resolved.replace("{{char}}", characterName, ignoreCase = true)
+    if (userName.isNotEmpty()) resolved = resolved.replace("{{user}}", userName, ignoreCase = true)
+    return resolved
 }

@@ -100,6 +100,7 @@ class OfflineAfterglowPromptAssembler @Inject constructor(
             characterUuid = character.uuid, conversationUuid = convo.uuid, sortedMessages = history,
             characterName = character.name, userName = userName,
             vectorThresholdPercent = settings.vectorSearchThreshold, settings = settings.toWorldInfoSettings(),
+            character = character, userBio = userProfile?.bio.orEmpty(), isOfflineMode = false,
         )
         return PromptBuilder.buildMessages(
             character = character,

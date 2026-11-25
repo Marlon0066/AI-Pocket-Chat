@@ -12,9 +12,8 @@ import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.Icon
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -147,7 +146,7 @@ internal fun LiuliMicButton(
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                Icons.Filled.Mic,
+                AppActionIcons.Mic,
                 contentDescription = stringResource(R.string.voice_message_hold_to_record),
                 tint = Palette.White,
                 modifier = Modifier.size(22.dp),

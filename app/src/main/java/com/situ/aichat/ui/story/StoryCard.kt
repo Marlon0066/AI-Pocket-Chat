@@ -15,9 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.Forum
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
@@ -37,6 +35,7 @@ import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.StoryEntity
 import com.situ.aichat.story.StoryGenerationTaskManager
 import com.situ.aichat.story.StoryStatus
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.appCardSurface
 import com.situ.aichat.util.DateFormatters
@@ -185,7 +184,7 @@ private fun QuickAction(
         else -> c.accent.text to c.accent.container
     }
     val icon: ImageVector = when (kind) {
-        StoryQuickAction.REGENERATE -> Icons.Filled.Refresh
+        StoryQuickAction.REGENERATE -> AppActionIcons.Refresh
         StoryQuickAction.GENERATING -> Icons.Filled.MoreHoriz
         StoryQuickAction.MAKE_CHOICE -> Icons.Outlined.Forum
         else -> Icons.AutoMirrored.Filled.MenuBook
@@ -212,7 +211,7 @@ private fun QuickAction(
                 Icon(icon, contentDescription = null, tint = content, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(title, style = AppTheme.typography.label, color = content, modifier = Modifier.weight(1f))
-                Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = content, modifier = Modifier.size(16.dp))
+                Icon(AppActionIcons.ChevronRight, contentDescription = null, tint = content, modifier = Modifier.size(16.dp))
             }
         }
         // 失败卡结局意图提示行（ST11 §4.4）：失败后意图不再被清（拍板①），告诉用户「重试仍会写结局」，

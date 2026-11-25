@@ -28,7 +28,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -64,6 +63,7 @@ import androidx.compose.ui.unit.sp
 import com.situ.aichat.R
 import com.situ.aichat.ui.components.AppMotion
 import com.situ.aichat.ui.components.clickableScale
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.world.planet.HomeMarkerVisual
 
@@ -180,7 +180,7 @@ fun WorldTopBar(
                     }
                     if (switcher != null) {
                         Icon(
-                            Icons.Filled.KeyboardArrowDown,
+                            AppActionIcons.ChevronDown,
                             contentDescription = null,
                             tint = WorldSceneColors.onGlass.copy(alpha = 0.85f),
                             modifier = Modifier.padding(start = 6.dp).size(18.dp).graphicsLayer { rotationZ = chevron },

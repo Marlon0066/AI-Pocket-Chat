@@ -14,8 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.MonetizationOn
-import androidx.compose.material.icons.filled.Schedule
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -76,7 +75,7 @@ fun DIYGiftDetailSheet(
                             Surface(shape = RoundedCornerShape(50), color = androidx.compose.ui.graphics.Color(0xFFE23B3B)) {
                                 Text("手作", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = androidx.compose.ui.graphics.Color.White, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
                             }
-                            Icon(Icons.Filled.MonetizationOn, contentDescription = null, tint = GiftColors.Gold, modifier = Modifier.size(16.dp))
+                            Icon(AppActionIcons.Coin, contentDescription = null, tint = GiftColors.Gold, modifier = Modifier.size(16.dp))
                             Text("${record.pricePaid}", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
                             Text("金币", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
@@ -108,7 +107,7 @@ fun DIYGiftDetailSheet(
 
             // 底部时间
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
+                Icon(AppActionIcons.Clock, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
                 Text(
                     // gift-2：含小时/分钟粒度的相对时间（1:1 iOS RelativeDateTimeFormatter .short），不再把刚做好的 DIY 显示成「今天」。
                     DateFormatters.relativeTimeSpanShort(record.timestamp, System.currentTimeMillis()),

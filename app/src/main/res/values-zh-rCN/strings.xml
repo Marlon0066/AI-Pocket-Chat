@@ -24,7 +24,7 @@
     <string name="profile_stat_friends_unit">位</string>
     <string name="profile_stat_memories_label">共同回忆</string>
     <string name="profile_stat_memories_unit">段</string>
-    <string name="profile_settings_entry_preview">个性化 · API · 聊天 · 记忆 · 语音 · 数据</string>
+    <string name="profile_settings_entry_preview">AI 服务 · 外观 · 聊天 · 记忆 · 系统</string>
     <!-- 设置首屏分组卡片标题（P15·P0-3） -->
     <string name="settings_group_api">API 与模型</string>
     <string name="settings_group_personalize">个性化</string>
@@ -1401,7 +1401,12 @@
 	<string name="diary_stats_count">已发布</string>
 	<string name="diary_stats_chars">总字数</string>
 	<string name="diary_stats_moods">心情分布</string>
+	<string name="diary_stats_heatmap_title">近 30 天心情色块</string>
 	<string name="diary_stats_none">还没有已发布的日记</string>
+	<string name="diary_compose_word_count">%1$d 字</string>
+	<string name="diary_compose_mood_pick">心情</string>
+	<string name="diary_exchange_kicker_sealed">今日交换信匣 · 待拆</string>
+	<string name="diary_exchange_kicker_need_write">今日交换信匣</string>
 	<!-- R5 月度回顾（提示词 + UI）。 -->
 	<string name="diary_review_intro">你是「%1$s」的日记助手。请根据下面这个月（%2$s）的日记摘录，为 TA 写一篇月度回顾。</string>
 	<string name="diary_review_req_letter">- 信式口吻，用第二人称「你」对 TA 说话，温柔、不评判</string>
@@ -3027,11 +3032,11 @@
 	<string name="char_world_join_title">加入世界</string>
 	<string name="char_world_join_sub_off">TA 会住进云野镇，有自己的生活</string>
 	<string name="char_world_join_sub_on">TA 已经是镇上的一员了</string>
-	<string name="char_world_join_sub_wb">TA 挂着世界书，二选一</string>
+	<string name="char_world_join_sub_wb">开启后将摘除当前世界观并住进云野镇</string>
 	<string name="char_world_join_sub_native">土生土长的原住民，生来就在世界里</string>
 	<string name="char_world_foot_off">加入后 TA 会出现在世界地图上、认识别的角色、有自己的日程和故事。与「世界书」二选一。</string>
 	<string name="char_world_foot_on">关掉即离开世界：会成为一件世界事件，TA 和大家的关系会休眠，重新加入时恢复。</string>
-	<string name="char_world_foot_wb">想让 TA 进世界？世界书与世界二选一——或者新建一个角色，重新选一次。</string>
+	<string name="char_world_foot_wb">开启即可一键摘除世界书并加入世界（世界书本身与词条不会删除，随时可切回）。</string>
 	<string name="char_world_foot_native">原住民角色一直住在世界里，不能离开，也不能挂世界书。</string>
 	<string name="char_world_foot_create">保存后 TA 就会住进云野镇。与「世界书」二选一。</string>
 	<string name="char_world_addr_title">住在哪儿</string>
@@ -3042,6 +3047,9 @@
 	<string name="char_world_leave_body">离开会成为一件世界事件，镇上的朋友会记得 TA。TA 和大家的关系会安静休眠——将来重新加入时原样恢复。</string>
 	<string name="char_world_leave_confirm">让 TA 离开</string>
 	<string name="char_world_leave_cancel">再想想</string>
+	<string name="char_world_switch_join_title">加入世界并摘除世界观？</string>
+	<string name="char_world_switch_join_body">加入云野镇世界后，会自动解除该角色当前绑定的世界书（书本身与词条不会删除，随时可切回）。</string>
+	<string name="char_world_switch_join_confirm">摘除并加入世界</string>
 	<string name="char_world_city_sheet_title">TA 住在哪儿</string>
 	<string name="char_world_city_sheet_sub">默认和你同城。搬去别的城市也可以——搬家是件大事，会成为一件世界事件。</string>
 	<string name="char_world_city_tag_home">和你同城 · 默认</string>
@@ -3050,8 +3058,19 @@
 	<string name="char_world_move_body">TA 会离开%1$s、在%2$s安顿下来。之后见 TA 得跑一趟远门——异地也随时能在聊天页说话。</string>
 	<string name="char_world_move_confirm">搬</string>
 	<string name="char_world_move_cancel">算了</string>
-	<string name="wb_binding_world_locked">已加入世界 · 与世界书二选一</string>
+	<string name="wb_binding_world_locked">当前在世界里 · 点一下选书并离开世界</string>
 	<string name="wb_binding_native_locked">原住民角色 · 不可绑定</string>
+	<string name="wb_binding_switch_leave_title">换用世界观并离开世界？</string>
+	<string name="wb_binding_switch_leave_body">挂上「%1$s」后，TA 会离开云野镇世界（已有关系与共同经历会妥善休眠，日后回到世界自动恢复）。</string>
+	<string name="wb_binding_switch_leave_confirm">离开世界并换用</string>
+	<string name="wb_binding_create_sub_selected">保存角色时自动挂载</string>
+	<string name="wb_characters_tag_in_world">在世界里</string>
+	<string name="wb_characters_tag_native">世界原住民</string>
+	<string name="wb_characters_sub_in_world">勾选将离开世界并启用本书</string>
+	<string name="wb_characters_sub_native">常驻世界 · 不可绑定世界书</string>
+	<string name="wb_characters_switch_title">绑定本书并离开世界？</string>
+	<string name="wb_characters_switch_body">「%1$s」当前住在云野镇世界里。绑定「%2$s」后，TA 会离开世界并启用本书设定。</string>
+	<string name="wb_characters_switch_confirm">离开世界并绑定</string>
 	<!-- 世界系统 W13 设置（图纸 §4.3/§4.4·zh 逐字锁死） -->
 	<string name="settings_group_world">世界</string>
 	<string name="world_settings_title">世界设置</string>
@@ -3821,4 +3840,175 @@
 	<string name="clog_reader_jump_bottom">跳到最后</string>
 	<string name="clog_reply_reasoning">这一轮模型思考了 %1$s tk（只记了用量，没记思考原文）。</string>
 	<string name="clog_reply_empty">（无内容）</string>
+
+	<!-- 设置全面重构（四卷） -->
+	<string name="settings_slider_default_mark">默认</string>
+	<string name="settings_range_min">最少</string>
+	<string name="settings_range_max">最多</string>
+
+	<string name="settings_hub_group_chat">聊天</string>
+	<string name="settings_hub_group_memory">记忆</string>
+	<string name="settings_hub_group_life">TA 们的生活</string>
+	<string name="settings_hub_group_writing">TA 写的东西</string>
+	<string name="settings_hub_group_system">系统</string>
+
+	<string name="settings_hub_ai_service">AI 服务</string>
+	<string name="settings_hub_voice">语音</string>
+	<string name="settings_hub_schedule">日程与来往</string>
+	<string name="settings_hub_pet">宠物</string>
+	<string name="settings_hub_wallet">钱包与礼物</string>
+	<string name="settings_hub_advanced">高级</string>
+	<string name="settings_hub_advanced_subtitle">提示词、内容过滤、日志，给想自己动手调的人</string>
+	<string name="settings_hub_search_results">搜索结果</string>
+	<string name="settings_hub_search_matched">匹配：%1$s</string>
+
+	<string name="settings_hub_val_reply">等 %1$s 秒 · %2$d–%3$d 条</string>
+	<string name="settings_hub_val_stickers_on">角色会发</string>
+	<string name="settings_hub_val_stickers_off">角色不发</string>
+	<string name="settings_hub_val_memory_turns">记住近 %1$d 轮</string>
+	<string name="settings_hub_val_worldbook_count">%1$d 本启用</string>
+	<string name="settings_hub_val_worldbook_none">未启用</string>
+	<string name="settings_hub_val_schedule_with_cross">已开启 · %1$s</string>
+	<string name="settings_hub_val_diary_daily">每天 %1$s</string>
+	<string name="settings_hub_val_diary_off">不自动写</string>
+	<string name="settings_hub_val_moment_freq">每人每天 %1$d 条</string>
+	<string name="settings_hub_val_moment_off">不自动发</string>
+	<string name="settings_hub_val_story_temp">创造力 %1$s</string>
+	<string name="settings_hub_val_bg_ready">已设好</string>
+	<string name="settings_hub_val_bg_not_ready">未设好</string>
+	<string name="settings_hub_val_backup_last">上次 %1$s</string>
+	<string name="settings_hub_val_backup_pending">等待首次备份</string>
+	<string name="settings_hub_val_narrative_plain">平淡</string>
+	<string name="settings_hub_val_narrative_normal">正常</string>
+	<string name="settings_hub_val_narrative_detailed">细腻</string>
+	<string name="settings_hub_val_narrative_custom">自定义</string>
+	<string name="settings_hub_val_notif_count">%1$d 类开着</string>
+
+	<string-array name="settings_kw_ai_service">
+		<item>API</item><item>模型</item><item>密钥</item><item>服务商</item><item>各功能用哪个</item><item>省钱模式</item><item>扫码导入</item>
+	</string-array>
+	<string-array name="settings_kw_appearance">
+		<item>主题</item><item>深色</item><item>浅色</item><item>界面风格</item><item>暖陶</item><item>琉璃</item><item>玻璃质感</item><item>底栏透明度</item>
+	</string-array>
+	<string-array name="settings_kw_reply">
+		<item>温度</item><item>创造力</item><item>等待时间</item><item>回复条数</item><item>短句口吻</item><item>情绪动画</item>
+	</string-array>
+	<string-array name="settings_kw_voice">
+		<item>TTS</item><item>语音服务</item><item>语音通话</item><item>打断灵敏度</item><item>语音条</item><item>音色</item>
+	</string-array>
+	<string-array name="settings_kw_offline">
+		<item>约会</item><item>邀约</item><item>叙事风格</item><item>余温消息</item><item>柔和粒子</item><item>沉浸输入</item>
+	</string-array>
+	<string-array name="settings_kw_stickers">
+		<item>表情</item><item>斗图</item><item>GIF</item><item>自定义表情</item>
+	</string-array>
+	<string-array name="settings_kw_memory">
+		<item>摘要</item><item>短期记忆</item><item>长期记忆</item><item>向量</item><item>回忆灵敏度</item><item>见面记忆</item><item>渐进压缩</item>
+	</string-array>
+	<string-array name="settings_kw_worldbooks">
+		<item>世界书</item><item>触发设置</item><item>扫描深度</item><item>字数预算</item><item>设定联动</item>
+	</string-array>
+	<string-array name="settings_kw_schedule">
+		<item>作息</item><item>每日日程</item><item>跨角色</item><item>一起做事</item>
+	</string-array>
+	<string-array name="settings_kw_growth">
+		<item>关系</item><item>好感</item><item>兴趣淡忘</item><item>自动推进</item><item>成长分析</item>
+	</string-array>
+	<string-array name="settings_kw_pet">
+		<item>宠物日记</item><item>领养</item><item>蛋巢</item><item>喂食</item>
+	</string-array>
+	<string-array name="settings_kw_wallet">
+		<item>货币</item><item>金币</item><item>红包</item><item>主动送礼</item><item>发薪</item>
+	</string-array>
+	<string-array name="settings_kw_world">
+		<item>鲜活度</item><item>时区</item><item>恋爱</item><item>新居民</item>
+	</string-array>
+	<string-array name="settings_kw_diary">
+		<item>自动生成</item><item>交换日记</item><item>写作规则</item><item>评论</item>
+	</string-array>
+	<string-array name="settings_kw_moments">
+		<item>动态</item><item>自动发帖</item><item>自动点赞</item><item>评论延迟</item>
+	</string-array>
+	<string-array name="settings_kw_story">
+		<item>小说</item><item>文字忌口</item><item>场面节拍</item><item>口味画像</item><item>创造力</item>
+	</string-array>
+	<string-array name="settings_kw_notifications">
+		<item>免打扰</item><item>深夜不打扰</item><item>提醒</item><item>红包过期</item><item>关系里程碑</item><item>经济动态</item>
+	</string-array>
+	<string-array name="settings_kw_calendar">
+		<item>系统日历</item><item>日程提醒</item><item>操作确认</item>
+	</string-array>
+	<string-array name="settings_kw_background">
+		<item>电池优化</item><item>自启动</item><item>保活</item><item>小米</item><item>HyperOS</item>
+	</string-array>
+	<string-array name="settings_kw_backup">
+		<item>导出</item><item>导入</item><item>恢复</item><item>自动备份</item><item>图片和语音</item>
+	</string-array>
+	<string-array name="settings_kw_language">
+		<item>中文</item><item>English</item><item>多语言</item>
+	</string-array>
+	<string-array name="settings_kw_advanced">
+		<item>提示词模块</item><item>记忆提示词</item><item>内容过滤</item><item>上下文日志</item><item>性能采集</item><item>深层记忆</item>
+	</string-array>
+	<string-array name="settings_kw_about">
+		<item>版本</item><item>协议</item><item>许可</item><item>致谢</item>
+	</string-array>
+
+	<string name="settings_adv_info">这里给想自己动手调的人。拿不准的先别改；提示词与过滤页随时可以恢复默认。</string>
+	<string name="settings_adv_group_prompts">提示词</string>
+	<string name="settings_adv_group_reply">回复处理</string>
+	<string name="settings_adv_group_diagnostics">诊断</string>
+	<string name="settings_adv_prompt_modules_sub">增删改发给 AI 的提示词分段</string>
+	<string name="settings_adv_memory_prompts_title">记忆提示词</string>
+	<string name="settings_adv_memory_prompts_sub">自定义记忆提取与注入的原文模板</string>
+	<string name="settings_adv_content_filter_sub">按规则清理或替换 AI 回复里的内容</string>
+	<string name="settings_adv_context_log_sub">查看每轮实际发给 AI 的内容和回复</string>
+	<string name="settings_adv_perf_sub">记录本地运行耗时，方便排查卡顿</string>
+
+	<string name="settings_voice_service_row">语音服务</string>
+	<string name="settings_voice_service_sub">选择系统语音或云端语音服务，设置默认音色</string>
+	<string name="settings_wb_trigger_row_sub">扫描深度、字数预算和联动触发规则</string>
+	<string name="settings_api_delete_confirm_title">删除这项 AI 配置？</string>
+	<string name="settings_api_delete_confirm_body">确定删除「%1$s」？这台设备上保存的密钥和配置都会一起移除。</string>
+	<string name="settings_api_missing_fields">还差这些必填项：%1$s</string>
+	<string name="settings_schedule_master_sub">开启后，角色会按自己的作息生活并在合适时候找你</string>
+	<string name="settings_schedule_disabled_reason">先开启日程，才能调整角色之间的来往频率</string>
+	<string name="settings_growth_master_title">角色成长</string>
+	<string name="settings_growth_master_sub">开启后，角色会随相处慢慢发展兴趣、记忆和亲密关系</string>
+	<string name="settings_growth_disabled_reason">先开启上方的角色成长，才能调整这些参数</string>
+	<string name="settings_growth_notif_link">关系里程碑通知</string>
+	<string name="settings_growth_notif_link_sub">前往「通知」设置是否提醒</string>
+	<string name="settings_pet_master_title">宠物系统</string>
+	<string name="settings_pet_master_sub">开启后，可以和角色一起领养并照顾虚拟宠物</string>
+	<string name="settings_pet_disabled_reason">先开启上方的宠物系统，才能自动写宠物日记</string>
+	<string name="settings_wallet_master_title">货币系统</string>
+	<string name="settings_wallet_master_sub">开启后，可以使用虚拟货币送礼物、发红包</string>
+	<string name="settings_wallet_disabled_reason">先开启上方的货币系统，角色才能主动送礼</string>
+	<string name="settings_wallet_notif_link">钱包与红包通知</string>
+	<string name="settings_wallet_notif_link_sub">前往「通知」管理经济动态和红包过期提醒</string>
+	<string name="settings_world_new_resident_sub">会创建一个新的角色，搬进你的世界里生活</string>
+	<string name="settings_story_reset_defaults">回到出厂默认</string>
+	<string name="settings_story_reset_confirm_title">回到出厂默认？</string>
+	<string name="settings_story_reset_confirm_body">会把全局的文字忌口、场面节拍和口味画像清空回出厂默认；单本书里单独改过的不受影响。</string>
+	<string name="notif_character_msg_title">角色消息通知</string>
+	<string name="notif_character_msg_sub">总控主动消息、离开时的回复、见面余温和世界动态</string>
+	<string name="notif_disabled_reason">先开启上方的「角色消息通知」</string>
+	<string name="notif_group_other">其他通知</string>
+	<string name="notif_red_packet_expiring_title">红包快过期提醒</string>
+	<string name="notif_red_packet_expiring_sub">未领的红包快过期前发提醒</string>
+	<string name="notif_meeting_reminder_title">约见面到点提醒</string>
+	<string name="notif_meeting_reminder_sub">约好的线下见面到点时发提醒</string>
+	<string name="notif_story_finished_title">故事写好或失败提醒</string>
+	<string name="notif_story_finished_sub">后台写完章节或生成失败时发提醒</string>
+	<string name="notif_moment_interaction_title">朋友圈评论和点赞</string>
+	<string name="notif_moment_interaction_sub">角色评论或点赞你的朋友圈时发提醒</string>
+	<string name="notif_where_else_info">宠物照顾提醒在宠物页里管理，故事更新提醒跟随每本书自己的设置。</string>
+	<string name="backup_include_media_v2">包含图片、语音和头像</string>
+	<string name="settings_cal_disabled_reason">先开启上方的「日历集成」</string>
+	<string name="settings_reply_wait_start">快一点回</string>
+	<string name="settings_reply_wait_end">多等一会儿</string>
+	<string name="settings_reply_temp_start">更稳重</string>
+	<string name="settings_reply_temp_end">更有想象力</string>
+	<string name="settings_voice_interrupt_start">不易打断</string>
+	<string name="settings_voice_interrupt_end">一说话就停</string>
 </resources>

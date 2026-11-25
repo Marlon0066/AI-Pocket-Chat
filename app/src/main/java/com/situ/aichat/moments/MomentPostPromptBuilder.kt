@@ -85,6 +85,8 @@ object MomentPostPromptBuilder {
         userName: String,
         /** 卷四 §4.5 ②：`IntentExitRenderer.momentBlock` 产出的两行（空 ⇒ 不插任何行，提示词逐字节同前）。 */
         intentBlock: String = "",
+        /** Q2·2A：角色生效的世界书归并段（null/空 ⇒ 逐字节不变）。 */
+        worldInfoSection: String? = null,
     ): String {
         val wordCountRange = resolveOverride(overrides, MomentsPromptField.WORD_COUNT_RANGE, DEFAULT_WORD_COUNT_RANGE)
         val toneStyle = resolveOverride(overrides, MomentsPromptField.TONE_STYLE, "")
@@ -106,6 +108,11 @@ object MomentPostPromptBuilder {
         if (personalityTraits.isNotEmpty()) parts.add(strings.traits.format(personalityTraits.joinToString(", ")))
 
         parts.add("")
+        if (!worldInfoSection.isNullOrBlank()) {
+            parts.add("## 世界观设定")
+            parts.add(worldInfoSection)
+            parts.add("")
+        }
         if (character.memorySummary.isNotEmpty()) {
             parts.add(strings.memoriesHeader)
             parts.add(character.memorySummary)

@@ -369,7 +369,7 @@ object PromptBuilder {
             } else {
                 emptyMap()
             }
-        fun resolveWorld(text: String) = applyPromptMacros(text, worldMacros)
+        fun resolveWorld(text: String) = PromptMacros.resolveWorldMacros(text, worldMacros)
 
         // 1. 系统提示词（前置区模块）+ 收集后置区模块条目（发射顺序在第 4/5 步决定）
         val recentCharacterLines = com.situ.aichat.prompt.growth.AttentionJudge.recentCharacterLines(filteredMessages, now.toEpochMilli()) // 卷三 D2
@@ -534,8 +534,10 @@ object PromptBuilder {
         }
 
         // WB4 世界书后置桶（position 2/3 归并·近因注入，守卫段之前）。
-        activeWorldInfo?.suffix?.takeIf { it.isNotBlank() }?.let {
-            chatMessages.add(ChatMessageDto(role = ROLE_SYSTEM, content = resolveWorld(it)))
+        activeWorldInfo?.suffix?.takeIf { it.isNotBlank() }?.let { rawSuffix ->
+            val resolvedSuffix = resolveWorld(rawSuffix)
+            chatMessages.add(ChatMessageDto(role = ROLE_SYSTEM, content = resolvedSuffix))
+            segmentSink?.add(worldInfoSegment("世界书（后置）", resolvedSuffix, ContextSegment.POSITION_SUFFIX))
         }
 
         // 5. 模式末尾强约束（统一用 P1-1 兜底后的 isCurrentlyInOfflineMode，防脏 flag 下构造错乱预设）。
@@ -831,6 +833,16 @@ object PromptBuilder {
         ContextSegment(
             name = module.name,
             systemModuleType = module.systemModuleType?.rawValue,
+            charCount = content.length,
+            estimatedTokens = TokenEstimator.estimate(content),
+            position = position,
+            fingerprint = ContextSegment.fingerprintOf(content),
+        )
+
+    internal fun worldInfoSegment(name: String, content: String, position: String): ContextSegment =
+        ContextSegment(
+            name = name,
+            systemModuleType = null,
             charCount = content.length,
             estimatedTokens = TokenEstimator.estimate(content),
             position = position,

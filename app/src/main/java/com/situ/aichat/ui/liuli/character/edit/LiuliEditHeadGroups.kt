@@ -15,8 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.PhotoCamera
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -154,7 +154,7 @@ internal fun LiuliEditWallpaperGroup(
                     contentAlignment = Alignment.Center,
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(Icons.Filled.AddPhotoAlternate, contentDescription = null, tint = colors.accent.text, modifier = Modifier.size(20.dp))
+                        Icon(AppActionIcons.AddPhoto, contentDescription = null, tint = colors.accent.text, modifier = Modifier.size(20.dp))
                         Text(stringResource(R.string.char_wallpaper_add), style = AppTypography.body, color = colors.accent.text)
                     }
                 }

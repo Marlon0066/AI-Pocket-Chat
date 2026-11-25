@@ -13,13 +13,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.FileDownload
-import androidx.compose.material.icons.filled.FormatQuote
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -211,11 +206,11 @@ private fun LiuliMenuReactionRow(
 }
 
 private fun menuActionIcon(action: ImmersiveMenuAction) = when (action) {
-    ImmersiveMenuAction.COPY -> Icons.Filled.ContentCopy
-    ImmersiveMenuAction.SAVE_IMAGE -> Icons.Filled.FileDownload
-    ImmersiveMenuAction.QUOTE -> Icons.Filled.FormatQuote
-    ImmersiveMenuAction.REGENERATE -> Icons.Filled.Refresh
-    ImmersiveMenuAction.DELETE -> Icons.Filled.Delete
+    ImmersiveMenuAction.COPY -> AppActionIcons.Copy
+    ImmersiveMenuAction.SAVE_IMAGE -> AppActionIcons.Download
+    ImmersiveMenuAction.QUOTE -> AppActionIcons.Quote
+    ImmersiveMenuAction.REGENERATE -> AppActionIcons.Refresh
+    ImmersiveMenuAction.DELETE -> AppActionIcons.Delete
 }
 
 /**

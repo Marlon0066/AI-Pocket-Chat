@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
@@ -30,6 +28,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.situ.aichat.R
 import com.situ.aichat.ui.components.LocalAppHaptics
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.liuli.page.liuliFootprint
 import com.situ.aichat.ui.liuli.glass.liuliWindowGlass
@@ -145,7 +144,7 @@ internal fun LiuliCloseDot(onClose: () -> Unit, modifier: Modifier = Modifier) {
                 .background(onGlass.primary.copy(alpha = CLOSE_DOT_ALPHA)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Default.Close, contentDescription = label, tint = onGlass.secondary, modifier = Modifier.size(CLOSE_ICON))
+            Icon(AppActionIcons.Close, contentDescription = label, tint = onGlass.secondary, modifier = Modifier.size(CLOSE_ICON))
         }
     }
 }

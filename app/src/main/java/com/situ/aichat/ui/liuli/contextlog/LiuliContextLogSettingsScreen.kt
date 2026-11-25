@@ -16,8 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,6 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.diagnostics.perf.PerfSettingsSites
 import com.situ.aichat.ui.components.contentMaxWidth
 import com.situ.aichat.diagnostics.perf.rememberSettingsWriteRecorder
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.liuli.designsystem.LiuliDialog
@@ -169,7 +168,7 @@ internal fun LiuliContextLogSettingsContent(
                         horizontalArrangement = Arrangement.spacedBy(LOCK_GAP),
                     ) {
                         Icon(
-                            Icons.Filled.Lock,
+                            AppActionIcons.Lock,
                             contentDescription = null,
                             tint = colors.text.tertiary,
                             modifier = Modifier.width(LOCK_ICON),

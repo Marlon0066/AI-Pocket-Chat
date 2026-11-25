@@ -16,13 +16,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,6 +40,7 @@ import com.situ.aichat.R
 import com.situ.aichat.data.model.AppSettings
 import com.situ.aichat.ui.components.SettingsSwitchRow
 import com.situ.aichat.ui.components.contentMaxWidth
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppRadio
 import com.situ.aichat.ui.designsystem.AppSheet
 import com.situ.aichat.ui.designsystem.AppTheme
@@ -135,32 +133,6 @@ fun WorldSettingsScreen(
             }
             WorldSectionFoot(stringResource(R.string.world_vividness_foot))
 
-            // 世界通知节。
-            WorldSettingsGroup(stringResource(R.string.world_notification_section)) {
-                WorldRadioRow(
-                    name = stringResource(R.string.world_notification_silent_name),
-                    tag = null,
-                    desc = stringResource(R.string.world_notification_silent_desc),
-                    selected = state.notificationTier == AppSettings.WORLD_NOTIFICATION_SILENT,
-                    onSelect = { viewModel.setNotification(AppSettings.WORLD_NOTIFICATION_SILENT) },
-                )
-                WorldRadioRow(
-                    name = stringResource(R.string.world_notification_gentle_name),
-                    tag = stringResource(R.string.world_notification_default_tag),
-                    desc = stringResource(R.string.world_notification_gentle_desc),
-                    selected = state.notificationTier == AppSettings.WORLD_NOTIFICATION_GENTLE,
-                    onSelect = { viewModel.setNotification(AppSettings.WORLD_NOTIFICATION_GENTLE) },
-                )
-                WorldRadioRow(
-                    name = stringResource(R.string.world_notification_all_name),
-                    tag = null,
-                    desc = stringResource(R.string.world_notification_all_desc),
-                    selected = state.notificationTier == AppSettings.WORLD_NOTIFICATION_ALL,
-                    onSelect = { viewModel.setNotification(AppSettings.WORLD_NOTIFICATION_ALL) },
-                )
-            }
-            WorldSectionFoot(stringResource(R.string.world_notification_foot))
-
             // 我的时区节。
             WorldSettingsGroup(stringResource(R.string.world_tz_section)) {
                 val tzValue = if (state.timezoneId == null) {
@@ -179,13 +151,13 @@ fun WorldSettingsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Icon(Icons.Filled.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                    Icon(AppActionIcons.Clock, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
                     Column(Modifier.weight(1f)) {
                         Text(stringResource(R.string.world_tz_row_title), style = MaterialTheme.typography.bodyLarge)
                         Text(stringResource(R.string.world_tz_row_sub), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Text(tzValue, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                    Icon(AppActionIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                 }
             }
 
@@ -221,12 +193,13 @@ fun WorldSettingsScreen(
                     Column(Modifier.weight(1f)) {
                         Text(stringResource(R.string.world_resident_entry_title), style = MaterialTheme.typography.bodyLarge)
                         Text(
-                            stringResource(R.string.world_resident_entry_sub, state.residentCount, state.residentCap),
+                            stringResource(R.string.settings_world_new_resident_sub) + " · " +
+                                stringResource(R.string.world_resident_entry_sub, state.residentCount, state.residentCap),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                    Icon(AppActionIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                 }
             }
             WorldSectionFoot(stringResource(R.string.world_resident_foot))

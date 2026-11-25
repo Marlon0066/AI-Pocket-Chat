@@ -1,26 +1,32 @@
 package com.situ.aichat.ui.diary
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,19 +38,24 @@ import com.situ.aichat.R
 import com.situ.aichat.ui.chat.VoiceRecordingOverlay
 import com.situ.aichat.ui.components.LocalAppHaptics
 import com.situ.aichat.ui.components.rememberReduceMotion
+import com.situ.aichat.ui.designsystem.AppActionIcons
+import com.situ.aichat.ui.designsystem.AppButton
+import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppDialogTone
 import com.situ.aichat.ui.designsystem.AppSnackbarHost
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTopBarAction
+import com.situ.aichat.ui.designsystem.BarScaffold
 import com.situ.aichat.ui.designsystem.grainSurface
 
 /**
- * 日记撰写 / 编辑界面（U1 重设计·契约 [FABLE5_DIARY_COMPOSE_REDESIGN_PROPOSAL.md]）：从「表单」改为「一页纸」——
- * 票据日期头 + 心情色回声（M1）/ 无边框纸面书写区 + 每日引导语（M2/M3）/ 心情微提示 + lively 轻弹（M4/刀②）/
- * 「让 TA 帮你起个头」协作 + 生成 breathing（M5/刀③）/ 底部陶土「记下」+ 发布落定仪式（M6/M7·刀④）。
- * 子组件见 [ComposeDiaryComponents]。功能一件不少，VM 行为零改，仅换呈现。
+ * 日记撰写 / 编辑界面（方向 C · 沉浸式书信画报写作体验）：
+ * - 顶栏：左侧 `✕` + 中央安静实时字数 + 右侧「先存着」草稿与主色「记下」胶囊；
+ * - 纸面：全幅顶部水彩心情晕染日期头 + 可点击心情邮票（点击折叠/展开心情行）+ 细密点线 + 宁静无格棉纸书写区；
+ * - 底部：键盘上方悬浮胶囊写作坞（加图+张数标 / 说一段 / AI 帮写 / 心情抽屉 / 可见性）。
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ComposeDiaryScreen(
     onClose: () -> Unit,
@@ -53,7 +64,6 @@ fun ComposeDiaryScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val materialChips by viewModel.materialChips.collectAsStateWithLifecycle()
-    // J6 说一段：录音三态（录/电平/计时）+ 取消态 + 转写中。
     val voiceRecording by viewModel.voice.voiceRecording.collectAsStateWithLifecycle()
     val voiceLevel by viewModel.voice.voiceLevel.collectAsStateWithLifecycle()
     val voiceDurationMs by viewModel.voice.voiceDurationMs.collectAsStateWithLifecycle()
@@ -65,34 +75,75 @@ fun ComposeDiaryScreen(
     val page = rememberComposeDiaryPageState(viewModel, onClose, onNavigateToApiConfig)
     val prompt = rememberDiaryDailyPrompt()
     val wash = rememberComposeDiaryWash(state.moodEmoji, fallback = colors.surface.base)
+    val scrollState = rememberScrollState()
+    val barLifted by remember { derivedStateOf { scrollState.value > 0 } }
+    var moodTrayExpanded by rememberSaveable { mutableStateOf(state.moodEmoji == null && state.content.isEmpty()) }
 
     Scaffold(
         containerColor = colors.surface.base,
         snackbarHost = { AppSnackbarHost(page.snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = {},
-                navigationIcon = {
-                    IconButton(onClick = { page.attemptClose() }) {
-                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_cancel), tint = colors.accent.text)
+            BarScaffold(lifted = barLifted) {
+                AppTopBarAction(
+                    icon = AppActionIcons.Close,
+                    contentDescription = stringResource(R.string.action_cancel),
+                    onClick = { page.attemptClose() },
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(start = AppSpacing.gutterForRoundButton),
+                )
+                if (state.content.isNotBlank()) {
+                    Text(
+                        stringResource(R.string.diary_compose_word_count, state.content.length),
+                        style = AppTheme.typography.captionNumeric,
+                        color = colors.text.tertiary,
+                        modifier = Modifier.align(Alignment.Center),
+                    )
+                }
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = AppSpacing.screenGutter),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    if (state.canSave) {
+                        Text(
+                            stringResource(R.string.diary_compose_save_draft_short),
+                            style = AppTheme.typography.secondary,
+                            color = colors.text.secondary,
+                            modifier = Modifier
+                                .clip(AppTheme.shapes.full)
+                                .clickable(onClickLabel = stringResource(R.string.diary_compose_save_draft_short)) {
+                                    page.saveDraft()
+                                }
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                        )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface.base),
-            )
+                    AppButton(
+                        onClick = { page.record(haptics) },
+                        style = AppButtonStyle.Primary,
+                        enabled = state.canSave,
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 7.dp),
+                    ) {
+                        Text(stringResource(R.string.diary_compose_record))
+                    }
+                }
+            }
         },
         bottomBar = {
-            ComposeActionBar(
-                canSave = state.canSave,
-                hasContent = state.hasContent,
+            ComposeFloatingWritingDock(
                 canAddImage = state.canAddImage,
+                imageCount = state.images.size,
                 isGenerating = state.isGenerating,
                 aiAssistAvailable = !state.isExchangeLetter,
+                moodEmoji = state.moodEmoji,
+                moodTrayExpanded = moodTrayExpanded,
                 visibility = state.visibility,
                 onAddImage = page::pickImages,
+                onToggleMoodTray = { moodTrayExpanded = !moodTrayExpanded },
                 onToggleVisibility = { page.toggleVisibility(state.visibility) },
                 onAiAssist = { page.showGuideSheet = true },
-                onSaveDraft = page::saveDraft,
-                onRecord = { page.record(haptics) },
                 onStartVoice = { viewModel.voice.startVoice() },
                 onVoiceDrag = { viewModel.voice.updateVoiceDrag(it) },
                 onFinishVoice = { viewModel.voice.finishVoice() },
@@ -103,40 +154,65 @@ fun ComposeDiaryScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    // J2 grain 纸感（顺序锁死：background→grain→scroll·此页此前缺席全 App 质感单源）。
                     .background(colors.surface.base)
                     .grainSurface()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp)
-                    .padding(top = 4.dp, bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(18.dp),
+                    .verticalScroll(scrollState)
+                    .padding(bottom = 28.dp),
             ) {
-                ComposeDateHead(timestamp = state.timestamp, moodEmoji = state.moodEmoji, wash = wash, scale = page.headScale.value, reduceMotion = reduceMotion, moodSelectTick = page.moodSelectTick)
-                TearLine()
-                // 🔵-1：用户点 MoodPill 才 tick++（→邮票盖章+触觉）；load/恢复/AI 回填走 VM 直改 state·tick 不动·静置。
-                MoodRow(selectedEmoji = state.moodEmoji, reduceMotion = reduceMotion, onToggle = page::toggleMood)
-                // J5「今天的素材」：仅空态且有素材时现（放 MoodRow 与 DiaryPaper 之间）；点击置入起笔句（句尾带换行·走 J1 镜像）。
-                if (state.showsMaterialChips(materialChips)) {
-                    MaterialChipsRow(chips = materialChips, onPick = page::pickMaterial)
-                }
-                DiaryPaper(
-                    content = state.content,
-                    prompt = prompt,
-                    isGenerating = state.isGenerating,
+                ComposeDateHead(
+                    timestamp = state.timestamp,
+                    moodEmoji = state.moodEmoji,
+                    wash = wash,
+                    scale = page.headScale.value,
                     reduceMotion = reduceMotion,
-                    aiAssistAvailable = !state.isExchangeLetter,
-                    onContentChange = viewModel::setContent,
-                    onAiStart = { page.showGuideSheet = true },
+                    moodSelectTick = page.moodSelectTick,
+                    onMoodClick = { moodTrayExpanded = !moodTrayExpanded },
+                    fullBleed = true,
                 )
-                // J6 转写中：纸面下方一行「正在落笔…」（松手落笔·转写文追加进正文）。
-                if (isTranscribing) {
-                    DiaryTranscribingPill(reduceMotion = reduceMotion)
-                }
-                if (state.images.isNotEmpty()) {
-                    ImageThumbs(images = state.images, onRemove = viewModel::removeImage)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = AppSpacing.screenGutter),
+                    verticalArrangement = Arrangement.spacedBy(18.dp),
+                ) {
+                    DiaryDottedDivider()
+                    AnimatedVisibility(
+                        visible = moodTrayExpanded,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically(),
+                    ) {
+                        MoodRow(
+                            selectedEmoji = state.moodEmoji,
+                            reduceMotion = reduceMotion,
+                            onToggle = { emoji, label ->
+                                page.toggleMood(emoji, label)
+                                if (state.moodEmoji != emoji) {
+                                    moodTrayExpanded = false
+                                }
+                            },
+                        )
+                    }
+                    if (state.showsMaterialChips(materialChips)) {
+                        MaterialChipsRow(chips = materialChips, onPick = page::pickMaterial)
+                    }
+                    DiaryPaper(
+                        content = state.content,
+                        prompt = prompt,
+                        isGenerating = state.isGenerating,
+                        reduceMotion = reduceMotion,
+                        aiAssistAvailable = !state.isExchangeLetter,
+                        onContentChange = viewModel::setContent,
+                        onAiStart = { page.showGuideSheet = true },
+                        showRules = false,
+                    )
+                    if (isTranscribing) {
+                        DiaryTranscribingPill(reduceMotion = reduceMotion)
+                    }
+                    if (state.images.isNotEmpty()) {
+                        ImageThumbs(images = state.images, onRemove = viewModel::removeImage)
+                    }
                 }
             }
-            // J6 录音浮层：按住录音时挂屏根·浮于动作栏上方（共享件 VoiceRecordingOverlay 零碰只消费）。
             if (voiceRecording) {
                 Box(
                     modifier = Modifier

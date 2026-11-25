@@ -10,6 +10,7 @@ import com.situ.aichat.data.local.entity.WorldBookEntryEntity
 import com.situ.aichat.data.worldbook.WorldBookRepository
 import com.situ.aichat.data.worldbook.decodeStringList
 import com.situ.aichat.data.worldbook.encodeStringList
+import com.situ.aichat.data.worldbook.isRegexKeywordForm
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -46,6 +47,10 @@ class WorldBookEntryEditViewModel @Inject constructor(
     var draft: WorldBookEntryEntity? by mutableStateOf(null)
         private set
 
+    /** 主 / 次关键词输入框尚未按回车的暂存文本——点右上角「保存」时自动收词入库，防忘按回车丢词。 */
+    var pendingPrimaryKeyInput: String by mutableStateOf("")
+    var pendingSecondaryKeyInput: String by mutableStateOf("")
+
     init {
         viewModelScope.launch {
             val loaded = entryUuid?.let { repository.getEntry(it) }
@@ -58,7 +63,11 @@ class WorldBookEntryEditViewModel @Inject constructor(
     }
 
     val isDirty: Boolean
-        get() = draft != null && draft != original
+        get() = draft != null && (
+            draft != original ||
+                pendingPrimaryKeyInput.isNotBlank() ||
+                pendingSecondaryKeyInput.isNotBlank()
+            )
 
     fun update(transform: (WorldBookEntryEntity) -> WorldBookEntryEntity) {
         draft = draft?.let(transform)
@@ -86,9 +95,15 @@ class WorldBookEntryEditViewModel @Inject constructor(
 
     fun secondaryKeys(entry: WorldBookEntryEntity): List<String> = decodeStringList(entry.secondaryKeysJson)
 
-    /** 加词：按中英文逗号、顿号切分，去空去重后并入。 */
+    /** 加词：`/regex/flags` 整条保留（防 `/\d{1,3}/i` 量词逗号被拆断）；普通词按中英文逗号、顿号切分去空去重。 */
     fun addKeys(raw: String, secondary: Boolean = false) = update { entry ->
-        val incoming = raw.split(',', '，', '、').map { it.trim() }.filter { it.isNotEmpty() }
+        val trimmed = raw.trim()
+        if (trimmed.isEmpty()) return@update entry
+        val incoming = if (isRegexKeywordForm(trimmed)) {
+            listOf(trimmed)
+        } else {
+            trimmed.split(',', '，', '、').map { it.trim() }.filter { it.isNotEmpty() }
+        }
         if (incoming.isEmpty()) return@update entry
         val current = if (secondary) secondaryKeys(entry) else keys(entry)
         val merged = (current + incoming).distinct()
@@ -106,6 +121,14 @@ class WorldBookEntryEditViewModel @Inject constructor(
     // MARK: - 保存 / 删除
 
     fun save(onSaved: () -> Unit) {
+        if (pendingPrimaryKeyInput.isNotBlank()) {
+            addKeys(pendingPrimaryKeyInput, secondary = false)
+            pendingPrimaryKeyInput = ""
+        }
+        if (pendingSecondaryKeyInput.isNotBlank()) {
+            addKeys(pendingSecondaryKeyInput, secondary = true)
+            pendingSecondaryKeyInput = ""
+        }
         val entry = draft ?: return
         viewModelScope.launch {
             repository.saveEntry(entry)

@@ -24,29 +24,21 @@ import com.situ.aichat.ui.liuli.page.LiuliLargeTitle
 import com.situ.aichat.ui.liuli.page.LiuliPage
 import com.situ.aichat.ui.liuli.page.LiuliPageGeometry
 import com.situ.aichat.ui.liuli.page.rememberLargeTitleCollapsed
-import com.situ.aichat.ui.settings.MemoryPromptsSettingsViewModel
 import com.situ.aichat.ui.settings.MemorySettingsViewModel
 
 /**
- * 记忆 hub（琉璃·图纸 2026-09-06 卷五 §4.1 屏 1）。与暖陶 [com.situ.aichat.ui.settings.MemoryHubScreen]
- * 同一副大脑：**两节各自订阅各自的 VM**（参数段 [MemorySettingsViewModel] / 提示词段
- * [MemoryPromptsSettingsViewModel]），一页上下堆叠，挂原路由 `memorySettings`。
+ * 琉璃 2.0 记忆设置页（设置全面重构卷二）：
+ * 聚焦日常记忆参数（含见面记忆）；提取与注入提示词模板已迁至「高级 → 记忆提示词」独立页（[LiuliMemoryPromptsScreen]）。
  */
 @Composable
 fun LiuliMemoryHubScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     memoryViewModel: MemorySettingsViewModel = hiltViewModel(),
-    promptsViewModel: MemoryPromptsSettingsViewModel = hiltViewModel(),
 ) {
     val settings by memoryViewModel.state.collectAsStateWithLifecycle()
-    val extraction by promptsViewModel.extraction.collectAsStateWithLifecycle()
-    val injection by promptsViewModel.injection.collectAsStateWithLifecycle()
-
     LiuliMemoryHubContent(
         settings = settings,
-        extraction = extraction,
-        injection = injection,
         memoryCallbacks = LiuliMemoryCallbacks(
             onSetShortTermLength = memoryViewModel::setShortTermMemoryLength,
             onSetAutoSummarizeInterval = memoryViewModel::setAutoSummarizeInterval,
@@ -55,26 +47,18 @@ fun LiuliMemoryHubScreen(
             onSetProgressive = memoryViewModel::setProgressiveCompressionEnabled,
             onSetStructuredInterval = memoryViewModel::setStructuredMemoryInterval,
             onSetVectorThreshold = memoryViewModel::setVectorSearchThreshold,
-        ),
-        promptCallbacks = LiuliMemoryPromptCallbacks(
-            onExtractionChange = promptsViewModel::onExtractionChange,
-            onInjectionChange = promptsViewModel::onInjectionChange,
-            onResetExtraction = promptsViewModel::resetExtraction,
-            onResetInjection = promptsViewModel::resetInjection,
+            onSetMeetingMemoryInjectCount = memoryViewModel::setMeetingMemoryInjectCount,
+            onSetMeetingMemoryMaxLength = memoryViewModel::setMeetingMemoryMaxLength,
         ),
         onBack = onBack,
         modifier = modifier,
     )
 }
 
-/** 记忆 hub 内容层（纯参数·可测）。两段的节序逐字继承暖陶：先参数四组，后提示词三组。 */
 @Composable
 internal fun LiuliMemoryHubContent(
     settings: AppSettings,
-    extraction: String,
-    injection: String,
     memoryCallbacks: LiuliMemoryCallbacks,
-    promptCallbacks: LiuliMemoryPromptCallbacks,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
@@ -100,7 +84,6 @@ internal fun LiuliMemoryHubContent(
                         .padding(horizontal = LiuliPageGeometry.gutter, vertical = LiuliPageGeometry.titleGap),
                 ) {
                     liuliMemoryParamGroups(settings, memoryCallbacks)
-                    liuliMemoryPromptGroups(extraction, injection, promptCallbacks)
                 }
             }
         }

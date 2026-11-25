@@ -19,9 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -50,6 +47,7 @@ import com.situ.aichat.R
 import com.situ.aichat.ui.components.CharacterAvatar
 import com.situ.aichat.ui.components.clickableScale
 import com.situ.aichat.ui.components.contentMaxWidth
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppFeatureIcons
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppTopBar
@@ -139,7 +137,7 @@ private fun ApiMissingBanner() {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Icon(Icons.Filled.Warning, contentDescription = null, tint = colors.status.onWarning, modifier = Modifier.size(16.dp))
+        Icon(AppActionIcons.Warning, contentDescription = null, tint = colors.status.onWarning, modifier = Modifier.size(16.dp))
         Text(
             stringResource(R.string.moment_api_missing),
             style = MaterialTheme.typography.bodySmall,
@@ -193,7 +191,7 @@ private fun CircleStrip(state: MomentsHubState, onClick: () -> Unit) {
                 Spacer(Modifier.width(6.dp))
             }
             Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                AppActionIcons.ChevronRight,
                 contentDescription = null,
                 tint = colors.text.tertiary,
             )

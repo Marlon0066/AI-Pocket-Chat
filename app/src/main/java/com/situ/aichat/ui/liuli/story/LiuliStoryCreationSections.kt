@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,6 +27,7 @@ import com.situ.aichat.story.StoryCreationCatalog
 import com.situ.aichat.story.StoryCreationLogic
 import com.situ.aichat.story.StoryRoleType
 import com.situ.aichat.ui.components.CharacterAvatar
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.liuli.designsystem.LiuliChip
@@ -194,7 +193,7 @@ internal fun LiuliCreationAdvancedGroup(form: StoryCreationForm, update: ((Story
     LiuliGroup {
         LiuliRowBase(onClick = { expanded = !expanded }, divider = false) {
             LiuliRowTitleColumn(stringResource(R.string.story_create_advanced), null, Modifier.weight(1f))
-            Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = c.text.tertiary, modifier = Modifier.size(STORY_CHEVRON))
+            Icon(AppActionIcons.ChevronDown, contentDescription = null, tint = c.text.tertiary, modifier = Modifier.size(STORY_CHEVRON))
         }
         if (expanded) {
             LiuliStoryTextEditRow(stringResource(R.string.story_field_world_title), form.worldSetting, onClick = { onEdit(StoryEditField.WORLD) }, divider = true)

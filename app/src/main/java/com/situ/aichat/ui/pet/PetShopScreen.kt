@@ -1,7 +1,7 @@
 package com.situ.aichat.ui.pet
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,17 +17,12 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.MonetizationOn
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,27 +32,39 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.situ.aichat.ui.designsystem.AppSegmentedControl
 import com.situ.aichat.pet.PetItem
 import com.situ.aichat.pet.PetItemCategory
 import com.situ.aichat.pet.PetItemKind
 import com.situ.aichat.pet.PetShopService
 import com.situ.aichat.pet.metadata
 import com.situ.aichat.ui.components.LocalAppHaptics
+import com.situ.aichat.ui.components.clickableScale
+import com.situ.aichat.ui.designsystem.AppActionIcons
+import com.situ.aichat.ui.designsystem.AppButton
+import com.situ.aichat.ui.designsystem.AppButtonStyle
+import com.situ.aichat.ui.designsystem.AppLoadingRing
+import com.situ.aichat.ui.designsystem.AppLoadingRingSize
+import com.situ.aichat.ui.designsystem.AppSegmentedControl
+import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppSheet
 import com.situ.aichat.ui.designsystem.AppSnackbarHost
 import com.situ.aichat.ui.designsystem.AppSpacing
+import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
+import com.situ.aichat.ui.designsystem.AppTypography
+import com.situ.aichat.ui.designsystem.appCardSurface
+import com.situ.aichat.ui.designsystem.grainSurface
 import com.situ.aichat.ui.gift.GiftColors
 import kotlinx.coroutines.launch
 
 /**
- * 宠物商店（1:1 iOS `PetShopView` 行为/状态，Material 3 原生重写非像素仿）：按物种过滤 → 零食/装扮分段 →
- * 2 列卡片网格（3 态：购买/已拥有/金币不足）→ 点卡弹确认底片 → [PetShopService.purchase] → snackbar。
+ * 宠物商店（💰 钱路 UI 壳·零业务逻辑改动）：按物种过滤 → 零食/装扮分段 →
+ * 2 列暖陶卡片网格（3 态：购买/已拥有/金币不足）→ 点卡弹确认底片 → [PetShopService.purchase] → snackbar。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,10 +84,11 @@ fun PetShopScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val appHaptics = LocalAppHaptics.current
+    val colors = AppTheme.colors
 
     Scaffold(
+        containerColor = colors.surface.base,
         topBar = {
-            // 顶栏正下方是恒定不动的分段控件（列表在它之下）→ 内容永不滚到栏下，恒静止（图纸 §11 D-2）。
             AppTopBar(title = "宠物商店", onBack = onClose, actions = { CoinPill(balance) })
         },
         snackbarHost = { AppSnackbarHost(snackbarHostState) },
@@ -88,7 +96,9 @@ fun PetShopScreen(
         Column(
             Modifier
                 .fillMaxSize()
-                .padding(padding),
+                .padding(padding)
+                .background(colors.surface.base)
+                .grainSurface(),
         ) {
             AppSegmentedControl(
                 options = PetItemCategory.entries,
@@ -103,7 +113,12 @@ fun PetShopScreen(
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = AppSpacing.screenGutter, end = AppSpacing.screenGutter, bottom = 32.dp),
+                contentPadding = PaddingValues(
+                    start = AppSpacing.screenGutter,
+                    end = AppSpacing.screenGutter,
+                    top = 4.dp,
+                    bottom = 32.dp,
+                ),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
@@ -128,35 +143,42 @@ fun PetShopScreen(
                     val outcome = viewModel.purchase(item)
                     purchasing = false
                     confirmingItem = null
-                    // P1-14：购买结果触觉（=iOS PetShopView.swift :204 成功 .success / :211/:218/:225 其余一切 .error，
-                    // sensoryFeedback :118-119）。必须在 showSnackbar 前——它是挂起函数会等 snackbar 消失才返回。
                     if (outcome is PetShopService.PurchaseOutcome.Success) appHaptics.success() else appHaptics.error()
-                    snackbarHostState.showSnackbar(purchaseMessage(outcome, item))
+                    snackbarHostState.showSnackbar(petShopPurchaseMessage(outcome, item))
                 }
             },
         )
     }
 }
 
-/** 购买结果文案（1:1 iOS toast 文字）。 */
-private fun purchaseMessage(outcome: PetShopService.PurchaseOutcome, item: PetItem): String = when (outcome) {
+/** 购买结果文案（单源，暖陶与琉璃共用）。 */
+internal fun petShopPurchaseMessage(outcome: PetShopService.PurchaseOutcome, item: PetItem): String = when (outcome) {
     is PetShopService.PurchaseOutcome.Success -> "已购入 ${item.name}"
     is PetShopService.PurchaseOutcome.InsufficientCoins -> "金币不足（需要 ${outcome.required} 当前 ${outcome.current}）"
     is PetShopService.PurchaseOutcome.AlreadyOwned -> "已经拥有了"
     is PetShopService.PurchaseOutcome.UnknownItem, PetShopService.PurchaseOutcome.PetNotFound -> "购买失败"
 }
 
-/** 购买按钮 3 态（1:1 iOS BuyState）。 */
-private enum class BuyState(val label: String) {
+/** 购买按钮 3 态（单源，暖陶与琉璃共用）。 */
+internal enum class PetBuyState(val label: String) {
     AVAILABLE("购买"),
     ALREADY_OWNED("已拥有"),
     INSUFFICIENT("金币不足"),
 }
 
-private fun buyStateOf(item: PetItem, balance: Int, ownedEquippable: Boolean): BuyState = when {
-    item.kind == PetItemKind.EQUIPPABLE && ownedEquippable -> BuyState.ALREADY_OWNED
-    balance < item.price -> BuyState.INSUFFICIENT
-    else -> BuyState.AVAILABLE
+internal fun petBuyStateOf(item: PetItem, balance: Int, ownedEquippable: Boolean): PetBuyState = when {
+    item.kind == PetItemKind.EQUIPPABLE && ownedEquippable -> PetBuyState.ALREADY_OWNED
+    balance < item.price -> PetBuyState.INSUFFICIENT
+    else -> PetBuyState.AVAILABLE
+}
+
+/** 效果说明（单源，暖陶与琉璃共用）。 */
+internal fun petShopEffectDescription(item: PetItem): String = when (item.kind) {
+    PetItemKind.CONSUMABLE -> {
+        val parts = petBoostParts(item.statBoosts)
+        if (parts.isEmpty()) "消耗品，使用一次即消耗" else "使用效果：${parts.joinToString(" · ")}"
+    }
+    PetItemKind.EQUIPPABLE -> "永久拥有，可在背包页反复佩戴 / 摘下"
 }
 
 @Composable
@@ -166,72 +188,71 @@ private fun PetShopItemCard(
     ownedEquippable: Boolean,
     onTap: () -> Unit,
 ) {
-    val state = buyStateOf(item, balance, ownedEquippable)
-    Surface(
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
+    val colors = AppTheme.colors
+    val state = petBuyStateOf(item, balance, ownedEquippable)
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onTap),
+            .appCardSurface()
+            .clickableScale(onClickLabel = item.name, onClick = onTap)
+            .padding(14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Column(
-            Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+        Box(
+            Modifier
+                .size(62.dp)
+                .clip(CircleShape)
+                .background(colors.accent.container),
+            contentAlignment = Alignment.Center,
         ) {
-            Box(
-                Modifier
-                    .size(64.dp)
-                    .background(MaterialTheme.colorScheme.tertiaryContainer, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(petItemIcon(item), contentDescription = null, tint = GiftColors.Gold, modifier = Modifier.size(32.dp))
-            }
-            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(
-                        item.name,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                    )
-                    if (item.isSignature) {
-                        Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = GiftColors.Gold, modifier = Modifier.size(13.dp))
-                    }
-                }
+            Icon(petItemIcon(item), contentDescription = null, tint = GiftColors.Gold, modifier = Modifier.size(30.dp))
+        }
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
-                    item.subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    item.name,
+                    style = AppTypography.label,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.text.primary,
                     maxLines = 1,
                 )
+                if (item.isSignature) {
+                    Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = GiftColors.Gold, modifier = Modifier.size(13.dp))
+                }
             }
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.MonetizationOn, contentDescription = null, tint = GiftColors.Gold, modifier = Modifier.size(15.dp))
-                Spacer(Modifier.size(3.dp))
-                Text("${item.price}", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.weight(1f))
-                BuyChip(state)
-            }
+            Text(
+                item.subtitle,
+                style = AppTypography.caption,
+                color = colors.text.secondary,
+                maxLines = 1,
+            )
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Icon(AppActionIcons.Coin, contentDescription = null, tint = GiftColors.Gold, modifier = Modifier.size(15.dp))
+            Spacer(Modifier.size(3.dp))
+            Text("${item.price}", style = AppTypography.amount, color = colors.text.primary)
+            Spacer(Modifier.weight(1f))
+            BuyChip(state)
         }
     }
 }
 
 @Composable
-private fun BuyChip(state: BuyState) {
+private fun BuyChip(state: PetBuyState) {
+    val colors = AppTheme.colors
     val (bg, fg) = when (state) {
-        BuyState.AVAILABLE -> MaterialTheme.colorScheme.primary to MaterialTheme.colorScheme.onPrimary
-        BuyState.ALREADY_OWNED, BuyState.INSUFFICIENT ->
-            MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
+        PetBuyState.AVAILABLE -> colors.accent.primary to colors.accent.onPrimary
+        PetBuyState.ALREADY_OWNED, PetBuyState.INSUFFICIENT ->
+            colors.surface.sunken to colors.text.secondary
     }
-    Surface(shape = RoundedCornerShape(50), color = bg) {
-        Text(
-            state.label,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = fg,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-        )
+    Box(
+        modifier = Modifier
+            .clip(AppShapes.full)
+            .background(bg)
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+    ) {
+        Text(state.label, style = AppTypography.caption, fontWeight = FontWeight.SemiBold, color = fg)
     }
 }
 
@@ -244,6 +265,7 @@ private fun PetShopBuyConfirmSheet(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
+    val colors = AppTheme.colors
     val canAfford = balance >= item.price
     val remaining = (balance - item.price).coerceAtLeast(0)
     AppSheet(onDismissRequest = onDismiss) {
@@ -255,117 +277,98 @@ private fun PetShopBuyConfirmSheet(
                 .navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // 头部
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(
-                    Modifier.size(56.dp).background(MaterialTheme.colorScheme.tertiaryContainer, CircleShape),
+                    Modifier
+                        .size(54.dp)
+                        .clip(CircleShape)
+                        .background(colors.accent.container),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(petItemIcon(item), contentDescription = null, tint = GiftColors.Gold, modifier = Modifier.size(28.dp))
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(item.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                        Text(item.name, style = AppTypography.titleSmall, color = colors.text.primary)
                         if (item.isSignature) {
                             Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = GiftColors.Gold, modifier = Modifier.size(16.dp))
                         }
                     }
-                    Text(item.subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(item.subtitle, style = AppTypography.secondary, color = colors.text.secondary)
                 }
             }
 
-            // 金额面板
-            Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AmountRow("价格", item.price)
-                    AmountRow("当前余额", balance)
-                    AmountRow("购买后余额", remaining)
-                }
-            }
-
-            // 效果说明
-            Text(
-                effectDescription(item),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            // 确认 / 取消
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = if (canAfford) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier
+            Column(
+                Modifier
                     .fillMaxWidth()
-                    .clickable(enabled = canAfford && !purchasing, onClick = onConfirm),
+                    .clip(AppShapes.medium)
+                    .background(colors.surface.sunken)
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(vertical = 14.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (purchasing) {
-                        // TODO(图纸未覆盖): 这枚转圈在**实心陶土主钮里面**，靠 onPrimary 反色才看得见；
-                        //  AppLoadingRing 恒 accent 色 = 陶土画在陶土上 → 停手登记（D-13）。
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
-                        Spacer(Modifier.size(6.dp))
-                    }
-                    Text(
-                        if (purchasing) "购买中…" else "确认购买 · ${item.price} 金币",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (canAfford) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                AmountRow("价格", item.price)
+                AmountRow("当前余额", balance)
+                AmountRow("购买后余额", remaining)
             }
-            Text(
-                "取消",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(enabled = !purchasing, onClick = onDismiss)
-                    .padding(vertical = 8.dp),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            )
+
+            Text(petShopEffectDescription(item), style = AppTypography.caption, color = colors.text.secondary)
+
+            AppButton(
+                onClick = onConfirm,
+                enabled = canAfford && !purchasing,
+                style = AppButtonStyle.Primary,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                if (purchasing) {
+                    AppLoadingRing(
+                        modifier = Modifier.size(16.dp),
+                        size = AppLoadingRingSize.Small,
+                        color = colors.accent.onPrimary,
+                        strokeWidth = 2.dp,
+                    )
+                    Spacer(Modifier.size(6.dp))
+                }
+                Text(if (purchasing) "购买中…" else "确认购买 · ${item.price} 金币")
+            }
+            AppButton(
+                onClick = onDismiss,
+                enabled = !purchasing,
+                style = AppButtonStyle.Text,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("取消")
+            }
         }
     }
 }
 
 @Composable
 private fun AmountRow(label: String, amount: Int) {
+    val colors = AppTheme.colors
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(label, style = AppTypography.secondary, color = colors.text.secondary)
         Spacer(Modifier.weight(1f))
-        Icon(Icons.Filled.MonetizationOn, contentDescription = null, tint = GiftColors.Gold, modifier = Modifier.size(14.dp))
+        Icon(AppActionIcons.Coin, contentDescription = null, tint = GiftColors.Gold, modifier = Modifier.size(14.dp))
         Spacer(Modifier.size(3.dp))
-        Text("$amount", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+        Text("$amount", style = AppTypography.amount, color = colors.text.primary)
     }
 }
 
-/** 效果说明（1:1 iOS effectDescription）。 */
-private fun effectDescription(item: PetItem): String = when (item.kind) {
-    PetItemKind.CONSUMABLE -> {
-        val parts = petBoostParts(item.statBoosts)
-        if (parts.isEmpty()) "消耗品，使用一次即消耗" else "使用效果：${parts.joinToString(" · ")}"
-    }
-    PetItemKind.EQUIPPABLE -> "永久拥有，可在背包页反复佩戴 / 摘下"
-}
-
-/** 金币胶囊（toolbar 右上，1:1 iOS balancePill）。 */
+/** 金币胶囊（顶栏右上）。 */
 @Composable
 private fun CoinPill(balance: Int) {
-    Surface(
-        shape = RoundedCornerShape(50),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest,
-        modifier = Modifier.padding(end = 8.dp),
+    val colors = AppTheme.colors
+    Row(
+        modifier = Modifier
+            .padding(end = 8.dp)
+            .clip(AppShapes.full)
+            .background(colors.surface.raised)
+            .border(0.5.dp, colors.surface.stroke, AppShapes.full)
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(Icons.Filled.MonetizationOn, contentDescription = null, tint = GiftColors.Gold, modifier = Modifier.size(16.dp))
-            Text("$balance", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-        }
+        Icon(AppActionIcons.Coin, contentDescription = null, tint = GiftColors.Gold, modifier = Modifier.size(16.dp))
+        Text("$balance", style = AppTypography.amount, color = colors.text.primary)
     }
 }

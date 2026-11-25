@@ -8,9 +8,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
@@ -35,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import com.situ.aichat.data.model.MeetingTimeGranularity
 import com.situ.aichat.meeting.MeetingDisplayFormatter
 import com.situ.aichat.meeting.MeetingTimeResolver
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppDialog
@@ -118,7 +116,7 @@ fun FutureMeetingFormSheet(
 
             // 选定时间预览（陶土色·与确认卡同视觉）。
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Icon(Icons.Outlined.CalendarMonth, contentDescription = null, tint = colors.accent.text, modifier = Modifier.size(18.dp))
+                Icon(AppActionIcons.Calendar, contentDescription = null, tint = colors.accent.text, modifier = Modifier.size(18.dp))
                 Text(whenPreview, style = typography.titleSmall, color = colors.accent.text)
             }
 
@@ -148,7 +146,7 @@ fun FutureMeetingFormSheet(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Icon(Icons.Outlined.Schedule, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(AppActionIcons.Clock, contentDescription = null, modifier = Modifier.size(16.dp))
                         Text("%02d:%02d".format(selectedTime.hour, selectedTime.minute))
                     }
                 }

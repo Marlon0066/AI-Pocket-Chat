@@ -80,6 +80,7 @@ class CharacterEditViewModelPersonaTest {
         ttsConfigRepo = mockk(relaxed = true),
         previewer = mockk(relaxed = true),
         membershipService = mockk(relaxed = true),
+        worldBookRepo = mockk(relaxed = true),
         personaCompiler = compiler,
         characterWriteLock = CharacterWriteLock(),
         appContext = RuntimeEnvironment.getApplication(),

@@ -6,8 +6,10 @@ import com.situ.aichat.data.local.entity.MomentPostEntity
 import com.situ.aichat.data.model.MomentNotificationType
 import com.situ.aichat.data.repository.CharacterRepository
 import com.situ.aichat.data.repository.MomentRepository
+import com.situ.aichat.data.repository.SettingsRepository
 import com.situ.aichat.notification.Notifier
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,6 +23,7 @@ class MomentInteractionNotifications @Inject constructor(
     @ApplicationContext private val context: Context,
     private val momentRepo: MomentRepository,
     private val characterRepo: CharacterRepository,
+    private val settingsRepository: SettingsRepository,
 ) {
 
     /**
@@ -56,6 +59,7 @@ class MomentInteractionNotifications @Inject constructor(
         post: MomentPostEntity,
         contentPreview: String,
     ) {
+        if (!settingsRepository.appSettings.first().notifMomentInteractionEnabled) return
         // 前台判定（卷一 C1）：App 前台（含见面剧场里）不弹横幅——App 内红点即提示（2-5b 拍板同源·
         // 对照 ChatReplyDeliverer.notifyIfNotViewing）。ProcessLifecycleOwner 纯 JVM 缺席 → runCatching 兜底。
         val appForeground = runCatching {

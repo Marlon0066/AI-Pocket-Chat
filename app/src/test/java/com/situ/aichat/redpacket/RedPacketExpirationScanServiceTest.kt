@@ -1,15 +1,30 @@
 package com.situ.aichat.redpacket
 
+import android.content.Context
+import com.situ.aichat.data.local.dao.RedPacketDao
+import com.situ.aichat.data.local.entity.CharacterEntity
 import com.situ.aichat.data.local.entity.RedPacketRecordEntity
+import com.situ.aichat.data.model.AppSettings
 import com.situ.aichat.data.model.WalletOwnerType
+import com.situ.aichat.data.repository.CharacterRepository
+import com.situ.aichat.data.repository.SettingsRepository
+import com.situ.aichat.notification.NotificationAlarmScheduler
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * 红包过期扫描纯函数单测（P9.3b-2）。断言**反推 iOS**：过期判定 now>expiresAt、22h 预警窗口（过期前 2h）+ 三条件
- * （receiver==user && !notified && in-window）、预警文案（不含金额）。过期退钱/通知投递走真机 + 钱路径复核。
+ * 红包过期扫描纯函数单测 + 卷四 B-4 门控行为测（P9.3b-2 + 独立复核）：
+ * 过期判定 now>expiresAt、22h 预警窗口（过期前 2h）+ 三条件、预警文案（不含金额）、
+ * 以及 B-4 关闭开关后冷启动不排预警闹钟、切换开关撤/重排闹钟、且**绝不影响 24h 过期自动退钱**。
  */
 class RedPacketExpirationScanServiceTest {
 
@@ -96,5 +111,77 @@ class RedPacketExpirationScanServiceTest {
 
     @Test fun warning_request_key_prefix() {
         assertEquals("red_packet_expiring_r1", RedPacketExpirationScanService.warningRequestKey("r1"))
+    }
+
+    // ── B-4 门控行为测（冷启动直读 DataStore + 绝不阻塞过期退钱） ──
+
+    private fun buildService(
+        dao: RedPacketDao,
+        redPacketService: RedPacketService,
+        characterRepo: CharacterRepository = mockk(relaxed = true),
+        alarm: NotificationAlarmScheduler = mockk(relaxed = true),
+        expiringEnabled: Boolean,
+    ): RedPacketExpirationScanService {
+        val settingsRepo = mockk<SettingsRepository> {
+            every { appSettings } returns flowOf(AppSettings(notifRedPacketExpiringEnabled = expiringEnabled))
+        }
+        return RedPacketExpirationScanService(
+            context = mockk<Context>(relaxed = true),
+            redPacketDao = dao,
+            redPacketService = redPacketService,
+            characterRepo = characterRepo,
+            alarmScheduler = alarm,
+            settingsRepo = settingsRepo,
+        )
+    }
+
+    @Test fun B4_冷启动开关关闭时_scheduleWarningAlarm绝不排闹钟() = runBlocking {
+        val alarm = mockk<NotificationAlarmScheduler>(relaxed = true)
+        val svc = buildService(
+            dao = mockk(relaxed = true),
+            redPacketService = mockk(relaxed = true),
+            alarm = alarm,
+            expiringEnabled = false,
+        )
+        svc.scheduleWarningAlarm(characterToUser(), "小七")
+        verify(exactly = 0) { alarm.scheduleExact(any(), any(), any()) }
+    }
+
+    @Test fun B4_关闭提醒开关后_24h过期退钱路径仍完整执行() = runBlocking {
+        val expiredRecord = characterToUser(expiresAt = h24)
+        val dao = mockk<RedPacketDao>()
+        coEvery { dao.pendingRecords() } returns listOf(expiredRecord)
+        val rpService = mockk<RedPacketService>(relaxed = true)
+        val alarm = mockk<NotificationAlarmScheduler>(relaxed = true)
+        val svc = buildService(dao = dao, redPacketService = rpService, alarm = alarm, expiringEnabled = false)
+
+        svc.scan(now = h24 + 1)
+
+        coVerify(exactly = 1) { rpService.expireRedPacket("r1", h24 + 1) }
+        verify(exactly = 1) { alarm.cancel("red_packet_expiring_r1") }
+    }
+
+    @Test fun B4_开关切换撤闹钟与重排闹钟_且绝不触碰退钱() = runBlocking {
+        val activeRecord = characterToUser(expiresAt = h24)
+        val dao = mockk<RedPacketDao>()
+        coEvery { dao.pendingRecords() } returns listOf(activeRecord)
+        val rpService = mockk<RedPacketService>(relaxed = true)
+        val charRepo = mockk<CharacterRepository>()
+        coEvery { charRepo.get("c1") } returns CharacterEntity(uuid = "c1", name = "小七", creationDate = 0L)
+        val alarm = mockk<NotificationAlarmScheduler>(relaxed = true)
+        val svc = buildService(
+            dao = dao,
+            redPacketService = rpService,
+            characterRepo = charRepo,
+            alarm = alarm,
+            expiringEnabled = true,
+        )
+
+        svc.onExpiringNotificationSettingChanged(enabled = false, now = 1000L)
+        verify(exactly = 1) { alarm.cancel("red_packet_expiring_r1") }
+
+        svc.onExpiringNotificationSettingChanged(enabled = true, now = 1000L)
+        verify(exactly = 1) { alarm.scheduleExact("red_packet_expiring_r1", h24 - h2, any()) }
+        coVerify(exactly = 0) { rpService.expireRedPacket(any(), any()) }
     }
 }

@@ -12,9 +12,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.KeyboardArrowDown
-import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,6 +40,7 @@ import com.situ.aichat.ui.contextlog.shared.failureCopy
 import com.situ.aichat.ui.contextlog.shared.failureIcon
 import com.situ.aichat.ui.contextlog.shared.failureTimeText
 import com.situ.aichat.ui.contextlog.shared.sameKindText
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
@@ -135,7 +133,7 @@ private fun RawErrorGroup(f: LogFailureView) {
     LiuliGroup(Modifier.padding(horizontal = LiuliPageGeometry.gutter)) {
         LiuliRowBase(onClick = { open = !open }, onClickLabel = label, divider = false) {
             Text(label, style = AppTypography.label, color = AppTheme.colors.text.secondary, modifier = Modifier.weight(1f))
-            Icon(if (open) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown, contentDescription = null, tint = AppTheme.colors.text.secondary, modifier = Modifier.size(18.dp))
+            Icon(if (open) AppActionIcons.ChevronUp else AppActionIcons.ChevronDown, contentDescription = null, tint = AppTheme.colors.text.secondary, modifier = Modifier.size(18.dp))
         }
         if (open) {
             LiuliLogFreeRow(first = false) {

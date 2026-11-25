@@ -96,15 +96,14 @@ fun MemorySettingsSections(viewModel: MemorySettingsViewModel = hiltViewModel())
                 onManualInput = { viewModel.setMemorySummaryMaxLength(it) }, // settings-slider-manualinput（手填不做 100 吸附）
                 onValueChange = { viewModel.setMemorySummaryMaxLength((it / 100f).roundToInt() * 100) },
             )
-            // 智能渐进压缩（2026-06-20）：用户自定义提取 prompt 时开关让位 → 置灰 + 显示关（存储值不变，清空自定义后恢复）。
+            // 智能渐进压缩（2026-06-20）：用户自定义提取 prompt 时开关让位 → 置灰 + 显示锁图标原因（存储值不变）。
             val canUseProgressive = s.memoryExtractionPrompt.isEmpty()
             SettingsSwitchRow(
                 title = stringResource(R.string.mem_progressive_title),
-                subtitle = stringResource(
-                    if (canUseProgressive) R.string.mem_progressive_subtitle else R.string.mem_progressive_disabled_hint,
-                ),
+                subtitle = stringResource(R.string.mem_progressive_subtitle),
                 checked = s.progressiveCompressionEnabled && canUseProgressive,
                 enabled = canUseProgressive,
+                disabledReason = if (!canUseProgressive) stringResource(R.string.mem_progressive_disabled_hint) else null,
                 onCheckedChange = { viewModel.setProgressiveCompressionEnabled(it) },
             )
         }
@@ -137,6 +136,30 @@ fun MemorySettingsSections(viewModel: MemorySettingsViewModel = hiltViewModel())
                 // settings-slider-manualinput：向量阈值是百分比，手填仍钳 0~100（>100% 无意义，有意微偏 iOS）。
                 onManualInput = { viewModel.setVectorSearchThreshold(it) },
                 onValueChange = { viewModel.setVectorSearchThreshold((it / 5f).roundToInt() * 5) },
+            )
+        }
+
+        SettingsSection(
+            title = "见面记忆",
+            footer = "注入最近 N 次见面的完整摘要，更早的合并为一行存档；「记忆上限」是注入文本的字数预算，超出时最早的完整摘要自动降为存档行。",
+        ) {
+            SettingsSliderRow(
+                label = "注入最近见面次数",
+                valueLabel = "${s.meetingMemoryInjectCount} 次",
+                value = s.meetingMemoryInjectCount.toFloat(),
+                valueRange = 1f..10f,
+                steps = 8,
+                onValueChange = { viewModel.setMeetingMemoryInjectCount(it.roundToInt()) },
+            )
+            SettingsSliderRow(
+                label = "见面记忆上限",
+                valueLabel = "${s.meetingMemoryMaxLength} $chars",
+                value = s.meetingMemoryMaxLength.toFloat(),
+                valueRange = 200f..3000f,
+                steps = 27,
+                infoMessage = stringResource(R.string.mem_meeting_info),
+                onManualInput = { viewModel.setMeetingMemoryMaxLength(it) },
+                onValueChange = { viewModel.setMeetingMemoryMaxLength((it / 100f).roundToInt() * 100) },
             )
         }
 

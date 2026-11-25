@@ -18,7 +18,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** T2-8（琉璃 2.0 卷五 §7·E17）：世界组四态文案 / D8 锁 / 离开确认 / 住址三态 / 城市弹层搬家。 */
+/** T2-8：世界组四态文案 / 原住民锁 / 挂世界书一键确认摘书入世 / 离开确认 / 城市弹层搬家。 */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "zh-rCN-w411dp-h891dp")
 class LiuliCharacterWorldGroupContentTest {
@@ -26,6 +26,7 @@ class LiuliCharacterWorldGroupContentTest {
     @get:Rule val compose = createComposeRule()
 
     private var joins = 0
+    private var switchJoins = 0
     private var leaves = 0
     private val moves = mutableListOf<String>()
 
@@ -38,7 +39,14 @@ class LiuliCharacterWorldGroupContentTest {
         compose.setContent {
             LiuliEditTestHost {
                 Column {
-                    LiuliCharacterWorldGroupContent(state, onJoin = { joins++ }, onLeave = { leaves++ }, onSelectRegion = {}, onMove = { moves += it })
+                    LiuliCharacterWorldGroupContent(
+                        state = state,
+                        onJoin = { joins++ },
+                        onLeave = { leaves++ },
+                        onSelectRegion = {},
+                        onMove = { moves += it },
+                        onJoinClearingWorldBooks = { switchJoins++ },
+                    )
                 }
             }
         }
@@ -49,11 +57,16 @@ class LiuliCharacterWorldGroupContentTest {
         regions = listOf(RegionUi("r1", "东岸")), citiesOfRegion = cities, selectedRegionId = "r1",
     )
 
-    @Test fun 世界书锁_副标脚注且开关禁用() {
+    @Test fun 挂世界书_开关不灰死_点开出切换确认_确认才摘书入世() {
         show(state(wb = true))
-        compose.onNodeWithText("TA 挂着世界书，二选一").assertExists()
-        compose.onNodeWithText("想让 TA 进世界？", substring = true).assertExists()
-        compose.onNode(isToggleable()).assertIsNotEnabled()
+        compose.onNodeWithText("开启后将摘除当前世界观并住进云野镇").assertExists()
+        compose.onNodeWithText("开启即可一键摘除世界书并加入世界", substring = true).assertExists()
+        compose.onNode(isToggleable()).assertIsEnabled().performClick()
+        assertEquals(0, switchJoins)
+        compose.onNodeWithText("加入世界并摘除世界观？").assertExists()
+        compose.onNodeWithText("摘除并加入世界").performClick()
+        assertEquals(1, switchJoins)
+        assertEquals(0, joins)
     }
 
     @Test fun 原住民_锁开关且住址行不可点() {
@@ -73,16 +86,14 @@ class LiuliCharacterWorldGroupContentTest {
         assertEquals(1, joins)
     }
 
-    @Test fun 已加入_关开关出离开确认_确认才离开() {
-        show(state(joined = true))
+    @Test fun 已加入_哪怕有脏世界书绑定也可正常关开关离开() {
+        show(state(wb = true, joined = true))
         compose.onNodeWithText("TA 已经是镇上的一员了").assertExists()
-        compose.onNodeWithText("关掉即离开世界", substring = true).assertExists()
-        compose.onNode(isToggleable()).performClick()
+        compose.onNode(isToggleable()).assertIsEnabled().performClick()
         assertEquals(0, leaves)
         compose.onNodeWithText("让 TA 离开世界？").assertExists()
         compose.onNodeWithText("让 TA 离开").performClick()
         assertEquals(1, leaves)
-        compose.onNodeWithText("让 TA 离开世界？").assertDoesNotExist()
     }
 
     @Test fun 住址尾巴_同城与异地() {

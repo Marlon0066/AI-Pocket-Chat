@@ -20,7 +20,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -41,6 +40,7 @@ import com.situ.aichat.R
 import com.situ.aichat.ui.components.AppMotion
 import com.situ.aichat.ui.components.CharacterAvatar
 import com.situ.aichat.ui.components.rememberReduceMotion
+import com.situ.aichat.ui.designsystem.AppIconButton
 import com.situ.aichat.ui.designsystem.AppPanelIcons
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppTheme
@@ -207,9 +207,13 @@ private fun TopBarActionButton(
             Icon(icon, contentDescription = contentDescription, tint = tint, modifier = Modifier.align(Alignment.Center))
         }
     } else {
-        IconButton(onClick = onClick) {
-            Icon(icon, contentDescription = contentDescription, tint = tint)
-        }
+        AppIconButton(
+            icon = icon,
+            contentDescription = contentDescription,
+            onClick = onClick,
+            tint = tint,
+            iconSize = 22.dp,
+        )
     }
 }
 

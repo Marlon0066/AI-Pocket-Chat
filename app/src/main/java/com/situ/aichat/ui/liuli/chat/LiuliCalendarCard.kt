@@ -8,9 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -103,7 +102,7 @@ internal fun LiuliCalendarCard(
                 modifier = Modifier.padding(top = ROW_GAP),
             ) {
                 Icon(
-                    Icons.Filled.Warning,
+                    AppActionIcons.Warning,
                     contentDescription = null,
                     tint = colors.status.onWarning,
                     modifier = Modifier.size(WARNING_ICON_SIZE),

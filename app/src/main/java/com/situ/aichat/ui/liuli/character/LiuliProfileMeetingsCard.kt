@@ -13,9 +13,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -83,7 +82,7 @@ internal fun LiuliProfileMeetingsCard(
                             color = colors.accent.text,
                         )
                         Icon(
-                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            AppActionIcons.ChevronRight,
                             contentDescription = null,
                             tint = colors.accent.text,
                             modifier = Modifier.size(CHEVRON),

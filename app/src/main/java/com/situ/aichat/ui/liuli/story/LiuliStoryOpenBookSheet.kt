@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -30,6 +28,7 @@ import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.CharacterEntity
 import com.situ.aichat.story.StoryCreationCatalog
 import com.situ.aichat.story.StoryTemplate
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.liuli.designsystem.LiuliAvatarRing
@@ -122,7 +121,7 @@ internal fun LiuliStoryOpenBookSheet(
                     ) {
                         Text(stringResource(R.string.story_sheet_add_support), style = AppTypography.secondary, color = c.accent.text)
                         Icon(
-                            Icons.Filled.KeyboardArrowDown,
+                            AppActionIcons.ChevronDown,
                             contentDescription = null,
                             tint = c.accent.text,
                             modifier = Modifier.size(18.dp).rotate(if (state.showSupporting) 180f else 0f),

@@ -28,6 +28,7 @@ class SystemTogglesViewModel @Inject constructor(
     fun setScheduleSystemEnabled(v: Boolean) = launch { settings.setScheduleSystemEnabled(v) }
     fun setCrossCharacterLevel(level: Int) = launch { settings.setCrossCharacterLevel(level) }
     fun setPetSystemEnabled(v: Boolean) = launch { settings.setPetSystemEnabled(v) }
+    fun setPetDiaryAutoGenerateEnabled(v: Boolean) = launch { settings.setPetDiaryAutoGenerateEnabled(v) }
     fun setCurrencySystemEnabled(v: Boolean) = launch { settings.setCurrencySystemEnabled(v) }
     fun setCharacterProactiveGiftEnabled(v: Boolean) = launch { settings.setCharacterProactiveGiftEnabled(v) }
 

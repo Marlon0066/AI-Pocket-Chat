@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Place
-import androidx.compose.material.icons.outlined.Schedule
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -110,7 +110,7 @@ internal fun LiuliOfflineEndCard(
 ) {
     LiuliStageCard(modifier = modifier) {
         LiuliCardHeader(
-            icon = Icons.Outlined.Schedule,
+            icon = AppActionIcons.Clock,
             title = "要结束这次见面吗？",
             subtitle = null,
             titleColor = LiuliPalette.stageText,

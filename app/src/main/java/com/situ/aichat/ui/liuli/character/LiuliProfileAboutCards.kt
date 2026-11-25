@@ -25,10 +25,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.FormatQuote
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Visibility
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -274,7 +273,7 @@ internal fun LiuliProfileCharacterInfoCard(character: CharacterEntity, modifier:
                 }
             }
             Icon(
-                Icons.Filled.KeyboardArrowDown,
+                AppActionIcons.ChevronDown,
                 contentDescription = stringResource(
                     if (expanded) R.string.a11y_charinfo_collapse else R.string.a11y_charinfo_expand,
                 ),
@@ -291,10 +290,10 @@ private fun CharInfoDetail(character: CharacterEntity) {
     Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         AccentInfoRow(MemColor.Pink, Icons.Filled.Visibility, stringResource(R.string.profile_charinfo_appearance), character.appearanceDescription)
         AccentInfoRow(MemColor.Indigo, Icons.AutoMirrored.Filled.MenuBook, stringResource(R.string.profile_charinfo_backstory), character.backstory)
-        AccentInfoRow(MemColor.Cyan, Icons.Filled.FormatQuote, stringResource(R.string.profile_charinfo_speaking), character.speakingStyle)
+        AccentInfoRow(MemColor.Cyan, AppActionIcons.Quote, stringResource(R.string.profile_charinfo_speaking), character.speakingStyle)
         AccentTagRow(MemColor.Teal, Icons.AutoMirrored.Filled.Chat, stringResource(R.string.profile_charinfo_catchphrase), splitTags(character.catchphrases))
         AccentTagRow(MemColor.Orange, Icons.Filled.Star, stringResource(R.string.profile_charinfo_interests), splitTags(character.initialInterests))
-        AccentInfoRow(MemColor.Purple, Icons.Filled.FormatQuote, stringResource(R.string.profile_charinfo_examples), character.exampleDialogues)
+        AccentInfoRow(MemColor.Purple, AppActionIcons.Quote, stringResource(R.string.profile_charinfo_examples), character.exampleDialogues)
     }
 }
 

@@ -99,12 +99,20 @@ internal fun LiuliCharacterEditScreen(
             worldGroup = if (viewModel.isEditing) {
                 { LiuliCharacterWorldGroup() }
             } else {
-                { LiuliCharacterWorldCreateGroup(joined = state.joinWorld, onToggle = { on -> viewModel.update { it.copy(joinWorld = on) } }) }
+                { LiuliCharacterWorldCreateGroup(joined = state.joinWorld, onToggle = viewModel::setCreateJoinWorld) }
             },
             worldBookGroup = if (viewModel.isEditing) {
                 { LiuliWorldBookGroup(onManageBooks = onOpenWorldBooks) }
             } else {
-                null
+                {
+                    LiuliWorldBookCreateGroup(
+                        selectedBookUuids = state.initialWorldBookUuids,
+                        joinedWorld = state.joinWorld,
+                        onSelectSole = viewModel::selectInitialWorldBookSole,
+                        onToggle = viewModel::toggleInitialWorldBook,
+                        onManageBooks = onOpenWorldBooks,
+                    )
+                }
             },
         )
     }

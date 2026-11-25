@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
@@ -24,10 +25,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.CharacterEntity
 import com.situ.aichat.data.local.entity.DiaryCommentEntity
@@ -35,6 +40,7 @@ import com.situ.aichat.data.local.entity.DiaryEntryEntity
 import com.situ.aichat.ui.components.CharacterAvatar
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
+import com.situ.aichat.ui.diary.DiaryMiniMoodStamp
 import com.situ.aichat.ui.diary.canReply
 import com.situ.aichat.ui.diary.diaryCommentAuthorName
 import com.situ.aichat.ui.diary.diaryCommentRelativeTime
@@ -55,11 +61,10 @@ import com.situ.aichat.ui.liuli.page.LiuliPageGeometry
 import com.situ.aichat.ui.liuli.page.liuliTouchHeight
 import com.situ.aichat.ui.theme.LocalIsDarkTheme
 
-// 琉璃日记详情的心情日期头 / 评论组 / 评论行 / 行内回复（琉璃 2.0 卷六·一 §4.3）。
+// 琉璃日记详情的心情日期头 / 评论组 / 评论行 / 行内回复（琉璃 2.0 卷六·一 §4.3 · 方向 C 升级）。
 
-/** 日期头内距 16（= 暖陶）。 */
-private val DATE_HEAD_PAD = 16.dp
-/** 评论卡上下内距 14 · 行间 12 · 回复缩进 42 · 头像 32 · 头像 ↔ 字 10（后四个 = 暖陶）。 */
+private val DATE_HEAD_PAD_H = 18.dp
+private val DATE_HEAD_PAD_V = 16.dp
 private val COMMENT_CARD_PAD_V = 14.dp
 private val COMMENT_GAP = 12.dp
 private val COMMENT_REPLY_INDENT = 42.dp
@@ -67,8 +72,8 @@ private val COMMENT_AVATAR = 32.dp
 private val COMMENT_AVATAR_GAP = 10.dp
 
 /**
- * 心情日期头（设计稿 D2「心情色淡渐变的玻璃感卡」）：半透明卡 + 心情浅档对角淡出（左上 → 右下），`dd` 大数字 + M月·周几 + yyyy年 +
- * 心情标。情绪色上的字一律 `text.primary`（ColorContrastTest「diary.mood」口径）。
+ * 方向 C 琉璃水彩晕染日期头：半透明玻璃感卡 + 心情水彩对角轻透晕染 + 36sp 等宽日号 + 竖发丝线 +
+ * 日期时间 + 右侧迷你心情邮票。情绪色上的字一律 `text.primary`（WCAG 对比度保证）。
  */
 @Composable
 internal fun LiuliDiaryDateHead(entry: DiaryEntryEntity) {
@@ -79,39 +84,63 @@ internal fun LiuliDiaryDateHead(entry: DiaryEntryEntity) {
         Modifier
             .fillMaxWidth()
             .liuliCardMaterial(LiuliShapes.medium, dark)
-            // 终点用同色 0 透明（不用 Color.Transparent）：避免中段发灰。
-            .then(if (tint != null) Modifier.background(Brush.linearGradient(listOf(tint, tint.copy(alpha = 0f)))) else Modifier)
-            .padding(DATE_HEAD_PAD),
+            .then(
+                if (tint != null) {
+                    Modifier.background(
+                        Brush.linearGradient(
+                            listOf(
+                                tint.copy(alpha = if (dark) 0.44f else 0.72f),
+                                tint.copy(alpha = 0f),
+                            ),
+                        ),
+                    )
+                } else {
+                    Modifier
+                },
+            )
+            .padding(horizontal = DATE_HEAD_PAD_H, vertical = DATE_HEAD_PAD_V),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             val day = formatDiaryDate(entry.timestamp, stringResource(R.string.diary_fmt_day_number))
-            Text(day, style = AppTypography.titleLarge.copy(fontFeatureSettings = "tnum"), color = colors.text.primary)
+            Text(
+                day,
+                style = AppTypography.titleLarge.copy(
+                    fontSize = 36.sp,
+                    lineHeight = 40.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    fontFeatureSettings = "tnum",
+                ),
+                color = colors.text.primary,
+            )
             Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(34.dp)
+                    .background(colors.text.tertiary.copy(alpha = 0.35f)),
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 val sub = formatDiaryDate(entry.timestamp, stringResource(R.string.diary_fmt_detail_sub))
                 val year = formatDiaryDate(entry.timestamp, stringResource(R.string.diary_fmt_month_section_year))
+                val time = formatDiaryDate(entry.timestamp, "HH:mm")
+                val moodText = entry.moodText?.takeIf { it.isNotBlank() }
                 Text(sub, style = AppTypography.label, color = colors.text.primary)
-                Text(year, style = AppTypography.caption, color = colors.text.primary)
+                Text(
+                    if (moodText != null) "$year · $time · $moodText" else "$year · $time",
+                    style = AppTypography.captionNumeric,
+                    color = colors.text.primary,
+                )
             }
             entry.moodEmoji?.takeIf { it.isNotEmpty() }?.let { emoji ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier
-                        .clip(LiuliShapes.pill)
-                        .background(LiuliMaterials.chipFill(dark))
-                        .border(1.dp, LiuliMaterials.cardRim(dark), LiuliShapes.pill)
-                        .padding(horizontal = 10.dp, vertical = 4.dp),
-                ) {
-                    Text(emoji, style = AppTypography.secondary)
-                    entry.moodText?.takeIf { it.isNotEmpty() }?.let { Text(it, style = AppTypography.secondary, color = colors.text.primary) }
-                }
+                Spacer(Modifier.width(8.dp))
+                DiaryMiniMoodStamp(emoji = emoji, timestamp = entry.timestamp)
             }
         }
     }
 }
 
-/** 评论组：组标题「评论（N）」+ 一张半透明组卡（一层线程·回复缩进 42·每根限一轮回复）。 */
+/** 评论组：组标题「评论（N）」+ 一张半透明组卡（一层线程·回复左侧极细引线·每根限一轮回复）。 */
 @Composable
 internal fun LiuliDiaryCommentSection(
     comments: List<DiaryCommentEntity>,
@@ -120,6 +149,7 @@ internal fun LiuliDiaryCommentSection(
     onReply: (rootCommentId: String, text: String) -> Unit,
 ) {
     val dark = LocalIsDarkTheme.current
+    val threadGuide = AppTheme.colors.surface.stroke
     val threads = remember(comments) { groupDiaryCommentThreads(comments) }
     val me = stringResource(R.string.diary_role_me)
     val ai = stringResource(R.string.diary_comment_author_ai)
@@ -138,7 +168,23 @@ internal fun LiuliDiaryCommentSection(
                     thread.replies.forEach { reply ->
                         key(reply.id) {
                             val name = diaryCommentAuthorName(reply, charactersByUuid, me, ai)
-                            LiuliDiaryCommentRow(reply, name, charactersByUuid, onDeleteComment, Modifier.padding(start = COMMENT_REPLY_INDENT))
+                            LiuliDiaryCommentRow(
+                                reply,
+                                name,
+                                charactersByUuid,
+                                onDeleteComment,
+                                Modifier
+                                    .drawBehind {
+                                        val x = 16.dp.toPx()
+                                        drawLine(
+                                            color = threadGuide,
+                                            start = Offset(x, 0f),
+                                            end = Offset(x, size.height),
+                                            strokeWidth = 1.5.dp.toPx(),
+                                        )
+                                    }
+                                    .padding(start = COMMENT_REPLY_INDENT),
+                            )
                         }
                     }
                     if (thread.canReply()) {
@@ -197,7 +243,7 @@ internal fun LiuliDiaryCommentRow(
     }
 }
 
-/** 行内回复 / 留言：折叠 = 主色小字（48 触达）；展开 = 琉璃单行输入 + 「发送」文字钮（发出即折叠清空）。 */
+/** 行内回复 / 留言：折叠 = 琉璃微胶囊（48 触达）；展开 = 琉璃单行输入 + 「发送」文字钮（发出即折叠清空）。 */
 @Composable
 internal fun LiuliDiaryInlineReply(
     actionLabel: String,
@@ -206,6 +252,7 @@ internal fun LiuliDiaryInlineReply(
     onSend: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val dark = LocalIsDarkTheme.current
     var expanded by rememberSaveable(stateKey) { mutableStateOf(false) }
     var text by rememberSaveable(stateKey) { mutableStateOf("") }
     if (!expanded) {
@@ -213,7 +260,16 @@ internal fun LiuliDiaryInlineReply(
             modifier.liuliTouchHeight().clickable(role = Role.Button, onClickLabel = actionLabel) { expanded = true },
             contentAlignment = Alignment.CenterStart,
         ) {
-            Text(actionLabel, style = AppTypography.caption, color = AppTheme.colors.accent.text, modifier = Modifier.padding(vertical = 4.dp))
+            Text(
+                actionLabel,
+                style = AppTypography.caption,
+                color = AppTheme.colors.accent.text,
+                modifier = Modifier
+                    .clip(LiuliShapes.pill)
+                    .background(LiuliMaterials.chipFill(dark))
+                    .border(1.dp, LiuliMaterials.cardRim(dark), LiuliShapes.pill)
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
+            )
         }
     } else {
         Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

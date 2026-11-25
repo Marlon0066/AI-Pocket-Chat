@@ -22,12 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -188,14 +183,15 @@ internal fun BottomCapsule(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                IconButton(onClick = onPrev, enabled = hasPrev, modifier = Modifier.size(40.dp)) {
-                    Icon(
-                        Icons.Filled.ChevronLeft,
-                        contentDescription = stringResource(R.string.story_reader_prev),
-                        tint = capsuleContent.copy(alpha = if (hasPrev) 1f else 0.3f),
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
+                com.situ.aichat.ui.designsystem.AppIconButton(
+                    icon = com.situ.aichat.ui.designsystem.AppActionIcons.ChevronLeft,
+                    contentDescription = stringResource(R.string.story_reader_prev),
+                    onClick = onPrev,
+                    enabled = hasPrev,
+                    tint = capsuleContent,
+                    iconSize = 20.dp,
+                    modifier = Modifier.size(40.dp),
+                )
                 Text(
                     storyReaderProgressLabel(progressPercent, remainingMinutes),
                     fontSize = 12.sp,
@@ -212,14 +208,15 @@ internal fun BottomCapsule(
                         colors = ButtonDefaults.textButtonColors(contentColor = capsuleContent),
                     ) { Text(stringResource(R.string.story_reader_continue_arc), fontWeight = FontWeight.Bold) }
                 } else {
-                    IconButton(onClick = onNext, enabled = hasNext, modifier = Modifier.size(40.dp)) {
-                        Icon(
-                            Icons.Filled.ChevronRight,
-                            contentDescription = stringResource(R.string.story_reader_next),
-                            tint = capsuleContent.copy(alpha = if (hasNext) 1f else 0.3f),
-                            modifier = Modifier.size(20.dp),
-                        )
-                    }
+                    com.situ.aichat.ui.designsystem.AppIconButton(
+                        icon = com.situ.aichat.ui.designsystem.AppActionIcons.ChevronRight,
+                        contentDescription = stringResource(R.string.story_reader_next),
+                        onClick = onNext,
+                        enabled = hasNext,
+                        tint = capsuleContent,
+                        iconSize = 20.dp,
+                        modifier = Modifier.size(40.dp),
+                    )
                 }
             }
         }

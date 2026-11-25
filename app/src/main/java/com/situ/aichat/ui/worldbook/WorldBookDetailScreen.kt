@@ -19,16 +19,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -50,12 +43,16 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
+import com.situ.aichat.data.local.entity.CharacterEntity
 import com.situ.aichat.data.local.entity.WorldBookEntryEntity
 import com.situ.aichat.data.worldbook.decodeStringList
 import com.situ.aichat.ui.components.CharacterAvatar
 import com.situ.aichat.ui.components.SettingsSwitchRow
 import com.situ.aichat.ui.components.clickableScale
 import com.situ.aichat.ui.components.contentMaxWidth
+import com.situ.aichat.ui.designsystem.AppActionIcons
+import com.situ.aichat.ui.designsystem.AppCheckbox
+import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppMenu
 import com.situ.aichat.ui.designsystem.AppMenuItem
@@ -66,7 +63,11 @@ import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppSwitch
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
+import com.situ.aichat.ui.designsystem.AppTopBarAction
 import com.situ.aichat.ui.designsystem.AppTopBarIcons
+import com.situ.aichat.ui.designsystem.AppTypography
+import com.situ.aichat.ui.designsystem.appCardSurface
+import com.situ.aichat.ui.designsystem.grainSurface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -127,6 +128,7 @@ fun WorldBookDetailScreen(
 
     val listState = rememberLazyListState()
     Scaffold(
+        containerColor = colors.surface.base,
         topBar = {
             AppTopBar(
                 title = b.name.ifBlank { stringResource(R.string.wb_shelf_title) },
@@ -134,9 +136,11 @@ fun WorldBookDetailScreen(
                 lifted = listState.canScrollBackward,
                 actions = {
                     Box {
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(AppTopBarIcons.More, contentDescription = stringResource(R.string.wb_cd_more_actions))
-                        }
+                        AppTopBarAction(
+                            icon = AppTopBarIcons.More,
+                            contentDescription = stringResource(R.string.wb_cd_more_actions),
+                            onClick = { showMenu = true },
+                        )
                         AppMenu(expanded = showMenu, onDismiss = { showMenu = false }) {
                             AppMenuItem(
                                 text = stringResource(R.string.wb_menu_export),
@@ -168,71 +172,69 @@ fun WorldBookDetailScreen(
     ) { padding ->
         LazyColumn(
             state = listState,
-            modifier = Modifier.padding(padding).fillMaxSize().contentMaxWidth(),
+            modifier = Modifier.fillMaxSize().grainSurface().padding(padding).contentMaxWidth(),
             contentPadding = PaddingValues(horizontal = AppSpacing.screenGutter, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             item(key = "header") {
-                Surface(shape = AppShapes.medium, tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-                        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
-                            if (b.description.isNotBlank()) {
-                                Text(b.description, style = MaterialTheme.typography.bodySmall, color = colors.text.secondary)
+                Column(modifier = Modifier.fillMaxWidth().appCardSurface().padding(vertical = 6.dp)) {
+                    Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
+                        if (b.description.isNotBlank()) {
+                            Text(b.description, style = AppTypography.caption, color = colors.text.secondary)
+                        }
+                        Text(
+                            stringResource(R.string.wb_detail_meta, stats.first, formatCharCount(stats.second)),
+                            style = AppTypography.caption,
+                            color = colors.text.secondary,
+                        )
+                    }
+                    AppListDivider(startInset = 0.dp)
+                    SettingsSwitchRow(
+                        title = stringResource(R.string.wb_enable_book),
+                        checked = b.enabled,
+                        onCheckedChange = { viewModel.setBookEnabled(it) },
+                    )
+                    SettingsSwitchRow(
+                        title = stringResource(R.string.wb_global_switch),
+                        subtitle = stringResource(R.string.wb_global_switch_sub),
+                        checked = b.isGlobal,
+                        onCheckedChange = { viewModel.setBookGlobal(it) },
+                    )
+                    if (!b.isGlobal) {
+                        AppListDivider(startInset = 0.dp)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showCharacters = true }
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            Row(horizontalArrangement = Arrangement.spacedBy((-6).dp)) {
+                                boundCharacters.take(5).forEach { character ->
+                                    CharacterAvatar(
+                                        name = character.name,
+                                        avatarPath = character.avatarPath,
+                                        size = 24.dp,
+                                        modifier = Modifier.border(1.5.dp, colors.surface.raised, CircleShape),
+                                    )
+                                }
                             }
                             Text(
-                                stringResource(R.string.wb_detail_meta, stats.first, formatCharCount(stats.second)),
-                                style = MaterialTheme.typography.bodySmall,
+                                if (boundCharacters.isEmpty()) {
+                                    stringResource(R.string.wb_bound_row_empty)
+                                } else {
+                                    stringResource(R.string.wb_bound_row, boundCharacters.size)
+                                },
+                                style = AppTypography.caption,
                                 color = colors.text.secondary,
+                                modifier = Modifier.weight(1f),
                             )
-                        }
-                        AppListDivider(startInset = 0.dp)
-                        SettingsSwitchRow(
-                            title = stringResource(R.string.wb_enable_book),
-                            checked = b.enabled,
-                            onCheckedChange = { viewModel.setBookEnabled(it) },
-                        )
-                        SettingsSwitchRow(
-                            title = stringResource(R.string.wb_global_switch),
-                            subtitle = stringResource(R.string.wb_global_switch_sub),
-                            checked = b.isGlobal,
-                            onCheckedChange = { viewModel.setBookGlobal(it) },
-                        )
-                        if (!b.isGlobal) {
-                            AppListDivider(startInset = 0.dp)
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { showCharacters = true }
-                                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            ) {
-                                Row(horizontalArrangement = Arrangement.spacedBy((-6).dp)) {
-                                    boundCharacters.take(5).forEach { character ->
-                                        CharacterAvatar(
-                                            name = character.name,
-                                            avatarPath = character.avatarPath,
-                                            size = 24.dp,
-                                            modifier = Modifier.border(1.5.dp, colors.surface.raised, CircleShape),
-                                        )
-                                    }
-                                }
-                                Text(
-                                    if (boundCharacters.isEmpty()) {
-                                        stringResource(R.string.wb_bound_row_empty)
-                                    } else {
-                                        stringResource(R.string.wb_bound_row, boundCharacters.size)
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = colors.text.secondary,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                Icon(
-                                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                    contentDescription = null,
-                                    tint = colors.text.secondary,
-                                )
-                            }
+                            Icon(
+                                AppActionIcons.ChevronRight,
+                                contentDescription = null,
+                                tint = colors.text.secondary,
+                            )
                         }
                     }
                 }
@@ -254,7 +256,7 @@ fun WorldBookDetailScreen(
                 item(key = "emptyEntries") {
                     Text(
                         stringResource(R.string.wb_detail_no_entries),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = AppTypography.caption,
                         color = colors.text.secondary,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
@@ -270,29 +272,27 @@ fun WorldBookDetailScreen(
                 }
             }
             item(key = "addEntry") {
-                Surface(
-                    shape = AppShapes.medium,
-                    tonalElevation = 2.dp,
-                    modifier = Modifier.fillMaxWidth().clickableScale { onCreateEntry(null) },
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .appCardSurface()
+                        .clickableScale { onCreateEntry(null) }
+                        .padding(vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                    ) {
-                        Icon(
-                            Icons.Filled.Add,
-                            contentDescription = null,
-                            tint = colors.accent.text,
-                            modifier = Modifier.size(18.dp),
-                        )
-                        Text(
-                            stringResource(R.string.wb_add_entry),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = colors.accent.text,
-                            modifier = Modifier.padding(start = 6.dp),
-                        )
-                    }
+                    Icon(
+                        AppTopBarIcons.Add,
+                        contentDescription = null,
+                        tint = colors.accent.text,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        stringResource(R.string.wb_add_entry),
+                        style = AppTypography.titleSmall,
+                        color = colors.accent.text,
+                        modifier = Modifier.padding(start = 6.dp),
+                    )
                 }
             }
         }
@@ -323,38 +323,93 @@ fun WorldBookDetailScreen(
     }
     if (showCharacters) {
         val allCharacters by viewModel.allCharacters.collectAsStateWithLifecycle()
+        val nativeUuids by viewModel.nativeCharacterUuids.collectAsStateWithLifecycle()
         val boundUuids = boundCharacters.map { it.uuid }.toSet()
+        var pendingSwitchChar by remember { mutableStateOf<CharacterEntity?>(null) }
+
         AppSheet(onDismissRequest = { showCharacters = false }) {
             Column(modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
                 Text(
                     stringResource(R.string.wb_characters_sheet_title),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = AppTypography.titleMedium,
                     color = colors.text.primary,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 )
                 allCharacters.forEach { character ->
                     val bound = character.uuid in boundUuids
+                    val isNative = character.uuid in nativeUuids
+                    val inWorld = !isNative && character.joinedWorld
+                    val onRowClick: () -> Unit = {
+                        when {
+                            isNative -> Unit
+                            !bound && inWorld -> pendingSwitchChar = character
+                            else -> viewModel.toggleCharacter(character.uuid, !bound)
+                        }
+                    }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { viewModel.toggleCharacter(character.uuid, !bound) }
+                            .alpha(if (isNative) 0.48f else 1f)
+                            .then(if (isNative) Modifier else Modifier.clickable(onClick = onRowClick))
                             .padding(horizontal = 20.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         CharacterAvatar(name = character.name, avatarPath = character.avatarPath, size = 36.dp)
-                        Text(
-                            character.name,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = colors.text.primary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f),
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                Text(
+                                    character.name,
+                                    style = AppTypography.body,
+                                    color = colors.text.primary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                if (isNative || inWorld) {
+                                    Text(
+                                        stringResource(if (isNative) R.string.wb_characters_tag_native else R.string.wb_characters_tag_in_world),
+                                        style = AppTypography.label,
+                                        color = if (isNative) colors.text.secondary else colors.accent.text,
+                                        modifier = Modifier
+                                            .clip(AppShapes.full)
+                                            .background(if (isNative) colors.surface.sunken else colors.accent.container)
+                                            .padding(horizontal = 7.dp, vertical = 2.dp),
+                                    )
+                                }
+                            }
+                            if (isNative || inWorld) {
+                                Text(
+                                    stringResource(if (isNative) R.string.wb_characters_sub_native else R.string.wb_characters_sub_in_world),
+                                    style = AppTypography.caption,
+                                    color = colors.text.secondary,
+                                )
+                            }
+                        }
+                        AppCheckbox(
+                            checked = bound,
+                            enabled = !isNative,
+                            onCheckedChange = { onRowClick() },
                         )
-                        Checkbox(checked = bound, onCheckedChange = { viewModel.toggleCharacter(character.uuid, it) })
                     }
                 }
             }
+        }
+        pendingSwitchChar?.let { target ->
+            AppDialog(
+                onDismissRequest = { pendingSwitchChar = null },
+                title = stringResource(R.string.wb_characters_switch_title),
+                body = stringResource(R.string.wb_characters_switch_body, target.name, b.name),
+                confirmText = stringResource(R.string.wb_characters_switch_confirm),
+                onConfirm = {
+                    viewModel.switchLeaveAndBindCharacter(target.uuid)
+                    pendingSwitchChar = null
+                },
+                dismissText = stringResource(R.string.action_cancel),
+                onDismiss = { pendingSwitchChar = null },
+            )
         }
     }
 }
@@ -372,51 +427,47 @@ private fun EntryRow(entry: WorldBookEntryEntity, onClick: () -> Unit, onToggle:
     } else {
         entry.content.replace('\n', ' ').take(40)
     }
-    Surface(
-        shape = AppShapes.medium,
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth().alpha(if (entry.enabled) 1f else 0.55f),
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .alpha(if (entry.enabled) 1f else 0.55f)
+            .appCardSurface()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            TriggerBadge(entry)
-            Column(modifier = Modifier.weight(1f)) {
+        WorldBookTriggerBadge(entry)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                title,
+                style = AppTypography.titleSmall,
+                color = colors.text.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (subtitle.isNotBlank()) {
                 Text(
-                    title,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = colors.text.primary,
+                    subtitle,
+                    style = AppTypography.caption,
+                    color = colors.text.secondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (subtitle.isNotBlank()) {
-                    Text(
-                        subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colors.text.secondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
             }
-            val toggleCd = title
-            AppSwitch(
-                checked = entry.enabled,
-                onCheckedChange = onToggle,
-                modifier = Modifier.semantics { contentDescription = toggleCd },
-            )
         }
+        val toggleCd = title
+        AppSwitch(
+            checked = entry.enabled,
+            onCheckedChange = onToggle,
+            modifier = Modifier.semantics { contentDescription = toggleCd },
+        )
     }
 }
 
 /** 三色触发徽章：常驻 = info 家族（酒馆蓝灯）/ 关键词 = success 家族（绿灯）/ 语义 = accent 家族（契约 §12.8）。 */
 @Composable
-private fun TriggerBadge(entry: WorldBookEntryEntity) {
+internal fun WorldBookTriggerBadge(entry: WorldBookEntryEntity) {
     val colors = AppTheme.colors
     val (bg, fg, labelRes) = when {
         entry.constant -> Triple(colors.status.infoContainer, colors.status.onInfo, R.string.wb_entry_badge_constant)
@@ -425,7 +476,7 @@ private fun TriggerBadge(entry: WorldBookEntryEntity) {
     }
     Text(
         stringResource(labelRes),
-        style = MaterialTheme.typography.labelSmall,
+        style = AppTypography.label,
         color = fg,
         modifier = Modifier.clip(AppShapes.full).background(bg).padding(horizontal = 8.dp, vertical = 3.dp),
     )

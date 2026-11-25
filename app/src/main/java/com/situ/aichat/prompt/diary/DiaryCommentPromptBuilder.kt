@@ -72,16 +72,17 @@ object DiaryCommentPromptBuilder {
         systemPrompt: String,
         userName: String,
         entryContent: String,
-        /**
-         * 日记附图张数（图片多模态一期 §B8）。>0 时注入盲图提示——从前日记链路对图片**完全无感知**：
-         * 用户写「今天去看海」配 9 张海景照，角色评论时连「有图」都不知道，很容易写出与照片脱节的话。
-         * 这里只补「知道有图、但看不到」，真看图属日记二期（本卷不做）。
-         */
         photoCount: Int = 0,
+        worldInfoSection: String? = null,
     ): String {
         val parts = mutableListOf<String>()
         parts.add(strings.intro.format(characterName, personality))
         if (systemPrompt.isNotEmpty()) parts.add(strings.setup.format(systemPrompt))
+        if (!worldInfoSection.isNullOrBlank()) {
+            parts.add("")
+            parts.add("## 世界观设定")
+            parts.add(worldInfoSection)
+        }
         parts.add("")
         parts.add(strings.friendWrote.format(userName))
         parts.add(strings.entryQuote.format(entryContent))
@@ -100,11 +101,6 @@ object DiaryCommentPromptBuilder {
         return parts.joinToString("\n")
     }
 
-    /**
-     * 角色回应用户回复的 system prompt（R3 评论回复一轮）。与 [build] 同骨架，追加「你之前的评论 +
-     * 用户的回复」两行对话上下文，指令换成「回应这条回复」；要求段去掉 reqTone（回应是接话，
-     * 不再需要「鼓励/共鸣/追问/调侃」的开题建议）。纯函数可单测。
-     */
     fun buildReply(
         strings: DiaryCommentPromptStrings,
         characterName: String,
@@ -114,12 +110,17 @@ object DiaryCommentPromptBuilder {
         entryContent: String,
         rootComment: String,
         userReply: String,
-        /** 同 [build]：>0 时注入盲图提示——回复线程里也该知道日记附了照片（首条评论知道、回复却失忆很割裂）。 */
         photoCount: Int = 0,
+        worldInfoSection: String? = null,
     ): String {
         val parts = mutableListOf<String>()
         parts.add(strings.intro.format(characterName, personality))
         if (systemPrompt.isNotEmpty()) parts.add(strings.setup.format(systemPrompt))
+        if (!worldInfoSection.isNullOrBlank()) {
+            parts.add("")
+            parts.add("## 世界观设定")
+            parts.add(worldInfoSection)
+        }
         parts.add("")
         parts.add(strings.friendWrote.format(userName))
         parts.add(strings.entryQuote.format(entryContent))
@@ -140,11 +141,6 @@ object DiaryCommentPromptBuilder {
         return parts.joinToString("\n")
     }
 
-    /**
-     * 作者回应用户在**TA 的交换日记**下的顶层留言（R6-1）。与 [buildReply] 的差别在视角：R3 里角色是
-     * 「朋友日记的评论者」，这里角色是「日记作者本人」——上下文换成「你今天写了一篇日记 + 用户读后留言」，
-     * 指令换成「回应这条留言」；要求段与 [buildReply] 同（无 reqTone）。纯函数可单测。
-     */
     fun buildExchangeReply(
         strings: DiaryCommentPromptStrings,
         characterName: String,
@@ -153,12 +149,17 @@ object DiaryCommentPromptBuilder {
         userName: String,
         entryContent: String,
         userComment: String,
-        /** 同 [build]：>0 时注入盲图提示——回复线程里也该知道日记附了照片（首条评论知道、回复却失忆很割裂）。 */
         photoCount: Int = 0,
+        worldInfoSection: String? = null,
     ): String {
         val parts = mutableListOf<String>()
         parts.add(strings.intro.format(characterName, personality))
         if (systemPrompt.isNotEmpty()) parts.add(strings.setup.format(systemPrompt))
+        if (!worldInfoSection.isNullOrBlank()) {
+            parts.add("")
+            parts.add("## 世界观设定")
+            parts.add(worldInfoSection)
+        }
         parts.add("")
         parts.add(strings.exchangeYouWrote)
         parts.add(strings.entryQuote.format(entryContent))

@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Handshake
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +30,7 @@ import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.PromiseEntity
 import com.situ.aichat.data.local.entity.PromiseStatus
 import com.situ.aichat.promise.PromiseInjectionRenderer
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppListDivider
@@ -186,7 +186,7 @@ private fun PromiseResolvedMicroRow(p: PromiseEntity, mdPattern: String) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
         if (p.statusRaw == PromiseStatus.FULFILLED) {
             Icon(
-                Icons.Filled.Check,
+                AppActionIcons.Check,
                 contentDescription = null,
                 modifier = Modifier.padding(top = 2.dp).size(15.dp),
                 tint = AppTheme.colors.status.onSuccess,

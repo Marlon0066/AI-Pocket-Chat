@@ -44,15 +44,15 @@ data class AppSettings(
     /** 向量检索余弦阈值（整数百分比 0-100，0=关闭）。对齐 iOS：默认 65（= 0.65）。 */
     val vectorSearchThreshold: Int = 65,
 
-    // 世界书触发设置（WB7c·契约 FABLE5_WORLDBOOK_PROPOSAL.md §12.7；默认值与酒馆全局默认一致 + D4 字符预算）
-    /** 世界书扫描深度：回看最近 N 条消息找关键词。 */
-    val worldInfoScanDepth: Int = 2,
+    // 世界书触发设置（WB7c·契约 FABLE5_WORLDBOOK_PROPOSAL.md §12.7；2026-11-25 1A 拍板默认开递归3轮+扫4条）
+    /** 世界书扫描深度：回看最近 N 条消息找关键词（默认 4 条）。 */
+    val worldInfoScanDepth: Int = 4,
     /** 世界书篇幅预算（字符·D4 拍板默认 6000 字）。 */
     val worldInfoBudgetChars: Int = 6000,
-    /** 世界书递归扫描（UI 叫「设定联动」）。 */
-    val worldInfoRecursiveScan: Boolean = false,
-    /** 递归轮数上限（0 = 不限）。 */
-    val worldInfoMaxRecursionSteps: Int = 0,
+    /** 世界书递归扫描（UI 叫「设定联动」·1A 拍板默认开）。 */
+    val worldInfoRecursiveScan: Boolean = true,
+    /** 递归轮数上限（0 = 不限；1A 拍板默认 3 轮防社区书环路）。 */
+    val worldInfoMaxRecursionSteps: Int = 3,
     /** 插入策略（存 WorldInfoInsertionStrategy 名字；CHARACTER_FIRST = ST/V2 卡规范默认）。 */
     val worldInfoInsertionStrategy: String = "CHARACTER_FIRST",
     /** 世界书关键词大小写敏感（全局默认关）。 */
@@ -208,6 +208,14 @@ data class AppSettings(
     val economyNotificationTier: String = "brief",
     /** 关系里程碑庆祝通知开关（P1-33·安卓超越 iOS：iOS 自动评估路径零通知）。默认开；关 = 全静默（=iOS 原生行为）。 */
     val milestoneNotificationEnabled: Boolean = true,
+    /** B-4：红包快过期提醒开关（默认开；仅控 22h 提醒通知，不影响红包到期自动退回逻辑）。 */
+    val notifRedPacketExpiringEnabled: Boolean = true,
+    /** B-4：约见面到点提醒开关（默认开）。 */
+    val notifMeetingReminderEnabled: Boolean = true,
+    /** B-4：故事生成完成或失败提醒开关（默认开）。 */
+    val notifStoryFinishedEnabled: Boolean = true,
+    /** B-4：朋友圈评论/点赞系统通知开关（默认开；关时仅不弹系统通知，App 内红点照常）。 */
+    val notifMomentInteractionEnabled: Boolean = true,
     /** 主动消息夜间免打扰开关（开 = 窗内到点的主动消息一律作废、不顺延补发）。默认开。 */
     val quietHoursEnabled: Boolean = true,
     /** 免打扰窗起点（当日分钟数，默认 1380=23:00）。跨午夜语义：start>end 表示跨天。 */

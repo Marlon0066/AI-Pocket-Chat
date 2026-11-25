@@ -52,4 +52,13 @@ class StoryGlobalSettingsViewModel @Inject constructor(
     fun setTemperature(value: Double) {
         viewModelScope.launch { settingsRepository.setStoryCreationTemperature(value) }
     }
+
+    /** B-6：将全局文字忌口、场面节拍与口味画像清空回出厂默认（单本书覆盖不受影响）。 */
+    fun resetToDefaults() {
+        viewModelScope.launch {
+            settingsRepository.setStoryBannedExpressions(null)
+            settingsRepository.setStorySceneBeats(null)
+            settingsRepository.setStoryTasteProfile(null)
+        }
+    }
 }

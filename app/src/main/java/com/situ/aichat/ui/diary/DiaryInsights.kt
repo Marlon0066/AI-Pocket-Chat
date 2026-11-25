@@ -11,12 +11,14 @@ import java.time.ZoneId
  */
 internal object DiaryInsights {
 
-    /** 一份轻统计：连续天数 + 已发布篇数 + 总字数 + 心情计数（emoji → 次数·降序）。 */
+    /** 一份轻统计：连续天数 + 已发布篇数 + 总字数 + 心情计数（emoji → 次数·降序）+ 近 30 天每日心情色块。 */
     data class Stats(
         val streakDays: Int,
         val publishedCount: Int,
         val totalChars: Int,
         val moodCounts: List<Pair<String, Int>>,
+        /** 近 30 天（[today - 29 .. today]）每日代表心情 emoji，无记录或无心情为 null。 */
+        val recentDayMoods: List<String?> = emptyList(),
     )
 
     /** 用户已发布日记（排草稿/宠物/交换信·streak 与统计共用的口径闸）。 */
@@ -71,11 +73,20 @@ internal object DiaryInsights {
             .eachCount()
             .entries.sortedByDescending { it.value }
             .map { it.key to it.value }
+        // 近 30 天每日最新带心情的已发布日记（或空串标记“有写但未选心情”，null 标记“当日无发布”）。
+        val byDay = pub.sortedByDescending { it.timestamp }
+            .groupBy { Instant.ofEpochMilli(it.timestamp).atZone(zone).toLocalDate() }
+        val recent = (29 downTo 0).map { offset ->
+            val day = today.minusDays(offset.toLong())
+            val list = byDay[day] ?: return@map null
+            list.firstNotNullOfOrNull { it.moodEmoji?.takeIf(String::isNotEmpty) } ?: ""
+        }
         return Stats(
             streakDays = streakDays(entries, today, zone),
             publishedCount = pub.size,
             totalChars = pub.sumOf { it.content.length },
             moodCounts = moods,
+            recentDayMoods = recent,
         )
     }
 }

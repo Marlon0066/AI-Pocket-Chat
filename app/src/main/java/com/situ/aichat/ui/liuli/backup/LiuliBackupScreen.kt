@@ -20,10 +20,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -86,9 +84,8 @@ fun LiuliBackupScreen(
     val autoBackupConfig by viewModel.autoBackupConfig.collectAsStateWithLifecycle()
     val progress by viewModel.progress.collectAsStateWithLifecycle()
     val readFailed by viewModel.readFailed.collectAsStateWithLifecycle()
+    val includeMedia by viewModel.includeMedia.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    // 是否在导出里包含媒体（默认开 = 对齐 iOS includeMedia 默认 ON）。
-    var includeMedia by remember { mutableStateOf(true) }
 
     val createDoc = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/zip"),
@@ -176,7 +173,16 @@ fun LiuliBackupScreen(
                         .padding(horizontal = LiuliPageGeometry.gutter, vertical = LiuliPageGeometry.titleGap),
                 ) {
                     LiuliGroup(footer = stringResource(R.string.backup_desc)) {
-                        LiuliRowBase(divider = false, verticalPadding = LiuliPageGeometry.rowTwoLinePad) {
+                        // B-7：导出「包含图片、语音和头像」持久化开关挪到导出按钮上方，先选再导。
+                        LiuliToggleRow(
+                            title = stringResource(R.string.backup_include_media_v2),
+                            subtitle = stringResource(R.string.backup_export_include_media_desc),
+                            checked = includeMedia,
+                            enabled = !busy,
+                            divider = false,
+                            onCheckedChange = viewModel::setIncludeMedia,
+                        )
+                        LiuliRowBase(divider = true, verticalPadding = LiuliPageGeometry.rowTwoLinePad) {
                             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(INLINE_GAP)) {
                                 LiuliButton(
                                     onClick = {
@@ -198,13 +204,6 @@ fun LiuliBackupScreen(
                                 ) { Text(stringResource(R.string.backup_import)) }
                             }
                         }
-                        LiuliToggleRow(
-                            title = stringResource(R.string.backup_export_include_media),
-                            subtitle = stringResource(R.string.backup_export_include_media_desc),
-                            checked = includeMedia,
-                            enabled = !busy,
-                            onCheckedChange = { includeMedia = it },
-                        )
                     }
 
                     // 「最近备份」直选导入（P1-8）：点一份 → 走既有 预览 → 策略 → 导入 链路，零新解析。

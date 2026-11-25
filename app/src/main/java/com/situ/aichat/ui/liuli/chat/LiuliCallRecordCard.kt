@@ -13,8 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Phone
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -117,7 +117,7 @@ internal fun LiuliCallRecordCard(
                 )
             }
             Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                AppActionIcons.ChevronRight,
                 contentDescription = null,
                 tint = colors.text.tertiary,
                 modifier = Modifier.rotate(chevronRotation),
@@ -224,7 +224,7 @@ private fun LiuliVoiceSetupTail(onClick: () -> Unit) {
         )
         Text(label, style = AppTypography.caption, color = colors.status.onWarning, modifier = Modifier.weight(1f))
         Icon(
-            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            AppActionIcons.ChevronRight,
             contentDescription = null,
             tint = colors.status.onWarning.copy(alpha = TAIL_CHEVRON_ALPHA),
             modifier = Modifier.size(TAIL_CHEVRON),

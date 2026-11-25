@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.MilestoneEntity
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -174,7 +174,7 @@ private fun TimelineFutureExtension(dotCenterY: androidx.compose.ui.unit.Dp) {
                         .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f * (1f - i / 6f))),
                 )
             }
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f), modifier = Modifier.size(10.dp))
+            Icon(AppActionIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f), modifier = Modifier.size(10.dp))
         }
     }
 }

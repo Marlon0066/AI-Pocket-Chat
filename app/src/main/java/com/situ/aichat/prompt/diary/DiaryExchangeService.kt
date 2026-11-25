@@ -70,6 +70,12 @@ class DiaryExchangeService @Inject constructor(
     private val promiseRepository: PromiseRepository,
     private val openLoopRepository: OpenLoopRepository,
 ) {
+    private var worldBookAmbient: com.situ.aichat.worldbook.WorldBookAmbientInjector? = null
+
+    @Inject
+    fun bindWorldBookAmbient(injector: com.situ.aichat.worldbook.WorldBookAmbientInjector) {
+        worldBookAmbient = injector
+    }
     private val unlockMutex = Mutex()
 
     /** 信封位状态（时间线当日置顶·S5）。 */
@@ -180,6 +186,13 @@ class DiaryExchangeService @Inject constructor(
             ),
             Instant.ofEpochMilli(now), ps,
         )
+        val worldInfoSection = worldBookAmbient?.buildAmbientSection(
+            character = ch,
+            userName = userName,
+            userBio = profile?.bio?.trim().orEmpty(),
+            contextText = listOf(chatSummary, scheduleSummary).filter { it.isNotBlank() }.joinToString("\n"),
+            nowMillis = now,
+        ).orEmpty()
         val enrichment = DiaryExchangeEnrichment(
             personaFrame = exStrings.personaFrame,
             aboutUser = profile?.bio?.trim().orEmpty(),
@@ -188,6 +201,7 @@ class DiaryExchangeService @Inject constructor(
             promiseBlock = promiseBlock,
             loopBlock = loopBlock,
             intentBlock = IntentExitRenderer.diaryBlock(ch.intentQueue.intents, userName, now), // 卷四 §4.5 ④：心里挂着的事
+            worldInfoSection = worldInfoSection,
         )
 
         val system = DiaryExchangePromptBuilder.build(

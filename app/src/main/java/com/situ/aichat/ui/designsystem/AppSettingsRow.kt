@@ -49,11 +49,13 @@ fun AppSettingsRow(
     showChevron: Boolean = false,
     onClick: (() -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
+    valueWarning: Boolean = false,
+    enabled: Boolean = true,
 ) {
     val colors = AppTheme.colors
     val haptics = LocalAppHaptics.current
     // trailing 在场时行本身不吃点击（防与槽内开关双触发·§4.8）。
-    val rowClick = onClick.takeIf { trailing == null }
+    val rowClick = onClick.takeIf { trailing == null && enabled }
     Row(
         modifier = modifier
             .then(
@@ -73,22 +75,28 @@ fun AppSettingsRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        val textAlpha = if (enabled) 1f else 0.48f
         if (icon != null) {
             Box(
                 Modifier
                     .size(30.dp)
                     .clip(RoundedCornerShape(9.dp))
-                    .background(colors.accent.primary.copy(alpha = 0.15f)),
+                    .background(colors.accent.primary.copy(alpha = if (enabled) 0.15f else 0.08f)),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(icon, contentDescription = null, tint = colors.accent.text, modifier = Modifier.size(18.dp))
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = colors.accent.text.copy(alpha = textAlpha),
+                    modifier = Modifier.size(18.dp),
+                )
             }
         }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 title,
                 style = AppTypography.settingsRowTitle,
-                color = colors.text.primary,
+                color = colors.text.primary.copy(alpha = textAlpha),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -96,7 +104,7 @@ fun AppSettingsRow(
                 Text(
                     subtitle,
                     style = AppTypography.settingsRowSubtitle,
-                    color = colors.text.secondary,
+                    color = colors.text.secondary.copy(alpha = textAlpha),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -105,8 +113,8 @@ fun AppSettingsRow(
         if (value != null) {
             Text(
                 value,
-                style = AppTypography.settingsRowValue,
-                color = colors.text.secondary,
+                style = AppTypography.settingsHubValue,
+                color = (if (valueWarning) colors.status.onWarning else colors.text.secondary).copy(alpha = textAlpha),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -128,7 +136,7 @@ fun AppSettingsRow(
             Icon(
                 AppProfileIcons.ChevronRight,
                 contentDescription = null,
-                tint = colors.text.tertiary,
+                tint = colors.text.tertiary.copy(alpha = textAlpha),
                 modifier = Modifier.size(16.dp),
             )
         }

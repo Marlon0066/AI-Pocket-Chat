@@ -1,14 +1,12 @@
 package com.situ.aichat.ui.liuli.settings
 
+import com.situ.aichat.ui.settings.hub.settingsMatches
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * T1：设置主页搜索过滤（图纸 2026-09-06 卷四 A-4 · §5 E7）。
- *
- * 期望从 A-4 那一行独立反推：trim · 空词全显 · `contains(ignoreCase)` · null 文本跳过 ·
- * 一条命中即整组显。
+ * T1：设置主页搜索过滤（原卷四 A-4 · 卷一搬至 ui.settings.hub，断言一字不改）。
  */
 class LiuliSettingsSearchTest {
 
@@ -16,7 +14,6 @@ class LiuliSettingsSearchTest {
         assertTrue(settingsMatches("", "外观", "表情包管理"))
         assertTrue(settingsMatches("   ", "外观"))
         assertTrue(settingsMatches("\t\n", "外观"))
-        // 一条文本都没有时，空词照样全显（组标题自己也算显）。
         assertTrue(settingsMatches(""))
     }
 
@@ -36,7 +33,6 @@ class LiuliSettingsSearchTest {
         assertTrue(settingsMatches("阈值", "记忆", "保留量 / 检索阈值"))
         assertTrue(settingsMatches("记忆", "记忆", null))
         assertFalse(settingsMatches("阈值", "记忆", null))
-        // 全 null（该组各行都没副标题）时不命中，不该崩。
         assertFalse(settingsMatches("阈值", null, null))
     }
 }

@@ -14,16 +14,15 @@ import com.situ.aichat.ui.liuli.page.LiuliToggleRow
 import com.situ.aichat.ui.settings.WORLD_TIMEZONES
 import com.situ.aichat.ui.settings.WorldSettingsUiState
 import com.situ.aichat.ui.settings.gmtOffsetShort
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Schedule
 import java.time.ZoneId
 
 /** 世界设置页的写口（与暖陶 `WorldSettingsViewModel` 一一对应）。 */
 @Immutable
 data class LiuliWorldSettingsCallbacks(
     val onSetVividness: (String) -> Unit,
-    val onSetNotification: (String) -> Unit,
     val onOpenTimezoneSheet: () -> Unit,
     val onSetRelationships: (Boolean) -> Unit,
     val onSetRomance: (Boolean) -> Unit,
@@ -68,32 +67,6 @@ internal fun ColumnScope.liuliWorldSettingsGroups(
         )
     }
 
-    LiuliGroup(
-        header = stringResource(R.string.world_notification_section),
-        footer = stringResource(R.string.world_notification_foot),
-    ) {
-        LiuliRadioRow(
-            title = stringResource(R.string.world_notification_silent_name),
-            subtitle = stringResource(R.string.world_notification_silent_desc),
-            selected = state.notificationTier == AppSettings.WORLD_NOTIFICATION_SILENT,
-            onSelect = { callbacks.onSetNotification(AppSettings.WORLD_NOTIFICATION_SILENT) },
-            divider = false,
-        )
-        LiuliRadioRow(
-            title = stringResource(R.string.world_notification_gentle_name) + TAG_SEP +
-                stringResource(R.string.world_notification_default_tag),
-            subtitle = stringResource(R.string.world_notification_gentle_desc),
-            selected = state.notificationTier == AppSettings.WORLD_NOTIFICATION_GENTLE,
-            onSelect = { callbacks.onSetNotification(AppSettings.WORLD_NOTIFICATION_GENTLE) },
-        )
-        LiuliRadioRow(
-            title = stringResource(R.string.world_notification_all_name),
-            subtitle = stringResource(R.string.world_notification_all_desc),
-            selected = state.notificationTier == AppSettings.WORLD_NOTIFICATION_ALL,
-            onSelect = { callbacks.onSetNotification(AppSettings.WORLD_NOTIFICATION_ALL) },
-        )
-    }
-
     LiuliGroup(header = stringResource(R.string.world_tz_section)) {
         // 右值 = 「跟随设备 · GMT+8」或「北京 · GMT+8」；表外的钉值直接显 zoneId（逐字照暖陶 :164–172）。
         val tzValue = if (state.timezoneId == null) {
@@ -108,7 +81,7 @@ internal fun ColumnScope.liuliWorldSettingsGroups(
             subtitle = stringResource(R.string.world_tz_row_sub),
             value = tzValue,
             onClick = callbacks.onOpenTimezoneSheet,
-            icon = Icons.Filled.Schedule,
+            icon = AppActionIcons.Clock,
             tileColor = LiuliPalette.tileWorld,
             divider = false,
         )
@@ -133,14 +106,15 @@ internal fun ColumnScope.liuliWorldSettingsGroups(
         )
     }
 
-    // 居民节（战役 B·图纸 §4.3）：入口行「让一位新居民搬来」+ 已有 n/50 计数 → ResidentCreateSheet。
+    // 居民节（战役 B·图纸 §4.3）：入口行「让一位新居民搬来」+ 解释 + 已有 n/50 计数 → ResidentCreateSheet。
     LiuliGroup(
         header = stringResource(R.string.world_resident_section),
         footer = stringResource(R.string.world_resident_foot),
     ) {
         LiuliNavRow(
             title = stringResource(R.string.world_resident_entry_title),
-            subtitle = stringResource(R.string.world_resident_entry_sub, state.residentCount, state.residentCap),
+            subtitle = stringResource(R.string.settings_world_new_resident_sub) + TAG_SEP +
+                stringResource(R.string.world_resident_entry_sub, state.residentCount, state.residentCap),
             onClick = callbacks.onOpenResidentSheet,
             icon = Icons.Filled.Add,
             tileColor = LiuliPalette.tileWorld,

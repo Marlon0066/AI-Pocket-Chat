@@ -29,14 +29,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
@@ -242,7 +236,7 @@ fun VoiceRecordButton(
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                Icons.Filled.Mic,
+                AppActionIcons.Mic,
                 contentDescription = stringResource(R.string.voice_message_hold_to_record),
                 tint = colors.text.onAccent,
             )
@@ -267,7 +261,7 @@ fun VoiceRecordingOverlay(level: Float, durationMs: Long, cancelling: Boolean) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Icon(Icons.Filled.Mic, contentDescription = null, tint = textAccent, modifier = Modifier.size(20.dp))
+        Icon(AppActionIcons.Mic, contentDescription = null, tint = textAccent, modifier = Modifier.size(20.dp))
         VoiceLevelBars(level = level, color = barColor, modifier = Modifier.width(40.dp).height(20.dp))
         Text(
             stringResource(if (cancelling) R.string.voice_recording_cancel_hint else R.string.voice_message_recording),
@@ -313,16 +307,18 @@ fun VoiceDraftBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        IconButton(onClick = onCancel) {
-            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_cancel), tint = colors.text.secondary)
-        }
-        IconButton(onClick = onPlay) {
-            Icon(
-                if (isPlaying) Icons.Filled.Stop else Icons.Filled.PlayArrow,
-                contentDescription = if (isPlaying) stringResource(R.string.a11y_stop_playback) else stringResource(R.string.a11y_voice_play), // Y5②
-                tint = colors.accent.text,
-            )
-        }
+        com.situ.aichat.ui.designsystem.AppIconButton(
+            icon = AppActionIcons.Close,
+            contentDescription = stringResource(R.string.action_cancel),
+            onClick = onCancel,
+            tint = colors.text.secondary,
+        )
+        com.situ.aichat.ui.designsystem.AppIconButton(
+            icon = if (isPlaying) com.situ.aichat.ui.designsystem.AppActionIcons.Stop else com.situ.aichat.ui.designsystem.AppActionIcons.Play,
+            contentDescription = if (isPlaying) stringResource(R.string.a11y_stop_playback) else stringResource(R.string.a11y_voice_play), // Y5②
+            onClick = onPlay,
+            tint = colors.accent.text,
+        )
         VoiceLevelBars(level = 0.6f, color = colors.accent.primary, modifier = Modifier.width(44.dp).height(18.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -386,7 +382,7 @@ fun VoiceDraftBar(
             color = colors.text.primary,
         )
         ChatPrimaryActionButton(
-            icon = Icons.AutoMirrored.Filled.Send,
+            icon = AppActionIcons.Send,
             contentDescription = stringResource(R.string.a11y_send_voice_message),
             onClick = onSend,
         )

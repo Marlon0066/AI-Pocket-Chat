@@ -14,7 +14,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
@@ -42,6 +41,7 @@ import com.situ.aichat.story.StoryCreationLogic
 import com.situ.aichat.story.StoryNarrativePerson
 import com.situ.aichat.story.StoryRoleType
 import com.situ.aichat.ui.components.CharacterAvatar
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppChoiceChip
@@ -425,7 +425,7 @@ private fun TextEditRow(title: String, value: String, showValueAsStatus: Boolean
                 Text(value, style = AppTheme.typography.secondary, color = c.text.secondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
-        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = c.text.tertiary)
+        Icon(AppActionIcons.ChevronRight, contentDescription = null, tint = c.text.tertiary)
     }
 }
 

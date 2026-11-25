@@ -22,10 +22,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddPhotoAlternate
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -53,6 +49,7 @@ import com.situ.aichat.data.model.GiftCardData
 import com.situ.aichat.data.model.GiftSender
 import com.situ.aichat.gift.GiftCatalog
 import com.situ.aichat.gift.GiftSendService
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.liuli.chat.LiuliGiftCard
@@ -203,7 +200,7 @@ internal fun LiuliDiyGiftCreationSheet(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
-                                    Icons.Filled.Close,
+                                    AppActionIcons.Close,
                                     contentDescription = removeLabel,
                                     tint = Color.White,
                                     modifier = Modifier.size(14.dp),
@@ -224,7 +221,7 @@ internal fun LiuliDiyGiftCreationSheet(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(Icons.Filled.AddPhotoAlternate, contentDescription = null, tint = colors.economy.gold)
+                        Icon(AppActionIcons.AddPhoto, contentDescription = null, tint = colors.economy.gold)
                         Text("添加图片", style = AppTypography.listPreview, color = onGlass.primary)
                     }
                 }
@@ -234,7 +231,7 @@ internal fun LiuliDiyGiftCreationSheet(
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text("花多少金币", style = AppTypography.snackbarBody, color = onGlass.secondary)
                     Box(Modifier.weight(1f))
-                    Icon(Icons.Filled.MonetizationOn, contentDescription = null, tint = colors.economy.gold, modifier = Modifier.size(16.dp))
+                    Icon(AppActionIcons.Coin, contentDescription = null, tint = colors.economy.gold, modifier = Modifier.size(16.dp))
                     Text(" $cost 金币", style = AppTypography.amount, color = onGlass.primary)
                 }
                 LiuliSlider(

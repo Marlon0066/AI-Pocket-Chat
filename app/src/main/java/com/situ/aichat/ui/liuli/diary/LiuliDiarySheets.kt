@@ -27,6 +27,8 @@ import com.situ.aichat.prompt.diary.MonthlyReviewService
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.diary.DiaryInsights
+import com.situ.aichat.ui.diary.DiaryLetterTopRule
+import com.situ.aichat.ui.diary.DiaryMoodHeatmap30
 import com.situ.aichat.ui.diary.MoodDistribution
 import com.situ.aichat.ui.diary.diaryReviewTitle
 import com.situ.aichat.ui.liuli.designsystem.LiuliButton
@@ -38,14 +40,17 @@ import com.situ.aichat.ui.liuli.page.LiuliStatCard
 
 // 琉璃日记的三枚弹层（琉璃 2.0 卷六·一 §4.2）：统计 / 月度回顾 / 三问引导，壳 = [LiuliSheetShell]，内容与暖陶同字同序。
 
-/** 回顾与统计：三格统计卡 + 心情分布（没发布过则一句提示）。 */
+/** 回顾与统计：三格统计卡 + 近 30 天心情色块热力格 + 心情分布（没发布过则一句提示）。 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun LiuliDiaryStatsSheet(stats: DiaryInsights.Stats, onDismiss: () -> Unit) {
     LiuliSheetShell(onDismissRequest = onDismiss, title = stringResource(R.string.diary_menu_insights)) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             LiuliStatCard(
                 listOf(
@@ -54,6 +59,9 @@ internal fun LiuliDiaryStatsSheet(stats: DiaryInsights.Stats, onDismiss: () -> U
                     stringResource(R.string.diary_stats_chars) to stats.totalChars.toString(),
                 ),
             )
+            if (stats.recentDayMoods.any { it != null }) {
+                DiaryMoodHeatmap30(stats.recentDayMoods)
+            }
             if (stats.moodCounts.isNotEmpty()) {
                 MoodDistribution(stats.moodCounts)
             } else if (stats.publishedCount == 0) {
@@ -64,7 +72,7 @@ internal fun LiuliDiaryStatsSheet(stats: DiaryInsights.Stats, onDismiss: () -> U
     }
 }
 
-/** 月度回顾：楷体信文 + 随文心情分布快照（长信可滚）。 */
+/** 月度回顾：双线信笺抬头 + 楷体信文 + 随文心情分布快照（长信可滚）。 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun LiuliDiaryReviewSheet(review: MonthlyReviewEntity, onDismiss: () -> Unit) {
@@ -76,6 +84,7 @@ internal fun LiuliDiaryReviewSheet(review: MonthlyReviewEntity, onDismiss: () ->
                 .padding(horizontal = 24.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            DiaryLetterTopRule()
             Text(review.content, style = AppTypography.kaiBody, color = LiuliTheme.onGlass.primary)
             MonthlyReviewService.decodeMoodCounts(review.moodCountsJson).takeIf { it.isNotEmpty() }?.let { MoodDistribution(it) }
             Box(Modifier.height(16.dp))

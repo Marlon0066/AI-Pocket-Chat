@@ -15,9 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -38,6 +35,7 @@ import com.situ.aichat.story.StoryNarrativePerson
 import com.situ.aichat.story.StoryTemplate
 import com.situ.aichat.ui.components.CharacterAvatar
 import com.situ.aichat.ui.components.clickableScale
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppListDivider
@@ -127,7 +125,7 @@ fun StoryOpenBookSheet(
                     ) {
                         Text(stringResource(R.string.story_sheet_add_support), style = AppTheme.typography.secondary, color = c.accent.text)
                         Icon(
-                            Icons.Filled.KeyboardArrowDown,
+                            AppActionIcons.ChevronDown,
                             contentDescription = null,
                             tint = c.accent.text,
                             modifier = Modifier.size(18.dp).rotate(if (state.showSupporting) 180f else 0f),
@@ -217,7 +215,7 @@ internal fun CastAvatar(
                         .border(2.dp, c.surface.raised, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Filled.Check, contentDescription = null, tint = c.text.onAccent, modifier = Modifier.size(11.dp))
+                    Icon(AppActionIcons.Check, contentDescription = null, tint = c.text.onAccent, modifier = Modifier.size(11.dp))
                 }
             }
         }

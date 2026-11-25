@@ -13,7 +13,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Handshake
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.situ.aichat.R
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppFeatureIcons
 import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.AppNavIcons
@@ -98,7 +98,7 @@ private fun factIcon(kind: FactKind): FactIcon {
         FactKind.RED_PACKET -> FactIcon(AppPanelIcons.RedPacket, c.ourDays.dotLife.copy(alpha = 0.30f), c.ourDays.dotLife)
         FactKind.MOMENTS -> FactIcon(AppProfileIcons.Moments, c.ourDays.dotLife.copy(alpha = 0.30f), c.ourDays.dotLife)
         FactKind.EXCHANGE_DIARY -> FactIcon(AppFeatureIcons.Diary, c.ourDays.dotLife.copy(alpha = 0.30f), c.ourDays.dotLife)
-        FactKind.SCHEDULE -> FactIcon(Icons.Filled.Schedule, c.surface.sunken, c.text.tertiary)
+        FactKind.SCHEDULE -> FactIcon(AppActionIcons.Clock, c.surface.sunken, c.text.tertiary)
     }
 }
 

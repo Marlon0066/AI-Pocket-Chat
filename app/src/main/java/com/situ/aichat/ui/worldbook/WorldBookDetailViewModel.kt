@@ -3,12 +3,14 @@ package com.situ.aichat.ui.worldbook
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.situ.aichat.data.local.dao.WorldNativeDao
 import com.situ.aichat.data.local.entity.CharacterEntity
 import com.situ.aichat.data.local.entity.WorldBookEntity
 import com.situ.aichat.data.local.entity.WorldBookEntryEntity
 import com.situ.aichat.data.repository.CharacterRepository
 import com.situ.aichat.data.worldbook.WorldBookRepository
 import com.situ.aichat.data.worldbook.decodeStringList
+import com.situ.aichat.world.member.WorldMembershipService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -28,6 +30,8 @@ import javax.inject.Inject
 class WorldBookDetailViewModel @Inject constructor(
     private val repository: WorldBookRepository,
     private val characterRepo: CharacterRepository,
+    private val worldNativeDao: WorldNativeDao,
+    private val membershipService: WorldMembershipService,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -70,10 +74,30 @@ class WorldBookDetailViewModel @Inject constructor(
     val allCharacters: StateFlow<List<CharacterEntity>> = characterRepo.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** 书侧绑定：与角色侧共用同一份 bind/unbind（契约 §12.3）。 */
+    /** 原住民出身角色 uuid 集合（常驻世界·不可绑定世界书）。 */
+    val nativeCharacterUuids: StateFlow<Set<String>> = worldNativeDao.observeAll()
+        .map { list -> list.mapNotNull { it.recruitedCharacterUuid }.toSet() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    /** 书侧绑定：原住民拒绝；未确认入世角色拒绝直接绑（走 [switchLeaveAndBindCharacter]）。 */
     fun toggleCharacter(characterUuid: String, bound: Boolean) {
         viewModelScope.launch {
+            if (worldNativeDao.getByRecruitedUuid(characterUuid) != null) return@launch
+            if (bound && characterRepo.get(characterUuid)?.joinedWorld == true) return@launch
             if (bound) repository.bind(characterUuid, bookUuid) else repository.unbind(characterUuid, bookUuid)
+        }
+    }
+
+    /** 确认切换：单事务令该角色离开世界并增量挂载本书。 */
+    fun switchLeaveAndBindCharacter(characterUuid: String) {
+        viewModelScope.launch {
+            if (worldNativeDao.getByRecruitedUuid(characterUuid) != null) return@launch
+            membershipService.leaveAndBindWorldBook(
+                characterUuid = characterUuid,
+                bookUuid = bookUuid,
+                sole = false,
+                nowMs = System.currentTimeMillis(),
+            )
         }
     }
 

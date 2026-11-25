@@ -22,7 +22,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -51,6 +50,7 @@ import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.StoryChapterEntity
 import com.situ.aichat.story.StoryChoiceCountdown
 import com.situ.aichat.story.StoryNarrativePerson
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 
 /**
@@ -194,7 +194,7 @@ private fun FreeInputCard(locked: Boolean, isDark: Boolean, onClick: () -> Unit)
                 modifier = Modifier.size(22.dp).clip(CircleShape).background(textColor.copy(alpha = 0.10f)),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Filled.Edit, contentDescription = null, tint = secondary, modifier = Modifier.size(13.dp))
+                Icon(AppActionIcons.Edit, contentDescription = null, tint = secondary, modifier = Modifier.size(13.dp))
             }
             Text(stringResource(R.string.story_choice_free_input), color = textColor.copy(alpha = 0.85f), modifier = Modifier.weight(1f))
         }

@@ -11,37 +11,36 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.situ.aichat.R
 import com.situ.aichat.ui.components.SettingsSection
-import com.situ.aichat.ui.components.SettingsSliderRow
 import com.situ.aichat.ui.components.SettingsSwitchRow
 import com.situ.aichat.ui.components.contentMaxWidth
 import com.situ.aichat.ui.designsystem.AppRadio
-import com.situ.aichat.ui.designsystem.AppSlider
 import com.situ.aichat.ui.designsystem.AppTextArea
 import com.situ.aichat.ui.designsystem.AppTextField
+import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
-import kotlin.math.roundToInt
+import com.situ.aichat.ui.designsystem.AppTypography
 
 /**
- * 线下见面设置页（10.2f；仿 iOS `OfflineModeSettingsView`，M3 原生）。
- * 邀约主导权 + 沉浸输入 + 叙事风格（含 custom 三编辑框）+ 见面记忆（次数/字数）+ 背景。
+ * 线下见面设置页（设置全面重构卷二）：
+ * 邀约主导权 + 沉浸输入 + 叙事风格（含 custom 三编辑框）+ 见面后余温 + 背景（B-3 已移除无入口的自定义图片选项）。
+ * 见面记忆（次数 / 字数上限）已统一搬至「记忆」页。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,14 +49,17 @@ fun ImmersiveSettingsScreen(
     viewModel: ImmersiveSettingsViewModel = hiltViewModel(),
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
-
     val scrollState = rememberScrollState()
+    val lifted by remember { derivedStateOf { scrollState.value > 0 } }
+    // B-3：旧存量若为 customImage，界面按柔和粒子回退展示，不暴露死选项。
+    val effectiveBg = if (settings.offlineBackgroundStyleRaw == "customImage") "particle" else settings.offlineBackgroundStyleRaw
+
     Scaffold(
         topBar = {
             AppTopBar(
                 title = "线下见面",
                 onBack = onBack,
-                lifted = scrollState.value > 0,
+                lifted = lifted,
             )
         },
     ) { padding ->
@@ -70,7 +72,6 @@ fun ImmersiveSettingsScreen(
                 .contentMaxWidth()
                 .padding(vertical = 8.dp),
         ) {
-            // 邀约主导权
             SettingsSection(
                 title = "邀约主导权",
                 footer = "开启时，角色会根据聊天情境主动提议见面。关闭后，只有你从聊天工具栏点「发起线下见面」才会进入线下模式。",
@@ -83,7 +84,6 @@ fun ImmersiveSettingsScreen(
                 )
             }
 
-            // 沉浸输入
             SettingsSection(
                 title = "沉浸输入",
                 footer = "开启后，线下见面时你可以分步描述环境、动作、对话和内心想法，获得更沉浸的角色扮演体验。",
@@ -96,7 +96,6 @@ fun ImmersiveSettingsScreen(
                 )
             }
 
-            // 叙事风格
             SettingsSection(
                 title = "叙事风格",
                 footer = narrativeDetailFooter(settings.offlineNarrativeDetailRaw),
@@ -106,7 +105,6 @@ fun ImmersiveSettingsScreen(
                     onSelect = { viewModel.setNarrativeDetail(it) },
                 )
             }
-            // custom 三编辑框卡外裸排（§4.A1·所属分区卡后、下一分区前·padding horizontal 20）。
             if (settings.offlineNarrativeDetailRaw == "custom") {
                 CustomPromptEditor(
                     title = "写作风格指导",
@@ -131,31 +129,10 @@ fun ImmersiveSettingsScreen(
                 )
             }
 
-            // 见面记忆（余温消息 ListItem :175 无独立标题·折入本段卡·脚注随制式落卡下——见 §11 D-A1）
             SettingsSection(
-                title = "见面记忆",
-                footer = "注入最近 N 次见面的完整摘要，更早的合并为一行存档；「记忆上限」是注入文本的字数预算，超出时最早的完整摘要自动降为存档行。",
+                title = "见面后",
+                footer = "见面记忆的注入条数与字数预算已统一收进「记忆」设置。",
             ) {
-                SliderRow(
-                    label = "注入最近见面次数",
-                    valueLabel = "${settings.meetingMemoryInjectCount} 次",
-                    value = settings.meetingMemoryInjectCount.toFloat(),
-                    valueRange = 1f..10f,
-                    steps = 8,
-                    onValueChange = { viewModel.setMeetingMemoryInjectCount(it.roundToInt()) },
-                )
-                // settings-slider-infobutton：用共享 SettingsSliderRow 以挂 ⓘ 说明（iOS 此滑块有 info.circle）。
-                SettingsSliderRow(
-                    label = "见面记忆上限",
-                    valueLabel = "${settings.meetingMemoryMaxLength} 字",
-                    value = settings.meetingMemoryMaxLength.toFloat(),
-                    valueRange = 200f..3000f,
-                    steps = 27, // 200..3000 步进 100
-                    infoMessage = stringResource(R.string.mem_meeting_info),
-                    onManualInput = { viewModel.setMeetingMemoryMaxLength(it) }, // settings-slider-manualinput（手填不做 100 吸附）
-                    onValueChange = { viewModel.setMeetingMemoryMaxLength((it / 100f).roundToInt() * 100) },
-                )
-                // 见面后余温消息（涟漪①·§3.10）
                 SettingsSwitchRow(
                     title = "见面后余温消息",
                     subtitle = "见面结束几小时后，TA 会主动发来一条回味见面的短消息",
@@ -164,16 +141,15 @@ fun ImmersiveSettingsScreen(
                 )
             }
 
-            // 背景
             SettingsSection(
                 title = "背景",
                 footer = "线下模式是角色邀请你面对面见面时的沉浸式叙事界面。",
             ) {
                 BackgroundStyleOptions(
-                    selectedRaw = settings.offlineBackgroundStyleRaw,
+                    selectedRaw = effectiveBg,
                     onSelect = { viewModel.setBackgroundStyle(it) },
                 )
-                when (settings.offlineBackgroundStyleRaw) {
+                when (effectiveBg) {
                     "particle" -> ParticleStyleOptions(
                         selectedRaw = settings.offlineParticleStyleRaw,
                         onSelect = { viewModel.setParticleStyle(it) },
@@ -185,7 +161,12 @@ fun ImmersiveSettingsScreen(
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text("背景色", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                            Text(
+                                "背景色",
+                                style = AppTypography.settingsRowTitle,
+                                color = AppTheme.colors.text.primary,
+                                modifier = Modifier.weight(1f),
+                            )
                             AppTextField(
                                 value = settings.offlineBackgroundColor,
                                 onValueChange = { viewModel.setBackgroundColor(it.trim().take(6)) },
@@ -198,13 +179,6 @@ fun ImmersiveSettingsScreen(
                             )
                         }
                     }
-                    // customImage 说明文字进卡（原私有 SectionFooter 已删·卡内行样式 padding 16）。
-                    "customImage" -> Text(
-                        "自定义背景图请在对应角色的档案中设置（每个角色独立）；未设置时回退到柔和粒子。",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                    )
                 }
             }
         }
@@ -231,7 +205,6 @@ private fun NarrativeDetailOptions(selectedRaw: String, onSelect: (String) -> Un
 private fun BackgroundStyleOptions(selectedRaw: String, onSelect: (String) -> Unit) {
     OptionRow("柔和粒子", selectedRaw == "particle") { onSelect("particle") }
     OptionRow("纯色", selectedRaw == "solidColor") { onSelect("solidColor") }
-    OptionRow("自定义图片", selectedRaw == "customImage") { onSelect("customImage") }
 }
 
 @Composable
@@ -247,30 +220,12 @@ private fun OptionRow(title: String, selected: Boolean, onSelect: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .selectable(selected = selected, onClick = onSelect)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AppRadio(selected = selected, onClick = onSelect)
-        Spacer(Modifier.width(8.dp))
-        Text(title, style = MaterialTheme.typography.bodyLarge)
-    }
-}
-
-@Composable
-private fun SliderRow(
-    label: String,
-    valueLabel: String,
-    value: Float,
-    valueRange: ClosedFloatingPointRange<Float>,
-    steps: Int,
-    onValueChange: (Float) -> Unit,
-) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-            Text(valueLabel, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
-        }
-        AppSlider(value = value, onValueChange = onValueChange, valueRange = valueRange, steps = steps)
+        Spacer(Modifier.width(10.dp))
+        Text(title, style = AppTypography.settingsRowTitle, color = AppTheme.colors.text.primary)
     }
 }
 
@@ -288,8 +243,8 @@ private fun CustomPromptEditor(
             .padding(horizontal = 20.dp, vertical = 4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(title, style = MaterialTheme.typography.titleSmall)
-        Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(title, style = AppTypography.settingsRowTitle, color = AppTheme.colors.text.primary)
+        Text(subtitle, style = AppTypography.settingsRowSubtitle, color = AppTheme.colors.text.secondary)
         AppTextArea(
             value = value,
             onValueChange = onValueChange,

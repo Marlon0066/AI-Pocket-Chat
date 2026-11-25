@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.SystemClock
 import android.util.Log
 import com.situ.aichat.data.local.entity.StoryEntity
+import com.situ.aichat.data.repository.SettingsRepository
 import com.situ.aichat.data.repository.StoryRepository
 import com.situ.aichat.foreground.ForegroundActivity
 import com.situ.aichat.foreground.LlmGenerationForegroundController
@@ -20,6 +21,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -58,6 +60,7 @@ class StoryGenerationTaskManager @Inject constructor(
     private val storyRepository: StoryRepository,
     private val foregroundController: LlmGenerationForegroundController,
     private val readingProgressStore: StoryReadingProgressStore,
+    private val settingsRepository: SettingsRepository,
 ) {
 
     /**
@@ -373,13 +376,17 @@ class StoryGenerationTaskManager @Inject constructor(
      * 完成/失败本地通知（1:1 iOS `sendNotification` :243-278，f-2）。用户已拍板：成功+失败都发、「故事更新」独立渠道、文案 1:1 iOS。
      * 区别于 11.1g 的章节「解锁」通知——本通知是「生成完成/失败」事件。点击深链开 app（跳具体故事的路由留 11.1h-j）。
      */
-    private fun notifyGenerationFinished(
+    private suspend fun notifyGenerationFinished(
         storyTitle: String,
         chapterNumber: Int,
         chapterTitle: String?,
         success: Boolean,
         storyId: String,
     ) {
+        if (!settingsRepository.appSettings.first().notifStoryFinishedEnabled) {
+            Log.d(TAG, "故事完成/失败提醒已关闭，跳过通知 story=${storyId.take(8)} ch=$chapterNumber")
+            return
+        }
         Notifier.postStory(
             context = context,
             notificationId = storyNotificationId(storyId),

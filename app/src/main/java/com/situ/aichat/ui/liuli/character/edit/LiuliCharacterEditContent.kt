@@ -110,6 +110,6 @@ internal fun ColumnScope.LiuliCharacterEditContent(
         )
     }
     Box(gutter) { worldGroup() }
-    if (isEditing) worldBookGroup?.let { Box(gutter) { it() } }
+    worldBookGroup?.let { Box(gutter) { it() } }
     if (isEditing) LiuliEditMeetingsGroup(onOpenMeetings = onOpenMeetings, modifier = gutter)
 }

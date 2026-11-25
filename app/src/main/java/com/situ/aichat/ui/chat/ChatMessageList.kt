@@ -16,11 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -33,7 +28,7 @@ import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
@@ -45,7 +40,8 @@ import com.situ.aichat.data.local.entity.CustomStickerEntity
 import com.situ.aichat.data.local.entity.MessageEntity
 import com.situ.aichat.data.model.MessageKind
 import com.situ.aichat.ui.components.AppMotion
-import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppActionIcons
+import com.situ.aichat.ui.designsystem.AppRoundFab
 import com.situ.aichat.ui.meeting.MeetingArrivalButton
 import com.situ.aichat.ui.meeting.MeetingCountdownChip
 
@@ -226,8 +222,8 @@ internal fun ChatMessageList(
                                     play = emotionPlay,
                                     onPlayed = { emotionPlayed.add(msg.messageUUID) },
                                 )
-                                // M3b：飞行期整行由覆盖层代画（含时间戳·落地帧像素一致交还）。
-                                .then(if (flightRow) Modifier.alpha(0f) else Modifier),
+                                // M3b：飞行期整行由覆盖层代画（含时间戳·落地帧像素一致交还）；只挡绘制不挂 alpha(0f) 避免读屏隐身。
+                                .then(if (flightRow) Modifier.drawWithContent { } else Modifier),
                         ) {
                             CompositionLocalProvider(LocalBubbleStampTone provides stampTone) {
                                 MessageRow(
@@ -318,14 +314,11 @@ internal fun ChatMessageList(
             enter = if (reduceMotion) EnterTransition.None else fadeIn() + expandIn(),
             exit = if (reduceMotion) ExitTransition.None else shrinkOut() + fadeOut(),
         ) {
-            FloatingActionButton(
+            AppRoundFab(
+                icon = AppActionIcons.ArrowDown,
+                contentDescription = stringResource(R.string.a11y_scroll_to_bottom),
                 onClick = { if (listItems.isNotEmpty()) scrollCoordinator.stickToBottom(animate = !reduceMotion) },
-                shape = CircleShape,
-                containerColor = AppTheme.colors.surface.raised,
-                contentColor = AppTheme.colors.accent.text,
-            ) {
-                Icon(Icons.Filled.ArrowDownward, contentDescription = stringResource(R.string.a11y_scroll_to_bottom))
-            }
+            )
         }
     }
 }

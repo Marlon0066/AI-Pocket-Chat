@@ -1,5 +1,6 @@
 package com.situ.aichat.ui.gift
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,17 +19,14 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -44,9 +42,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppChoiceChip
+import com.situ.aichat.ui.designsystem.AppMediaRow
+import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppSheet
 import com.situ.aichat.ui.designsystem.AppSpacing
+import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.ui.designsystem.appCardSurface
 import com.situ.aichat.data.local.entity.CharacterEntity
@@ -152,30 +154,29 @@ fun GiftShopScreen(
 /** 余额胶囊（toolbar 右上，1:1 iOS balancePill）。 */
 @Composable
 private fun BalancePill(balance: Int) {
-    Surface(
-        shape = RoundedCornerShape(50),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest,
-        modifier = Modifier.padding(end = 8.dp),
+    val colors = AppTheme.colors
+    Row(
+        modifier = Modifier
+            .padding(end = 8.dp)
+            .background(colors.surface.sunken, AppShapes.full)
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(Icons.Filled.MonetizationOn, contentDescription = null, tint = GiftColors.Gold, modifier = Modifier.size(16.dp))
-            Text(
-                text = "$balance",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
+        Icon(AppActionIcons.Coin, contentDescription = null, tint = GiftColors.Gold, modifier = Modifier.size(16.dp))
+        Text(
+            text = "$balance",
+            style = AppTheme.typography.label,
+            fontWeight = FontWeight.SemiBold,
+            color = colors.text.primary,
+        )
     }
 }
 
 /** 未选角色引导卡（1:1 iOS characterSelectPrompt·appCardSurface 承托·圆角 18→16 并轨）。 */
 @Composable
 private fun CharacterSelectPrompt(onClick: () -> Unit) {
+    val colors = AppTheme.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -185,14 +186,17 @@ private fun CharacterSelectPrompt(onClick: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)) {
-            Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.People, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            }
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(colors.accent.container, RoundedCornerShape(10.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Filled.People, contentDescription = null, tint = colors.accent.text)
         }
         Column(modifier = Modifier.weight(1f)) {
-            Text("选择送礼对象", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-            Text("先选一个角色再挑礼物", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("选择送礼对象", style = AppTheme.typography.label, color = colors.text.primary)
+            Text("先选一个角色再挑礼物", style = AppTheme.typography.caption, color = colors.text.secondary)
         }
     }
 }
@@ -200,6 +204,7 @@ private fun CharacterSelectPrompt(onClick: () -> Unit) {
 /** 已选角色行（1:1 iOS selectedCharacterRow，点击换对象·appCardSurface 承托）。 */
 @Composable
 private fun SelectedCharacterRow(character: CharacterEntity, onClick: () -> Unit) {
+    val colors = AppTheme.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -211,8 +216,8 @@ private fun SelectedCharacterRow(character: CharacterEntity, onClick: () -> Unit
     ) {
         CharacterAvatar(name = character.name, avatarPath = character.avatarPath, size = 36.dp)
         Column(modifier = Modifier.weight(1f)) {
-            Text("送给 ${character.name}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-            Text("点此更换对象", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("送给 ${character.name}", style = AppTheme.typography.label, color = colors.text.primary)
+            Text("点此更换对象", style = AppTheme.typography.caption, color = colors.text.secondary)
         }
     }
 }
@@ -245,37 +250,42 @@ private fun GiftCharacterPickerSheet(
     onPick: (CharacterEntity) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val colors = AppTheme.colors
     AppSheet(onDismissRequest = onDismiss) {
         Column(modifier = Modifier.navigationBarsPadding()) {
             Text(
                 "选择送礼对象",
-                style = MaterialTheme.typography.titleMedium,
+                style = AppTheme.typography.titleSmall,
+                color = colors.text.primary,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
             )
             if (characters.isEmpty()) {
                 Text(
                     "先去「联系人」创建一个角色，才能送礼。",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = AppTheme.typography.body,
+                    color = colors.text.secondary,
                     modifier = Modifier.padding(20.dp),
                 )
             } else {
-                characters.forEach { c ->
-                    // TODO(图纸未覆盖): leading 是 44dp 角色头像（§4.8 点名的 avatar 情形），不是 30dp 陶土
-                    //  瓦片 → 停手登记（施工日志 D-12）。
-                    ListItem(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onPick(c) },
-                        headlineContent = { Text(c.name) },
-                        supportingContent = { if (c.occupation.isNotEmpty()) Text(c.occupation, maxLines = 1) },
-                        leadingContent = { CharacterAvatar(name = c.name, avatarPath = c.avatarPath, size = 44.dp) },
-                        trailingContent = {
-                            if (c.uuid == selectedUuid) {
-                                Icon(Icons.Filled.Check, contentDescription = stringResource(R.string.a11y_gift_selected), tint = MaterialTheme.colorScheme.primary)
-                            }
-                        },
-                    )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    characters.forEach { c ->
+                        AppMediaRow(
+                            title = c.name,
+                            subtitle = c.occupation.takeIf { it.isNotEmpty() },
+                            leading = { CharacterAvatar(name = c.name, avatarPath = c.avatarPath, size = 44.dp) },
+                            trailing = {
+                                if (c.uuid == selectedUuid) {
+                                    Icon(AppActionIcons.Check, contentDescription = stringResource(R.string.a11y_gift_selected), tint = colors.accent.text)
+                                }
+                            },
+                            onClick = { onPick(c) },
+                        )
+                    }
                 }
             }
         }

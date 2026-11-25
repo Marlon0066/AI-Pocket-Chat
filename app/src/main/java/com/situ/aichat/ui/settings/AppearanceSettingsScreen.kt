@@ -1,6 +1,5 @@
 package com.situ.aichat.ui.settings
 
-import android.os.Build
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,12 +17,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,23 +42,19 @@ import com.situ.aichat.data.model.AppSkin
 import com.situ.aichat.data.model.GlassTier
 import com.situ.aichat.ui.components.SettingsSection
 import com.situ.aichat.ui.components.contentMaxWidth
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppRadio
-import com.situ.aichat.ui.designsystem.AppSettingsRow
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppSlider
-import com.situ.aichat.ui.designsystem.AppSwitch
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
-import com.situ.aichat.ui.designsystem.appCardSurface
 import com.situ.aichat.ui.designsystem.LightAppColors
 import com.situ.aichat.ui.designsystem.LiuliLightAppColors
 import com.situ.aichat.ui.liuli.glass.hazeGlassSupported
 import kotlin.math.roundToInt
 
 /**
- * 外观设置页（11.4a + 主题配色 2026-06-30 + 琉璃第二张脸 2026-09-04）：脸（暖陶 / 琉璃·两张脸一个大脑）
- * + 深浅模式（对齐 iOS `AppearanceMode`：浅色/深色/跟随系统·与脸正交）+ Material You 动态取色（安卓特有·
- * 仅 Android 12+ 显示）。读写走 DataStore，根部主题即时生效。见 FABLE5_THEME_LIULI_PROPOSAL.md §7.1。
+ * 外观设置页（B-2：动态取色开关已移除，保留界面风格、玻璃质感、深浅模式、暖陶底栏不透明度）。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,7 +65,6 @@ fun AppearanceSettingsScreen(
     val skin by viewModel.skin.collectAsStateWithLifecycle()
     val glassTier by viewModel.glassTier.collectAsStateWithLifecycle()
     val mode by viewModel.mode.collectAsStateWithLifecycle()
-    val useDynamicColor by viewModel.useDynamicColor.collectAsStateWithLifecycle()
     val bottomNavOpacity by viewModel.bottomNavOpacity.collectAsStateWithLifecycle()
 
     val scrollState = rememberScrollState()
@@ -150,21 +141,7 @@ fun AppearanceSettingsScreen(
                 }
             }
 
-            // 动态取色（Material You）仅 Android 12+ 有意义；无独立分区标题 → 无标题卡壳（自研设置行自带透明底）。
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 16.dp).appCardSurface().padding(vertical = 6.dp)) {
-                    AppSettingsRow(
-                        title = stringResource(R.string.appearance_dynamic_color_title),
-                        subtitle = stringResource(R.string.appearance_dynamic_color_subtitle),
-                        trailing = {
-                            AppSwitch(
-                                checked = useDynamicColor,
-                                onCheckedChange = { viewModel.setDynamicColor(it) },
-                            )
-                        },
-                    )
-                }
-            }
+            // B-2：外观页已移除动态取色开关。
 
             // 过渡丝滑化·A1：悬浮底栏背景不透明度（默认 0.88）+ 实时预览。
             // 琉璃下整节隐藏（契约 D-7：琉璃底栏是玻璃片，不读这个偏好；暖陶底栏照旧读）。
@@ -331,7 +308,7 @@ private fun OptionCard(
             style = MaterialTheme.typography.bodyMedium,
         )
         if (selected) {
-            Icon(Icons.Filled.Check, contentDescription = null, tint = colors.accent.text, modifier = Modifier.size(18.dp))
+            Icon(AppActionIcons.Check, contentDescription = null, tint = colors.accent.text, modifier = Modifier.size(18.dp))
         }
     }
 }

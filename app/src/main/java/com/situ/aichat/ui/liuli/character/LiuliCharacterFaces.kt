@@ -4,13 +4,13 @@ import androidx.compose.runtime.Composable
 import com.situ.aichat.data.model.AppSkin
 import com.situ.aichat.ui.character.CharacterEditScreen
 import com.situ.aichat.ui.character.CharacterProfileScreen
+import com.situ.aichat.ui.character.MemoryEditScreen
 import com.situ.aichat.ui.liuli.character.edit.LiuliCharacterEditScreen
 import com.situ.aichat.ui.liuli.designsystem.LocalAppSkin
 
 /**
  * 角色资料页的选脸点（图纸 2026-09-06 卷四 A-1）。与暖陶 `CharacterProfileScreen` **同 8 参**，
  * 两条分支实参逐字相同。
- *
  */
 @Composable
 fun SkinnedCharacterProfileScreen(
@@ -63,4 +63,14 @@ fun SkinnedCharacterEditScreen(
         return
     }
     CharacterEditScreen(onCancel, onSaved, onEditModules, onOpenOfflineMeetings, onOpenWorldBooks, focusVoiceSection)
+}
+
+/** 记忆手动编辑页选脸。 */
+@Composable
+fun SkinnedMemoryEditScreen(onClose: () -> Unit) {
+    if (LocalAppSkin.current == AppSkin.LIULI) {
+        LiuliMemoryEditScreen(onClose = onClose)
+        return
+    }
+    MemoryEditScreen(onClose = onClose)
 }

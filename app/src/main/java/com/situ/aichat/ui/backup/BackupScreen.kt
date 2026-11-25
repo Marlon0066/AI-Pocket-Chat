@@ -65,9 +65,8 @@ fun BackupScreen(
     val autoBackupConfig by viewModel.autoBackupConfig.collectAsStateWithLifecycle()
     val progress by viewModel.progress.collectAsStateWithLifecycle()
     val readFailed by viewModel.readFailed.collectAsStateWithLifecycle()
+    val includeMedia by viewModel.includeMedia.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    // 是否在导出里包含聊天图片/语音等媒体（默认开=对齐 iOS includeMedia 默认 ON；关可大幅减小文件体积）。
-    var includeMedia by remember { mutableStateOf(true) }
 
     val createDoc = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/zip"),
@@ -145,6 +144,24 @@ fun BackupScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            // B-7：导出「包含图片、语音和头像」持久化开关挪到导出按钮上方，先选再导。
+            Column(Modifier.fillMaxWidth().appCardSurface().padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.backup_include_media_v2), style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            stringResource(R.string.backup_export_include_media_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    AppSwitch(
+                        checked = includeMedia,
+                        onCheckedChange = viewModel::setIncludeMedia,
+                        enabled = !busy,
+                    )
+                }
+            }
             AppButton(
                 onClick = {
                     viewModel.clearEvents()
@@ -192,22 +209,6 @@ fun BackupScreen(
                             )
                         }
                     }
-                }
-            }
-
-            // 导出「包含媒体」开关 → 无标题卡壳单行卡（§4.A11·操作页 16 gutter 由外 Column 提供·
-            // 与全宽按钮同宽故不叠 horizontal 20·卡内 16·§11 D-A11）。
-            Column(Modifier.fillMaxWidth().appCardSurface().padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(stringResource(R.string.backup_export_include_media), style = MaterialTheme.typography.bodyMedium)
-                        Text(
-                            stringResource(R.string.backup_export_include_media_desc),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    AppSwitch(checked = includeMedia, onCheckedChange = { includeMedia = it }, enabled = !busy)
                 }
             }
 

@@ -11,9 +11,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -137,7 +136,7 @@ internal fun PolaroidPhoto(path: String, onRemove: (String) -> Unit) {
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    Icons.Filled.Close,
+                    AppActionIcons.Close,
                     contentDescription = stringResource(R.string.diary_compose_remove_image),
                     tint = Color.White,
                     modifier = Modifier.size(14.dp),

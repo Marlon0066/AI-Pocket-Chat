@@ -30,6 +30,8 @@ class MemorySettingsViewModel @Inject constructor(
     fun setProgressiveCompressionEnabled(enabled: Boolean) = launch { settings.setProgressiveCompressionEnabled(enabled) }
     fun setStructuredMemoryInterval(rounds: Int) = launch { settings.setStructuredMemoryInterval(rounds) }
     fun setVectorSearchThreshold(percent: Int) = launch { settings.setVectorSearchThreshold(percent) }
+    fun setMeetingMemoryInjectCount(count: Int) = launch { settings.setMeetingMemoryInjectCount(count) }
+    fun setMeetingMemoryMaxLength(chars: Int) = launch { settings.setMeetingMemoryMaxLength(chars) }
 
     private inline fun launch(crossinline block: suspend () -> Unit) {
         viewModelScope.launch { block() }

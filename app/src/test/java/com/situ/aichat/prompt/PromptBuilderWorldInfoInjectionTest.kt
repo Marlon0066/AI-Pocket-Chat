@@ -125,4 +125,45 @@ class PromptBuilderWorldInfoInjectionTest {
         val baseline = build(null)
         assertEquals("全空激活结果必须等价于无世界书", baseline, build(world()))
     }
+
+    @Test
+    fun 大小写无关宏解析_大写CHAR_USER_NOW全部替换() {
+        val character = CharacterEntity(uuid = "c1", name = "小雨", creationDate = 0L)
+        val user = com.situ.aichat.data.local.entity.UserProfileEntity(nickname = "阿檀")
+        val msgs = PromptBuilder.buildMessages(
+            character = character,
+            sortedMessages = emptyList(),
+            userProfile = user,
+            appSettings = AppSettings(),
+            strings = strings(),
+            worldInfo = world(before = "{{CHAR}}与{{User}}在{{NOW}}相遇"),
+            now = fixedNow,
+        )
+        val sys = msgs.first().content.orEmpty()
+        val expectedNow = com.situ.aichat.util.DateFormatters.yearMonthDayHourMinute(fixedNow.toEpochMilli())
+        assertTrue(sys.contains("小雨与阿檀在${expectedNow}相遇"))
+    }
+
+    @Test
+    fun 上下文日志分段_前后置世界书全部显形() {
+        val segments = mutableListOf<ContextSegment>()
+        val character = CharacterEntity(uuid = "c1", name = "小雨", creationDate = 0L)
+        val messages = listOf(
+            MessageEntity(messageUUID = "u1", conversationUuid = "c1", roleRaw = "user", content = "你好", timestamp = 1L),
+        )
+        PromptBuilder.buildMessages(
+            character = character,
+            sortedMessages = messages,
+            userProfile = null,
+            appSettings = AppSettings(),
+            strings = strings(),
+            worldInfo = world(before = "前设定", after = "后设定", suffix = "尾设定"),
+            now = fixedNow,
+            segmentSink = segments,
+        )
+        val names = segments.map { it.name }
+        assertTrue(names.contains("世界书（角色前）"))
+        assertTrue(names.contains("世界书（角色后）"))
+        assertTrue(names.contains("世界书（后置）"))
+    }
 }

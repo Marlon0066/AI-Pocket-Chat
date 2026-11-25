@@ -22,7 +22,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Brush
-import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -47,6 +46,7 @@ import com.situ.aichat.gift.GiftItem
 import com.situ.aichat.gift.GiftSendService
 import com.situ.aichat.ui.components.AnimatedCoinText
 import com.situ.aichat.ui.components.CharacterAvatar
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.gift.GiftImage
@@ -136,7 +136,7 @@ internal fun LiuliGiftSheet(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(Icons.Filled.MonetizationOn, contentDescription = null, tint = colors.economy.gold, modifier = Modifier.size(16.dp))
+                    Icon(AppActionIcons.Coin, contentDescription = null, tint = colors.economy.gold, modifier = Modifier.size(16.dp))
                     AnimatedCoinText(balance, style = AppTypography.amount.copy(color = onGlass.primary))
                 }
             }
@@ -236,7 +236,7 @@ private fun LiuliGiftCell(item: GiftItem, balance: Int, onClick: () -> Unit) {
         Text(item.subtitle, style = AppTypography.snackbarBody, color = onGlass.secondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             Icon(
-                Icons.Filled.MonetizationOn,
+                AppActionIcons.Coin,
                 contentDescription = null,
                 tint = if (canAfford) colors.economy.gold else colors.status.onError,
                 modifier = Modifier.size(14.dp),
@@ -276,7 +276,7 @@ private fun LiuliDiyEntryCell(enabled: Boolean, onClick: () -> Unit) {
         Text("手作 · 你自己做", style = AppTypography.label, color = onGlass.primary, maxLines = 1)
         Text("亲手做一份独特的", style = AppTypography.snackbarBody, color = onGlass.secondary, maxLines = 1)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            Icon(Icons.Filled.MonetizationOn, contentDescription = null, tint = colors.economy.gold, modifier = Modifier.size(14.dp))
+            Icon(AppActionIcons.Coin, contentDescription = null, tint = colors.economy.gold, modifier = Modifier.size(14.dp))
             Text("2–20 金币", style = AppTypography.amount, color = onGlass.primary)
         }
     }

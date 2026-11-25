@@ -9,11 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -31,8 +27,10 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
 import com.situ.aichat.economy.SalaryEditWarningFlag
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppTopBar
+import com.situ.aichat.ui.designsystem.AppTopBarAction
 import com.situ.aichat.ui.meeting.MeetingCountdownChip
 import com.situ.aichat.ui.ourdays.ProfileOurDaysCard
 import com.situ.aichat.ui.starfield.StarfieldEntryCard
@@ -110,9 +108,11 @@ fun CharacterProfileScreen(
                 lifted = listState.canScrollBackward,
                 actions = {
                     character?.let { c ->
-                        IconButton(onClick = { onEditCharacter(c.uuid) }) {
-                            Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.profile_edit_character))
-                        }
+                        AppTopBarAction(
+                            icon = AppActionIcons.Edit,
+                            contentDescription = stringResource(R.string.profile_edit_character),
+                            onClick = { onEditCharacter(c.uuid) },
+                        )
                     }
                 },
             )

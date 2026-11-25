@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,6 +32,7 @@ import androidx.compose.ui.window.PopupProperties
 import com.situ.aichat.ui.components.AppMotion
 import com.situ.aichat.ui.components.LocalAppHaptics
 import com.situ.aichat.ui.components.rememberReduceMotion
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.liuli.glass.liuliWindowGlass
@@ -168,7 +167,7 @@ fun LiuliPopupMenu(
                 if (entry.selected) {
                     Spacer(Modifier.width(MENU_CHECK_GAP))
                     Icon(
-                        Icons.Filled.Check,
+                        AppActionIcons.Check,
                         contentDescription = null,
                         tint = colors.accent.text,
                         modifier = Modifier.size(MENU_CHECK),

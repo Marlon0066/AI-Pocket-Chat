@@ -20,14 +20,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -55,6 +51,8 @@ import com.situ.aichat.gift.GiftHistoryPromptService
 import com.situ.aichat.offline.OfflineMeetingSession
 import com.situ.aichat.profile.CharacterWalletActivity
 import com.situ.aichat.ui.components.AnimatedCoinText
+import com.situ.aichat.ui.designsystem.AppActionIcons
+import com.situ.aichat.ui.designsystem.AppIconButton
 import com.situ.aichat.ui.designsystem.AppListDivider
 import com.situ.aichat.ui.designsystem.appCardSurface
 import com.situ.aichat.ui.gift.GiftSymbolMapping
@@ -226,14 +224,13 @@ internal fun CharacterWalletCard(
                 }
             }
             if (onEdit != null) {
-                IconButton(onClick = onEdit) {
-                    Icon(
-                        Icons.Filled.Edit,
-                        contentDescription = stringResource(R.string.wallet_edit_title),
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
+                AppIconButton(
+                    icon = AppActionIcons.Edit,
+                    contentDescription = stringResource(R.string.wallet_edit_title),
+                    onClick = onEdit,
+                    tint = MaterialTheme.colorScheme.primary,
+                    iconSize = 20.dp,
+                )
             }
         }
 
@@ -347,7 +344,7 @@ private fun ActivityRow(tx: CurrencyTransactionEntity, nowMillis: Long) {
 @Composable
 private fun MonthlyStatsRow(earn: Int, spend: Int) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Filled.CalendarMonth, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
+        Icon(AppActionIcons.Calendar, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
         Spacer(Modifier.width(6.dp))
         Text(stringResource(R.string.profile_wallet_month), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.weight(1f))
@@ -383,7 +380,7 @@ internal fun OfflineMeetingMemorySection(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(stringResource(R.string.profile_meeting_all_count, sessions.size), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                    Icon(AppActionIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
                 }
             }
         }

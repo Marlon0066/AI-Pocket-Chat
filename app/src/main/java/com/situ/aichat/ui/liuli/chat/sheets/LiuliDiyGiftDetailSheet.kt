@@ -15,7 +15,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -31,6 +30,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.GiftRecordEntity
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.liuli.designsystem.LiuliTheme
@@ -113,7 +113,7 @@ internal fun LiuliDiyGiftDetailSheet(record: GiftRecordEntity, onDismiss: () -> 
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Schedule, contentDescription = null, tint = onGlass.secondary, modifier = Modifier.size(14.dp))
+                Icon(AppActionIcons.Clock, contentDescription = null, tint = onGlass.secondary, modifier = Modifier.size(14.dp))
                 Text(
                     DateFormatters.relativeTimeSpanShort(record.timestamp, System.currentTimeMillis()),
                     style = AppTypography.snackbarBody,

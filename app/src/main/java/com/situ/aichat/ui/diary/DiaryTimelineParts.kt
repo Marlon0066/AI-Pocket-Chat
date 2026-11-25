@@ -3,13 +3,17 @@ package com.situ.aichat.ui.diary
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -24,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.DiaryEntryWithComments
 import com.situ.aichat.data.local.entity.MonthlyReviewEntity
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.appCardSurface
 import java.time.Instant
@@ -118,7 +123,7 @@ internal fun MonthHeader(
             }
         }
         Spacer(Modifier.height(8.dp))
-        DiaryDashedDivider()
+        DiaryDottedDivider()
     }
 }
 
@@ -141,37 +146,51 @@ private fun ReviewChip(
     )
 }
 
-/** 那年今天回顾卡（R5·纯本地）：accent 标 + 年份 + 摘录两行，点击进详情。 */
+/** 那年今天时光书签卡（方向 C·纯本地）：左侧主色书签竖带 + 年份 + 摘录两行，点击进详情。 */
 @Composable
-internal fun OnThisDayCard(hit: DiaryEntryWithComments, onOpenEntry: (String) -> Unit, surface: Modifier = Modifier.appCardSurface()) {
+internal fun OnThisDayCard(
+    hit: DiaryEntryWithComments,
+    onOpenEntry: (String) -> Unit,
+    surface: Modifier = Modifier.appCardSurface(cornerRadius = 16.dp),
+) {
     val colors = AppTheme.colors
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .padding(horizontal = AppSpacing.screenGutter, vertical = 5.dp)
             .then(surface)
             .clickable(onClickLabel = stringResource(R.string.a11y_diary_open)) { onOpenEntry(hit.entry.uuid) }
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+            .height(IntrinsicSize.Min)
+            .padding(horizontal = 14.dp, vertical = 13.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(
+            modifier = Modifier
+                .width(3.5.dp)
+                .fillMaxHeight()
+                .clip(AppTheme.shapes.full)
+                .background(colors.accent.primary.copy(alpha = 0.78f)),
+        )
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    stringResource(R.string.diary_on_this_day),
+                    style = AppTheme.typography.caption,
+                    color = colors.accent.text,
+                )
+                Text(
+                    formatDiaryDate(hit.entry.timestamp, stringResource(R.string.diary_fmt_month_section_year)),
+                    style = AppTheme.typography.captionNumeric,
+                    color = colors.text.secondary,
+                )
+            }
             Text(
-                stringResource(R.string.diary_on_this_day),
-                style = AppTheme.typography.caption,
-                color = colors.accent.text,
-            )
-            Text(
-                formatDiaryDate(hit.entry.timestamp, stringResource(R.string.diary_fmt_month_section_year)),
-                style = AppTheme.typography.caption,
-                color = colors.text.secondary,
+                hit.entry.content,
+                style = AppTheme.typography.listPreview,
+                color = colors.text.primary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
         }
-        Text(
-            hit.entry.content,
-            style = AppTheme.typography.listPreview,
-            color = colors.text.primary,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
     }
 }

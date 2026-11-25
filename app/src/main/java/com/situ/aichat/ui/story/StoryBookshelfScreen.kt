@@ -1,5 +1,6 @@
 package com.situ.aichat.ui.story
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,15 +18,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Archive
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,17 +32,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.StoryEntity
 import com.situ.aichat.ui.components.LocalAppHaptics
 import com.situ.aichat.ui.components.rememberReduceMotion
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppDialog
@@ -54,6 +55,7 @@ import com.situ.aichat.ui.designsystem.AppDialogTone
 import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
+import com.situ.aichat.ui.designsystem.AppTopBarAction
 import com.situ.aichat.ui.designsystem.AppTopBarIcons
 
 /**
@@ -101,9 +103,11 @@ fun StoryBookshelfScreen(
                 onBack = onBack,
                 lifted = listState.canScrollBackward,
                 actions = {
-                    IconButton(onClick = onCreateStory) {
-                        Icon(AppTopBarIcons.Add, contentDescription = stringResource(R.string.story_create_new))
-                    }
+                    AppTopBarAction(
+                        icon = AppTopBarIcons.Add,
+                        contentDescription = stringResource(R.string.story_create_new),
+                        onClick = onCreateStory,
+                    )
                 },
             )
         },
@@ -269,11 +273,11 @@ internal fun menuActionLabel(action: StoryCardMenuAction): Int = when (action) {
 }
 
 internal fun menuActionIcon(action: StoryCardMenuAction): ImageVector = when (action) {
-    StoryCardMenuAction.PAUSE -> Icons.Filled.Pause
-    StoryCardMenuAction.RESUME -> Icons.Filled.PlayArrow
+    StoryCardMenuAction.PAUSE -> AppActionIcons.Pause
+    StoryCardMenuAction.RESUME -> AppActionIcons.Play
     StoryCardMenuAction.ARCHIVE -> Icons.Outlined.Archive
     StoryCardMenuAction.SETTINGS -> Icons.AutoMirrored.Outlined.MenuBook
-    StoryCardMenuAction.DELETE -> Icons.Outlined.Delete
+    StoryCardMenuAction.DELETE -> AppActionIcons.Delete
 }
 
 @Composable
@@ -283,8 +287,8 @@ internal fun StoryEmptyState(modifier: Modifier = Modifier, action: @Composable 
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("📚", style = AppTheme.typography.titleLarge.copy(fontSize = 52.sp))
-        Spacer(Modifier.height(12.dp))
+        StoryEmptyBookIllustration()
+        Spacer(Modifier.height(14.dp))
         Text(stringResource(R.string.story_empty_title), style = AppTheme.typography.titleSmall, color = AppTheme.colors.text.primary)
         Spacer(Modifier.height(6.dp))
         Text(
@@ -295,5 +299,48 @@ internal fun StoryEmptyState(modifier: Modifier = Modifier, action: @Composable 
         )
         Spacer(Modifier.height(16.dp))
         action()
+    }
+}
+
+/** 书架空态自绘线描摊开书本插画（取代系统 📚 emoji，双脸主题色自动适配）。 */
+@Composable
+private fun StoryEmptyBookIllustration() {
+    val colors = AppTheme.colors
+    val strokeColor = colors.text.secondary.copy(alpha = 0.72f)
+    val accentColor = colors.accent.primary
+    val softWash = colors.accent.primary.copy(alpha = 0.12f)
+    Canvas(Modifier.size(72.dp)) {
+        val w = size.width
+        val h = size.height
+        val stroke = Stroke(width = 1.9.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        // 温润光晕底
+        drawCircle(color = softWash, radius = w * 0.42f, center = Offset(w * 0.5f, h * 0.52f))
+        // 左页
+        val leftPage = Path().apply {
+            moveTo(w * 0.50f, h * 0.34f)
+            quadraticTo(w * 0.36f, h * 0.28f, w * 0.20f, h * 0.32f)
+            lineTo(w * 0.20f, h * 0.68f)
+            quadraticTo(w * 0.36f, h * 0.64f, w * 0.50f, h * 0.71f)
+            close()
+        }
+        // 右页
+        val rightPage = Path().apply {
+            moveTo(w * 0.50f, h * 0.34f)
+            quadraticTo(w * 0.64f, h * 0.28f, w * 0.80f, h * 0.32f)
+            lineTo(w * 0.80f, h * 0.68f)
+            quadraticTo(w * 0.64f, h * 0.64f, w * 0.50f, h * 0.71f)
+            close()
+        }
+        drawPath(leftPage, color = strokeColor, style = stroke)
+        drawPath(rightPage, color = strokeColor, style = stroke)
+        // 右页文字线
+        drawLine(strokeColor.copy(alpha = 0.45f), Offset(w * 0.58f, h * 0.44f), Offset(w * 0.72f, h * 0.42f), strokeWidth = 1.5.dp.toPx(), cap = StrokeCap.Round)
+        drawLine(strokeColor.copy(alpha = 0.45f), Offset(w * 0.58f, h * 0.53f), Offset(w * 0.70f, h * 0.51f), strokeWidth = 1.5.dp.toPx(), cap = StrokeCap.Round)
+        // 顶部星芒点缀
+        val sx = w * 0.50f
+        val sy = h * 0.19f
+        val sr = w * 0.055f
+        drawLine(accentColor, Offset(sx, sy - sr), Offset(sx, sy + sr), strokeWidth = 1.6.dp.toPx(), cap = StrokeCap.Round)
+        drawLine(accentColor, Offset(sx - sr, sy), Offset(sx + sr, sy), strokeWidth = 1.6.dp.toPx(), cap = StrokeCap.Round)
     }
 }

@@ -129,7 +129,7 @@ internal fun LazyListScope.agreementContent() {
     items(agreementSections) { (number, titleRes, bodyRes) ->
         AgreementSection(number, titleRes, bodyRes)
     }
-    item { Spacer(Modifier.height(4.dp)) }
+    item { Spacer(Modifier.height(24.dp)) }
 }
 
 @Composable

@@ -20,7 +20,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -65,6 +64,7 @@ import com.situ.aichat.R
 import com.situ.aichat.ui.components.AppMotion
 import com.situ.aichat.ui.components.LocalAppHaptics
 import com.situ.aichat.ui.components.rememberReduceMotion
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import kotlinx.coroutines.CoroutineStart
@@ -324,7 +324,7 @@ private fun ComposeGridRemoveButton(onClick: () -> Unit, modifier: Modifier = Mo
             Modifier.size(REMOVE_VISUAL).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Filled.Close, contentDescription = cd, tint = Color.White, modifier = Modifier.size(12.dp))
+            Icon(AppActionIcons.Close, contentDescription = cd, tint = Color.White, modifier = Modifier.size(12.dp))
         }
     }
 }

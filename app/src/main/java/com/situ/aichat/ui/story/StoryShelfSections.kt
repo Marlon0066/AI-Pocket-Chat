@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,6 +33,7 @@ import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.StoryEntity
 import com.situ.aichat.story.StoryEndingType
 import com.situ.aichat.ui.components.clickableScale
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 
 /**
@@ -76,7 +76,7 @@ fun NewStoryCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
             Text(stringResource(R.string.story_new_story_title), style = AppTheme.typography.label, color = c.text.primary)
             Text(stringResource(R.string.story_new_story_subtitle), style = AppTheme.typography.caption, color = c.text.secondary)
         }
-        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = c.accent.text, modifier = Modifier.size(18.dp))
+        Icon(AppActionIcons.ChevronRight, contentDescription = null, tint = c.accent.text, modifier = Modifier.size(18.dp))
     }
 }
 
@@ -121,7 +121,7 @@ fun StoryArchiveSection(
                     modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(99.dp)).clickableScale(onClick = onViewAll),
                 ) {
                     Text(stringResource(R.string.story_archive_view_all), style = AppTheme.typography.caption, color = c.accent.text)
-                    Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = c.accent.text, modifier = Modifier.size(15.dp))
+                    Icon(AppActionIcons.ChevronRight, contentDescription = null, tint = c.accent.text, modifier = Modifier.size(15.dp))
                 }
             }
         }

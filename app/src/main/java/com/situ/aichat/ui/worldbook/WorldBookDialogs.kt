@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import com.situ.aichat.R
 import com.situ.aichat.data.worldbook.WorldBookCodec
 import com.situ.aichat.data.worldbook.WorldBookRepository
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppDialog
@@ -129,7 +128,7 @@ internal fun ImportSuccessSheet(
                 modifier = Modifier.size(48.dp).clip(CircleShape).background(colors.status.successContainer),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Filled.Check, contentDescription = null, tint = colors.status.onSuccess)
+                Icon(AppActionIcons.Check, contentDescription = null, tint = colors.status.onSuccess)
             }
             Spacer(Modifier.height(4.dp))
             Text(

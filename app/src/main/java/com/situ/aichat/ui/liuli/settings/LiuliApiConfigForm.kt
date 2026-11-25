@@ -1,11 +1,13 @@
 package com.situ.aichat.ui.liuli.settings
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.situ.aichat.R
 import com.situ.aichat.data.model.ApiProviderType
 import com.situ.aichat.data.repository.isHttpsBaseUrl
@@ -49,7 +51,12 @@ internal fun LiuliApiConfigForm(
     modifier: Modifier = Modifier,
 ) {
     val urlInsecure = baseUrl.isNotBlank() && !isHttpsBaseUrl(baseUrl)
-    val canSave = apiKey.isNotBlank() && baseUrl.isNotBlank() && model.isNotBlank() && isHttpsBaseUrl(baseUrl)
+    val missing = buildList {
+        if (baseUrl.isBlank()) add("Base URL")
+        if (model.isBlank()) add(LiuliApiText.MODEL_LABEL)
+        if (apiKey.isBlank()) add("API Key")
+    }
+    val canSave = missing.isEmpty() && isHttpsBaseUrl(baseUrl)
     LiuliGroup(modifier = modifier, footer = liuliKnownCapabilityHint(model)) {
         LiuliMenuRow(
             title = PROVIDER_LABEL,
@@ -81,13 +88,25 @@ internal fun LiuliApiConfigForm(
         )
         LiuliApiKeyRow(value = apiKey, onValueChange = onApiKeyChange)
         LiuliRowBase(verticalPadding = LiuliPageGeometry.rowTwoLinePad) {
-            LiuliButton(
-                onClick = onSave,
-                style = LiuliButtonStyle.Prominent,
-                enabled = canSave,
+            Column(
                 modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Text(SAVE_AND_ACTIVATE_LABEL)
+                LiuliButton(
+                    onClick = onSave,
+                    style = LiuliButtonStyle.Prominent,
+                    enabled = canSave,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(SAVE_AND_ACTIVATE_LABEL)
+                }
+                if (missing.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.settings_api_missing_fields, missing.joinToString("、")),
+                        style = com.situ.aichat.ui.designsystem.AppTypography.caption,
+                        color = com.situ.aichat.ui.designsystem.AppTheme.colors.text.tertiary,
+                    )
+                }
             }
         }
     }

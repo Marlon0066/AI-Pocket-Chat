@@ -37,6 +37,12 @@ class MomentCommentGenerator @Inject constructor(
     private val userProfileDao: UserProfileDao,
     private val scheduleDao: ScheduleDao,
 ) {
+    private var worldBookAmbient: com.situ.aichat.worldbook.WorldBookAmbientInjector? = null
+
+    @Inject
+    fun bindWorldBookAmbient(injector: com.situ.aichat.worldbook.WorldBookAmbientInjector) {
+        worldBookAmbient = injector
+    }
 
     /**
      * 生成评论内容（temp 0.9，剥 think，空 → null 跳过）。装配 [MomentCommentPromptBuilder] 系统提示词。
@@ -77,6 +83,13 @@ class MomentCommentGenerator @Inject constructor(
             null
         }
         val canSeePhotos = firstPhotoDataUri != null
+        val worldInfoSection = worldBookAmbient?.buildAmbientSection(
+            character = character,
+            userName = userNickname,
+            userBio = userProfileDao.get()?.bio.orEmpty(),
+            contextText = listOfNotNull(post.content, replyTarget?.content).joinToString("\n"),
+            nowMillis = nowMillis,
+        )
         val systemPrompt = MomentCommentPromptBuilder.build(
             strings = strings,
             character = character,
@@ -87,13 +100,11 @@ class MomentCommentGenerator @Inject constructor(
             nowContext = MomentPromptContext.buildNowContext(MomentPromptContext.NowScenario.COMMENT, nowMillis, zone),
             scheduleContext = buildCommentScheduleLine(character, strings, scheduleSystemEnabled, nowMillis, zone),
             photoCount = post.imagePaths.size,
-            // 图片多模态一期（拍板④）：视觉能力真值上线——配置支持看图且这条动态真有图，就挂首图并走
-            // photosVision 文案（文案原话「You can see the first one attached below」= 只挂第一张，
-            // 与下面 contentParts 的构造严格对齐）；否则照旧走「有 N 张图但你看不到」的盲图分支。
             visionEnabled = canSeePhotos,
             existingComments = existingComments,
             replyTarget = replyTarget,
             mentionedByPoster = mentioned,
+            worldInfoSection = worldInfoSection,
         )
 
         val messages = listOf(

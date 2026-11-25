@@ -12,8 +12,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -43,6 +41,7 @@ import com.situ.aichat.ui.contextlog.shared.LogReaderHeaderRow
 import com.situ.aichat.ui.contextlog.shared.readerCharacterName
 import com.situ.aichat.ui.contextlog.shared.sentCaptionText
 import com.situ.aichat.ui.contextlog.splitLogTextBlocks
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
@@ -79,7 +78,7 @@ internal fun LiuliContextLogReplyContent(state: ContextLogEntryUiState, onBack: 
         title = title,
         onBack = onBack,
         collapsed = rememberLargeTitleCollapsed(listState),
-        actions = { if (text.isNotEmpty()) LiuliPageCircleAction({ onCopy(text) }, stringResource(R.string.clog_reader_copy_all), Icons.Outlined.ContentCopy) },
+        actions = { if (text.isNotEmpty()) LiuliPageCircleAction({ onCopy(text) }, stringResource(R.string.clog_reader_copy_all), AppActionIcons.Copy) },
     ) {
         SelectionContainer(Modifier.fillMaxSize()) {
             LazyColumn(

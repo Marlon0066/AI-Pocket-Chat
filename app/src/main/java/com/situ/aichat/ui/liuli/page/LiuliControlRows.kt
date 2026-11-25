@@ -14,11 +14,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Text
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -109,52 +114,68 @@ fun LiuliToggleRow(
     enabled: Boolean = true,
     icon: ImageVector? = null,
     tileColor: LiuliTileTone? = null,
-    /** 砖之外的自定义前导件（如每角色行的 28dp 头像·A-7）。与 [icon] 二选一，同占砖位。 */
     leading: (@Composable () -> Unit)? = null,
     divider: Boolean = true,
-    /** 副标行数上限（琉璃 2.0 卷六·三·加法零回归：默认不限 = 增补前行为）：创建故事的角色简介限两行（同暖陶）。 */
     subtitleMaxLines: Int = Int.MAX_VALUE,
+    disabledReason: String? = null,
+    indented: Boolean = false,
 ) {
     val haptics = LocalAppHaptics.current
+    val colors = AppTheme.colors
     val interaction = remember { MutableInteractionSource() }
-    // 读屏念「开 / 关」（同暖陶 `SettingsSwitchRow` 的 stateDescription·卷五复核 R1 A-6 补·两键既有）。
     val stateOn = stringResource(R.string.settings_state_on)
     val stateOff = stringResource(R.string.settings_state_off)
-    LiuliRowBase(
-        modifier = modifier
-            .toggleable(
-                value = checked,
-                interactionSource = interaction,
-                indication = null,
-                enabled = enabled,
-                role = Role.Switch,
-                onValueChange = { next ->
-                    if (next) haptics.light() else haptics.soft()
-                    onCheckedChange(next)
-                },
+    Column(modifier = modifier.fillMaxWidth().then(if (indented) Modifier.padding(start = 16.dp) else Modifier)) {
+        LiuliRowBase(
+            modifier = Modifier
+                .toggleable(
+                    value = checked,
+                    interactionSource = interaction,
+                    indication = null,
+                    enabled = enabled,
+                    role = Role.Switch,
+                    onValueChange = { next ->
+                        if (next) haptics.light() else haptics.soft()
+                        onCheckedChange(next)
+                    },
+                )
+                .semantics { stateDescription = if (checked) stateOn else stateOff },
+            interactionSource = interaction,
+            minHeight = if (subtitle != null) LiuliPageGeometry.rowTwoLine else LiuliPageGeometry.rowMin,
+            verticalPadding = if (subtitle != null) TWO_LINE_PAD else 0.dp,
+            divider = divider,
+            dividerInset = if (icon != null || leading != null) {
+                LiuliPageGeometry.dividerInsetTile
+            } else {
+                LiuliPageGeometry.dividerInsetPlain
+            },
+        ) {
+            if (leading != null) {
+                Box(Modifier.alpha(if (enabled) 1f else 0.45f)) { leading() }
+                Spacer(Modifier.width(LiuliPageGeometry.tileGap))
+            } else if (icon != null && tileColor != null) {
+                Box(Modifier.alpha(if (enabled) 1f else 0.45f)) { LiuliGroupIconTile(icon, tileColor) }
+                Spacer(Modifier.width(LiuliPageGeometry.tileGap))
+            }
+            LiuliRowTitleColumn(
+                title = title,
+                subtitle = subtitle,
+                modifier = Modifier.weight(1f).alpha(if (enabled) 1f else 0.45f),
+                subtitleMaxLines = subtitleMaxLines,
             )
-            .semantics { stateDescription = if (checked) stateOn else stateOff },
-        interactionSource = interaction,
-        minHeight = if (subtitle != null) LiuliPageGeometry.rowTwoLine else LiuliPageGeometry.rowMin,
-        verticalPadding = if (subtitle != null) TWO_LINE_PAD else 0.dp,
-        divider = divider,
-        dividerInset = if (icon != null || leading != null) {
-            LiuliPageGeometry.dividerInsetTile
-        } else {
-            LiuliPageGeometry.dividerInsetPlain
-        },
-    ) {
-        if (leading != null) {
-            leading()
             Spacer(Modifier.width(LiuliPageGeometry.tileGap))
-        } else if (icon != null && tileColor != null) {
-            LiuliGroupIconTile(icon, tileColor)
-            Spacer(Modifier.width(LiuliPageGeometry.tileGap))
+            LiuliSwitch(checked = checked, onCheckedChange = null, enabled = enabled)
         }
-        LiuliRowTitleColumn(title, subtitle, Modifier.weight(1f), subtitleMaxLines)
-        Spacer(Modifier.width(LiuliPageGeometry.tileGap))
-        // 纯视觉（null）：点击面只在行上；给它 `{}` 会成第二个 toggleable 节点把药丸上的点击吃掉（复核 R1 🔴-2）。
-        LiuliSwitch(checked = checked, onCheckedChange = null, enabled = enabled)
+        if (!enabled && !disabledReason.isNullOrBlank()) {
+            Row(
+                modifier = Modifier.padding(start = LiuliPageGeometry.groupPadH, end = LiuliPageGeometry.groupPadH, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+            ) {
+                Icon(Icons.Outlined.Lock, contentDescription = null, tint = colors.status.onWarning, modifier = Modifier.size(13.dp))
+                Text(disabledReason, style = AppTypography.secondary.copy(fontSize = SUB_SIZE), color = colors.status.onWarning)
+            }
+        }
     }
 }
 
@@ -191,6 +212,9 @@ fun LiuliSliderRow(
      * 上限钳位在各 setter 里）。
      */
     onManualInput: ((Int) -> Unit)? = null,
+    defaultValue: Float? = null,
+    startLabel: String? = null,
+    endLabel: String? = null,
 ) {
     val colors = AppTheme.colors
     // settings-slider-infobutton / settings-slider-manualinput 的琉璃对应态（与暖陶同名同时序）。
@@ -198,7 +222,7 @@ fun LiuliSliderRow(
     var showManual by remember { mutableStateOf(false) }
     var editText by remember { mutableStateOf("") }
     LiuliRowBase(
-        modifier = modifier,
+        modifier = modifier.alpha(if (enabled) 1f else 0.45f),
         minHeight = 0.dp,
         verticalPadding = STACK_PAD_V,
         divider = divider,
@@ -206,8 +230,6 @@ fun LiuliSliderRow(
     ) {
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(STACK_GAP)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                // 标题 + ⓘ 合成一段占 weight(1f)：ⓘ 必须紧跟标题右侧（暖陶同结构），而长标题仍受可用宽约束
-                // ——直接把 weight 给 Text 会把 ⓘ 顶到右值旁边，给 Row 又会让长标题挤掉右值。
                 Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         title,
@@ -218,7 +240,6 @@ fun LiuliSliderRow(
                     if (info != null) {
                         Spacer(Modifier.width(INFO_GAP))
                         val infoLabel = stringResource(R.string.settings_info_dialog_title)
-                        // 版位恰 18（外层盒），48 触达框由 liuliFootprint 居中外溢——直接给内层 18 会把标题挤窄。
                         Box(Modifier.size(INFO_ICON), contentAlignment = Alignment.Center) {
                             Box(
                                 modifier = Modifier
@@ -246,9 +267,7 @@ fun LiuliSliderRow(
                             maxLines = 1,
                         )
                     }
-                    if (onManualInput != null) {
-                        // 48 触达外溢要配**内层居中盒**：`liuliTouchHeight` 只把节点撑到 48、不居中内容，直接挂在
-                        // Text 上字会被顶到 48 框上沿——右值比标题高出一截（卷五复核 R1 🔴·记忆 / 成长 / 线下见面页全中）。
+                    if (onManualInput != null && enabled) {
                         Box(
                             modifier = Modifier
                                 .liuliTouchHeight()
@@ -271,6 +290,23 @@ fun LiuliSliderRow(
                 enabled = enabled,
                 onValueChangeFinished = onValueChangeFinished,
             )
+            if (startLabel != null || endLabel != null || defaultValue != null) {
+                val defaultLabel = stringResource(R.string.settings_slider_default_mark)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(startLabel.orEmpty(), style = AppTypography.caption, color = colors.text.tertiary)
+                    if (defaultValue != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Box(Modifier.size(4.dp).clip(CircleShape).background(colors.accent.primary))
+                            Text(defaultLabel, style = AppTypography.caption, color = colors.text.tertiary)
+                        }
+                    }
+                    Text(endLabel.orEmpty(), style = AppTypography.caption, color = colors.text.tertiary)
+                }
+            }
             if (example != null) {
                 Text(
                     example,

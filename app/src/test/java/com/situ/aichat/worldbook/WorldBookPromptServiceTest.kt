@@ -124,4 +124,65 @@ class WorldBookPromptServiceTest {
         )
         assertNull("扫描缓冲必须排除 system 与结构化卡", run(messages))
     }
+
+    @Test
+    fun SYSTEM_HINT与待投递消息不进扫描_引用与图片摘要可触发() = runBlocking {
+        coEvery { dao.activeBooksForCharacter("c1") } returns listOf(wbBook("b1"))
+        coEvery { dao.entriesForBooks(listOf("b1")) } returns listOf(
+            wbEntry("e-hint", keys = listOf("耳语暗号"), content = "不该被耳语触发"),
+            wbEntry("e-held", keys = listOf("未送达暗号"), content = "不该被延迟未送达消息触发"),
+            wbEntry("e-quote", keys = listOf("古籍残页"), content = "引用文本触发成功"),
+            wbEntry("e-img", keys = listOf("青铜古剑"), content = "图片摘要触发成功"),
+        )
+        coEvery { dao.timedStatesForConversation("conv1") } returns emptyList()
+
+        val messages = listOf(
+            MessageEntity(
+                messageUUID = "h1",
+                conversationUuid = "conv1",
+                roleRaw = "user",
+                content = "耳语暗号",
+                timestamp = 1L,
+                messageKindRaw = MessageKind.SYSTEM_HINT.raw,
+            ),
+            MessageEntity(
+                messageUUID = "h2",
+                conversationUuid = "conv1",
+                roleRaw = "assistant",
+                content = "未送达暗号",
+                timestamp = 2L,
+                isHeldForDelivery = true,
+            ),
+            MessageEntity(
+                messageUUID = "u1",
+                conversationUuid = "conv1",
+                roleRaw = "user",
+                content = "你看这个",
+                quotedContent = "上面写着古籍残页四个字",
+                timestamp = 3L,
+            ),
+            MessageEntity(
+                messageUUID = "u2",
+                conversationUuid = "conv1",
+                roleRaw = "user",
+                content = "[图片]",
+                imageRelativePath = "chat_images/sword.jpg",
+                mediaMemorySummary = "一把刻着铭文的青铜古剑",
+                timestamp = 4L,
+            ),
+        )
+
+        val result = service.activateForTurn(
+            characterUuid = "c1",
+            conversationUuid = "conv1",
+            sortedMessages = messages,
+            characterName = "小雨",
+            userName = "阿檀",
+        )
+        val after = result?.after.orEmpty()
+        assertEquals(false, after.contains("不该被耳语触发"))
+        assertEquals(false, after.contains("不该被延迟未送达消息触发"))
+        assertEquals(true, after.contains("引用文本触发成功"))
+        assertEquals(true, after.contains("图片摘要触发成功"))
+    }
 }

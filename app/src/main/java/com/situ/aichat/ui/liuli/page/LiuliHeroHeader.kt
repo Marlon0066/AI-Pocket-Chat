@@ -32,7 +32,6 @@ import com.situ.aichat.util.AvatarStore
 import com.situ.aichat.ui.components.AvatarColor
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
-import com.situ.aichat.ui.designsystem.Palette
 import com.situ.aichat.ui.liuli.designsystem.LiuliAvatarRing
 import com.situ.aichat.ui.liuli.home.LiuliRelationshipPill
 
@@ -81,7 +80,7 @@ fun LiuliHeroHeader(
     ) {
         LiuliAvatarRing(HEAD_RING) {
             Box(
-                Modifier.size(HEAD_AVATAR).clip(CircleShape).background(AvatarColor.brush(name)),
+                Modifier.size(HEAD_AVATAR).clip(CircleShape).background(AvatarColor.brush(name, dark = colors.isDark)),
                 contentAlignment = Alignment.Center,
             ) {
                 val done = image as? HeroImage.Done
@@ -96,7 +95,7 @@ fun LiuliHeroHeader(
                     Text(
                         name.take(1).uppercase().ifEmpty { "·" },
                         style = AppTypography.titleLarge.copy(fontSize = MONOGRAM_TEXT, fontWeight = FontWeight.W700),
-                        color = Palette.White,
+                        color = AvatarColor.monogramInk(dark = colors.isDark),
                     )
                 }
                 // Loading：只渐变。

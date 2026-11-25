@@ -60,6 +60,14 @@ class BackupViewModel @Inject constructor(
     val autoBackupConfig: StateFlow<AutoBackupConfig> = settingsRepo.autoBackupConfig
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AutoBackupConfig())
 
+    /** B-7：手动导出是否包含图片/语音/头像（持久化偏好，默认开）。 */
+    val includeMedia: StateFlow<Boolean> = settingsRepo.backupIncludeMedia
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    fun setIncludeMedia(include: Boolean) {
+        viewModelScope.launch { settingsRepo.setBackupIncludeMedia(include) }
+    }
+
     private val _importResult = MutableStateFlow<ImportResult?>(null)
     val importResult: StateFlow<ImportResult?> = _importResult.asStateFlow()
 

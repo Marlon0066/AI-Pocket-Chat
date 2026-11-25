@@ -6,6 +6,7 @@ import com.situ.aichat.data.remote.llm.modelcatalog.ModelCatalogException
 import com.situ.aichat.data.remote.llm.modelcatalog.ModelCatalogService
 import com.situ.aichat.data.repository.ApiConfigRepository
 import com.situ.aichat.data.repository.ApiFunctionRouter
+import com.situ.aichat.data.repository.SettingsRepository
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -42,13 +43,15 @@ class ModelCatalogFetchStateTest {
     private val repo = mockk<ApiConfigRepository>(relaxed = true)
     private val catalog = mockk<ModelCatalogService>()
     private val router = mockk<ApiFunctionRouter>(relaxed = true)
+    private val settingsRepo = mockk<SettingsRepository>(relaxed = true)
     private val dispatcher = StandardTestDispatcher()
 
     private fun vm(): ApiConfigViewModel {
         every { repo.observeAll() } returns emptyFlow()
         every { repo.observeActive() } returns emptyFlow()
         every { router.assignments } returns emptyFlow()
-        return ApiConfigViewModel(repo, catalog, router)
+        every { settingsRepo.appSettings } returns emptyFlow()
+        return ApiConfigViewModel(repo, catalog, router, settingsRepo)
     }
 
     private fun fetch(vm: ApiConfigViewModel) =

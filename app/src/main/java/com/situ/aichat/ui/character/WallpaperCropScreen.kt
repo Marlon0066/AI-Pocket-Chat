@@ -23,8 +23,9 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
+import com.situ.aichat.ui.designsystem.AppLoadingRing
+import com.situ.aichat.ui.designsystem.AppLoadingRingSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -114,8 +115,11 @@ fun WallpaperCropScreen(
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             val src = source
             if (src == null) {
-                // TODO(图纸未覆盖): 同 AvatarCropScreen —— 画在用户壁纸照片上的白色转圈，换 accent 会糊掉（D-13）。
-                CircularProgressIndicator(Modifier.align(Alignment.Center), color = Color.White)
+                AppLoadingRing(
+                    modifier = Modifier.align(Alignment.Center),
+                    size = AppLoadingRingSize.Large,
+                    color = Color.White,
+                )
             } else {
                 CropEditor(src, onCancel, onConfirm)
             }

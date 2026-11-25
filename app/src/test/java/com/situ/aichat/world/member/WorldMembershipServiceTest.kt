@@ -267,4 +267,75 @@ class WorldMembershipServiceTest {
         assertFalse("B→A 恢复", db.worldSocialDao().getEdge("B", "A")!!.dormant)
         assertEquals(listOf("A"), db.characterDao().getInWorld().map { it.uuid }) // 只有 A 在世
     }
+
+    // MARK: - 世界 × 世界书单事务自由切换（Q5 方案 B + Q6 原住民锁死）
+
+    @Test
+    fun `joinClearingWorldBooks_单事务摘除全部世界书并加入世界_原住民拒绝`() = runBlocking {
+        seedWorld()
+        character("c-wb", "陆沉", joined = false)
+        db.worldBookDao().upsertBook(WorldBookEntity(uuid = "b1", name = "光夜暗幕录"))
+        db.worldBookDao().upsertBook(WorldBookEntity(uuid = "b2", name = "副设定"))
+        db.worldBookDao().bind(WorldBookBindingEntity(characterUuid = "c-wb", bookUuid = "b1"))
+        db.worldBookDao().bind(WorldBookBindingEntity(characterUuid = "c-wb", bookUuid = "b2"))
+        db.worldSocialDao().upsertEdge(WorldRelationshipEntity(fromId = "c-wb", toId = "other", dormant = true, updatedAt = day0))
+
+        // 未确认普通 join 仍防误触拦截
+        assertEquals(WorldMembershipService.Result.WorldbookBound, service.join("c-wb", day0))
+
+        // 确认切换后单事务清空绑定 + 入世 + 唤醒休眠边 + 写 join 事件
+        assertEquals(WorldMembershipService.Result.Ok, service.joinClearingWorldBooks("c-wb", day0 + 5))
+        assertTrue(db.worldBookDao().boundBookUuids("c-wb").isEmpty())
+        assertTrue(db.characterDao().getByUuid("c-wb")!!.joinedWorld)
+        assertFalse(db.worldSocialDao().getEdge("c-wb", "other")!!.dormant)
+        assertEquals(WorldMembershipService.JOIN_KIND, db.worldDao().getAllEvents().single().kindRaw)
+
+        // 原住民出身拒绝
+        character("c-native", "温知夏", joined = true, joinedAt = day0)
+        db.worldNativeDao().upsert(WorldNativeStateEntity(nativeId = "native:wen", recruitedCharacterUuid = "c-native"))
+        assertEquals(WorldMembershipService.Result.NativeOrigin, service.joinClearingWorldBooks("c-native", day0 + 10))
+    }
+
+    @Test
+    fun `leaveAndBindWorldBook_单事务离世休眠清旅行并绑书_原住民拒绝`() = runBlocking {
+        seedWorld()
+        character("c-in", "沈星回", joined = true, joinedAt = day0)
+        db.worldBookDao().upsertBook(WorldBookEntity(uuid = "b-star", name = "深空猎人录"))
+        db.worldBookDao().upsertBook(WorldBookEntity(uuid = "b-extra", name = "番外设定"))
+        db.worldSocialDao().upsertEdge(WorldRelationshipEntity(fromId = "c-in", toId = "other", dormant = false, updatedAt = day0))
+        db.worldDao().upsertTravel(
+            WorldTravelEntity(
+                ownerId = "c-in", fromCityId = WorldIds.HOME_CITY_ID, toCityId = "city_taoqiu",
+                departAt = day0, arriveAt = day0 + 1000, modeRaw = WorldIds.TravelModes.TRAIN,
+            ),
+        )
+
+        // sole = true：离开世界 + 休眠关系 + 清在途旅行 + 写 leave 事件 + 唯一绑定 b-star
+        assertEquals(
+            WorldMembershipService.Result.Ok,
+            service.leaveAndBindWorldBook("c-in", bookUuid = "b-star", sole = true, nowMs = day0 + 20),
+        )
+        assertFalse(db.characterDao().getByUuid("c-in")!!.joinedWorld)
+        assertTrue(db.worldSocialDao().getEdge("c-in", "other")!!.dormant)
+        assertNull(db.worldDao().getTravel("c-in"))
+        assertEquals(listOf("b-star"), db.worldBookDao().boundBookUuids("c-in"))
+        assertEquals(WorldMembershipService.LEAVE_KIND, db.worldDao().getAllEvents().single().kindRaw)
+
+        // sole = false（书详情页增量勾选）：保留已有绑定并追加新书
+        assertEquals(
+            WorldMembershipService.Result.Ok,
+            service.leaveAndBindWorldBook("c-in", bookUuid = "b-extra", sole = false, nowMs = day0 + 30),
+        )
+        assertEquals(setOf("b-star", "b-extra"), db.worldBookDao().boundBookUuids("c-in").toSet())
+
+        // 原住民出身不可离世绑书
+        character("c-native", "温知夏", joined = true, joinedAt = day0)
+        db.worldNativeDao().upsert(WorldNativeStateEntity(nativeId = "native:wen", recruitedCharacterUuid = "c-native"))
+        assertEquals(
+            WorldMembershipService.Result.NativeOrigin,
+            service.leaveAndBindWorldBook("c-native", bookUuid = "b-star", sole = true, nowMs = day0 + 40),
+        )
+        assertTrue(db.characterDao().getByUuid("c-native")!!.joinedWorld)
+        assertTrue(db.worldBookDao().boundBookUuids("c-native").isEmpty())
+    }
 }

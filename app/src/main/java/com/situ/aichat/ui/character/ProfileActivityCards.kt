@@ -19,13 +19,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AcUnit
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.LocalFireDepartment
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -52,6 +49,7 @@ import com.situ.aichat.R
 import com.situ.aichat.data.model.DynamicInterest
 import com.situ.aichat.data.model.GrowthEventType
 import com.situ.aichat.data.model.GrowthLogEntry
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppDialog
@@ -189,13 +187,13 @@ private fun GrowthLogRow(entry: GrowthLogEntry, isLast: Boolean) {
 }
 
 private fun growthEventIcon(type: GrowthEventType): ImageVector = when (type) {
-    GrowthEventType.PERSONALITY_SHIFT -> Icons.Filled.Person
+    GrowthEventType.PERSONALITY_SHIFT -> AppActionIcons.Person
     GrowthEventType.RELATIONSHIP_CHANGE -> Icons.Filled.Favorite
     GrowthEventType.INTEREST_DISCOVERED -> Icons.Filled.AutoAwesome
     GrowthEventType.INTEREST_COOLED -> Icons.Filled.AcUnit
     GrowthEventType.MAJOR_EVENT -> Icons.Filled.Star
-    GrowthEventType.GIFT_RECEIVED -> Icons.Filled.CardGiftcard
-    GrowthEventType.GIFT_SENT -> Icons.AutoMirrored.Filled.Send
+    GrowthEventType.GIFT_RECEIVED -> AppActionIcons.Gift
+    GrowthEventType.GIFT_SENT -> AppActionIcons.Send
 }
 
 private val growthEventColorMap = mapOf(

@@ -47,6 +47,33 @@ internal fun JsonObject.lenientStringList(key: String): List<String>? {
     return arr.mapNotNull { (it as? JsonPrimitive)?.takeIf { p -> p !is JsonNull }?.content }
 }
 
+/** 判断是否为 ST `/正则/flags` 形态关键词（含首尾双斜杠，内部量词如 `{1,3}` 的逗号不可拆分）。 */
+internal fun isRegexKeywordForm(raw: String): Boolean {
+    val trimmed = raw.trim()
+    return trimmed.length > 2 && trimmed.startsWith("/") && trimmed.lastIndexOf('/') > 0
+}
+
+/**
+ * 拆分单个关键词输入串：正则形态整串保留（trim 后返回单元素）；普通形态按英文 `,` / 中文 `，` 切分、trim 去空。
+ * 导入解析与条目编辑器输入共用此单一事实源。
+ */
+internal fun splitKeywordTokens(raw: String): List<String> {
+    val trimmed = raw.trim()
+    if (trimmed.isEmpty()) return emptyList()
+    if (isRegexKeywordForm(trimmed)) return listOf(trimmed)
+    return trimmed.split(',', '，').map { it.trim() }.filter { it.isNotEmpty() }
+}
+
+/** 宽容读关键词列表：兼容标准 JSON 数组（自动拆非正则逗号串）与单字符串形态；缺失/null → null。 */
+internal fun JsonObject.lenientKeywordList(key: String): List<String>? = when (val el = this[key]) {
+    is JsonArray -> el.flatMap { item ->
+        val content = (item as? JsonPrimitive)?.takeIf { it !is JsonNull }?.content ?: return@flatMap emptyList()
+        splitKeywordTokens(content)
+    }
+    is JsonPrimitive -> if (el is JsonNull) null else splitKeywordTokens(el.content)
+    else -> null
+}
+
 /**
  * delayUntilRecursion 双形态（ST 老导出 = 布尔、新导出 = 递归层级数字，契约 §2.1）：
  * 布尔 true → 1 / false → 0；数字 → 取整；缺失 → 0。

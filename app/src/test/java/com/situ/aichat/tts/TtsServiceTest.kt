@@ -109,4 +109,35 @@ class TtsServiceTest {
         assertEquals("https://api.volink.org/v1/tts/speech", r.config.baseUrl)
         assertNull(r.config.miniMaxVoiceOverrides)
     }
+
+    // MARK: - B-1 全局默认音色兜底
+
+    @Test
+    fun `B1 system falls back to defaultSystemVoiceIdentifier when character voice is blank`() {
+        val config = TtsConfiguration(
+            providerType = TtsProviderType.SYSTEM,
+            defaultSystemVoiceIdentifier = "zh-CN-default",
+        )
+        val fallback = TtsService.resolvedProvider(TtsVoiceProfile(voiceIdentifier = ""), config, "")
+        assertTrue(fallback is TtsResolvedProvider.System)
+        assertEquals("zh-CN-default", (fallback as TtsResolvedProvider.System).voiceIdentifier)
+
+        val override = TtsService.resolvedProvider(TtsVoiceProfile(voiceIdentifier = "zh-CN-char"), config, "")
+        assertEquals("zh-CN-char", (override as TtsResolvedProvider.System).voiceIdentifier)
+    }
+
+    @Test
+    fun `B1 remote falls back to defaultRemoteVoiceID when character remote voice is blank`() {
+        val config = TtsConfiguration(
+            providerType = TtsProviderType.MINIMAX,
+            modelName = "speech-2.8-hd",
+            defaultRemoteVoiceID = "global-vid",
+        )
+        val fallback = TtsService.resolvedProvider(TtsVoiceProfile(remoteVoiceID = ""), config, apiKey = "k")
+        assertTrue(fallback is TtsResolvedProvider.Remote)
+        assertEquals("global-vid", (fallback as TtsResolvedProvider.Remote).voiceId)
+
+        val override = TtsService.resolvedProvider(TtsVoiceProfile(remoteVoiceID = "char-vid"), config, apiKey = "k")
+        assertEquals("char-vid", (override as TtsResolvedProvider.Remote).voiceId)
+    }
 }

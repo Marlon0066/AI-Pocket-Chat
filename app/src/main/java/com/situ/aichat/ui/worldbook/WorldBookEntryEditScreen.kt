@@ -20,15 +20,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -45,6 +39,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.situ.aichat.R
 import com.situ.aichat.ui.components.SettingsSwitchRow
 import com.situ.aichat.ui.components.contentMaxWidth
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppDialog
@@ -59,6 +54,9 @@ import com.situ.aichat.ui.designsystem.AppTextField
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
 import com.situ.aichat.ui.designsystem.AppTopBarIcons
+import com.situ.aichat.ui.designsystem.AppTypography
+import com.situ.aichat.ui.designsystem.appCardSurface
+import com.situ.aichat.ui.designsystem.grainSurface
 
 /**
  * 条目编辑器（WB7b·契约 §12.4/§12.10）：常用五件在前（标题 / 触发方式三段 / 关键词 chips /
@@ -86,6 +84,7 @@ fun WorldBookEntryEditScreen(
 
     val scrollState = rememberScrollState()
     Scaffold(
+        containerColor = colors.surface.base,
         topBar = {
             AppTopBar(
                 title = stringResource(if (viewModel.isEditing) R.string.wb_entry_edit_title else R.string.wb_entry_new_title),
@@ -94,9 +93,11 @@ fun WorldBookEntryEditScreen(
                 actions = {
                     if (viewModel.isEditing) {
                         Box {
-                            IconButton(onClick = { showMenu = true }) {
-                                Icon(AppTopBarIcons.More, contentDescription = stringResource(R.string.wb_cd_more_actions))
-                            }
+                            com.situ.aichat.ui.designsystem.AppTopBarAction(
+                                icon = AppTopBarIcons.More,
+                                contentDescription = stringResource(R.string.wb_cd_more_actions),
+                                onClick = { showMenu = true },
+                            )
                             AppMenu(expanded = showMenu, onDismiss = { showMenu = false }) {
                                 AppMenuItem(
                                     text = stringResource(R.string.wb_delete_entry),
@@ -118,8 +119,9 @@ fun WorldBookEntryEditScreen(
     ) { padding ->
         Column(
             modifier = Modifier
-                .padding(padding)
                 .fillMaxSize()
+                .grainSurface()
+                .padding(padding)
                 .verticalScroll(scrollState)
                 .contentMaxWidth()
                 .padding(horizontal = AppSpacing.screenGutter, vertical = 12.dp)
@@ -136,7 +138,7 @@ fun WorldBookEntryEditScreen(
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
                     stringResource(R.string.wb_trigger_mode),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = AppTypography.caption,
                     color = colors.text.secondary,
                 )
                 AppSegmentedControl(
@@ -160,7 +162,7 @@ fun WorldBookEntryEditScreen(
                             WorldBookTriggerMode.VECTOR -> R.string.wb_mode_vector_hint
                         },
                     ),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = AppTypography.caption,
                     color = colors.text.secondary,
                 )
             }
@@ -172,6 +174,8 @@ fun WorldBookEntryEditScreen(
                     onAdd = { viewModel.addKeys(it) },
                     onRemove = { viewModel.removeKey(it) },
                     hint = stringResource(R.string.wb_keywords_hint),
+                    inputValue = viewModel.pendingPrimaryKeyInput,
+                    onInputValueChange = { viewModel.pendingPrimaryKeyInput = it },
                 )
             }
 
@@ -186,18 +190,18 @@ fun WorldBookEntryEditScreen(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(
                         stringResource(R.string.wb_content_macro_hint),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = AppTypography.caption,
                         color = colors.text.secondary,
                     )
                     Text(
                         stringResource(R.string.wb_char_count, entry.content.length),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = AppTypography.caption,
                         color = colors.text.secondary,
                     )
                 }
             }
 
-            Surface(shape = AppShapes.medium, tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.fillMaxWidth().appCardSurface()) {
                 SettingsSwitchRow(
                     title = stringResource(R.string.wb_entry_enabled),
                     checked = entry.enabled,
@@ -207,7 +211,7 @@ fun WorldBookEntryEditScreen(
 
             Text(
                 stringResource(R.string.wb_advanced),
-                style = MaterialTheme.typography.titleSmall,
+                style = AppTypography.titleSmall,
                 color = colors.text.secondary,
                 modifier = Modifier.padding(start = 4.dp, top = 6.dp),
             )
@@ -260,9 +264,13 @@ internal fun KeywordChipsEditor(
     onAdd: (String) -> Unit,
     onRemove: (String) -> Unit,
     hint: String? = null,
+    inputValue: String? = null,
+    onInputValueChange: ((String) -> Unit)? = null,
 ) {
     val colors = AppTheme.colors
-    var input by remember { mutableStateOf("") }
+    var localInput by remember { mutableStateOf("") }
+    val currentInput = inputValue ?: localInput
+    val updateInput: (String) -> Unit = onInputValueChange ?: { localInput = it }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (keys.isNotEmpty()) {
             FlowRow(
@@ -274,40 +282,37 @@ internal fun KeywordChipsEditor(
             }
         }
         AppTextField(
-            value = input,
-            onValueChange = { input = it },
+            value = currentInput,
+            onValueChange = updateInput,
             label = label,
             placeholder = stringResource(R.string.wb_keywords_input_placeholder),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(
                 onDone = {
-                    if (input.isNotBlank()) {
-                        onAdd(input)
-                        input = ""
+                    if (currentInput.isNotBlank()) {
+                        onAdd(currentInput)
+                        updateInput("")
                     }
                 },
             ),
-            trailingIcon = if (input.isNotBlank()) {
+            trailingIcon = if (currentInput.isNotBlank()) {
                 {
-                    IconButton(
+                    com.situ.aichat.ui.designsystem.AppIconButton(
+                        icon = AppTopBarIcons.Add,
+                        contentDescription = stringResource(R.string.wb_cd_add_keyword),
                         onClick = {
-                            onAdd(input)
-                            input = ""
+                            onAdd(currentInput)
+                            updateInput("")
                         },
-                    ) {
-                        Icon(
-                            Icons.Filled.Add,
-                            contentDescription = stringResource(R.string.wb_cd_add_keyword),
-                            tint = colors.accent.text,
-                        )
-                    }
+                        tint = colors.accent.text,
+                    )
                 }
             } else {
                 null
             },
         )
         hint?.let {
-            Text(it, style = MaterialTheme.typography.bodySmall, color = colors.text.secondary)
+            Text(it, style = AppTypography.caption, color = colors.text.secondary)
         }
     }
 }
@@ -326,7 +331,7 @@ private fun KeywordChip(key: String, onRemove: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(key, style = MaterialTheme.typography.labelMedium, color = colors.accent.onContainer)
-        Icon(Icons.Filled.Close, contentDescription = null, tint = colors.accent.onContainer, modifier = Modifier.size(14.dp))
+        Text(key, style = AppTypography.label, color = colors.accent.onContainer)
+        Icon(AppActionIcons.Close, contentDescription = null, tint = colors.accent.onContainer, modifier = Modifier.size(14.dp))
     }
 }

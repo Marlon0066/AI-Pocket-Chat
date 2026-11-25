@@ -1,6 +1,7 @@
 package com.situ.aichat.ui.gift
 
 import android.graphics.Bitmap
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,11 +19,11 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -45,9 +46,12 @@ import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.CharacterEntity
 import com.situ.aichat.data.local.entity.GiftRecordEntity
 import com.situ.aichat.gift.GiftCatalog
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppSegmentedControl
 import com.situ.aichat.ui.designsystem.AppSpacing
+import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
+import com.situ.aichat.ui.designsystem.appCardSurface
 import com.situ.aichat.util.ContentImageStore
 import java.time.Instant
 import java.time.ZoneId
@@ -108,22 +112,29 @@ fun GiftBoxScreen(
             }
             if (records.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    // gift-3：图标 + 标题 + 双行引导，1:1 iOS GiftBoxView EmptyStateView（received=gift🎁 / sent=shippingbox📦）。
+                    val colors = AppTheme.colors
+                    val typography = AppTheme.typography
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(top = 48.dp, start = 24.dp, end = 24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Text(if (receivedTab) "🎁" else "📦", style = MaterialTheme.typography.displayMedium)
-                        Spacer(Modifier.height(12.dp))
+                        Box(
+                            modifier = Modifier.size(64.dp).clip(CircleShape).background(colors.surface.sunken),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(AppActionIcons.Gift, contentDescription = null, tint = colors.accent.text, modifier = Modifier.size(30.dp))
+                        }
+                        Spacer(Modifier.height(14.dp))
                         Text(
                             if (receivedTab) "还没有收到礼物" else "还没送过礼物",
-                            style = MaterialTheme.typography.titleMedium,
+                            style = typography.titleSmall,
+                            color = colors.text.primary,
                         )
                         Spacer(Modifier.height(6.dp))
                         Text(
                             if (receivedTab) "等角色想你的时候\n会主动送来" else "去礼物店挑一份\n表达你的心意",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = typography.secondary,
+                            color = colors.text.secondary,
                             textAlign = TextAlign.Center,
                         )
                     }
@@ -159,72 +170,73 @@ private fun HistoryCard(
     counterparty: CharacterEntity?,
     onClick: () -> Unit,
 ) {
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth(),
+    val colors = AppTheme.colors
+    val typography = AppTheme.typography
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .appCardSurface()
+            .clickable(onClick = onClick)
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            // 缩略图：DIY 有上传图 → 本地图；否则 GiftImage(record)（DIY 无图走 paintbrush 兜底）
-            val diyImage by produceState<Bitmap?>(initialValue = null, record.uuid) {
-                value = if (record.isDIY) ContentImageStore.load(record.diyImagePath) else null
+        // 缩略图：DIY 有上传图 → 本地图；否则 GiftImage(record)（DIY 无图走 paintbrush 兜底）
+        val diyImage by produceState<Bitmap?>(initialValue = null, record.uuid) {
+            value = if (record.isDIY) ContentImageStore.load(record.diyImagePath) else null
+        }
+        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            val bmp = diyImage
+            if (record.isDIY && bmp != null) {
+                Image(
+                    bitmap = bmp.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier.size(140.dp).clip(RoundedCornerShape(14.dp)),
+                    contentScale = ContentScale.Crop,
+                )
+            } else {
+                GiftImage(record = record, size = 140.dp, cornerRadius = 14.dp, showsShadow = false)
             }
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                val bmp = diyImage
-                if (record.isDIY && bmp != null) {
-                    Image(
-                        bitmap = bmp.asImageBitmap(),
-                        contentDescription = null,
-                        modifier = Modifier.size(140.dp).clip(RoundedCornerShape(14.dp)),
-                        contentScale = ContentScale.Crop,
-                    )
-                } else {
-                    GiftImage(record = record, size = 140.dp, cornerRadius = 14.dp, showsShadow = false)
-                }
-            }
+        }
 
+        Text(
+            text = giftTitle(record),
+            style = typography.label,
+            color = colors.text.primary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+
+        if (record.isDIY && record.diyContent.isNotEmpty()) {
             Text(
-                text = giftTitle(record),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
+                text = diyContentPreview(record.diyContent),
+                style = typography.caption,
+                color = colors.text.secondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+        }
 
-            if (record.isDIY && record.diyContent.isNotEmpty()) {
-                Text(
-                    text = diyContentPreview(record.diyContent),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(record.reactionMoodEmoji.ifEmpty { "🎁" }, style = MaterialTheme.typography.bodySmall)
-                Text(
-                    text = counterparty?.name ?: "未知",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(record.reactionMoodEmoji.ifEmpty { "🎁" }, style = typography.caption)
             Text(
-                text = compactGiftDate(record.timestamp),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = counterparty?.name ?: "未知",
+                style = typography.caption,
+                color = colors.text.secondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
+
+        Text(
+            text = compactGiftDate(record.timestamp),
+            style = typography.caption,
+            color = colors.text.tertiary,
+        )
     }
 }
 
 /** 礼物名（1:1 iOS giftTitle）：目录名 → DIY 标题/手作礼物 → 礼物。 */
-private fun giftTitle(record: GiftRecordEntity): String {
+internal fun giftTitle(record: GiftRecordEntity): String {
     GiftCatalog.find(record.giftItemId)?.let { return it.name }
     return if (record.isDIY) record.diyTitle.ifEmpty { "手作礼物" } else "礼物"
 }

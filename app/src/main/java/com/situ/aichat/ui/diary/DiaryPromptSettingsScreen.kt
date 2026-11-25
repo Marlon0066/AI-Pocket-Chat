@@ -8,9 +8,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -146,7 +145,7 @@ private fun RuleSection(
             style = AppButtonStyle.Text,
             modifier = Modifier.padding(horizontal = 8.dp),
         ) {
-            Icon(Icons.Filled.Refresh, contentDescription = null)
+            Icon(AppActionIcons.Refresh, contentDescription = null)
             Spacer(Modifier.width(8.dp))
             Text(stringResource(R.string.diary_rules_reset))
         }

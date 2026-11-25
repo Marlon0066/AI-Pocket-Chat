@@ -10,13 +10,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.EditCalendar
 import androidx.compose.material.icons.outlined.EventBusy
 import androidx.compose.material.icons.outlined.HighlightOff
 import androidx.compose.material.icons.outlined.Place
-import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Stars
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -35,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import com.situ.aichat.data.model.FutureMeetingChangeData
 import com.situ.aichat.data.model.FutureMeetingProposalData
 import com.situ.aichat.data.model.MeetingStatus
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppShapes
@@ -78,7 +77,7 @@ fun AppointmentProposalBubble(
     ) {
         // 标题：「{角色}想和你约个时间」
         IconLine(
-            icon = Icons.Outlined.CalendarMonth,
+            icon = AppActionIcons.Calendar,
             text = "${name}想和你约个时间",
             textStyle = typography.label,
             textColor = colors.text.primary,
@@ -87,7 +86,7 @@ fun AppointmentProposalBubble(
         )
         // 时间（突出·陶土色）
         data.whenDisplay?.takeIf { it.isNotBlank() }?.let {
-            IconLine(Icons.Outlined.Schedule, it, typography.label, colors.accent.text, colors.accent.text)
+            IconLine(AppActionIcons.Clock, it, typography.label, colors.accent.text, colors.accent.text)
         }
         // 活动
         data.activity?.takeIf { it.isNotBlank() }?.let {
@@ -189,7 +188,7 @@ fun AppointmentChangeBubble(
             }
         } else {
             data.oldWhenDisplay?.takeIf { it.isNotBlank() }?.let {
-                IconLine(Icons.Outlined.Schedule, it, typography.secondary, colors.text.secondary, colors.text.tertiary, iconSize = 14)
+                IconLine(AppActionIcons.Clock, it, typography.secondary, colors.text.secondary, colors.text.tertiary, iconSize = 14)
             }
         }
         // 活动 · 地点（给上下文）

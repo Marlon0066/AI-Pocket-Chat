@@ -11,9 +11,8 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material3.Icon
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -61,7 +60,7 @@ internal fun BoxScope.LiuliScrollToBottom(
             size = 40.dp,
         ) {
             Icon(
-                Icons.Filled.ArrowDownward,
+                AppActionIcons.ArrowDown,
                 contentDescription = null,
                 tint = LocalContentColor.current, // 圆钮甲：跟圆钮走（钴蓝）
                 modifier = Modifier.size(20.dp),

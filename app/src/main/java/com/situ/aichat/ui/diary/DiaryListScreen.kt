@@ -20,11 +20,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,6 +50,7 @@ import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.DiaryEntryWithComments
 import com.situ.aichat.ui.components.AppMotion
 import com.situ.aichat.ui.components.rememberReduceMotion
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppDialog
@@ -61,8 +59,10 @@ import com.situ.aichat.ui.designsystem.AppElevation
 import com.situ.aichat.ui.designsystem.AppMenu
 import com.situ.aichat.ui.designsystem.AppMenuItem
 import com.situ.aichat.ui.designsystem.AppSegmentedControl
+import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
+import com.situ.aichat.ui.designsystem.AppTopBarAction
 import java.time.Instant
 
 /**
@@ -113,7 +113,7 @@ fun DiaryListScreen(
                 onBack = onBack,
                 lifted = lifted,
                 actions = {
-                    // R5 连续记录印章（发布才算·O4）：>0 才现身。
+                    // R5 连续记录印章（发布才算·O4）：>0 才现身，点击直达回顾与统计。
                     if (insights.streakDays > 0) {
                         val streakCd = stringResource(R.string.a11y_diary_streak, insights.streakDays)
                         Text(
@@ -123,13 +123,16 @@ fun DiaryListScreen(
                             modifier = Modifier
                                 .clip(AppTheme.shapes.full)
                                 .border(1.dp, AppTheme.colors.accent.container, AppTheme.shapes.full)
+                                .clickable(onClickLabel = stringResource(R.string.diary_menu_insights)) { showStats = true }
                                 .padding(horizontal = 10.dp, vertical = 4.dp)
                                 .semantics { contentDescription = streakCd },
                         )
                     }
-                    IconButton(onClick = { menuExpanded = true }) {
-                        Icon(Icons.Filled.DateRange, contentDescription = stringResource(R.string.diary_view_mode))
-                    }
+                    AppTopBarAction(
+                        icon = AppActionIcons.Calendar,
+                        contentDescription = stringResource(R.string.diary_view_mode),
+                        onClick = { menuExpanded = true },
+                    )
                     // R1 已裁（D-2 核准·2026-08-06）：单选清单项保留 DropdownMenuItem——AppMenuItem 无
                     // trailingIcon/selected 槽，勾选标记属站点内部结构；容器已是 AppMenu 玻璃小笺。勿「统一」改掉。
                     AppMenu(expanded = menuExpanded, onDismiss = { menuExpanded = false }) {
@@ -255,7 +258,7 @@ private fun ComposePill(onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(16.dp), tint = colors.text.onAccent)
+        Icon(AppActionIcons.Edit, contentDescription = null, modifier = Modifier.size(16.dp), tint = colors.text.onAccent)
         Text(stringResource(R.string.diary_fab_compose), style = AppTheme.typography.label, color = colors.text.onAccent)
     }
 }
@@ -267,7 +270,7 @@ private fun DiaryEntryFilterRow(selected: DiaryEntryFilter, onSelect: (DiaryEntr
         options = DiaryEntryFilter.entries,
         selected = selected,
         onSelect = onSelect,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.padding(horizontal = AppSpacing.screenGutter, vertical = 8.dp),
         label = { stringResource(it.labelRes) },
     )
 }
@@ -346,7 +349,7 @@ private fun DiaryTimeline(
                         .then(if (reduceMotion) Modifier else Modifier.animateItem(placementSpec = AppMotion.gentleSpring()))
                         // 拆信揭晓（celebrate·只对刚拆开的那封一次）。
                         .celebrateUnlockEntrance(enabled = ewc.entry.uuid == justUnlockedUuid)
-                        .padding(horizontal = 16.dp, vertical = 5.dp)
+                        .padding(horizontal = AppSpacing.screenGutter, vertical = 6.dp)
                         .combinedClickable(
                             onClickLabel = stringResource(R.string.a11y_diary_open),
                             onClick = { onOpenEntry(ewc.entry.uuid) },

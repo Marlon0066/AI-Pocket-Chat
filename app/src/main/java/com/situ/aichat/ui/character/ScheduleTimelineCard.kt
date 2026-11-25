@@ -16,9 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +36,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import com.situ.aichat.R
 import com.situ.aichat.ui.components.rememberReduceMotion
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.data.local.entity.ScheduleEventEntity
@@ -85,7 +84,7 @@ fun ScheduleTimelineCard(
 private fun CardHeader(trailing: @Composable (() -> Unit)? = null) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
-            Icons.Filled.CalendarMonth,
+            AppActionIcons.Calendar,
             contentDescription = null,
             modifier = Modifier.size(18.dp),
             tint = MaterialTheme.colorScheme.onSurface,
@@ -147,7 +146,7 @@ private fun ContentCard(
                     color = MaterialTheme.colorScheme.primary,
                 )
                 Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    AppActionIcons.ChevronRight,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                     tint = MaterialTheme.colorScheme.primary,

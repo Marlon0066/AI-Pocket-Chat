@@ -7,9 +7,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Text
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -60,7 +59,7 @@ private fun LiuliScheduleItemsCard(items: List<CalendarItemParser.ParsedCalendar
     val reminder = items.firstOrNull()?.type == CalendarItemParser.ItemType.REMINDER
     LiuliCard(width = LiuliChatGeometry.cardWidth) {
         LiuliCardHeader(
-            icon = Icons.Filled.DateRange,
+            icon = AppActionIcons.Calendar,
             title = "今天的安排",
             subtitle = null,
             tag = "日程",

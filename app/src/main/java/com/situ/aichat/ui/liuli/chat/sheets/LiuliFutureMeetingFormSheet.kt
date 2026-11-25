@@ -8,9 +8,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -36,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.situ.aichat.data.model.MeetingTimeGranularity
 import com.situ.aichat.meeting.MeetingDisplayFormatter
 import com.situ.aichat.meeting.MeetingTimeResolver
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.liuli.designsystem.LiuliButton
@@ -114,7 +112,7 @@ internal fun LiuliFutureMeetingFormSheet(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Icon(Icons.Outlined.CalendarMonth, contentDescription = null, tint = colors.accent.text, modifier = Modifier.size(18.dp))
+                Icon(AppActionIcons.Calendar, contentDescription = null, tint = colors.accent.text, modifier = Modifier.size(18.dp))
                 Text(whenPreview, style = AppTypography.titleSmall, color = colors.accent.text)
             }
 
@@ -144,7 +142,7 @@ internal fun LiuliFutureMeetingFormSheet(
                     label = "%02d:%02d".format(selectedTime.hour, selectedTime.minute),
                     fillWidth = true,
                     role = Role.Button,
-                    leading = { Icon(Icons.Outlined.Schedule, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                    leading = { Icon(AppActionIcons.Clock, contentDescription = null, modifier = Modifier.size(16.dp)) },
                 )
             }
 

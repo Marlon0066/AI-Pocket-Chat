@@ -10,9 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -66,7 +65,7 @@ internal fun ApiMissingBanner() {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Icon(Icons.Filled.Warning, contentDescription = null, tint = colors.status.onError, modifier = Modifier.size(16.dp))
+        Icon(AppActionIcons.Warning, contentDescription = null, tint = colors.status.onError, modifier = Modifier.size(16.dp))
         Text(stringResource(R.string.diary_api_missing), style = AppTheme.typography.secondary, color = colors.status.onError)
     }
 }

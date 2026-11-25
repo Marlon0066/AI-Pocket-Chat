@@ -100,4 +100,24 @@ class DiaryInsightsTest {
         assertEquals(listOf("😊" to 2, "😌" to 1), stats.moodCounts)
         assertEquals(3, stats.streakDays)
     }
+
+    @Test fun `recentDayMoods maps 30 day window excluding drafts pets and letters`() {
+        val entries = listOf(
+            entry(today, mood = "😊"),
+            entry(today.minusDays(1), mood = null),            // 已发布无心情 → ""
+            entry(today.minusDays(2), draft = true, mood = "😢"), // 草稿不计入
+            entry(today.minusDays(3), pet = true, mood = "🐾"),   // 宠物不计入
+            entry(today.minusDays(4), author = "c1", mood = "💌"), // 来信不计入
+            entry(today.minusDays(29), mood = "😌"),              // 窗口第一天（index 0）
+            entry(today.minusDays(30), mood = "🥰"),              // 窗口外
+        )
+        val moods = DiaryInsights.stats(entries, today, zone).recentDayMoods
+        assertEquals(30, moods.size)
+        assertEquals("😌", moods[0])
+        assertEquals(null, moods[25]) // today - 4 (letter excluded)
+        assertEquals(null, moods[26]) // today - 3 (pet excluded)
+        assertEquals(null, moods[27]) // today - 2 (draft excluded)
+        assertEquals("", moods[28])   // today - 1 (published without mood)
+        assertEquals("😊", moods[29]) // today
+    }
 }

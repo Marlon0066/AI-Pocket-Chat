@@ -105,15 +105,12 @@ fun RedPacketCardBubble(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = secondaryText(status, isFromUser),
-                        style = typography.secondary,
-                        color = textSecondary,
-                        maxLines = 1,
-                    )
-                    if (accepted) AcceptedBadge()
-                }
+                Text(
+                    text = secondaryText(status, isFromUser),
+                    style = typography.secondary,
+                    color = textSecondary,
+                    maxLines = 1,
+                )
             }
         }
     }
@@ -143,20 +140,6 @@ private fun FuBadge(muted: Boolean) {
             style = AppTheme.typography.titleMedium,
             color = if (muted) colors.text.tertiary else colors.economy.redPacketSeal,
         )
-    }
-}
-
-/** 「已领取」小金章（accepted 副标题右侧·白底金描边同手作 pill 语言）。 */
-@Composable
-private fun AcceptedBadge() {
-    val colors = AppTheme.colors
-    Box(
-        modifier = Modifier
-            .clip(AppShapes.full)
-            .border(1.dp, colors.economy.gold, AppShapes.full)
-            .padding(horizontal = 6.dp, vertical = 1.dp),
-    ) {
-        Text("已领取", style = AppTheme.typography.caption, color = colors.economy.gold)
     }
 }
 

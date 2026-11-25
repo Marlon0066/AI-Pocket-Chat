@@ -6,103 +6,19 @@ import com.situ.aichat.ui.liuli.designsystem.LocalAppSkin
 import com.situ.aichat.ui.settings.AppearanceSettingsScreen
 import com.situ.aichat.ui.settings.NotificationSettingsScreen
 import com.situ.aichat.ui.settings.SettingsScreen
+import com.situ.aichat.ui.settings.hub.SettingsHubEntry
 
-/**
- * 设置三屏的选脸点（图纸 2026-09-06 卷四 A-1·口径同卷三 `LiuliHomeFaces`）。每个包装与暖陶屏**同签名**
- * （VM 默认形参不进包装签名）；体内按 [LocalAppSkin] 二选一，两条分支实参逐字相同——导航图只把函数名
- * 换成 `Skinned…`。三个包装一次建齐（图纸 §10 ⑥：`AIChatApp.kt` 只在 C3 动一次）。
- */
-
+/** 设置三屏的选脸点：主页签名已收束为 (onBack, onOpenEntry)，与暖陶 [SettingsScreen] 逐参对齐。 */
 @Composable
 fun SkinnedSettingsScreen(
     onBack: () -> Unit,
-    onOpenApiConfig: () -> Unit,
-    onOpenApiFunctions: () -> Unit,
-    onOpenMemorySettings: () -> Unit,
-    onOpenSystemToggles: () -> Unit,
-    onOpenAppearance: () -> Unit,
-    onOpenNotificationSettings: () -> Unit,
-    onOpenImmersiveSettings: () -> Unit,
-    onOpenStickerManagement: () -> Unit,
-    onOpenGrowthSettings: () -> Unit,
-    onOpenReplyRules: () -> Unit,
-    onOpenContentFilter: () -> Unit,
-    onOpenCalendarAwareness: () -> Unit,
-    onOpenWorldBooks: () -> Unit,
-    onOpenPromptModules: () -> Unit,
-    onOpenTtsConfig: () -> Unit,
-    onOpenVoiceCallSettings: () -> Unit,
-    onOpenDiarySettings: () -> Unit,
-    onOpenMomentSettings: () -> Unit,
-    onOpenStoryGlobalSettings: () -> Unit,
-    onOpenWorldSettings: () -> Unit,
-    onOpenBackup: () -> Unit,
-    onOpenBackgroundReliability: () -> Unit,
-    onOpenContextLog: () -> Unit,
-    onOpenPerfCollect: () -> Unit,
-    onOpenAbout: () -> Unit,
+    onOpenEntry: (SettingsHubEntry) -> Unit,
 ) {
     if (LocalAppSkin.current == AppSkin.LIULI) {
-        LiuliSettingsScreen(
-            onBack = onBack,
-            callbacks = LiuliSettingsCallbacks(
-                onOpenApiConfig = onOpenApiConfig,
-                onOpenApiFunctions = onOpenApiFunctions,
-                onOpenMemorySettings = onOpenMemorySettings,
-                onOpenSystemToggles = onOpenSystemToggles,
-                onOpenAppearance = onOpenAppearance,
-                onOpenNotificationSettings = onOpenNotificationSettings,
-                onOpenImmersiveSettings = onOpenImmersiveSettings,
-                onOpenStickerManagement = onOpenStickerManagement,
-                onOpenGrowthSettings = onOpenGrowthSettings,
-                onOpenReplyRules = onOpenReplyRules,
-                onOpenContentFilter = onOpenContentFilter,
-                onOpenCalendarAwareness = onOpenCalendarAwareness,
-                onOpenWorldBooks = onOpenWorldBooks,
-                onOpenPromptModules = onOpenPromptModules,
-                onOpenTtsConfig = onOpenTtsConfig,
-                onOpenVoiceCallSettings = onOpenVoiceCallSettings,
-                onOpenDiarySettings = onOpenDiarySettings,
-                onOpenMomentSettings = onOpenMomentSettings,
-                onOpenStoryGlobalSettings = onOpenStoryGlobalSettings,
-                onOpenWorldSettings = onOpenWorldSettings,
-                onOpenBackup = onOpenBackup,
-                onOpenBackgroundReliability = onOpenBackgroundReliability,
-                onOpenContextLog = onOpenContextLog,
-                onOpenPerfCollect = onOpenPerfCollect,
-                onOpenAbout = onOpenAbout,
-            ),
-        )
+        LiuliSettingsScreen(onBack = onBack, onOpenEntry = onOpenEntry)
         return
     }
-    SettingsScreen(
-        onBack = onBack,
-        onOpenApiConfig = onOpenApiConfig,
-        onOpenApiFunctions = onOpenApiFunctions,
-        onOpenMemorySettings = onOpenMemorySettings,
-        onOpenSystemToggles = onOpenSystemToggles,
-        onOpenAppearance = onOpenAppearance,
-        onOpenNotificationSettings = onOpenNotificationSettings,
-        onOpenImmersiveSettings = onOpenImmersiveSettings,
-        onOpenStickerManagement = onOpenStickerManagement,
-        onOpenGrowthSettings = onOpenGrowthSettings,
-        onOpenReplyRules = onOpenReplyRules,
-        onOpenContentFilter = onOpenContentFilter,
-        onOpenCalendarAwareness = onOpenCalendarAwareness,
-        onOpenWorldBooks = onOpenWorldBooks,
-        onOpenPromptModules = onOpenPromptModules,
-        onOpenTtsConfig = onOpenTtsConfig,
-        onOpenVoiceCallSettings = onOpenVoiceCallSettings,
-        onOpenDiarySettings = onOpenDiarySettings,
-        onOpenMomentSettings = onOpenMomentSettings,
-        onOpenStoryGlobalSettings = onOpenStoryGlobalSettings,
-        onOpenWorldSettings = onOpenWorldSettings,
-        onOpenBackup = onOpenBackup,
-        onOpenBackgroundReliability = onOpenBackgroundReliability,
-        onOpenContextLog = onOpenContextLog,
-        onOpenPerfCollect = onOpenPerfCollect,
-        onOpenAbout = onOpenAbout,
-    )
+    SettingsScreen(onBack = onBack, onOpenEntry = onOpenEntry)
 }
 
 @Composable

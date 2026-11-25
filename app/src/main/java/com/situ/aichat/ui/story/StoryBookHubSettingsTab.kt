@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -34,6 +32,7 @@ import com.situ.aichat.data.local.entity.StoryCharacterRoleEntity
 import com.situ.aichat.data.local.entity.StoryEntity
 import com.situ.aichat.story.StoryEditableField
 import com.situ.aichat.story.StoryGlobalCraftValues
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppDialog
@@ -122,7 +121,7 @@ private fun CraftRow(label: String, isNew: Boolean, trailing: @Composable () -> 
         Text(label, style = AppTheme.typography.body, color = c.text.primary)
         if (isNew) HubTagChip(stringResource(R.string.story_hub_tag_new), highlighted = true)
         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.End) { trailing() }
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = c.text.tertiary)
+        Icon(AppActionIcons.ChevronRight, contentDescription = null, tint = c.text.tertiary)
     }
 }
 
@@ -246,7 +245,7 @@ private fun DangerRow(label: String, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(label, style = AppTheme.typography.body, color = AppTheme.colors.status.onError, modifier = Modifier.weight(1f))
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = AppTheme.colors.status.onError)
+        Icon(AppActionIcons.ChevronRight, contentDescription = null, tint = AppTheme.colors.status.onError)
     }
 }
 

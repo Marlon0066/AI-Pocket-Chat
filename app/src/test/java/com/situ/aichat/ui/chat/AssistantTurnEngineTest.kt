@@ -235,7 +235,7 @@ class AssistantTurnEngineTest {
             meetingAppointmentStore = mockk(relaxed = true),
             // WB4：本测试族不测世界书——stub 成「无书」保持既有断言语义（activateForTurn 恒 null = 装配零变化）。
             worldBookPromptService = mockk {
-                coEvery { activateForTurn(any(), any(), any(), any(), any(), any(), any()) } returns null
+                coEvery { activateForTurn(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns null
             },
             // W5：本测试族不测世界联动——relaxed mock 使 forTurn 恒 null（worldContext=null=装配零变化，既有断言不变）。
             worldChatContextProvider = mockk(relaxed = true),

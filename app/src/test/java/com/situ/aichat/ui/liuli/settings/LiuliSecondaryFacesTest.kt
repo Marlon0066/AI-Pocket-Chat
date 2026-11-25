@@ -37,10 +37,10 @@ class LiuliSecondaryFacesTest {
     }
 
     @Test fun 设置主页包装与暖陶同签名() {
-        // 暖陶 SettingsScreen = onBack + 25 个 onOpen* + 3 个 VM 默认形参。
-        assertEquals(29, declaredParams(WARM_SETTINGS, "SettingsScreen"))
-        assertEquals(26, declaredParams(FACES_SETTINGS, "SkinnedSettingsScreen"))
-        check("SkinnedSettingsScreen", WARM_SETTINGS to "SettingsScreen", vmDefaults = 3)
+        // 暖陶 SettingsScreen = onBack + onOpenEntry + 1 个 VM 默认形参。
+        assertEquals(3, declaredParams(WARM_SETTINGS, "SettingsScreen"))
+        assertEquals(2, declaredParams(FACES_SETTINGS, "SkinnedSettingsScreen"))
+        check("SkinnedSettingsScreen", WARM_SETTINGS to "SettingsScreen", vmDefaults = 1)
     }
 
     @Test fun 外观与通知包装与暖陶同签名() {

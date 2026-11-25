@@ -30,22 +30,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Backpack
 import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Healing
 import androidx.compose.material.icons.filled.Restaurant
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shower
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Toys
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -83,10 +77,12 @@ import com.situ.aichat.pet.personalityType
 import com.situ.aichat.pet.species
 import com.situ.aichat.ui.components.LocalAppHaptics
 import com.situ.aichat.ui.components.clickableScale
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppLoadingRing
 import com.situ.aichat.ui.designsystem.AppLoadingRingSize
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTopBarIcons
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
@@ -250,16 +246,18 @@ private fun PetContent(
                 var heldReaction by remember { mutableStateOf("") }
                 LaunchedEffect(state.reactionText) { state.reactionText?.let { heldReaction = it } }
                 if (bubbleAlpha > 0.01f) {
-                    Surface(
-                        shape = RoundedCornerShape(50),
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
-                        tonalElevation = 2.dp,
+                    val c = AppTheme.colors
+                    Box(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .offset(y = (-4).dp)
-                            .graphicsLayer { alpha = bubbleAlpha; scaleX = bubbleScale; scaleY = bubbleScale },
+                            .graphicsLayer { alpha = bubbleAlpha; scaleX = bubbleScale; scaleY = bubbleScale }
+                            .clip(AppShapes.full)
+                            .background(c.surface.raised.copy(alpha = 0.88f))
+                            .border(0.5.dp, c.surface.stroke, AppShapes.full)
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
                     ) {
-                        Text(heldReaction, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp))
+                        Text(heldReaction, fontSize = 12.sp, color = c.text.primary)
                     }
                 }
             }
@@ -271,7 +269,7 @@ private fun PetContent(
                 modifier = Modifier.clickable { showRename = true },
             ) {
                 Text(pet.name, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = AppTheme.colors.text.primary)
-                Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.a11y_rename), modifier = Modifier.size(16.dp), tint = AppTheme.colors.text.secondary)
+                Icon(AppActionIcons.Edit, contentDescription = stringResource(R.string.a11y_rename), modifier = Modifier.size(16.dp), tint = AppTheme.colors.text.secondary)
             }
             Spacer(Modifier.height(8.dp))
             // S3：需求领衔（emoji + 第一人称文案·urgent → 深陶强调·开心/满足 → 暖常色）
@@ -306,7 +304,7 @@ private fun PetContent(
         }
 
         // 顶部返回（左·纸感圆）+ 背包/商店（右·合并悬浮胶囊·C 方案）。壁纸重构②：自管 statusBarsPadding 让位状态栏。
-        TopIconButton(Icons.AutoMirrored.Filled.ArrowBack, "返回", Modifier.align(Alignment.TopStart).statusBarsPadding().padding(12.dp), onBack)
+        TopIconButton(AppTopBarIcons.Back, "返回", Modifier.align(Alignment.TopStart).statusBarsPadding().padding(12.dp), onBack)
         TopActionCapsule(
             modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp),
             items = listOf(
@@ -336,12 +334,18 @@ private fun PetContent(
 
         // 顺序 toast 槽（P1-34 queue 化：进化金币 + 成就批共用；🏆 前缀在此供给——资源文案不得再带）
         state.milestoneToast?.let { text ->
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = MaterialTheme.colorScheme.tertiaryContainer,
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 60.dp),
+            val c = AppTheme.colors
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(top = 60.dp)
+                    .clip(AppShapes.full)
+                    .background(c.accent.container)
+                    .border(0.5.dp, c.accent.primary.copy(alpha = 0.30f), AppShapes.full)
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
             ) {
-                Text("🏆 $text", modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp), fontWeight = FontWeight.Medium)
+                Text("🏆 $text", fontWeight = FontWeight.Medium, color = c.accent.text)
             }
         }
     }
@@ -398,45 +402,44 @@ private fun CareToolbar(
     onWalkComplete: () -> Unit,
     onShowDetail: () -> Unit,
 ) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(32.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
-        tonalElevation = 3.dp,
+    val colors = AppTheme.colors
+    val shape = RoundedCornerShape(32.dp)
+    Row(
+        modifier = modifier
+            .clip(shape)
+            .background(colors.surface.raised.copy(alpha = 0.94f))
+            .border(0.5.dp, colors.surface.stroke, shape)
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(20.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            when (pet.neglectPhase) {
-                PetNeglectPhase.RAN_AWAY -> {
-                    ToolbarButton(Icons.Filled.Search, "寻找", state.searchCooldown, onSearch)
-                    val attempts = pet.metadata.searchAttempts
-                    if (attempts > 0) {
-                        Text("$attempts/${PetRecoveryThresholds.ATTEMPTS_TO_FIND}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-                PetNeglectPhase.SICK -> {
-                    ToolbarButton(Icons.Filled.Healing, "治疗", state.treatCooldown, onTreat)
-                    ToolbarButton(Icons.Filled.Restaurant, "喂食", state.feedCooldown, onFeed)
-                    ToolbarButton(Icons.Filled.Shower, "清洁", state.cleanCooldown, onClean)
-                }
-                else -> {
-                    ToolbarButton(Icons.Filled.Restaurant, "喂食", state.feedCooldown, onFeed)
-                    ToolbarButton(Icons.Filled.Shower, "清洁", state.cleanCooldown, onClean)
-                    ToolbarButton(Icons.Filled.Toys, "玩耍", state.playCooldown, onPlay)
-                    val startTime = pet.metadata.walkStartTime
-                    if (startTime != null && PetWalkService.walkState(pet) is PetWalkService.WalkState.Walking) {
-                        WalkCountdownButton(startTime, onWalkComplete)
-                    } else {
-                        ToolbarButton(Icons.AutoMirrored.Filled.DirectionsWalk, "散步", !PetWalkService.canStartWalk(pet), onStartWalk)
-                    }
+        when (pet.neglectPhase) {
+            PetNeglectPhase.RAN_AWAY -> {
+                ToolbarButton(AppActionIcons.Search, "寻找", state.searchCooldown, onSearch)
+                val attempts = pet.metadata.searchAttempts
+                if (attempts > 0) {
+                    Text("$attempts/${PetRecoveryThresholds.ATTEMPTS_TO_FIND}", fontSize = 11.sp, color = colors.text.secondary)
                 }
             }
-            if (pet.neglectPhase != PetNeglectPhase.RAN_AWAY) {
-                ToolbarButton(Icons.Filled.BarChart, "详情", false, onShowDetail)
+            PetNeglectPhase.SICK -> {
+                ToolbarButton(Icons.Filled.Healing, "治疗", state.treatCooldown, onTreat)
+                ToolbarButton(Icons.Filled.Restaurant, "喂食", state.feedCooldown, onFeed)
+                ToolbarButton(Icons.Filled.Shower, "清洁", state.cleanCooldown, onClean)
             }
+            else -> {
+                ToolbarButton(Icons.Filled.Restaurant, "喂食", state.feedCooldown, onFeed)
+                ToolbarButton(Icons.Filled.Shower, "清洁", state.cleanCooldown, onClean)
+                ToolbarButton(Icons.Filled.Toys, "玩耍", state.playCooldown, onPlay)
+                val startTime = pet.metadata.walkStartTime
+                if (startTime != null && PetWalkService.walkState(pet) is PetWalkService.WalkState.Walking) {
+                    WalkCountdownButton(startTime, onWalkComplete)
+                } else {
+                    ToolbarButton(Icons.AutoMirrored.Filled.DirectionsWalk, "散步", !PetWalkService.canStartWalk(pet), onStartWalk)
+                }
+            }
+        }
+        if (pet.neglectPhase != PetNeglectPhase.RAN_AWAY) {
+            ToolbarButton(Icons.Filled.BarChart, "详情", false, onShowDetail)
         }
     }
 }
@@ -447,19 +450,23 @@ private fun ToolbarButton(icon: androidx.compose.ui.graphics.vector.ImageVector,
     // S3：养护栏重着色——暖陶图标 + 浅陶软容器（替原冷灰 onSurface/surfaceVariant·沿用 Material 图标只换色）。
     val iconTint = if (disabled) colors.text.tertiary else colors.accent.text
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Surface(
-            shape = CircleShape,
-            color = colors.accent.container,
-            modifier = Modifier.size(44.dp).then(if (disabled) Modifier else Modifier.clickable(onClick = onClick)),
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(colors.accent.container)
+                .then(if (disabled) Modifier else Modifier.clickableScale(role = Role.Button, onClick = onClick)),
+            contentAlignment = Alignment.Center,
         ) {
-            Box(contentAlignment = Alignment.Center) { Icon(icon, contentDescription = label, tint = iconTint, modifier = Modifier.size(22.dp)) }
+            Icon(icon, contentDescription = label, tint = iconTint, modifier = Modifier.size(22.dp))
         }
         Text(label, fontSize = 11.sp, color = if (disabled) colors.text.tertiary else colors.text.secondary)
     }
 }
 
 @Composable
-private fun WalkCountdownButton(startTime: Long, onComplete: () -> Unit) {
+internal fun WalkCountdownButton(startTime: Long, onComplete: () -> Unit) {
+    val colors = AppTheme.colors
     var remaining by remember(startTime) { mutableLongStateOf(PetWalkService.WALK_DURATION_MS - (System.currentTimeMillis() - startTime)) }
     LaunchedEffect(startTime) {
         while (true) {
@@ -471,10 +478,13 @@ private fun WalkCountdownButton(startTime: Long, onComplete: () -> Unit) {
     }
     val totalSec = (remaining / 1000).coerceAtLeast(0)
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(44.dp)) {
-            Box(contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Filled.DirectionsWalk, contentDescription = stringResource(R.string.a11y_pet_walking), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp)) }
+        Box(
+            modifier = Modifier.size(44.dp).clip(CircleShape).background(colors.accent.container),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.AutoMirrored.Filled.DirectionsWalk, contentDescription = stringResource(R.string.a11y_pet_walking), tint = colors.accent.text, modifier = Modifier.size(22.dp))
         }
-        Text("${totalSec / 60}:${"%02d".format(totalSec % 60)}", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+        Text("${totalSec / 60}:${"%02d".format(totalSec % 60)}", fontSize = 11.sp, color = colors.accent.text)
     }
 }
 

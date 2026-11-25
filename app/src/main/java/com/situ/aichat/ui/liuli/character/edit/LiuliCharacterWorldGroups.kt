@@ -55,13 +55,14 @@ internal fun LiuliCharacterWorldGroup(viewModel: CharacterWorldViewModel = hiltV
     LiuliCharacterWorldGroupContent(
         state = state,
         onJoin = viewModel::join,
+        onJoinClearingWorldBooks = viewModel::joinClearingWorldBooks,
         onLeave = viewModel::leave,
         onSelectRegion = viewModel::selectRegion,
         onMove = viewModel::move,
     )
 }
 
-/** 世界组内容（无状态·可单测）：D8 互斥置灰 + 四态副标 / 脚注 + 住址行 + 离开确认 + 城市弹层 → 搬家确认。 */
+/** 世界组内容（无状态·可单测）：仅原住民锁死；挂世界书时点开弹切换确认框一键摘书入世 + 住址行 + 离开确认 + 城市弹层。 */
 @Composable
 internal fun LiuliCharacterWorldGroupContent(
     state: CharacterWorldUiState,
@@ -69,12 +70,14 @@ internal fun LiuliCharacterWorldGroupContent(
     onLeave: () -> Unit,
     onSelectRegion: (String) -> Unit,
     onMove: (String) -> Unit,
+    onJoinClearingWorldBooks: () -> Unit = onJoin,
 ) {
     val reduceMotion = rememberReduceMotion()
     val wb = state.worldbookBound
     val native = state.nativeOrigin
     val joined = state.joined
     var showLeave by remember { mutableStateOf(false) }
+    var showSwitchJoin by remember { mutableStateOf(false) }
     var showCity by remember { mutableStateOf(false) }
 
     LiuliGroup(
@@ -84,9 +87,15 @@ internal fun LiuliCharacterWorldGroupContent(
         LiuliToggleRow(
             title = stringResource(R.string.char_world_join_title),
             checked = joined,
-            onCheckedChange = { on -> if (on) onJoin() else showLeave = true },
+            onCheckedChange = { on ->
+                when {
+                    !on -> showLeave = true
+                    wb -> showSwitchJoin = true
+                    else -> onJoin()
+                }
+            },
             subtitle = stringResource(worldJoinSubtitleRes(worldbookBound = wb, nativeOrigin = native, joined = joined)),
-            enabled = !wb && !native,
+            enabled = !native,
             icon = Icons.Filled.Public,
             tileColor = LiuliTileTone.Sky,
             divider = false,
@@ -130,6 +139,20 @@ internal fun LiuliCharacterWorldGroupContent(
             },
             dismissText = stringResource(R.string.char_world_leave_cancel),
             onDismiss = { showLeave = false },
+        )
+    }
+    if (showSwitchJoin) {
+        LiuliDialog(
+            onDismissRequest = { showSwitchJoin = false },
+            title = stringResource(R.string.char_world_switch_join_title),
+            body = stringResource(R.string.char_world_switch_join_body),
+            confirmText = stringResource(R.string.char_world_switch_join_confirm),
+            onConfirm = {
+                onJoinClearingWorldBooks()
+                showSwitchJoin = false
+            },
+            dismissText = stringResource(R.string.action_cancel),
+            onDismiss = { showSwitchJoin = false },
         )
     }
     if (showCity) {

@@ -27,7 +27,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,7 +35,6 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -60,6 +58,7 @@ import com.situ.aichat.data.backup.ImportStrategy
 import com.situ.aichat.ui.backup.strategyLabelRes
 import com.situ.aichat.ui.components.AvatarColor
 import com.situ.aichat.ui.components.contentMaxWidth
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.liuli.designsystem.LiuliButton
@@ -269,7 +268,7 @@ private fun LiuliCharacterPreviewRow(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
-                    Icons.Filled.Warning,
+                    AppActionIcons.Warning,
                     contentDescription = null,
                     // F7：原文件私有的 ConflictAmber → 语义色 status.onWarning。
                     tint = colors.status.onWarning,
@@ -349,6 +348,7 @@ private fun LiuliImportResultSummary(result: ImportResult.Success) {
 /** 预览头像：直接解码 zip 内字节（预览段未重存媒体）；无字节 → 名字首字母 + 渐变（复用 [AvatarColor]）。 */
 @Composable
 private fun LiuliPreviewAvatar(name: String, bytes: ByteArray?, size: Dp) {
+    val isDark = AppTheme.colors.isDark
     val bitmap by produceState<ImageBitmap?>(initialValue = null, bytes) {
         value = bytes?.let {
             withContext(Dispatchers.Default) {
@@ -360,7 +360,7 @@ private fun LiuliPreviewAvatar(name: String, bytes: ByteArray?, size: Dp) {
         modifier = Modifier
             .size(size)
             .clip(CircleShape)
-            .background(AvatarColor.brush(name))
+            .background(AvatarColor.brush(name, dark = isDark))
             // 整体装饰压停（名字由行文本承载）——cd = null 盖不住首字母兜底 Text 的泄漏停，须容器级清空。
             .clearAndSetSemantics {},
         contentAlignment = Alignment.Center,
@@ -375,7 +375,7 @@ private fun LiuliPreviewAvatar(name: String, bytes: ByteArray?, size: Dp) {
             )
             bytes == null -> Text(
                 text = name.take(1).uppercase().ifEmpty { "·" },
-                color = Color.White,
+                color = AvatarColor.monogramInk(dark = isDark),
                 fontWeight = FontWeight.SemiBold,
                 fontSize = (size.value * MONOGRAM_RATIO).sp,
             )

@@ -54,6 +54,27 @@ data class WorldInfoSettings(
 /** 扫描输入的一条消息（升序传入；[senderName] 供 include_names 前缀）。 */
 data class ScanMessage(val text: String, val senderName: String = "")
 
+/**
+ * 条目级扩展匹配源（ST `matchCharacterDescription` 等六项布尔开关）：
+ * 当某条目的 `extraJson` 显式勾选对应开关时，将该角色/用户静态档案拼入该条目的扫描缓冲。
+ */
+data class WorldInfoMatchSources(
+    val characterDescription: String = "",
+    val characterPersonality: String = "",
+    val characterDepthPrompt: String = "",
+    val scenario: String = "",
+    val creatorNotes: String = "",
+    val personaDescription: String = "",
+) {
+    val isEmpty: Boolean
+        get() = characterDescription.isBlank() &&
+            characterPersonality.isBlank() &&
+            characterDepthPrompt.isBlank() &&
+            scenario.isBlank() &&
+            creatorNotes.isBlank() &&
+            personaDescription.isBlank()
+}
+
 data class WorldInfoActivationInput(
     /** 本轮生效的书（调用方已按「启用的全局书 ∪ 绑定书」取好；引擎仍复核 enabled）。 */
     val books: List<WorldBookEntity>,
@@ -67,6 +88,12 @@ data class WorldInfoActivationInput(
     /** 向量检索命中的条目 uuid（WB5 产出；链接条目只认这个，不走关键词）。 */
     val vectorMatchedEntryUuids: Set<String> = emptySet(),
     val settings: WorldInfoSettings = WorldInfoSettings(),
+    /** 当前角色名（用于关键词与递归文本中的 `{{char}}` 展开，以及首轮 `includeNames` 角色名兜底）。 */
+    val characterName: String = "",
+    /** 当前用户名（用于关键词与递归文本中的 `{{user}}` 展开）。 */
+    val userName: String = "",
+    /** 条目级 `match*` 静态匹配源（空则不附加）。 */
+    val matchSources: WorldInfoMatchSources = WorldInfoMatchSources(),
 )
 
 /** @depth 注入项：WB4 在对话历史倒数第 [depth] 条处按 [role]（0=system/1=user/2=assistant）插入。 */

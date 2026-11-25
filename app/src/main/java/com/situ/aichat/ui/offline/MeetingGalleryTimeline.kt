@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -95,6 +97,9 @@ internal fun MeetingGalleryTimeline(
     onRetry: (String) -> Unit,
     onOpen: (OfflineMeetingSession) -> Unit,
     onEdit: (OfflineMeetingSession) -> Unit,
+    listState: LazyListState = rememberLazyListState(),
+    contentPadding: PaddingValues = PaddingValues(start = AppSpacing.screenGutter, end = AppSpacing.screenGutter, top = 4.dp, bottom = 28.dp),
+    header: (@Composable () -> Unit)? = null,
 ) {
     // extractor 已倒序；显式钉死 newest-first（同资料页 SKY-3 口径）。
     val sorted = remember(sessions) { sessions.sortedByDescending { it.startMillis } }
@@ -102,14 +107,18 @@ internal fun MeetingGalleryTimeline(
     val nowMillis = remember { System.currentTimeMillis() }
 
     LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = AppSpacing.screenGutter, end = AppSpacing.screenGutter, top = 4.dp, bottom = 28.dp),
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = contentPadding,
     ) {
+        if (header != null) {
+            item(key = "header") { header() }
+        }
         item(key = "stat") {
             Text(
                 galleryStatLine(sorted.size, first.startMillis),
                 style = AppTheme.typography.secondary.copy(fontSize = 12.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = AppTheme.colors.text.secondary,
                 modifier = Modifier.padding(start = 2.dp, bottom = 10.dp),
             )
         }

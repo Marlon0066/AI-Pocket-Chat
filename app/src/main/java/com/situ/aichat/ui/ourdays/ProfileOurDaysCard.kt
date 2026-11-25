@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,6 +25,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.ui.character.CardSectionHeader
 import com.situ.aichat.ui.character.ProfileCard
 import com.situ.aichat.R
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppFeatureIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
@@ -45,7 +44,7 @@ fun ProfileOurDaysCard(onOpen: () -> Unit, modifier: Modifier = Modifier, viewMo
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             CardSectionHeader(AppFeatureIcons.Days, colors.accent.text, stringResource(R.string.our_days_title))
             Spacer(Modifier.weight(1f))
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = colors.text.tertiary)
+            Icon(AppActionIcons.ChevronRight, contentDescription = null, tint = colors.text.tertiary)
         }
         Text(
             if (state.hasAny) {

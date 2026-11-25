@@ -1,43 +1,58 @@
 package com.situ.aichat.ui.liuli.diary
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
 import com.situ.aichat.ui.components.LocalAppHaptics
 import com.situ.aichat.ui.components.rememberReduceMotion
+import com.situ.aichat.ui.designsystem.AppActionIcons
+import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.diary.ComposeDateHead
 import com.situ.aichat.ui.diary.ComposeDiaryViewModel
+import com.situ.aichat.ui.diary.DiaryDottedDivider
 import com.situ.aichat.ui.diary.DiaryPaper
 import com.situ.aichat.ui.diary.DiaryTranscribingPill
 import com.situ.aichat.ui.diary.ImageThumbs
 import com.situ.aichat.ui.diary.MaterialChipsRow
 import com.situ.aichat.ui.diary.MoodRow
-import com.situ.aichat.ui.diary.TearLine
 import com.situ.aichat.ui.diary.rememberComposeDiaryPageState
 import com.situ.aichat.ui.diary.rememberComposeDiaryWash
 import com.situ.aichat.ui.diary.rememberDiaryDailyPrompt
 import com.situ.aichat.ui.diary.showsMaterialChips
 import com.situ.aichat.ui.liuli.designsystem.LiuliDialog
 import com.situ.aichat.ui.liuli.designsystem.LiuliMaterials
+import com.situ.aichat.ui.liuli.designsystem.LiuliShapes
 import com.situ.aichat.ui.liuli.designsystem.LiuliSnackbarHost
+import com.situ.aichat.ui.liuli.glass.LiuliGlassRole
+import com.situ.aichat.ui.liuli.glass.liuliGlass
 import com.situ.aichat.ui.liuli.page.LiuliPage
 import com.situ.aichat.ui.liuli.page.LiuliPageCircleAction
 import com.situ.aichat.ui.liuli.page.LiuliPageGeometry
 import com.situ.aichat.ui.theme.LocalIsDarkTheme
 
 /**
- * 琉璃写日记（琉璃 2.0 卷六·一 §4.4·设计稿 D3）：与暖陶 [com.situ.aichat.ui.diary.ComposeDiaryScreen] 共用同一个 VM、
- * 同一个页级状态件与全部器物件（日期头 + 邮票 / 撕票线 / 心情行 / 素材芯片 / 横线纸 / 拍立得 / 说一段）；
- * 换成柔光底上一块固定的稿纸框 + 悬浮玻璃底条 + 琉璃弹层 / 对话框。**不加 BackHandler**（系统返回按导航默认·同暖陶）。
+ * 琉璃写日记（方向 C 升级）：保持 [LiuliComposePaper] 与 [LiuliComposeDiaryBar] 几何契约零回归，
+ * 纸面内部升级为水彩日期天头 + 可点击折叠心情邮票 + 细密点线 + 宁静无格磨砂书写区 + 顶部实时字数玻璃胶囊。
  */
 @Composable
 internal fun LiuliComposeDiaryScreen(
@@ -47,7 +62,6 @@ internal fun LiuliComposeDiaryScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val materialChips by viewModel.materialChips.collectAsStateWithLifecycle()
-    // J6 说一段：录音三态（录/电平/计时）+ 取消态 + 转写中。
     val voiceRecording by viewModel.voice.voiceRecording.collectAsStateWithLifecycle()
     val voiceLevel by viewModel.voice.voiceLevel.collectAsStateWithLifecycle()
     val voiceDurationMs by viewModel.voice.voiceDurationMs.collectAsStateWithLifecycle()
@@ -59,9 +73,9 @@ internal fun LiuliComposeDiaryScreen(
     val page = rememberComposeDiaryPageState(viewModel, onClose, onNavigateToApiConfig)
     val prompt = rememberDiaryDailyPrompt()
     val wash = rememberComposeDiaryWash(state.moodEmoji, fallback = LiuliMaterials.paperTop(dark))
+    var moodTrayExpanded by rememberSaveable { mutableStateOf(state.moodEmoji == null && state.content.isEmpty()) }
 
     LiuliPage(
-        // 只在收起胶囊里用·本页恒不收起。
         title = stringResource(R.string.diary_nav_title),
         onBack = page::attemptClose,
         collapsed = false,
@@ -69,8 +83,28 @@ internal fun LiuliComposeDiaryScreen(
             LiuliPageCircleAction(
                 onClick = page::attemptClose,
                 contentDescription = stringResource(R.string.action_cancel),
-                icon = Icons.Filled.Close,
+                icon = AppActionIcons.Close,
             )
+        },
+        actions = if (state.content.isNotBlank()) {
+            {
+                Box(
+                    modifier = Modifier
+                        .height(LiuliPageGeometry.backButton)
+                        .liuliGlass(LiuliShapes.pill, dark = dark, role = LiuliGlassRole.Button)
+                        .padding(horizontal = 14.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        stringResource(R.string.diary_compose_word_count, state.content.length),
+                        style = AppTypography.captionNumeric,
+                        color = AppTheme.colors.text.secondary,
+                        maxLines = 1,
+                    )
+                }
+            }
+        } else {
+            null
         },
         bottomBar = {
             LiuliComposeDiaryBottom(voiceRecording, voiceLevel, voiceDurationMs, voiceCancelling) {
@@ -96,9 +130,26 @@ internal fun LiuliComposeDiaryScreen(
                 scale = page.headScale.value,
                 reduceMotion = reduceMotion,
                 moodSelectTick = page.moodSelectTick,
+                onMoodClick = { moodTrayExpanded = !moodTrayExpanded },
+                fullBleed = false,
             )
-            TearLine(notchColor = LiuliMaterials.paperTop(dark))
-            MoodRow(selectedEmoji = state.moodEmoji, reduceMotion = reduceMotion, onToggle = page::toggleMood)
+            DiaryDottedDivider()
+            AnimatedVisibility(
+                visible = moodTrayExpanded,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically(),
+            ) {
+                MoodRow(
+                    selectedEmoji = state.moodEmoji,
+                    reduceMotion = reduceMotion,
+                    onToggle = { emoji, label ->
+                        page.toggleMood(emoji, label)
+                        if (state.moodEmoji != emoji) {
+                            moodTrayExpanded = false
+                        }
+                    },
+                )
+            }
             if (state.showsMaterialChips(materialChips)) MaterialChipsRow(chips = materialChips, onPick = page::pickMaterial)
             DiaryPaper(
                 content = state.content,
@@ -108,6 +159,7 @@ internal fun LiuliComposeDiaryScreen(
                 aiAssistAvailable = !state.isExchangeLetter,
                 onContentChange = viewModel::setContent,
                 onAiStart = { page.showGuideSheet = true },
+                showRules = false,
             )
             if (isTranscribing) DiaryTranscribingPill(reduceMotion = reduceMotion)
             if (state.images.isNotEmpty()) ImageThumbs(images = state.images, onRemove = viewModel::removeImage)

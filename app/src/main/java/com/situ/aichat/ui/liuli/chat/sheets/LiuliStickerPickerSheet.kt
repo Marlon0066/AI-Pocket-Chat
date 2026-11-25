@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mood
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -46,6 +45,7 @@ import com.situ.aichat.sticker.StickerRecentStore
 import com.situ.aichat.sticker.StickerService
 import com.situ.aichat.sticker.toStickerInfo
 import com.situ.aichat.ui.chat.StickerImage
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.liuli.designsystem.LiuliButton
@@ -132,7 +132,7 @@ internal fun LiuliStickerPickerSheet(
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Icon(
-                        if (tab == 0) Icons.Filled.Schedule else Icons.Filled.Mood,
+                        if (tab == 0) AppActionIcons.Clock else Icons.Filled.Mood,
                         contentDescription = null,
                         tint = onGlass.secondary,
                         modifier = Modifier.size(40.dp),

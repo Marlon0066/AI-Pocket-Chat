@@ -11,7 +11,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,15 +23,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -55,7 +54,10 @@ import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppLoadingRing
 import com.situ.aichat.ui.designsystem.AppLoadingRingSize
+import com.situ.aichat.ui.designsystem.AppShapes
+import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
+import com.situ.aichat.ui.designsystem.appCardSurface
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
@@ -160,18 +162,20 @@ private fun GiftHeader(state: GiftReactionViewModel.UiState, revealed: Boolean, 
                 },
             )
         }
+        val colors = AppTheme.colors
+        val typography = AppTheme.typography
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text("你送出了", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("你送出了", style = typography.caption, color = colors.text.secondary)
             Text(
                 text = item?.name.orEmpty(),
-                style = MaterialTheme.typography.titleLarge,
+                style = typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = colors.text.primary,
             )
             Text(
                 text = "给 ${state.characterName}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = typography.secondary,
+                color = colors.text.secondary,
             )
         }
     }
@@ -179,6 +183,8 @@ private fun GiftHeader(state: GiftReactionViewModel.UiState, revealed: Boolean, 
 
 @Composable
 private fun ReactionBubble(state: GiftReactionViewModel.UiState, loading: Boolean, reduceMotion: Boolean) {
+    val colors = AppTheme.colors
+    val typography = AppTheme.typography
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -188,17 +194,13 @@ private fun ReactionBubble(state: GiftReactionViewModel.UiState, loading: Boolea
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = state.characterName,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    style = typography.label,
+                    color = colors.text.primary,
                 )
                 val emoji = state.outcome?.moodEmoji
-                if (!emoji.isNullOrEmpty()) Text(emoji, style = MaterialTheme.typography.titleSmall)
+                if (!emoji.isNullOrEmpty()) Text(emoji, style = typography.label)
             }
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            ) {
+            Box(modifier = Modifier.appCardSurface()) {
                 // P1-11：loading 行→反应文字的淡入淡出+气泡高度动画（iOS :248/:262 同一 withAnimation(.smooth(0.3))
                 // 隐式驱动 :123-144 Group switch 分支的 .opacity 转场+尺寸变化；转场 API 用 tween=项目惯例）。
                 AnimatedContent(
@@ -221,16 +223,16 @@ private fun ReactionBubble(state: GiftReactionViewModel.UiState, loading: Boolea
                                 AppLoadingRing(size = AppLoadingRingSize.Small)
                                 Text(
                                     text = loadingText(state.characterName),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = typography.body,
+                                    color = colors.text.secondary,
                                 )
                             }
                         } else {
                             // 回放无已存反应（如聊天送礼记录）时给中性占位，不显空气泡
                             Text(
                                 text = state.outcome?.reactionText?.ifBlank { "TA 收下了这份礼物" } ?: "",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                style = typography.body,
+                                color = colors.text.primary,
                             )
                         }
                     }
@@ -272,6 +274,8 @@ private fun AffinityBadge(state: GiftReactionViewModel.UiState, reduceMotion: Bo
     // .opacity 转场）。保留早退结构 + graphicsLayer alpha（合同回退方案：AnimatedVisibility 隐藏态在
     // spacedBy(28dp) Column 里是 0 尺寸节点仍占一段间距；徽章是末元素，进组合即淡入与 iOS 视觉等价）。
     // 安卓守钱分叉（回放空反应 affinityGain=0 不显徽章、不二次入账）由上方早退天然保持，VM 零触碰。
+    val colors = AppTheme.colors
+    val typography = AppTheme.typography
     val badgeAlpha = remember { Animatable(if (reduceMotion) 1f else 0f) }
     LaunchedEffect(Unit) { badgeAlpha.animateTo(1f, tween(AppMotion.SMOOTH_MS)) }
     Column(
@@ -279,31 +283,27 @@ private fun AffinityBadge(state: GiftReactionViewModel.UiState, reduceMotion: Bo
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Surface(
-            shape = RoundedCornerShape(50),
-            color = AffinityPink.copy(alpha = 0.12f),
+        Row(
+            modifier = Modifier
+                .background(AffinityPink.copy(alpha = 0.12f), AppShapes.full)
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(Icons.Filled.Favorite, contentDescription = null, tint = AffinityPink, modifier = Modifier.size(18.dp))
-                Text(
-                    text = outcome.senseText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
+            Icon(Icons.Filled.Favorite, contentDescription = null, tint = AffinityPink, modifier = Modifier.size(18.dp))
+            Text(
+                text = outcome.senseText,
+                style = typography.label,
+                color = colors.text.primary,
+            )
         }
         val badge = outcome.handmadeBadge
         if (badge != null) {
             Spacer(Modifier.width(0.dp))
             Text(
                 text = "· $badge ·",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = typography.caption,
+                color = colors.text.secondary,
             )
         }
     }

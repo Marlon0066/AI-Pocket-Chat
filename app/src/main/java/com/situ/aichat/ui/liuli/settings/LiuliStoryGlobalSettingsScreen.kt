@@ -1,5 +1,6 @@
 package com.situ.aichat.ui.liuli.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -18,9 +19,13 @@ import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
@@ -30,6 +35,7 @@ import com.situ.aichat.story.globalValueLabel
 import com.situ.aichat.ui.components.contentMaxWidth
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
+import com.situ.aichat.ui.liuli.designsystem.LiuliDialog
 import com.situ.aichat.ui.liuli.designsystem.LiuliPalette
 import com.situ.aichat.ui.liuli.page.LiuliGroup
 import com.situ.aichat.ui.liuli.page.LiuliLargeTitle
@@ -44,12 +50,7 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * 故事全局设置页（琉璃·图纸 2026-09-06 卷五 §4.1 屏 13）。与暖陶 `StoryGlobalSettingsScreen` 共用
- * [StoryGlobalSettingsViewModel]。
- *
- * 三行值标全走 [globalValueLabel]（**三态取值单源**·REDLINES §1：口味画像没有出厂默认，故第三行传
- * `hasFactoryDefault = false`——这一处传错，屏上写的就与真注入的不是一回事）。思考模型时只加一行琥珀提示，
- * **滑杆不禁用**（换回普通模型即生效·逐字照暖陶 :80）。
+ * 故事全局设置页（琉璃·图纸 2026-09-06 卷五 §4.1 屏 13；设置全面重构卷三 B-6 补齐「回到出厂默认」）。
  */
 @Composable
 fun LiuliStoryGlobalSettingsScreen(
@@ -65,6 +66,7 @@ fun LiuliStoryGlobalSettingsScreen(
         isThinking = isThinking,
         onSetTemperature = viewModel::setTemperature,
         onOpenField = onOpenField,
+        onResetDefaults = viewModel::resetToDefaults,
         onBack = onBack,
         modifier = modifier,
     )
@@ -79,9 +81,11 @@ internal fun LiuliStoryGlobalSettingsContent(
     onOpenField: (String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onResetDefaults: () -> Unit = {},
     listState: LazyListState = rememberLazyListState(),
 ) {
     val title = stringResource(R.string.story_global_settings_title)
+    var showResetConfirm by remember { mutableStateOf(false) }
     val bottomInset = LiuliPageGeometry.pageBottom + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     LiuliPage(
         title = title,
@@ -103,7 +107,6 @@ internal fun LiuliStoryGlobalSettingsContent(
                 ) {
                     LiuliGroup(
                         header = stringResource(R.string.settings_group_story),
-                        // 组尾说明条：讲清「全局 vs 单本书覆盖」的分工（暖陶是组外一段文字·琉璃归组脚注）。
                         footer = stringResource(R.string.story_global_settings_footer),
                     ) {
                         LiuliSliderRow(
@@ -115,7 +118,6 @@ internal fun LiuliStoryGlobalSettingsContent(
                             divider = false,
                             onValueChange = { onSetTemperature((it * 10).roundToInt() / 10.0) },
                         )
-                        // 思考模型不吃温度：只提示，滑条不禁用。
                         if (isThinking) {
                             LiuliRowBase(
                                 divider = false,
@@ -149,12 +151,40 @@ internal fun LiuliStoryGlobalSettingsContent(
                             onClick = { onOpenField(StoryEditableField.GLOBAL_TASTE_PROFILE_KEY) },
                             icon = Icons.Filled.Insights,
                             tileColor = LiuliPalette.tileStory,
-                            // 口味画像没有出厂默认 → 值标只有「已设置 / 未设置」两种说法。
                             value = stringResource(globalValueLabel(settings.storyTasteProfile, hasFactoryDefault = false)),
                         )
                     }
+
+                    LiuliGroup {
+                        LiuliRowBase(
+                            modifier = Modifier.clickable(role = Role.Button) { showResetConfirm = true },
+                            divider = false,
+                        ) {
+                            Text(
+                                stringResource(R.string.settings_story_reset_defaults),
+                                style = AppTypography.body,
+                                color = AppTheme.colors.status.onError,
+                            )
+                        }
+                    }
                 }
             }
+        }
+
+        if (showResetConfirm) {
+            LiuliDialog(
+                onDismissRequest = { showResetConfirm = false },
+                title = stringResource(R.string.settings_story_reset_confirm_title),
+                body = stringResource(R.string.settings_story_reset_confirm_body),
+                confirmText = stringResource(R.string.settings_story_reset_defaults),
+                confirmDanger = true,
+                onConfirm = {
+                    showResetConfirm = false
+                    onResetDefaults()
+                },
+                dismissText = stringResource(R.string.action_cancel),
+                onDismiss = { showResetConfirm = false },
+            )
         }
     }
 }

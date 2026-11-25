@@ -7,16 +7,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.ExperimentalMaterial3Api
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,7 +31,9 @@ import com.situ.aichat.data.local.dao.GiftDao
 import com.situ.aichat.data.repository.CharacterRepository
 import com.situ.aichat.gift.GiftCatalog
 import com.situ.aichat.gift.GiftItem
+import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTopBar
+import com.situ.aichat.ui.designsystem.appCardSurface
 import com.situ.aichat.util.DateFormatters
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -102,6 +101,8 @@ fun ReceivedGiftDetailScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
+    val colors = AppTheme.colors
+    val typography = AppTheme.typography
     val scrollState = rememberScrollState()
     Scaffold(
         topBar = {
@@ -125,9 +126,9 @@ fun ReceivedGiftDetailScreen(
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 state.item?.let { GiftImage(item = it, size = 200.dp, cornerRadius = 24.dp) }
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("来自", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(state.giftName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                    Text(state.characterName, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("来自", style = typography.caption, color = colors.text.secondary)
+                    Text(state.giftName, style = typography.titleLarge, fontWeight = FontWeight.Bold, color = colors.text.primary)
+                    Text(state.characterName, style = typography.secondary, color = colors.text.secondary)
                 }
             }
 
@@ -136,12 +137,12 @@ fun ReceivedGiftDetailScreen(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     com.situ.aichat.ui.components.CharacterAvatar(name = state.characterName, avatarPath = state.avatarPath, size = 44.dp)
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.weight(1f)) {
-                        Text(state.characterName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-                        Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                        Text(state.characterName, style = typography.label, color = colors.text.primary)
+                        Box(modifier = Modifier.fillMaxWidth().appCardSurface()) {
                             Text(
                                 state.senderMessage,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                style = typography.body,
+                                color = colors.text.primary,
                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp).fillMaxWidth(),
                             )
                         }
@@ -151,12 +152,12 @@ fun ReceivedGiftDetailScreen(
 
             // 日期
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
+                Icon(AppActionIcons.Clock, contentDescription = null, tint = colors.text.secondary, modifier = Modifier.size(14.dp))
                 Text(
                     // gift-1：永久保存的收礼记录显示精确日期+时间（1:1 iOS .abbreviated+.shortened），不再随天数坍缩成「3天前」。
                     DateFormatters.mediumDateShortTime(state.timestamp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = typography.caption,
+                    color = colors.text.secondary,
                 )
             }
         }

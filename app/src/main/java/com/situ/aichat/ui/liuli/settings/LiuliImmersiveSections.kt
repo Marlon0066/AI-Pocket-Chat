@@ -3,9 +3,9 @@ package com.situ.aichat.ui.liuli.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
@@ -13,11 +13,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.situ.aichat.R
 import com.situ.aichat.data.model.AppSettings
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
@@ -26,19 +24,13 @@ import com.situ.aichat.ui.liuli.page.LiuliGroup
 import com.situ.aichat.ui.liuli.page.LiuliPageGeometry
 import com.situ.aichat.ui.liuli.page.LiuliRadioRow
 import com.situ.aichat.ui.liuli.page.LiuliRowBase
-import com.situ.aichat.ui.liuli.page.LiuliSliderRow
 import com.situ.aichat.ui.liuli.page.LiuliToggleRow
 import com.situ.aichat.ui.settings.narrativeDetailFooter
-import kotlin.math.roundToInt
-import androidx.compose.foundation.layout.padding
 
 /**
- * 线下见面设置页的全部文案（琉璃·A-6「硬编码中文屏逐字复制」）。
- *
- * 暖陶 `ImmersiveSettingsScreen.kt` 除 `mem_meeting_info` 一枚外**全是硬编码中文**，本卷零新增资源键，
- * 故这里逐字复制一份。**改任一侧必须同步另一侧**（登记契约 §10.3 F 备注）。
- * 存储 raw 值（`plain/normal/detailed/custom`、`particle/solidColor/customImage`、`stars/firefly/dust`）
- * 与线下叙事 prompt 强耦合，一个字都不许动。
+ * 线下见面设置页文案（琉璃·设置全面重构卷二）：
+ * B-3 已移除无入口的自定义图片选项；见面记忆（次数 / 字数上限）已搬至「记忆」页。
+ * 存储 raw 值（plain/normal/detailed/custom、particle/solidColor、stars/firefly/dust）与线下叙事 prompt 耦合，零碰。
  */
 private object ImmersiveText {
     const val INVITE_TITLE = "邀约主导权"
@@ -69,13 +61,8 @@ private object ImmersiveText {
     const val EMOTION_SUB = "每行写一种情绪氛围，系统每轮随机抽一条"
     const val EMOTION_PLACEHOLDER = "轻松愉快的聊天氛围\n安静但不尴尬的相处\n有点想靠近的心情"
 
-    const val MEMORY_TITLE = "见面记忆"
-    const val MEMORY_FOOTER =
-        "注入最近 N 次见面的完整摘要，更早的合并为一行存档；「记忆上限」是注入文本的字数预算，超出时最早的完整摘要自动降为存档行。"
-    const val MEMORY_COUNT = "注入最近见面次数"
-    const val MEMORY_COUNT_UNIT = "次"
-    const val MEMORY_MAX = "见面记忆上限"
-    const val MEMORY_MAX_UNIT = "字"
+    const val AFTERGLOW_TITLE = "见面后"
+    const val AFTERGLOW_FOOTER = "见面记忆的注入条数与字数预算已统一收进「记忆」设置。"
     const val AFTERGLOW_ROW = "见面后余温消息"
     const val AFTERGLOW_SUB = "见面结束几小时后，TA 会主动发来一条回味见面的短消息"
 
@@ -83,21 +70,18 @@ private object ImmersiveText {
     const val BACKGROUND_FOOTER = "线下模式是角色邀请你面对面见面时的沉浸式叙事界面。"
     const val BG_PARTICLE = "柔和粒子"
     const val BG_SOLID = "纯色"
-    const val BG_IMAGE = "自定义图片"
     const val PARTICLE_STARS = "✦ 星光"
     const val PARTICLE_FIREFLY = "✧ 萤火"
     const val PARTICLE_DUST = "· 微尘"
     const val BG_COLOR_LABEL = "背景色"
     const val BG_COLOR_PLACEHOLDER = "FF6B6B"
-    const val BG_IMAGE_NOTE = "自定义背景图请在对应角色的档案中设置（每个角色独立）；未设置时回退到柔和粒子。"
 }
 
-/** 纯色背景那一格的宽（逐字照暖陶 `:186` 的 140dp）。 */
 private val COLOR_FIELD_WIDTH = 140.dp
-/** 组内块与块的缝。 */
 private val BLOCK_GAP = 12.dp
+private val SUB_INDENT = LiuliPageGeometry.groupPadH
 
-/** 线下见面页的写口（与暖陶 `ImmersiveSettingsViewModel` 一一对应）。 */
+/** 线下见面页的写口（保留兼容参数默认值，避免破坏外部调用）。 */
 @Immutable
 data class LiuliImmersiveCallbacks(
     val onSetCharacterCanInitiate: (Boolean) -> Unit,
@@ -106,16 +90,13 @@ data class LiuliImmersiveCallbacks(
     val onSetCustomStyle: (String) -> Unit,
     val onSetCustomDirective: (String) -> Unit,
     val onSetCustomEmotion: (String) -> Unit,
-    val onSetMeetingMemoryInjectCount: (Int) -> Unit,
-    val onSetMeetingMemoryMaxLength: (Int) -> Unit,
+    val onSetMeetingMemoryInjectCount: (Int) -> Unit = {},
+    val onSetMeetingMemoryMaxLength: (Int) -> Unit = {},
     val onSetAfterglowEnabled: (Boolean) -> Unit,
     val onSetBackgroundStyle: (String) -> Unit,
     val onSetParticleStyle: (String) -> Unit,
     val onSetBackgroundColor: (String) -> Unit,
 )
-
-/** 粒子样式子选项行的缩进（= 组内距 16）。 */
-private val SUB_INDENT = LiuliPageGeometry.groupPadH
 
 @Composable
 internal fun ColumnScope.liuliImmersiveGroups(s: AppSettings, callbacks: LiuliImmersiveCallbacks) {
@@ -141,7 +122,6 @@ internal fun ColumnScope.liuliImmersiveGroups(s: AppSettings, callbacks: LiuliIm
 
     LiuliGroup(
         header = ImmersiveText.NARRATIVE_TITLE,
-        // 脚注随选中档变（借暖陶 `narrativeDetailFooter`·§2.2-2 已提 internal·实现零改）。
         footer = narrativeDetailFooter(s.offlineNarrativeDetailRaw),
     ) {
         val raw = s.offlineNarrativeDetailRaw
@@ -151,7 +131,6 @@ internal fun ColumnScope.liuliImmersiveGroups(s: AppSettings, callbacks: LiuliIm
         LiuliRadioRow(ImmersiveText.NARRATIVE_CUSTOM, raw == "custom", { callbacks.onSetNarrativeDetail("custom") })
     }
 
-    // 三个 custom 编辑器只在「自定义」档出现（逐字照暖陶 `:110`）。它们进的是线下叙事 prompt，零碰。
     if (s.offlineNarrativeDetailRaw == "custom") {
         PromptGroup(
             title = ImmersiveText.STYLE_TITLE,
@@ -176,40 +155,21 @@ internal fun ColumnScope.liuliImmersiveGroups(s: AppSettings, callbacks: LiuliIm
         )
     }
 
-    LiuliGroup(header = ImmersiveText.MEMORY_TITLE, footer = ImmersiveText.MEMORY_FOOTER) {
-        LiuliSliderRow(
-            title = ImmersiveText.MEMORY_COUNT,
-            valueLabel = "${s.meetingMemoryInjectCount} ${ImmersiveText.MEMORY_COUNT_UNIT}",
-            value = s.meetingMemoryInjectCount.toFloat(),
-            valueRange = 1f..10f,
-            steps = 8,
-            divider = false,
-            onValueChange = { callbacks.onSetMeetingMemoryInjectCount(it.roundToInt()) },
-        )
-        LiuliSliderRow(
-            title = ImmersiveText.MEMORY_MAX,
-            valueLabel = "${s.meetingMemoryMaxLength} ${ImmersiveText.MEMORY_MAX_UNIT}",
-            value = s.meetingMemoryMaxLength.toFloat(),
-            valueRange = 200f..3000f,
-            steps = 27, // 200..3000 步进 100
-            info = stringResource(R.string.mem_meeting_info),
-            onManualInput = callbacks.onSetMeetingMemoryMaxLength, // 手填不做 100 吸附（同暖陶）
-            onValueChange = { callbacks.onSetMeetingMemoryMaxLength((it / 100f).roundToInt() * 100) },
-        )
+    LiuliGroup(header = ImmersiveText.AFTERGLOW_TITLE, footer = ImmersiveText.AFTERGLOW_FOOTER) {
         LiuliToggleRow(
             title = ImmersiveText.AFTERGLOW_ROW,
             subtitle = ImmersiveText.AFTERGLOW_SUB,
             checked = s.offlineAfterglowEnabled,
             onCheckedChange = callbacks.onSetAfterglowEnabled,
+            divider = false,
         )
     }
 
     LiuliGroup(header = ImmersiveText.BACKGROUND_TITLE, footer = ImmersiveText.BACKGROUND_FOOTER) {
-        // 粒子样式三行是「柔和粒子」的子选项：往里缩一档，别与上面三个主选项平排成两个选中态（复核 R1）。
-        val bg = s.offlineBackgroundStyleRaw
+        // B-3：旧存量若为 customImage，按柔和粒子回退展示，不暴露死选项。
+        val bg = if (s.offlineBackgroundStyleRaw == "customImage") "particle" else s.offlineBackgroundStyleRaw
         LiuliRadioRow(ImmersiveText.BG_PARTICLE, bg == "particle", { callbacks.onSetBackgroundStyle("particle") }, divider = false)
         LiuliRadioRow(ImmersiveText.BG_SOLID, bg == "solidColor", { callbacks.onSetBackgroundStyle("solidColor") })
-        LiuliRadioRow(ImmersiveText.BG_IMAGE, bg == "customImage", { callbacks.onSetBackgroundStyle("customImage") })
         when (bg) {
             "particle" -> {
                 val p = s.offlineParticleStyleRaw
@@ -227,7 +187,6 @@ internal fun ColumnScope.liuliImmersiveGroups(s: AppSettings, callbacks: LiuliIm
                 Spacer(Modifier.width(LiuliPageGeometry.tileGap))
                 LiuliField(
                     value = s.offlineBackgroundColor,
-                    // 逐字照暖陶：trim 后只留 6 位（`:182`）。
                     onValueChange = { callbacks.onSetBackgroundColor(it.trim().take(6)) },
                     placeholder = ImmersiveText.BG_COLOR_PLACEHOLDER,
                     keyboardOptions = KeyboardOptions(
@@ -237,19 +196,10 @@ internal fun ColumnScope.liuliImmersiveGroups(s: AppSettings, callbacks: LiuliIm
                     modifier = Modifier.width(COLOR_FIELD_WIDTH),
                 )
             }
-            "customImage" -> LiuliRowBase(verticalPadding = BLOCK_GAP, verticalAlignment = Alignment.Top) {
-                Text(
-                    ImmersiveText.BG_IMAGE_NOTE,
-                    style = AppTypography.secondary,
-                    color = AppTheme.colors.text.secondary,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
         }
     }
 }
 
-/** 一个 custom 提示词组：组标题 + 说明句 + 整块多行文本域（A-4 ⑤ 多行组）。 */
 @Composable
 private fun PromptGroup(
     title: String,

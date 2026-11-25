@@ -21,12 +21,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,8 +38,10 @@ import androidx.compose.ui.unit.dp
 import com.situ.aichat.R
 import com.situ.aichat.data.calendar.CalendarAction
 import com.situ.aichat.prompt.CalendarItemParser
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
+import com.situ.aichat.ui.designsystem.AppIconButton
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
@@ -73,7 +71,7 @@ fun CalendarConfirmCard(
         Column(Modifier.padding(16.dp)) {
             // 标题行：图标 + 「{角色}想{动词}一个{类型}」
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.DateRange, contentDescription = null, tint = accent, modifier = Modifier.size(20.dp))
+                Icon(AppActionIcons.Calendar, contentDescription = null, tint = accent, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = "${characterName}想${action.actionVerb}一个${action.typeDisplayName}",
@@ -99,7 +97,7 @@ fun CalendarConfirmCard(
                 }
                 if (action.isDeleteAction) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                        Icon(Icons.Filled.Warning, contentDescription = null, tint = accent, modifier = Modifier.size(14.dp))
+                        Icon(AppActionIcons.Warning, contentDescription = null, tint = accent, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(4.dp))
                         Text("此操作不可撤销", style = AppTypography.secondary, color = accent)
                     }
@@ -160,9 +158,14 @@ fun CalendarToastBanner(text: String, isDelete: Boolean, onDismiss: () -> Unit) 
             Spacer(Modifier.width(8.dp))
             Text(text, style = AppTypography.secondary, color = content)
             Spacer(Modifier.width(4.dp))
-            IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_close), tint = content, modifier = Modifier.size(16.dp))
-            }
+            AppIconButton(
+                icon = AppActionIcons.Close,
+                contentDescription = stringResource(R.string.action_close),
+                onClick = onDismiss,
+                tint = content,
+                iconSize = 16.dp,
+                modifier = Modifier.size(32.dp),
+            )
         }
     }
 }
@@ -199,7 +202,7 @@ private fun CalendarItemCard(item: CalendarItemParser.ParsedCalendarItem) {
     val accent = if (item.type == CalendarItemParser.ItemType.EVENT) colors.accent.primary else colors.status.onWarning
     Surface(color = colors.surface.raised, shape = AppShapes.medium, border = BorderStroke(1.dp, colors.surface.stroke)) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
-            Icon(Icons.Filled.DateRange, contentDescription = null, tint = accent, modifier = Modifier.size(18.dp))
+            Icon(AppActionIcons.Calendar, contentDescription = null, tint = accent, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Column {
                 Text(item.title, style = AppTypography.label, color = colors.text.primary)

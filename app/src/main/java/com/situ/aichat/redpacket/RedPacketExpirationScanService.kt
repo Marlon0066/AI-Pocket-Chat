@@ -7,11 +7,13 @@ import com.situ.aichat.data.local.dao.RedPacketDao
 import com.situ.aichat.data.local.entity.RedPacketRecordEntity
 import com.situ.aichat.data.model.WalletOwnerType
 import com.situ.aichat.data.repository.CharacterRepository
+import com.situ.aichat.data.repository.SettingsRepository
 import com.situ.aichat.notification.NotificationAlarmScheduler
 import com.situ.aichat.notification.NotificationPayload
 import com.situ.aichat.notification.NotificationPermission
 import com.situ.aichat.notification.Notifier
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -39,6 +41,7 @@ class RedPacketExpirationScanService @Inject constructor(
     private val redPacketService: RedPacketService,
     private val characterRepo: CharacterRepository,
     private val alarmScheduler: NotificationAlarmScheduler,
+    private val settingsRepo: SettingsRepository,
 ) {
 
     /** 主入口：一次扫完过期 + 预警（1:1 iOS `scan`）。 */
@@ -67,6 +70,10 @@ class RedPacketExpirationScanService @Inject constructor(
      * 22h 预警：未授权通知 → 静默跳过；重新 fetch pending → 过滤 [shouldWarn] → 逐条推预警（**不含金额**）+ 置 notifiedExpiringSoon。
      */
     private suspend fun processExpiringSoon(now: Long) {
+        if (!settingsRepo.appSettings.first().notifRedPacketExpiringEnabled) {
+            Log.d(TAG, "红包快过期提醒已关闭,跳过 22h 预警扫描")
+            return
+        }
         if (!NotificationPermission.isGranted(context)) {
             Log.d(TAG, "未获通知授权,跳过 22h 预警扫描")
             return
@@ -95,13 +102,37 @@ class RedPacketExpirationScanService @Inject constructor(
     // ── 精确闹钟（预警，Android 韧性层） ──
 
     /**
-     * 角色发红包时排一个 22h 预警精确闹钟（executor 调用，post-commit）。到点由 [NotificationAlarmReceiver] 发预警，
-     * app 被杀也能弹（国产 ROM 最可靠路径）。warningAt 已过则立即 fire（测试 / 极短过期窗）。
+     * 角色发红包时排一个 22h 预警精确闹钟（executor 调用，post-commit）。直读 DataStore 开关，避免冷启动
+     * 未扫描时的陈旧内存缓存；仅门控 22h 提醒，不触碰任何过期/退钱路径。
      */
-    fun scheduleWarningAlarm(record: RedPacketRecordEntity, characterName: String) {
+    suspend fun scheduleWarningAlarm(record: RedPacketRecordEntity, characterName: String) {
+        if (!settingsRepo.appSettings.first().notifRedPacketExpiringEnabled) {
+            Log.d(TAG, "红包快过期提醒已关闭,跳过排 22h 预警闹钟 ${record.uuid}")
+            return
+        }
         val warningAt = record.expiresAt - WARNING_LEAD_MS
         alarmScheduler.scheduleExact(warningRequestKey(record.uuid), warningAt, buildExpiringPayload(record, characterName))
         Log.d(TAG, "红包 ${record.uuid} 22h 预警闹钟已排 at=$warningAt")
+    }
+
+    /** B-4：开关切换时即时对账 22h 预警闹钟——关则撤销全部待触发预警，开则重排未过期且未预警的待拆红包。 */
+    suspend fun onExpiringNotificationSettingChanged(
+        enabled: Boolean,
+        now: Long = System.currentTimeMillis(),
+    ) {
+        val pending = redPacketDao.pendingRecords()
+        if (!enabled) {
+            pending.forEach { cancelWarningAlarm(it.uuid) }
+            return
+        }
+        for (record in pending) {
+            if (isExpired(record, now) || record.notifiedExpiringSoon) continue
+            if (WalletOwnerType.fromRaw(record.receiverType) != WalletOwnerType.USER) continue
+            if (WalletOwnerType.fromRaw(record.senderType) != WalletOwnerType.CHARACTER) continue
+            val sender = characterRepo.get(record.senderCharacterUUID) ?: continue
+            val warningAt = record.expiresAt - WARNING_LEAD_MS
+            alarmScheduler.scheduleExact(warningRequestKey(record.uuid), warningAt, buildExpiringPayload(record, sender.name))
+        }
     }
 
     /** 取消预警闹钟（用户拆开 / 过期时调；无对应闹钟为 no-op）。 */

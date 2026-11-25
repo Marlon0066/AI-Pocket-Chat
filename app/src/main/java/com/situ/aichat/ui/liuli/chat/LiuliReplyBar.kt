@@ -22,10 +22,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material3.Icon
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -85,7 +83,7 @@ internal fun LiuliReplyBar(
                 .semantics { contentDescription = cancelLabel },
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Filled.Close, null, Modifier.size(CLEAR_ICON_SIZE), tint = LiuliTheme.onGlass.secondary)
+            Icon(AppActionIcons.Close, null, Modifier.size(CLEAR_ICON_SIZE), tint = LiuliTheme.onGlass.secondary)
         }
     }
 }
@@ -105,7 +103,7 @@ internal fun LiuliQuoteHint(visible: Boolean, reduceMotion: Boolean, modifier: M
         exit = if (reduceMotion) ExitTransition.None else fadeOut(tween(HINT_MOTION_MS)) + slideOutVertically { it / 2 },
     ) {
         LiuliQuoteShell(Modifier.height(HINT_HEIGHT), verticalPadding = 0.dp, accentBarHeight = HINT_ACCENT_BAR_HEIGHT) {
-            Icon(Icons.Filled.FormatQuote, null, Modifier.size(HINT_ICON_SIZE), tint = accent)
+            Icon(AppActionIcons.Quote, null, Modifier.size(HINT_ICON_SIZE), tint = accent)
             Spacer(Modifier.width(ACCENT_BAR_GAP))
             Text(
                 stringResource(R.string.chat_quote_text_only_hint),

@@ -7,24 +7,24 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * T1-4（琉璃 2.0 卷五 §7）：世界段 / 世界观卡文案优先级。独立反推：世界书锁 > 原住民 > 已加入 > 未加入；
- * 住址尾巴 原住民 > 同城 > 异地；世界观卡 原住民 > 已加入 > 未绑 > 单本 > 多本。
+ * T1-4：世界段 / 世界观卡文案优先级（原住民 > 已加入 > 已挂世界书可一键切换 > 未加入；
+ * 历史脏数据 `joined=true && worldbookBound=true` 优先显已加入态以便正常关开关离世）。
  */
 class CharacterWorldLabelsTest {
 
     @Test
     fun `加入世界副标四态`() {
-        assertEquals(R.string.char_world_join_sub_wb, worldJoinSubtitleRes(worldbookBound = true, nativeOrigin = true, joined = true))
-        assertEquals(R.string.char_world_join_sub_native, worldJoinSubtitleRes(worldbookBound = false, nativeOrigin = true, joined = true))
-        assertEquals(R.string.char_world_join_sub_on, worldJoinSubtitleRes(worldbookBound = false, nativeOrigin = false, joined = true))
+        assertEquals(R.string.char_world_join_sub_native, worldJoinSubtitleRes(worldbookBound = true, nativeOrigin = true, joined = true))
+        assertEquals(R.string.char_world_join_sub_on, worldJoinSubtitleRes(worldbookBound = true, nativeOrigin = false, joined = true))
+        assertEquals(R.string.char_world_join_sub_wb, worldJoinSubtitleRes(worldbookBound = true, nativeOrigin = false, joined = false))
         assertEquals(R.string.char_world_join_sub_off, worldJoinSubtitleRes(worldbookBound = false, nativeOrigin = false, joined = false))
     }
 
     @Test
     fun `世界脚注四态`() {
+        assertEquals(R.string.char_world_foot_native, worldFooterRes(worldbookBound = true, nativeOrigin = true, joined = true))
+        assertEquals(R.string.char_world_foot_on, worldFooterRes(worldbookBound = true, nativeOrigin = false, joined = true))
         assertEquals(R.string.char_world_foot_wb, worldFooterRes(worldbookBound = true, nativeOrigin = false, joined = false))
-        assertEquals(R.string.char_world_foot_native, worldFooterRes(worldbookBound = false, nativeOrigin = true, joined = false))
-        assertEquals(R.string.char_world_foot_on, worldFooterRes(worldbookBound = false, nativeOrigin = false, joined = true))
         assertEquals(R.string.char_world_foot_off, worldFooterRes(worldbookBound = false, nativeOrigin = false, joined = false))
     }
 

@@ -22,8 +22,6 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material3.Icon
@@ -49,6 +47,7 @@ import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.CharacterEntity
 import com.situ.aichat.moments.MentionAvailability
 import com.situ.aichat.ui.components.CharacterAvatar
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 
@@ -187,7 +186,7 @@ internal fun ComposeMentionChip(mentioned: List<CharacterEntity>, onOpen: () -> 
         ) {
             Box(Modifier.size(24.dp).clip(CircleShape), contentAlignment = Alignment.Center) {
                 Icon(
-                    Icons.Filled.Close,
+                    AppActionIcons.Close,
                     contentDescription = clearLabel,
                     tint = colors.accent.onContainer.copy(alpha = 0.6f),
                     modifier = Modifier.size(14.dp),
@@ -286,7 +285,7 @@ private fun MentionPickerRow(character: CharacterEntity, checked: Boolean, avail
         }
         if (checked) {
             Box(Modifier.size(22.dp).clip(CircleShape).background(colors.accent.text), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Check, contentDescription = null, tint = colors.surface.base, modifier = Modifier.size(14.dp))
+                Icon(AppActionIcons.Check, contentDescription = null, tint = colors.surface.base, modifier = Modifier.size(14.dp))
             }
         } else {
             Box(Modifier.size(22.dp).border(1.5.dp, colors.text.tertiary, CircleShape))

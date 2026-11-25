@@ -17,8 +17,6 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
@@ -41,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.StoryChapterEntity
 import com.situ.aichat.ui.components.LocalAppHaptics
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 
@@ -214,7 +213,7 @@ internal fun StoryContinueZone(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Icon(Icons.Outlined.Edit, contentDescription = null, tint = accent, modifier = Modifier.size(20.dp))
+                Icon(AppActionIcons.Edit, contentDescription = null, tint = accent, modifier = Modifier.size(20.dp))
                 // 卷三 §4.5：入口从「写一句」升级为导演台（选择区的输入提示走 story_custom_choice_hint_* 族，与此入口无涉）。
                 Text(stringResource(R.string.story_continue_director_hint), color = secondary, fontSize = 15.sp)
             }
@@ -240,7 +239,7 @@ internal fun StoryContinueZone(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = onPill, modifier = Modifier.size(16.dp))
+                    Icon(AppActionIcons.Play, contentDescription = null, tint = onPill, modifier = Modifier.size(16.dp))
                     Text(
                         stringResource(storyContinueFlowLabelRes(mode)),
                         color = onPill,

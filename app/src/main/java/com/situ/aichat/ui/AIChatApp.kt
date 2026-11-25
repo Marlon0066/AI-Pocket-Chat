@@ -31,17 +31,17 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.situ.aichat.R
-import com.situ.aichat.ui.character.MemoryEditScreen
 import com.situ.aichat.ui.designsystem.AppBottomNavHeight
 import com.situ.aichat.ui.designsystem.AppBottomNavItem
 import com.situ.aichat.ui.designsystem.AppNavIcons
 import com.situ.aichat.ui.liuli.character.SkinnedCharacterEditScreen
 import com.situ.aichat.ui.liuli.character.SkinnedCharacterProfileScreen
-import com.situ.aichat.ui.offline.OfflineMeetingMemoryScreen
-import com.situ.aichat.ui.ourdays.OurDayPageScreen
-import com.situ.aichat.ui.ourdays.OurDaysScreen
-import com.situ.aichat.ui.promise.PromiseLedgerScreen
-import com.situ.aichat.ui.schedule.ScheduleFullDayScreen
+import com.situ.aichat.ui.liuli.character.SkinnedMemoryEditScreen
+import com.situ.aichat.ui.liuli.offline.SkinnedOfflineMeetingMemoryScreen
+import com.situ.aichat.ui.liuli.ourdays.SkinnedOurDayPageScreen
+import com.situ.aichat.ui.liuli.ourdays.SkinnedOurDaysScreen
+import com.situ.aichat.ui.liuli.promise.SkinnedPromiseLedgerScreen
+import com.situ.aichat.ui.liuli.schedule.SkinnedScheduleFullDayScreen
 import com.situ.aichat.ui.starfield.StarfieldScreen
 import com.situ.aichat.ui.liuli.backup.SkinnedBackupScreen
 import com.situ.aichat.ui.chat.ChatScreen
@@ -62,10 +62,10 @@ import com.situ.aichat.ui.liuli.diary.SkinnedDiaryListScreen
 import com.situ.aichat.ui.liuli.diary.SkinnedDiaryPromptPreviewScreen
 import com.situ.aichat.ui.liuli.diary.SkinnedDiaryPromptSettingsScreen
 import com.situ.aichat.ui.liuli.diary.SkinnedDiarySettingsScreen
-import com.situ.aichat.ui.gift.GiftBoxScreen
-import com.situ.aichat.ui.gift.GiftReactionScreen
-import com.situ.aichat.ui.gift.GiftShopScreen
-import com.situ.aichat.ui.gift.ReceivedGiftDetailScreen
+import com.situ.aichat.ui.liuli.gift.SkinnedGiftBoxScreen
+import com.situ.aichat.ui.liuli.gift.SkinnedGiftReactionScreen
+import com.situ.aichat.ui.liuli.gift.SkinnedGiftShopScreen
+import com.situ.aichat.ui.liuli.gift.SkinnedReceivedGiftDetailScreen
 import com.situ.aichat.ui.liuli.moments.SkinnedComposeMomentScreen
 import com.situ.aichat.ui.liuli.moments.SkinnedDayMomentsScreen
 import com.situ.aichat.ui.liuli.moments.SkinnedMomentAuthorScreen
@@ -73,25 +73,25 @@ import com.situ.aichat.ui.liuli.moments.SkinnedMomentDetailScreen
 import com.situ.aichat.ui.liuli.moments.SkinnedMomentNotificationListScreen
 import com.situ.aichat.ui.liuli.moments.SkinnedMomentSettingsScreen
 import com.situ.aichat.ui.liuli.moments.SkinnedMomentsListScreen
-import com.situ.aichat.ui.pet.PetAdoptionScreen
-import com.situ.aichat.ui.pet.PetDetailScreen
-import com.situ.aichat.ui.pet.PetInventoryScreen
-import com.situ.aichat.ui.pet.PetShopScreen
-import com.situ.aichat.ui.pet.PetListScreen
-import com.situ.aichat.ui.profile.UserProfileEditScreen
+import com.situ.aichat.ui.liuli.pet.SkinnedPetAdoptionScreen
+import com.situ.aichat.ui.liuli.pet.SkinnedPetDetailScreen
+import com.situ.aichat.ui.liuli.pet.SkinnedPetInventoryScreen
+import com.situ.aichat.ui.liuli.pet.SkinnedPetListScreen
+import com.situ.aichat.ui.liuli.pet.SkinnedPetShopScreen
+import com.situ.aichat.ui.liuli.profile.SkinnedUserProfileEditScreen
 import com.situ.aichat.ui.liuli.promptmodule.SkinnedPromptModuleSettingsScreen
 import com.situ.aichat.ui.screens.PlaceholderScreen
-import com.situ.aichat.ui.sticker.StickerImportScreen
-import com.situ.aichat.ui.sticker.StickerManagementScreen
+import com.situ.aichat.ui.liuli.sticker.SkinnedStickerImportScreen
+import com.situ.aichat.ui.liuli.sticker.SkinnedStickerManagementScreen
 import com.situ.aichat.ui.liuli.story.SkinnedStoryArchiveAllScreen
 import com.situ.aichat.ui.liuli.story.SkinnedStoryArchiveDetailScreen
 import com.situ.aichat.ui.liuli.story.SkinnedStoryBookHubScreen
 import com.situ.aichat.ui.liuli.story.SkinnedStoryBookshelfScreen
-import com.situ.aichat.ui.worldbook.WorldBookDetailScreen
-import com.situ.aichat.ui.worldbook.WorldBookEntryEditScreen
+import com.situ.aichat.ui.liuli.worldbook.SkinnedWorldBookDetailScreen
+import com.situ.aichat.ui.liuli.worldbook.SkinnedWorldBookEntryEditScreen
 import com.situ.aichat.ui.liuli.worldbook.SkinnedWorldBookSettingsScreen
 import com.situ.aichat.ui.world.WorldScreen
-import com.situ.aichat.ui.worldbook.WorldBookShelfScreen
+import com.situ.aichat.ui.liuli.worldbook.SkinnedWorldBookShelfScreen
 import com.situ.aichat.ui.liuli.story.SkinnedStoryChapterListScreen
 import com.situ.aichat.ui.liuli.story.SkinnedStoryCreationScreen
 import com.situ.aichat.ui.liuli.story.SkinnedStoryFieldEditorScreen
@@ -117,21 +117,28 @@ import com.situ.aichat.ui.liuli.settings.SkinnedGrowthSettingsScreen
 import com.situ.aichat.ui.liuli.settings.SkinnedKernelObservatoryScreen
 import com.situ.aichat.ui.liuli.settings.SkinnedReplyRuleSettingsScreen
 import com.situ.aichat.ui.liuli.settings.SkinnedMemoryHubScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedMemoryPromptsScreen
 import com.situ.aichat.ui.liuli.wallet.SkinnedRedeemCodeScreen
-import com.situ.aichat.ui.wallet.UserWalletScreen
+import com.situ.aichat.ui.liuli.wallet.SkinnedUserWalletScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedPetSettingsScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedScheduleSettingsScreen
 import com.situ.aichat.ui.liuli.settings.SkinnedSystemTogglesScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedWalletSettingsScreen
 import com.situ.aichat.ui.liuli.settings.SkinnedApiFunctionAssignmentScreen
 import com.situ.aichat.ui.liuli.settings.SkinnedBackgroundReliabilityScreen
 import com.situ.aichat.ui.settings.ReliabilityPromptDialog
+import com.situ.aichat.ui.liuli.settings.SkinnedAdvancedSettingsScreen
 import com.situ.aichat.ui.liuli.settings.SkinnedCalendarAwarenessScreen
 import com.situ.aichat.ui.liuli.settings.SkinnedImmersiveSettingsScreen
 import com.situ.aichat.ui.liuli.settings.SkinnedNotificationSettingsScreen
 import com.situ.aichat.ui.liuli.settings.SkinnedSettingsScreen
 import com.situ.aichat.ui.liuli.settings.SkinnedStoryGlobalSettingsScreen
 import com.situ.aichat.ui.liuli.settings.SkinnedWorldSettingsScreen
+import com.situ.aichat.ui.settings.hub.SettingsHubEntry
 import com.situ.aichat.world.WorldFocusEntry
 import com.situ.aichat.ui.liuli.settings.SkinnedTtsConfigurationScreen
 import com.situ.aichat.ui.liuli.settings.SkinnedVoiceCallSettingsScreen
+import com.situ.aichat.ui.liuli.settings.SkinnedVoiceSettingsScreen
 import com.situ.aichat.ui.navigation.BackCardHoldEnter
 import com.situ.aichat.ui.navigation.LocalPredictiveBackMotion
 import com.situ.aichat.ui.navigation.appEnterTransition
@@ -436,13 +443,13 @@ fun AIChatApp(
                 SkinnedMomentSettingsScreen(onBack = { navController.popBackStack() })
             }
             backCardComposable("stickerManagement") {
-                StickerManagementScreen(
+                SkinnedStickerManagementScreen(
                     onBack = { navController.popBackStack() },
                     onImport = { navController.navigate("stickerImport") },
                 )
             }
             backCardComposable("stickerImport") {
-                StickerImportScreen(onBack = { navController.popBackStack() })
+                SkinnedStickerImportScreen(onBack = { navController.popBackStack() })
             }
             // P11 互动故事（11.1h）：朋友圈枢纽 → 书架 → 章节列表 → 阅读器。阅读器=11.1i、创建/设定=11.1j（暂占位）。
             backCardComposable("momentsStory") {
@@ -554,7 +561,7 @@ fun AIChatApp(
             }
             // 宠物（M11）：枢纽列表 → 详情（按是否有宠物显示详情或领养进度）→ 领养。
             backCardComposable("momentsPet") {
-                PetListScreen(
+                SkinnedPetListScreen(
                     onOpenPet = { uuid -> navController.navigate("petDetail/$uuid") },
                     onBack = { navController.popBackStack() },
                 )
@@ -574,7 +581,7 @@ fun AIChatApp(
             }
             // 世界书 WB7（UI 名「设定集」）：书架 → 书详情；条目编辑器随 WB7b、触发设置随 WB7c。
             backCardComposable("worldBooks") {
-                WorldBookShelfScreen(
+                SkinnedWorldBookShelfScreen(
                     onBack = { navController.popBackStack() },
                     onOpenBook = { bookUuid -> navController.navigate("worldBook/$bookUuid") },
                     onOpenSettings = { navController.navigate("worldBookSettings") },
@@ -591,7 +598,7 @@ fun AIChatApp(
                 arguments = listOf(navArgument("bookUuid") { type = NavType.StringType }),
             ) { backStackEntry ->
                 val worldBookUuid = backStackEntry.arguments?.getString("bookUuid").orEmpty()
-                WorldBookDetailScreen(
+                SkinnedWorldBookDetailScreen(
                     onBack = { navController.popBackStack() },
                     onOpenEntry = { entryUuid ->
                         navController.navigate("worldBookEntry/$worldBookUuid?entryUuid=$entryUuid")
@@ -619,7 +626,7 @@ fun AIChatApp(
                     },
                 ),
             ) {
-                WorldBookEntryEditScreen(onDone = { navController.popBackStack() })
+                SkinnedWorldBookEntryEditScreen(onDone = { navController.popBackStack() })
             }
             backCardComposable(
                 "petDetail/{characterUuid}",
@@ -630,7 +637,7 @@ fun AIChatApp(
                 val petReaction by backStackEntry.savedStateHandle
                     .getStateFlow<String?>("petReaction", null)
                     .collectAsStateWithLifecycle()
-                PetDetailScreen(
+                SkinnedPetDetailScreen(
                     onBack = { navController.popBackStack() },
                     onAdopt = { navController.navigate("petAdoption/$uuid") },
                     onOpenShop = { navController.navigate("petShop/$uuid") },
@@ -643,20 +650,20 @@ fun AIChatApp(
                 "petAdoption/{characterUuid}",
                 arguments = listOf(navArgument("characterUuid") { type = NavType.StringType }),
             ) {
-                PetAdoptionScreen(onClose = { navController.popBackStack() })
+                SkinnedPetAdoptionScreen(onClose = { navController.popBackStack() })
             }
             // P9.3c 宠物商店 / 背包（按 characterUuid 定位宠物）。
             backCardComposable(
                 "petShop/{characterUuid}",
                 arguments = listOf(navArgument("characterUuid") { type = NavType.StringType }),
             ) {
-                PetShopScreen(onClose = { navController.popBackStack() })
+                SkinnedPetShopScreen(onClose = { navController.popBackStack() })
             }
             backCardComposable(
                 "petInventory/{characterUuid}",
                 arguments = listOf(navArgument("characterUuid") { type = NavType.StringType }),
             ) {
-                PetInventoryScreen(
+                SkinnedPetInventoryScreen(
                     onClose = { navController.popBackStack() },
                     // pet-ui-2：把反应文案写回上一屏(详情页)的 savedStateHandle，返回时弹头顶气泡（最新一条胜出）。
                     onReaction = { text -> navController.previousBackStackEntry?.savedStateHandle?.set("petReaction", text) },
@@ -664,7 +671,7 @@ fun AIChatApp(
             }
             // P9.2d 礼物店（M09）。无参=店内选对象；giftShop/{uuid}=带入角色（聊天等入口，暂未接）。
             backCardComposable("userWallet") {
-                UserWalletScreen(
+                SkinnedUserWalletScreen(
                     onBack = { navController.popBackStack() },
                     onOpenGiftShop = { navController.navigate("giftShop") },
                     onOpenRedeemCode = { navController.navigate("redeemCode") },
@@ -674,7 +681,7 @@ fun AIChatApp(
                 SkinnedRedeemCodeScreen(onClose = { navController.popBackStack() })
             }
             backCardComposable("giftShop") {
-                GiftShopScreen(
+                SkinnedGiftShopScreen(
                     onClose = { navController.popBackStack() },
                     onNavigateToReaction = { recordUuid -> navController.navigate("giftReaction/$recordUuid?send=true") },
                 )
@@ -683,7 +690,7 @@ fun AIChatApp(
                 route = "giftShop/{characterUuid}",
                 arguments = listOf(navArgument("characterUuid") { type = NavType.StringType }),
             ) {
-                GiftShopScreen(
+                SkinnedGiftShopScreen(
                     onClose = { navController.popBackStack() },
                     onNavigateToReaction = { recordUuid -> navController.navigate("giftReaction/$recordUuid?send=true") },
                 )
@@ -697,7 +704,7 @@ fun AIChatApp(
                 ),
             ) { backStackEntry ->
                 val isSend = backStackEntry.arguments?.getBoolean("send") ?: true
-                GiftReactionScreen(
+                SkinnedGiftReactionScreen(
                     isSendFlow = isSend,
                     onFinish = { navController.popBackStack() },
                     onBack = { navController.popBackStack() },
@@ -705,7 +712,7 @@ fun AIChatApp(
             }
             // 收礼盒（Profile 入口）：收到/送出分段；点卡分流 DIY 详情 / 收礼详情 / 反应回放。
             backCardComposable("giftBox") {
-                GiftBoxScreen(
+                SkinnedGiftBoxScreen(
                     onBack = { navController.popBackStack() },
                     onOpenReaction = { recordUuid -> navController.navigate("giftReaction/$recordUuid?send=false") },
                     onOpenReceived = { recordUuid -> navController.navigate("receivedGift/$recordUuid") },
@@ -715,7 +722,7 @@ fun AIChatApp(
                 route = "receivedGift/{recordUuid}",
                 arguments = listOf(navArgument("recordUuid") { type = NavType.StringType }),
             ) {
-                ReceivedGiftDetailScreen(onBack = { navController.popBackStack() })
+                SkinnedReceivedGiftDetailScreen(onBack = { navController.popBackStack() })
             }
             backCardComposable(TopDest.Profile.route) {
                 SkinnedProfileScreen(
@@ -728,35 +735,57 @@ fun AIChatApp(
                     bottomContentPadding = AppBottomNavHeight,
                 )
             }
-            // Fable5「我」页重构：独立设置页（从 ProfileScreen 抽出·9 组重分组）。
+            // 设置全面重构（四卷）：主页单源目录 + 独立「高级」页。
             backCardComposable("settings") {
                 SkinnedSettingsScreen(
                     onBack = { navController.popBackStack() },
-                    onOpenApiConfig = { navController.navigate("apiConfig") },
-                    onOpenApiFunctions = { navController.navigate("apiFunctions") },
-                    onOpenMemorySettings = { navController.navigate("memorySettings") },
-                    onOpenSystemToggles = { navController.navigate("systemToggles") },
-                    onOpenAppearance = { navController.navigate("appearance") },
-                    onOpenNotificationSettings = { navController.navigate("notificationSettings") },
-                    onOpenImmersiveSettings = { navController.navigate("immersiveSettings") },
-                    onOpenStickerManagement = { navController.navigate("stickerManagement") },
-                    onOpenGrowthSettings = { navController.navigate("growthSettings") },
-                    onOpenReplyRules = { navController.navigate("replyRuleSettings") },
-                    onOpenContentFilter = { navController.navigate("contentFilterSettings") },
-                    onOpenCalendarAwareness = { navController.navigate("calendarAwareness") },
-                    onOpenWorldBooks = { navController.navigate("worldBooks") },
+                    onOpenEntry = { entry ->
+                        val route = when (entry) {
+                            SettingsHubEntry.AI_SERVICE -> "apiConfig"
+                            SettingsHubEntry.APPEARANCE -> "appearance"
+                            SettingsHubEntry.REPLY -> "replyRuleSettings"
+                            SettingsHubEntry.VOICE -> "voiceSettings"
+                            SettingsHubEntry.OFFLINE_MEETING -> "immersiveSettings"
+                            SettingsHubEntry.STICKERS -> "stickerManagement"
+                            SettingsHubEntry.MEMORY -> "memorySettings"
+                            SettingsHubEntry.WORLDBOOKS -> "worldBooks"
+                            SettingsHubEntry.SCHEDULE -> "scheduleSettings"
+                            SettingsHubEntry.GROWTH -> "growthSettings"
+                            SettingsHubEntry.PET -> "petSettings"
+                            SettingsHubEntry.WALLET -> "walletSettings"
+                            SettingsHubEntry.WORLD -> "worldSettings"
+                            SettingsHubEntry.DIARY -> "diarySettings"
+                            SettingsHubEntry.MOMENTS -> "momentSettings"
+                            SettingsHubEntry.STORY -> "storyGlobalSettings"
+                            SettingsHubEntry.NOTIFICATIONS -> "notificationSettings"
+                            SettingsHubEntry.CALENDAR -> "calendarAwareness"
+                            SettingsHubEntry.BACKGROUND_RELIABILITY -> "backgroundReliability"
+                            SettingsHubEntry.BACKUP -> "backup"
+                            SettingsHubEntry.LANGUAGE -> null
+                            SettingsHubEntry.ADVANCED -> "advancedSettings"
+                            SettingsHubEntry.ABOUT -> "about"
+                        }
+                        if (route != null) navController.navigate(route)
+                    },
+                )
+            }
+            backCardComposable("advancedSettings") {
+                SkinnedAdvancedSettingsScreen(
+                    onBack = { navController.popBackStack() },
                     onOpenPromptModules = { navController.navigate("promptModules") },
-                    onOpenTtsConfig = { navController.navigate("ttsConfig") },
-                    onOpenVoiceCallSettings = { navController.navigate("voiceCallSettings") },
-                    onOpenDiarySettings = { navController.navigate("diarySettings") },
-                    onOpenMomentSettings = { navController.navigate("momentSettings") },
-                    onOpenStoryGlobalSettings = { navController.navigate("storyGlobalSettings") },
-                    onOpenWorldSettings = { navController.navigate("worldSettings") },
-                    onOpenBackup = { navController.navigate("backup") },
-                    onOpenBackgroundReliability = { navController.navigate("backgroundReliability") },
+                    onOpenMemoryPrompts = { navController.navigate("memoryPrompts") },
+                    onOpenContentFilter = { navController.navigate("contentFilterSettings") },
                     onOpenContextLog = { navController.navigate("contextLog") },
                     onOpenPerfCollect = { navController.navigate("perfCollect") },
-                    onOpenAbout = { navController.navigate("about") },
+                )
+            }
+            backCardComposable("memoryPrompts") {
+                SkinnedMemoryPromptsScreen(onBack = { navController.popBackStack() })
+            }
+            backCardComposable("voiceSettings") {
+                SkinnedVoiceSettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenTtsConfig = { navController.navigate("ttsConfig") },
                 )
             }
             backCardComposable("apiConfig") { backStackEntry ->
@@ -770,6 +799,7 @@ fun AIChatApp(
                     onOpenScan = { navController.navigate("apiConfig/scan") },
                     scannedConfig = scanned,
                     onScanConsumed = { backStackEntry.savedStateHandle[KEY_SCANNED_API_CONFIG] = null },
+                    onOpenApiFunctions = { navController.navigate("apiFunctions") },
                 )
             }
             backCardComposable("apiConfig/scan") {
@@ -801,7 +831,7 @@ fun AIChatApp(
                 )
             }
             backCardComposable("userProfile/edit") {
-                UserProfileEditScreen(onClose = { navController.popBackStack() })
+                SkinnedUserProfileEditScreen(onClose = { navController.popBackStack() })
             }
             backCardComposable(
                 route = "backup?focusFolder={focusFolder}",
@@ -835,10 +865,23 @@ fun AIChatApp(
             backCardComposable("systemToggles") {
                 SkinnedSystemTogglesScreen(onBack = { navController.popBackStack() })
             }
+            backCardComposable("scheduleSettings") {
+                SkinnedScheduleSettingsScreen(onBack = { navController.popBackStack() })
+            }
+            backCardComposable("petSettings") {
+                SkinnedPetSettingsScreen(onBack = { navController.popBackStack() })
+            }
+            backCardComposable("walletSettings") {
+                SkinnedWalletSettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenNotifications = { navController.navigate("notificationSettings") },
+                )
+            }
             backCardComposable("growthSettings") {
                 SkinnedGrowthSettingsScreen(
                     onBack = { navController.popBackStack() },
                     onOpenObservatory = { navController.navigate("kernelObservatory") },
+                    onOpenNotifications = { navController.navigate("notificationSettings") },
                 )
             }
             // 活人感内核卷零：开发者调试页（DEBUG 守卫在 Screen 内部，本文件只接线）。
@@ -1070,7 +1113,7 @@ fun AIChatApp(
                 route = "memoryEdit/{characterUuid}",
                 arguments = listOf(navArgument("characterUuid") { type = NavType.StringType }),
             ) {
-                MemoryEditScreen(onClose = { navController.popBackStack() })
+                SkinnedMemoryEditScreen(onClose = { navController.popBackStack() })
             }
             // 记忆星空（资料页「故事」Tab 入口卡目标·全屏可漫游星空·转场走 NavHost 全局默认·J5）。
             backCardComposable(
@@ -1087,21 +1130,21 @@ fun AIChatApp(
                 route = "offlineMeetings/{characterUuid}",
                 arguments = listOf(navArgument("characterUuid") { type = NavType.StringType }),
             ) {
-                OfflineMeetingMemoryScreen(onBack = { navController.popBackStack() })
+                SkinnedOfflineMeetingMemoryScreen(onBack = { navController.popBackStack() })
             }
             // 记忆改造三期：角色资料页「我们的约定」账本子页。
             backCardComposable(
                 route = "promises/{characterUuid}",
                 arguments = listOf(navArgument("characterUuid") { type = NavType.StringType }),
             ) {
-                PromiseLedgerScreen(onBack = { navController.popBackStack() })
+                SkinnedPromiseLedgerScreen(onBack = { navController.popBackStack() })
             }
             // 14.2 全天行程视图（资料页日程卡「查看全天行程」目标）。
             backCardComposable(
                 route = "scheduleFullDay/{characterUuid}?date={date}",
                 arguments = listOf(navArgument("characterUuid") { type = NavType.StringType }, navArgument("date") { type = NavType.StringType; nullable = true; defaultValue = null }),
             ) {
-                ScheduleFullDayScreen(
+                SkinnedScheduleFullDayScreen(
                     onBack = { navController.popBackStack() },
                     onOpenChat = { conversationUuid -> navController.navigate("chat/$conversationUuid") },
                 )
@@ -1114,7 +1157,7 @@ fun AIChatApp(
                     navArgument("date") { type = NavType.StringType; nullable = true; defaultValue = null },
                 ),
             ) {
-                OurDaysScreen(
+                SkinnedOurDaysScreen(
                     onBack = { navController.popBackStack() },
                     onOpenDay = { uuid, dayKey -> navController.navigate("ourDays/day/$uuid/$dayKey") },
                 )
@@ -1123,7 +1166,7 @@ fun AIChatApp(
                 route = "ourDays/day/{characterUuid}/{dayKey}",
                 arguments = listOf(navArgument("characterUuid") { type = NavType.StringType }, navArgument("dayKey") { type = NavType.StringType }),
             ) {
-                OurDayPageScreen(
+                SkinnedOurDayPageScreen(
                     onBack = { navController.popBackStack() },
                     onOpenDay = { uuid, dayKey -> navController.navigate("ourDays/day/$uuid/$dayKey") },
                     onOpenMeetings = { uuid -> navController.navigate("offlineMeetings/$uuid") },

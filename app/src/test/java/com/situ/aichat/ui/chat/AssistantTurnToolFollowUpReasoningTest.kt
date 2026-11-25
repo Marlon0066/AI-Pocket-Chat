@@ -91,7 +91,9 @@ class AssistantTurnToolFollowUpReasoningTest {
             promiseRepository = mockk(relaxed = true), promiseToolHandler = mockk(relaxed = true),
             ourDayRepository = mockk(relaxed = true) { coEvery { injectableForCharacter(any()) } returns emptyList() },
             meetingAppointmentStore = mockk(relaxed = true),
-            worldBookPromptService = mockk { coEvery { activateForTurn(any(), any(), any(), any(), any(), any(), any()) } returns null },
+            worldBookPromptService = mockk {
+                coEvery { activateForTurn(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns null
+            },
             worldChatContextProvider = mockk(relaxed = true),
             errorFlow = MutableStateFlow(null), infoToastFlow = MutableStateFlow(null), isDelivering = MutableStateFlow(false),
         )

@@ -8,12 +8,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,8 +22,10 @@ import androidx.compose.ui.unit.dp
 import com.situ.aichat.R
 import com.situ.aichat.ui.components.clickableScale
 import com.situ.aichat.ui.designsystem.AppActionChip
-import com.situ.aichat.ui.designsystem.AppShapes
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTypography
+import com.situ.aichat.ui.designsystem.appCardSurface
 
 /**
  * 写作向导（WB7b·契约 §12.10「新建时引导写全」）：类别 → 预选触发方式 + 标题/内容的**具体示例 placeholder**。
@@ -64,52 +61,52 @@ enum class WorldBookGuideCategory(
 internal fun WorldBookGuideCard(
     hasEntries: Boolean,
     onPickCategory: (WorldBookGuideCategory) -> Unit,
+    modifier: Modifier = Modifier,
+    cardModifier: @Composable () -> Modifier = { Modifier.appCardSurface() },
 ) {
     val colors = AppTheme.colors
     var expanded by rememberSaveable(hasEntries) { mutableStateOf(!hasEntries) }
 
-    Surface(shape = AppShapes.medium, tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickableScale { expanded = !expanded }
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        stringResource(if (hasEntries) R.string.wb_guide_more else R.string.wb_guide_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = colors.text.primary,
-                    )
-                    if (expanded) {
-                        Text(
-                            stringResource(R.string.wb_guide_intro),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = colors.text.secondary,
-                        )
-                    }
-                }
-                Icon(
-                    if (expanded) Icons.Filled.KeyboardArrowUp else Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = colors.text.secondary,
+    Column(modifier = modifier.fillMaxWidth().then(cardModifier())) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickableScale { expanded = !expanded }
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    stringResource(if (hasEntries) R.string.wb_guide_more else R.string.wb_guide_title),
+                    style = AppTypography.titleSmall,
+                    color = colors.text.primary,
                 )
+                if (expanded) {
+                    Text(
+                        stringResource(R.string.wb_guide_intro),
+                        style = AppTypography.caption,
+                        color = colors.text.secondary,
+                    )
+                }
             }
-            if (expanded) {
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, bottom = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    WorldBookGuideCategory.entries.forEach { category ->
-                        AppActionChip(
-                            onClick = { onPickCategory(category) },
-                            label = stringResource(category.labelRes),
-                        )
-                    }
+            Icon(
+                if (expanded) AppActionIcons.ChevronUp else AppActionIcons.ChevronRight,
+                contentDescription = null,
+                tint = colors.text.secondary,
+            )
+        }
+        if (expanded) {
+            FlowRow(
+                modifier = Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, bottom = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                WorldBookGuideCategory.entries.forEach { category ->
+                    AppActionChip(
+                        onClick = { onPickCategory(category) },
+                        label = stringResource(category.labelRes),
+                    )
                 }
             }
         }

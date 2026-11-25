@@ -85,6 +85,8 @@ data class DiaryExchangeEnrichment(
     val loopBlock: String = "",
     /** 卷四 §4.5 ④：`IntentExitRenderer.diaryBlock` 产出（心里挂着的事 + 日记可以写得坦白些）；空 ⇒ 不插。 */
     val intentBlock: String = "",
+    /** Q2·2A：角色生效的世界书归并段（空 ⇒ 不插，提示词逐字节同前）。 */
+    val worldInfoSection: String = "",
 )
 
 /**
@@ -132,6 +134,11 @@ object DiaryExchangePromptBuilder {
         if (systemPrompt.isNotEmpty()) parts.add(strings.setup.format(systemPrompt))
         // ③ 人设框定（紧跟身份/设定·保留声音但别套聊天短句/表情）。
         if (enrichment.personaFrame.isNotEmpty()) parts.add(enrichment.personaFrame)
+        if (enrichment.worldInfoSection.isNotEmpty()) {
+            parts.add("")
+            parts.add("## 世界观设定")
+            parts.add(enrichment.worldInfoSection)
+        }
         parts.add("")
         parts.add(strings.task.format(userName))
         parts.add("")

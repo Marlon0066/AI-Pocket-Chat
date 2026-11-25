@@ -10,9 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -210,7 +209,7 @@ private fun DeleteButton(label: String, onClick: () -> Unit) {
         Modifier.liuliFootprint(DELETE_ICON).clickable(role = Role.Button, onClickLabel = label, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(Icons.Filled.Close, contentDescription = label, tint = AppTheme.colors.text.tertiary, modifier = Modifier.size(DELETE_ICON))
+        Icon(AppActionIcons.Close, contentDescription = label, tint = AppTheme.colors.text.tertiary, modifier = Modifier.size(DELETE_ICON))
     }
 }
 

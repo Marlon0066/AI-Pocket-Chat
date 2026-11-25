@@ -51,6 +51,12 @@ class ProactiveMessageComposer @Inject constructor(
     private val userProfileDao: UserProfileDao,
     private val characterRepository: CharacterRepository,
 ) {
+    private var worldBookAmbient: com.situ.aichat.worldbook.WorldBookAmbientInjector? = null
+
+    @Inject
+    fun bindWorldBookAmbient(injector: com.situ.aichat.worldbook.WorldBookAmbientInjector) {
+        worldBookAmbient = injector
+    }
 
     /**
      * 现做一条主动消息。返回 null = 生成失败（无 config / 无 key / 网络异常 / 解析失败），调用方决定重试或走兜底链。
@@ -67,7 +73,8 @@ class ProactiveMessageComposer @Inject constructor(
         if (config == null || config.apiKey.isEmpty() || config.baseUrl.isEmpty() || config.modelName.isEmpty()) {
             return null
         }
-        val userName = (userProfileDao.get()?.nickname ?: "").ifEmpty { "用户" }
+        val profile = userProfileDao.get()
+        val userName = (profile?.nickname ?: "").ifEmpty { "用户" }
         val memory = StructuredMemory.decode(character.structuredMemoryJSON)
         val relationship = characterRepository.currentRelationship(character.uuid)
         val schedule = scheduleDao.scheduleFor(character.uuid, DateFormatters.startOfDayMillis(now, zone))
@@ -81,8 +88,15 @@ class ProactiveMessageComposer @Inject constructor(
         }
         val conversations = conversationDao.getByCharacter(character.uuid)
         val snippet = buildRecentSnippet(conversations.map { it.uuid }, userName, character.name)
+        val worldInfoSection = worldBookAmbient?.buildAmbientSection(
+            character = character,
+            userName = userName,
+            userBio = profile?.bio.orEmpty(),
+            contextText = listOfNotNull(occasion, snippet).joinToString("\n"),
+            nowMillis = now,
+        )
 
-        val system = composeSystemPrompt(character, userName, relationship, memory)
+        val system = composeSystemPrompt(character, userName, relationship, memory, worldInfoSection)
         val user = composeUserPrompt(state, weatherInfo, snippet, memory, occasion)
 
         val raw = runCatching { callLlm(system, user, character.name, config) }.getOrElse {
@@ -155,6 +169,7 @@ class ProactiveMessageComposer @Inject constructor(
             userName: String,
             relationship: String?,
             memory: StructuredMemory,
+            worldInfoSection: String? = null,
         ): String = buildList {
             add("你是${character.name}。你现在想给${userName}发一条手机消息。")
             add("")
@@ -166,6 +181,11 @@ class ProactiveMessageComposer @Inject constructor(
             relationship?.let { add("- 你和${userName}的关系：$it") }
             memory.nicknameFromChar.ifEmpty { null }?.let { add("- 你叫TA：$it") }
             memory.nicknameToChar.ifEmpty { null }?.let { add("- TA叫你：$it") }
+            if (!worldInfoSection.isNullOrBlank()) {
+                add("")
+                add("## 世界观设定")
+                add(worldInfoSection)
+            }
             add("")
             add(composeRules())
         }.joinToString("\n")

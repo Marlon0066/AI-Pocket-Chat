@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -41,6 +39,7 @@ import com.situ.aichat.data.model.imagePaths
 import com.situ.aichat.moments.MomentCommentTreeBuilder
 import com.situ.aichat.moments.MomentMentionRules
 import com.situ.aichat.ui.components.CharacterAvatar
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppMomentIcons
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppTheme
@@ -258,6 +257,6 @@ internal fun MomentReplyChip(replyName: String, onCancelReply: () -> Unit) {
             color = colors.accent.onContainer,
         )
         Spacer(Modifier.width(2.dp))
-        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_cancel), modifier = Modifier.size(14.dp), tint = colors.accent.onContainer)
+        Icon(AppActionIcons.Close, contentDescription = stringResource(R.string.action_cancel), modifier = Modifier.size(14.dp), tint = colors.accent.onContainer)
     }
 }

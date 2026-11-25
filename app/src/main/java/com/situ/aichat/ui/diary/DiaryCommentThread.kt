@@ -1,5 +1,6 @@
 package com.situ.aichat.ui.diary
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.situ.aichat.R
@@ -78,6 +82,7 @@ internal fun DiaryCommentThreadSection(
     onReply: (rootCommentId: String, text: String) -> Unit,
 ) {
     val threads = remember(comments) { groupDiaryCommentThreads(comments) }
+    val threadGuide = AppTheme.colors.surface.stroke
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         threads.forEach { thread ->
             key(thread.root.id) {
@@ -88,7 +93,17 @@ internal fun DiaryCommentThreadSection(
                             reply,
                             charactersByUuid,
                             onDeleteComment,
-                            modifier = Modifier.padding(start = 42.dp),
+                            modifier = Modifier
+                                .drawBehind {
+                                    val x = 16.dp.toPx()
+                                    drawLine(
+                                        color = threadGuide,
+                                        start = Offset(x, 0f),
+                                        end = Offset(x, size.height),
+                                        strokeWidth = 1.5.dp.toPx(),
+                                    )
+                                }
+                                .padding(start = 42.dp),
                         )
                     }
                 }
@@ -152,10 +167,12 @@ internal fun ExchangeNoteAffordance(
                 style = AppTheme.typography.caption,
                 color = AppTheme.colors.accent.text,
                 modifier = Modifier
+                    .clip(AppTheme.shapes.full)
+                    .background(AppTheme.colors.surface.sunken)
                     .clickable(onClickLabel = stringResource(R.string.diary_exchange_comment_action)) {
                         expanded = true
                     }
-                    .padding(vertical = 4.dp),
+                    .padding(horizontal = 14.dp, vertical = 7.dp),
             )
         } else {
             Row(
@@ -200,8 +217,10 @@ private fun ReplyAffordance(
                 style = AppTheme.typography.caption,
                 color = AppTheme.colors.accent.text,
                 modifier = Modifier
+                    .clip(AppTheme.shapes.full)
+                    .background(AppTheme.colors.surface.sunken)
                     .clickable(onClickLabel = stringResource(R.string.diary_reply_action)) { expanded = true }
-                    .padding(vertical = 4.dp),
+                    .padding(horizontal = 14.dp, vertical = 7.dp),
             )
         } else {
             Row(

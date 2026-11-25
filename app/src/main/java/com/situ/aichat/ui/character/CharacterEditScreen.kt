@@ -15,14 +15,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -51,12 +49,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
 import com.situ.aichat.prompt.ZodiacCalculator
 import com.situ.aichat.ui.components.CharacterAvatar
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppButton
 import com.situ.aichat.ui.designsystem.AppButtonStyle
 import com.situ.aichat.ui.designsystem.AppChoiceChip
+import com.situ.aichat.ui.designsystem.AppIconButton
 import com.situ.aichat.ui.designsystem.AppSegmentedControl
 import com.situ.aichat.ui.designsystem.AppSwitch
 import com.situ.aichat.ui.worldbook.WorldBookBindingSection
+import com.situ.aichat.ui.worldbook.WorldBookCreateBindingSection
 import java.text.DateFormat
 import java.util.Calendar
 import java.util.Date
@@ -210,9 +211,11 @@ fun CharacterEditScreen(
                             )
                         }
                     }
-                    IconButton(onClick = { viewModel.update { it.copy(birthdayMillis = null) } }) {
-                        Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.char_birthday_clear))
-                    }
+                    AppIconButton(
+                        icon = AppActionIcons.Close,
+                        contentDescription = stringResource(R.string.char_birthday_clear),
+                        onClick = { viewModel.update { it.copy(birthdayMillis = null) } },
+                    )
                 }
             }
             // Age mode
@@ -447,16 +450,24 @@ fun CharacterEditScreen(
             } else {
                 CharacterWorldCreateSection(
                     joined = state.joinWorld,
-                    onToggle = { on -> viewModel.update { it.copy(joinWorld = on) } },
+                    onToggle = viewModel::setCreateJoinWorld,
                 )
             }
 
-            // ---- 世界观（世界书绑定·仅编辑模式·WB7c 契约 FABLE5_WORLDBOOK_PROPOSAL.md §12.5） ----
+            // ---- 世界观（世界书绑定·新建与编辑均可见·4A / WB7c） ----
+            SectionHeader(stringResource(R.string.wb_binding_section))
             if (viewModel.isEditing) {
-                SectionHeader(stringResource(R.string.wb_binding_section))
                 WorldBookBindingSection(onManageBooks = onOpenWorldBooks)
-                SectionFooter(stringResource(R.string.wb_binding_footer))
+            } else {
+                WorldBookCreateBindingSection(
+                    selectedBookUuids = state.initialWorldBookUuids,
+                    joinedWorld = state.joinWorld,
+                    onSelectSole = viewModel::selectInitialWorldBookSole,
+                    onToggle = viewModel::toggleInitialWorldBook,
+                    onManageBooks = onOpenWorldBooks,
+                )
             }
+            SectionFooter(stringResource(R.string.wb_binding_footer))
 
             // ---- 见面回忆（角色档案，仅编辑模式 → 10.2e M16；也是兜底 Toast 指向的页面） ----
             if (viewModel.isEditing) {

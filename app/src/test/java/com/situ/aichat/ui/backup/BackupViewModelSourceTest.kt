@@ -36,6 +36,7 @@ import org.robolectric.annotation.Config
 class BackupViewModelSourceTest {
 
     private lateinit var backupService: BackupService
+    private lateinit var settingsRepo: com.situ.aichat.data.repository.SettingsRepository
     private lateinit var vm: BackupViewModel
 
     private fun idle() = shadowOf(Looper.getMainLooper()).idle()
@@ -49,10 +50,11 @@ class BackupViewModelSourceTest {
     @Before
     fun setUp() {
         backupService = mockk()
+        settingsRepo = mockk(relaxed = true)
         vm = BackupViewModel(
             backupService = backupService,
             backgroundScheduler = mockk(relaxed = true),
-            settingsRepo = mockk(relaxed = true),
+            settingsRepo = settingsRepo,
             reliabilityPromptController = mockk(relaxed = true),
             llmForeground = mockk(relaxed = true),
         )
@@ -116,5 +118,12 @@ class BackupViewModelSourceTest {
         coVerify(exactly = 0) { backupService.importArchive(any(), any(), any()) }
         assertEquals(null, vm.preview.value)
         assertEquals(null, vm.importResult.value)
+    }
+
+    @Test
+    fun B7_切换包含媒体持久化写入设置仓库() = runBlocking {
+        vm.setIncludeMedia(false)
+        idle()
+        coVerify(exactly = 1) { settingsRepo.setBackupIncludeMedia(false) }
     }
 }

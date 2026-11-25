@@ -20,10 +20,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.KeyboardArrowDown
-import androidx.compose.material.icons.outlined.KeyboardArrowUp
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.VerticalAlignBottom
 import androidx.compose.material.icons.outlined.VerticalAlignTop
 import androidx.compose.material3.Icon
@@ -82,6 +78,7 @@ import com.situ.aichat.ui.contextlog.shared.readerTocShape
 import com.situ.aichat.ui.contextlog.shared.rememberLogReaderControls
 import com.situ.aichat.ui.contextlog.shared.sentCaptionText
 import com.situ.aichat.ui.contextlog.shared.sentRoleLabel
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppSpacing
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
@@ -170,11 +167,11 @@ internal fun LiuliContextLogSentContent(
         collapsed = c.searching || collapsedByScroll,
         actions = {
             if (c.searching) {
-                LiuliPageCircleAction({ c.current = (c.current - 1).mod(nav.size) }, stringResource(R.string.clog_reader_prev_hit), Icons.Outlined.KeyboardArrowUp, enabled = nav.isNotEmpty())
-                LiuliPageCircleAction({ c.current = (c.current + 1).mod(nav.size) }, stringResource(R.string.clog_reader_next_hit), Icons.Outlined.KeyboardArrowDown, enabled = nav.isNotEmpty())
+                LiuliPageCircleAction({ c.current = (c.current - 1).mod(nav.size) }, stringResource(R.string.clog_reader_prev_hit), AppActionIcons.ChevronUp, enabled = nav.isNotEmpty())
+                LiuliPageCircleAction({ c.current = (c.current + 1).mod(nav.size) }, stringResource(R.string.clog_reader_next_hit), AppActionIcons.ChevronDown, enabled = nav.isNotEmpty())
             } else if (view != null) {
-                LiuliPageCircleAction({ c.enterSearch() }, stringResource(R.string.clog_reader_search), Icons.Outlined.Search)
-                LiuliPageCircleAction(onCopyAll, stringResource(R.string.clog_reader_copy_all), Icons.Outlined.ContentCopy)
+                LiuliPageCircleAction({ c.enterSearch() }, stringResource(R.string.clog_reader_search), AppActionIcons.Search)
+                LiuliPageCircleAction(onCopyAll, stringResource(R.string.clog_reader_copy_all), AppActionIcons.Copy)
             }
         },
         subBar = if (c.searching) ({

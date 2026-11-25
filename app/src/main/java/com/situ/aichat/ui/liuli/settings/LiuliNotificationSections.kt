@@ -6,11 +6,10 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,14 +24,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.situ.aichat.R
 import com.situ.aichat.data.local.entity.CharacterEntity
+import com.situ.aichat.data.model.AppSettings
 import com.situ.aichat.notification.CalendarReminderMode
 import com.situ.aichat.notification.EconomyNotificationTier
 import com.situ.aichat.ui.components.CharacterAvatar
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.liuli.designsystem.LiuliButton
 import com.situ.aichat.ui.liuli.designsystem.LiuliButtonStyle
+import com.situ.aichat.ui.liuli.designsystem.LiuliTileTone
 import com.situ.aichat.ui.liuli.page.LiuliGroup
+import com.situ.aichat.ui.liuli.page.LiuliMasterCard
 import com.situ.aichat.ui.liuli.page.LiuliPageGeometry
 import com.situ.aichat.ui.liuli.page.LiuliRadioRow
 import com.situ.aichat.ui.liuli.page.LiuliRowBase
@@ -42,17 +45,8 @@ import com.situ.aichat.ui.settings.formatMinuteOfDay
 import com.situ.aichat.ui.settings.snapToHalfHour
 
 /**
- * 通知页各组（琉璃·图纸 2026-09-06 卷四 A-7）。节序 / 条件 / 文案 / 回调逐字继承暖陶
- * `NotificationSettingsScreen`；`formatMinuteOfDay` / `snapToHalfHour` 直接 import 暖陶那两个
- * （§2.2-3 已把它们从 private 提为 internal·实现零改）。
- */
-
-/**
- * 免打扰滑条范围：起点 20:00–23:30、终点 05:00–11:00，均 30min 步进（steps = 中间刻数）。
- *
- * **与暖陶 `NotificationSettingsScreen.kt` 的 `QUIET_*` 常量同值**——那边是 private 且 §2.2 只许把两个
- * 函数提为 internal，故此处自写一份。改任一侧必须同步另一侧（图纸 §11 D-11：A-7 写的 `0f..1439f, steps = 47`
- * 会把用户可设范围整整放宽一倍，那是行为变更不是换皮，故不采）。
+ * 通知页各组（琉璃·设置全面重构卷四 B-4 / B-5 / D-6）。
+ * 节序 / 条件 / 文案 / 回调与暖陶 `NotificationSettingsScreen` 逐项对齐。
  */
 internal object LiuliQuietHours {
     const val START_MIN = 1200f // 20:00
@@ -71,7 +65,7 @@ internal fun ColumnScope.permissionGroup(onGrant: () -> Unit, onOpenSystemSettin
         LiuliRowBase(divider = false, verticalPadding = LiuliPageGeometry.groupPadH, verticalAlignment = Alignment.Top) {
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Warning, contentDescription = null, tint = colors.status.onError, modifier = Modifier.size(20.dp))
+                    Icon(AppActionIcons.Warning, contentDescription = null, tint = colors.status.onError, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(
                         stringResource(R.string.notif_perm_denied),
@@ -92,28 +86,27 @@ internal fun ColumnScope.permissionGroup(onGrant: () -> Unit, onOpenSystemSettin
     }
 }
 
-/** 总开关组（无标题）。 */
+/** 角色消息通知总开关大卡（B-5）。 */
 @Composable
 internal fun ColumnScope.globalSwitchGroup(enabled: Boolean, onChange: (Boolean) -> Unit) {
-    LiuliGroup {
-        LiuliToggleRow(
-            title = stringResource(R.string.notif_global_label),
-            subtitle = stringResource(R.string.notif_global_desc),
-            checked = enabled,
-            onCheckedChange = onChange,
-            divider = false,
-        )
-    }
+    LiuliMasterCard(
+        title = stringResource(R.string.notif_character_msg_title),
+        subtitle = stringResource(R.string.notif_character_msg_sub),
+        icon = Icons.Filled.Notifications,
+        tileTone = LiuliTileTone.Rose,
+        checked = enabled,
+        onCheckedChange = onChange,
+    )
 }
 
 /**
- * 夜间免打扰组：开关行 + 开着时 range 文（组脚注位）+ 两条滑杆行。
- *
- * 滑杆走「拖动只改本地、松手才写库」（图纸 §3）：吸附仍是 `snapToHalfHour`（机制锁 §9 ④）。
+ * 夜间免打扰组：开关行 + 开着时 range 文（组脚注位）+ 两条滑杆行。总开关关闭时整组变灰示因。
  */
 @Composable
 internal fun ColumnScope.quietHoursGroup(
     enabled: Boolean,
+    controlsEnabled: Boolean,
+    disabledReason: String?,
     startMinute: Int,
     endMinute: Int,
     onSetEnabled: (Boolean) -> Unit,
@@ -138,6 +131,8 @@ internal fun ColumnScope.quietHoursGroup(
             title = stringResource(R.string.notif_quiet_hours_label),
             subtitle = stringResource(R.string.notif_quiet_hours_desc),
             checked = enabled,
+            enabled = controlsEnabled,
+            disabledReason = disabledReason,
             onCheckedChange = onSetEnabled,
             divider = false,
         )
@@ -145,6 +140,7 @@ internal fun ColumnScope.quietHoursGroup(
             LiuliSliderRow(
                 title = stringResource(R.string.notif_quiet_hours_start_label, formatMinuteOfDay(snapToHalfHour(liveStart))),
                 value = liveStart,
+                enabled = controlsEnabled,
                 onValueChange = { liveStart = it },
                 onValueChangeFinished = { onSetStart(snapToHalfHour(liveStart)) },
                 valueRange = LiuliQuietHours.START_MIN..LiuliQuietHours.START_MAX,
@@ -153,12 +149,50 @@ internal fun ColumnScope.quietHoursGroup(
             LiuliSliderRow(
                 title = stringResource(R.string.notif_quiet_hours_end_label, formatMinuteOfDay(snapToHalfHour(liveEnd))),
                 value = liveEnd,
+                enabled = controlsEnabled,
                 onValueChange = { liveEnd = it },
                 onValueChangeFinished = { onSetEnd(snapToHalfHour(liveEnd)) },
                 valueRange = LiuliQuietHours.END_MIN..LiuliQuietHours.END_MAX,
                 steps = LiuliQuietHours.END_STEPS,
             )
         }
+    }
+}
+
+/** 世界通知三档（自世界设置收拢，受角色消息总开关控制）。 */
+@Composable
+internal fun ColumnScope.worldNotificationGroup(
+    tier: String,
+    enabled: Boolean,
+    disabledReason: String?,
+    onSelect: (String) -> Unit,
+) {
+    LiuliGroup(
+        header = stringResource(R.string.world_notification_section),
+        footer = disabledReason ?: stringResource(R.string.world_notification_foot),
+    ) {
+        LiuliRadioRow(
+            title = stringResource(R.string.world_notification_silent_name),
+            subtitle = stringResource(R.string.world_notification_silent_desc),
+            selected = tier == AppSettings.WORLD_NOTIFICATION_SILENT,
+            enabled = enabled,
+            onSelect = { onSelect(AppSettings.WORLD_NOTIFICATION_SILENT) },
+            divider = false,
+        )
+        LiuliRadioRow(
+            title = "${stringResource(R.string.world_notification_gentle_name)} · ${stringResource(R.string.world_notification_default_tag)}",
+            subtitle = stringResource(R.string.world_notification_gentle_desc),
+            selected = tier == AppSettings.WORLD_NOTIFICATION_GENTLE,
+            enabled = enabled,
+            onSelect = { onSelect(AppSettings.WORLD_NOTIFICATION_GENTLE) },
+        )
+        LiuliRadioRow(
+            title = stringResource(R.string.world_notification_all_name),
+            subtitle = stringResource(R.string.world_notification_all_desc),
+            selected = tier == AppSettings.WORLD_NOTIFICATION_ALL,
+            enabled = enabled,
+            onSelect = { onSelect(AppSettings.WORLD_NOTIFICATION_ALL) },
+        )
     }
 }
 
@@ -191,21 +225,7 @@ internal fun ColumnScope.calendarModeGroup(mode: CalendarReminderMode, onSelect:
     }
 }
 
-/** 里程碑开关组（无标题·常显）。 */
-@Composable
-internal fun ColumnScope.milestoneGroup(enabled: Boolean, onChange: (Boolean) -> Unit) {
-    LiuliGroup {
-        LiuliToggleRow(
-            title = stringResource(R.string.notif_milestone_setting_label),
-            subtitle = stringResource(R.string.notif_milestone_setting_desc),
-            checked = enabled,
-            onCheckedChange = onChange,
-            divider = false,
-        )
-    }
-}
-
-/** 角色经济三档（仅高级模式显示）。 */
+/** 角色经济三档（D-6 常显，不再受高级模式门控）。 */
 @Composable
 internal fun ColumnScope.economyGroup(tier: EconomyNotificationTier, onSelect: (EconomyNotificationTier) -> Unit) {
     LiuliGroup(
@@ -234,16 +254,72 @@ internal fun ColumnScope.economyGroup(tier: EconomyNotificationTier, onSelect: (
     }
 }
 
-/** 每角色开关组：空 → 一句空态文；否则每角色一行（leading = 28 头像）。 */
+/** 其他通知（统一收拢 6 类，含 B-4 四开关）。 */
+@Composable
+internal fun ColumnScope.otherNotificationsGroup(
+    state: LiuliOtherNotificationsState,
+    onSetMilestoneEnabled: (Boolean) -> Unit,
+    onSetMomentNewPostEnabled: (Boolean) -> Unit,
+    onSetMomentInteractionEnabled: (Boolean) -> Unit,
+    onSetStoryFinishedEnabled: (Boolean) -> Unit,
+    onSetMeetingReminderEnabled: (Boolean) -> Unit,
+    onSetRedPacketExpiringEnabled: (Boolean) -> Unit,
+) {
+    LiuliGroup(header = stringResource(R.string.notif_group_other)) {
+        LiuliToggleRow(
+            title = stringResource(R.string.notif_milestone_setting_label),
+            subtitle = stringResource(R.string.notif_milestone_setting_desc),
+            checked = state.milestoneEnabled,
+            onCheckedChange = onSetMilestoneEnabled,
+            divider = false,
+        )
+        LiuliToggleRow(
+            title = stringResource(R.string.moment_settings_new_post_notif),
+            subtitle = stringResource(R.string.moment_settings_new_post_notif_desc),
+            checked = state.momentNewPostEnabled,
+            onCheckedChange = onSetMomentNewPostEnabled,
+        )
+        LiuliToggleRow(
+            title = stringResource(R.string.notif_moment_interaction_title),
+            subtitle = stringResource(R.string.notif_moment_interaction_sub),
+            checked = state.momentInteractionEnabled,
+            onCheckedChange = onSetMomentInteractionEnabled,
+        )
+        LiuliToggleRow(
+            title = stringResource(R.string.notif_story_finished_title),
+            subtitle = stringResource(R.string.notif_story_finished_sub),
+            checked = state.storyFinishedEnabled,
+            onCheckedChange = onSetStoryFinishedEnabled,
+        )
+        LiuliToggleRow(
+            title = stringResource(R.string.notif_meeting_reminder_title),
+            subtitle = stringResource(R.string.notif_meeting_reminder_sub),
+            checked = state.meetingReminderEnabled,
+            onCheckedChange = onSetMeetingReminderEnabled,
+        )
+        LiuliToggleRow(
+            title = stringResource(R.string.notif_red_packet_expiring_title),
+            subtitle = stringResource(R.string.notif_red_packet_expiring_sub),
+            checked = state.redPacketExpiringEnabled,
+            onCheckedChange = onSetRedPacketExpiringEnabled,
+        )
+    }
+}
+
+/** 每角色开关组：空 → 一句空态文；否则每角色一行（leading = 28 头像），总开关关闭时整组变灰。 */
 @Composable
 internal fun ColumnScope.perCharacterGroup(
     characters: List<CharacterEntity>,
     disabledIds: Set<String>,
+    controlsEnabled: Boolean,
+    disabledReason: String?,
     onSetEnabled: (String, Boolean) -> Unit,
 ) {
-    LiuliGroup(header = stringResource(R.string.notif_per_character_header)) {
+    LiuliGroup(
+        header = stringResource(R.string.notif_per_character_header),
+        footer = disabledReason,
+    ) {
         if (characters.isEmpty()) {
-            // 空态一句放在组内（行基线给 16 内距·别再套脚注件：它自带左 16 上 6 会叠成 32 / 22·复核 R1 🔵-4）。
             LiuliRowBase(divider = false, verticalPadding = EMPTY_PAD_V) {
                 Text(
                     stringResource(R.string.notif_per_character_empty),
@@ -256,6 +332,7 @@ internal fun ColumnScope.perCharacterGroup(
                 LiuliToggleRow(
                     title = character.name,
                     checked = character.uuid !in disabledIds,
+                    enabled = controlsEnabled,
                     onCheckedChange = { onSetEnabled(character.uuid, it) },
                     leading = { CharacterAvatar(character.name, character.avatarPath, AVATAR) },
                     divider = index > 0,
@@ -265,7 +342,7 @@ internal fun ColumnScope.perCharacterGroup(
     }
 }
 
-/** 每角色行的头像直径（A-7）。 */
+/** 每角色行的头像直径。 */
 private val AVATAR = 28.dp
 /** 每角色空态那一句的上下内距。 */
 private val EMPTY_PAD_V = 12.dp

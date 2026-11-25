@@ -14,8 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,6 +28,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
 import com.situ.aichat.ui.components.contentMaxWidth
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.diary.DiaryPromptSettingsViewModel
@@ -211,7 +210,7 @@ private fun ColumnScope.ruleGroup(
         )
         LiuliRowBase(verticalPadding = LiuliPageGeometry.rowTwoLinePad) {
             LiuliButton(onClick = { callbacks.onResetSection(section) }, style = LiuliButtonStyle.Text, contentPadding = PaddingValues(0.dp)) {
-                Icon(Icons.Filled.Refresh, contentDescription = null)
+                Icon(AppActionIcons.Refresh, contentDescription = null)
                 Text(stringResource(R.string.diary_rules_reset))
             }
         }

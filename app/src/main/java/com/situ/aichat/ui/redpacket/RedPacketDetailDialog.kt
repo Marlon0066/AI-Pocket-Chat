@@ -27,10 +27,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -156,9 +152,13 @@ fun RedPacketDetailDialog(
             }
         }
         Box(modifier = Modifier.fillMaxSize().background(Brush.radialGradient(backgroundColors(status, economy)))) {
-            IconButton(onClick = onDismiss, modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp)) {
-                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_close), tint = onBackdrop.copy(alpha = 0.9f))
-            }
+            com.situ.aichat.ui.designsystem.AppIconButton(
+                icon = com.situ.aichat.ui.designsystem.AppActionIcons.Close,
+                contentDescription = stringResource(R.string.action_close),
+                onClick = onDismiss,
+                tint = onBackdrop.copy(alpha = 0.9f),
+                modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp),
+            )
 
             Column(
                 modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars).padding(horizontal = 32.dp, vertical = 48.dp),

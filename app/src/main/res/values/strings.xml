@@ -1364,7 +1364,12 @@
 	<string name="diary_stats_count">Published</string>
 	<string name="diary_stats_chars">Characters</string>
 	<string name="diary_stats_moods">Moods</string>
+	<string name="diary_stats_heatmap_title">Last 30 days</string>
 	<string name="diary_stats_none">No published entries yet</string>
+	<string name="diary_compose_word_count">%1$d chars</string>
+	<string name="diary_compose_mood_pick">Mood</string>
+	<string name="diary_exchange_kicker_sealed">Today\'s letterbox · sealed</string>
+	<string name="diary_exchange_kicker_need_write">Today\'s letterbox</string>
 	<!-- R5 monthly review (prompt + UI). -->
 	<string name="diary_review_intro">You are "%1$s"\'s diary assistant. Based on the diary excerpts below for %2$s, write a monthly review for them.</string>
 	<string name="diary_review_req_letter">- Letter-like voice, speak to them as "you", gentle and non-judgmental</string>
@@ -2816,7 +2821,7 @@
 	<string name="profile_stat_friends_unit"></string>
 	<string name="profile_stat_memories_label">Memories</string>
 	<string name="profile_stat_memories_unit"></string>
-	<string name="profile_settings_entry_preview">Personalization · API · Chat · Memory · Voice · Data</string>
+	<string name="profile_settings_entry_preview">AI Service · Appearance · Chat · Memory · System</string>
 	<!-- 设置分组 -->
 	<string name="settings_group_auto_content">AI-created content</string>
 	<string name="settings_group_data">Data &amp; Diagnostics</string>
@@ -3006,11 +3011,11 @@
 	<string name="char_world_join_title">Join the world</string>
 	<string name="char_world_join_sub_off">They\'ll settle in Yunye Town and live their own life</string>
 	<string name="char_world_join_sub_on">They\'re already one of the townsfolk</string>
-	<string name="char_world_join_sub_wb">They have a lorebook — pick one or the other</string>
+	<string name="char_world_join_sub_wb">Turning this on removes their current lorebook and settles them in Yunye Town</string>
 	<string name="char_world_join_sub_native">A born-and-raised local, in the world from the start</string>
 	<string name="char_world_foot_off">Once joined, they show up on the world map, meet other characters, and get their own schedule and stories. Choose this or a “lorebook.”</string>
 	<string name="char_world_foot_on">Turning this off means leaving the world: it becomes a world event, their ties with everyone go dormant, and are restored when they rejoin.</string>
-	<string name="char_world_foot_wb">Want them in the world? Lorebook and world are one-or-the-other — or create a new character and choose again.</string>
+	<string name="char_world_foot_wb">Turn this on to unbind their lorebook and join the world in one step (the lorebook itself is kept).</string>
 	<string name="char_world_foot_native">Local characters always live in the world; they can\'t leave, and can\'t carry a lorebook.</string>
 	<string name="char_world_foot_create">Once saved, they\'ll settle in Yunye Town. Choose this or a “lorebook.”</string>
 	<string name="char_world_addr_title">Where they live</string>
@@ -3021,6 +3026,9 @@
 	<string name="char_world_leave_body">Leaving becomes a world event, and friends in town will remember them. Their ties with everyone go quietly dormant — restored just as they were if they rejoin later.</string>
 	<string name="char_world_leave_confirm">Let them leave</string>
 	<string name="char_world_leave_cancel">On second thought</string>
+	<string name="char_world_switch_join_title">Join the world and remove lorebook?</string>
+	<string name="char_world_switch_join_body">Joining Yunye Town will automatically unbind this character\'s current lorebook (the book and entries won\'t be deleted, and you can switch back anytime).</string>
+	<string name="char_world_switch_join_confirm">Remove &amp; join world</string>
 	<string name="char_world_city_sheet_title">Where do they live?</string>
 	<string name="char_world_city_sheet_sub">Same city as you by default. Moving to another city is fine too — a move is a big deal, and becomes a world event.</string>
 	<string name="char_world_city_tag_home">same city as you · default</string>
@@ -3029,8 +3037,19 @@
 	<string name="char_world_move_body">They\'ll leave %1$s and settle in %2$s. After that, seeing them means a trip out — but you can still chat any time from afar.</string>
 	<string name="char_world_move_confirm">Move</string>
 	<string name="char_world_move_cancel">Never mind</string>
-	<string name="wb_binding_world_locked">In the world · one or the other with a lorebook</string>
+	<string name="wb_binding_world_locked">Currently in the world · tap to pick a lorebook and leave</string>
 	<string name="wb_binding_native_locked">Local character · can\'t be bound</string>
+	<string name="wb_binding_switch_leave_title">Switch to lorebook and leave the world?</string>
+	<string name="wb_binding_switch_leave_body">Binding “%1$s” will have them leave Yunye Town (existing relationships go quietly dormant and restore if they rejoin later).</string>
+	<string name="wb_binding_switch_leave_confirm">Leave world &amp; switch</string>
+	<string name="wb_binding_create_sub_selected">Automatically bound when character is saved</string>
+	<string name="wb_characters_tag_in_world">in the world</string>
+	<string name="wb_characters_tag_native">world local</string>
+	<string name="wb_characters_sub_in_world">Checking leaves the world and enables this book</string>
+	<string name="wb_characters_sub_native">Always in the world · can\'t bind a lorebook</string>
+	<string name="wb_characters_switch_title">Bind this book and leave the world?</string>
+	<string name="wb_characters_switch_body">“%1$s” currently lives in Yunye Town. Binding “%2$s” will have them leave the world and enable this book.</string>
+	<string name="wb_characters_switch_confirm">Leave world &amp; bind</string>
 	<!-- World system W13 settings (blueprint §4.3/§4.4) -->
 	<string name="settings_group_world">World</string>
 	<string name="world_settings_title">World settings</string>
@@ -3801,4 +3820,175 @@
 	<string name="clog_reader_jump_bottom">Jump to end</string>
 	<string name="clog_reply_reasoning">The model spent %1$s tk thinking this turn (only the amount was logged, not the thinking itself).</string>
 	<string name="clog_reply_empty">(Empty)</string>
+
+	<!-- Settings Full Rework (Volumes 1-4) -->
+	<string name="settings_slider_default_mark">Default</string>
+	<string name="settings_range_min">Min</string>
+	<string name="settings_range_max">Max</string>
+
+	<string name="settings_hub_group_chat">Chat</string>
+	<string name="settings_hub_group_memory">Memory</string>
+	<string name="settings_hub_group_life">Their Life</string>
+	<string name="settings_hub_group_writing">What They Write</string>
+	<string name="settings_hub_group_system">System</string>
+
+	<string name="settings_hub_ai_service">AI Service</string>
+	<string name="settings_hub_voice">Voice</string>
+	<string name="settings_hub_schedule">Schedule &amp; Social</string>
+	<string name="settings_hub_pet">Pets</string>
+	<string name="settings_hub_wallet">Wallet &amp; Gifts</string>
+	<string name="settings_hub_advanced">Advanced</string>
+	<string name="settings_hub_advanced_subtitle">Prompts, content filter, and logs for hands-on tuning</string>
+	<string name="settings_hub_search_results">Search results</string>
+	<string name="settings_hub_search_matched">Matched: %1$s</string>
+
+	<string name="settings_hub_val_reply">Wait %1$ss · %2$d–%3$d msgs</string>
+	<string name="settings_hub_val_stickers_on">Characters send</string>
+	<string name="settings_hub_val_stickers_off">Characters don\'t send</string>
+	<string name="settings_hub_val_memory_turns">Last %1$d turns</string>
+	<string name="settings_hub_val_worldbook_count">%1$d enabled</string>
+	<string name="settings_hub_val_worldbook_none">None enabled</string>
+	<string name="settings_hub_val_schedule_with_cross">On · %1$s</string>
+	<string name="settings_hub_val_diary_daily">Daily %1$s</string>
+	<string name="settings_hub_val_diary_off">Manual only</string>
+	<string name="settings_hub_val_moment_freq">%1$d / char / day</string>
+	<string name="settings_hub_val_moment_off">Manual only</string>
+	<string name="settings_hub_val_story_temp">Creativity %1$s</string>
+	<string name="settings_hub_val_bg_ready">Ready</string>
+	<string name="settings_hub_val_bg_not_ready">Needs setup</string>
+	<string name="settings_hub_val_backup_last">Last %1$s</string>
+	<string name="settings_hub_val_backup_pending">Waiting for first backup</string>
+	<string name="settings_hub_val_narrative_plain">Plain</string>
+	<string name="settings_hub_val_narrative_normal">Natural</string>
+	<string name="settings_hub_val_narrative_detailed">Detailed</string>
+	<string name="settings_hub_val_narrative_custom">Custom</string>
+	<string name="settings_hub_val_notif_count">%1$d active</string>
+
+	<string-array name="settings_kw_ai_service">
+		<item>API</item><item>Model</item><item>Key</item><item>Provider</item><item>Function assignment</item><item>Cache saver</item><item>QR scan</item>
+	</string-array>
+	<string-array name="settings_kw_appearance">
+		<item>Theme</item><item>Dark mode</item><item>Light mode</item><item>Skin</item><item>Warm Clay</item><item>Liuli</item><item>Glass</item><item>Bottom bar</item>
+	</string-array>
+	<string-array name="settings_kw_reply">
+		<item>Temperature</item><item>Creativity</item><item>Wait seconds</item><item>Segments</item><item>Texting tone</item><item>Emotion animation</item>
+	</string-array>
+	<string-array name="settings_kw_voice">
+		<item>TTS</item><item>Voice call</item><item>Interrupt sensitivity</item><item>Voice message</item><item>Speech</item><item>Timbre</item>
+	</string-array>
+	<string-array name="settings_kw_offline">
+		<item>Date</item><item>Invitation</item><item>Narrative</item><item>Afterglow</item><item>Particle</item><item>Immersive input</item>
+	</string-array>
+	<string-array name="settings_kw_stickers">
+		<item>Emoji</item><item>Meme</item><item>GIF</item><item>Custom sticker</item>
+	</string-array>
+	<string-array name="settings_kw_memory">
+		<item>Summary</item><item>Short-term</item><item>Long-term</item><item>Vector</item><item>Recall</item><item>Meeting memory</item><item>Compression</item>
+	</string-array>
+	<string-array name="settings_kw_worldbooks">
+		<item>Worldbook</item><item>Lore</item><item>Trigger</item><item>Scan depth</item><item>Budget</item>
+	</string-array>
+	<string-array name="settings_kw_schedule">
+		<item>Routine</item><item>Daily schedule</item><item>Cross character</item><item>Hang out</item>
+	</string-array>
+	<string-array name="settings_kw_growth">
+		<item>Relationship</item><item>Affection</item><item>Interest</item><item>Auto advance</item><item>Kernel</item>
+	</string-array>
+	<string-array name="settings_kw_pet">
+		<item>Pet diary</item><item>Adopt</item><item>Egg</item><item>Feed</item>
+	</string-array>
+	<string-array name="settings_kw_wallet">
+		<item>Currency</item><item>Coins</item><item>Red packet</item><item>Proactive gift</item><item>Salary</item>
+	</string-array>
+	<string-array name="settings_kw_world">
+		<item>Vividness</item><item>Timezone</item><item>Romance</item><item>Resident</item>
+	</string-array>
+	<string-array name="settings_kw_diary">
+		<item>Auto generate</item><item>Exchange diary</item><item>Writing rules</item><item>Comment</item>
+	</string-array>
+	<string-array name="settings_kw_moments">
+		<item>Feed</item><item>Auto post</item><item>Auto like</item><item>Comment delay</item>
+	</string-array>
+	<string-array name="settings_kw_story">
+		<item>Novel</item><item>Banned phrases</item><item>Scene beats</item><item>Taste profile</item><item>Creativity</item>
+	</string-array>
+	<string-array name="settings_kw_notifications">
+		<item>Quiet hours</item><item>Do not disturb</item><item>Push</item><item>Alert</item><item>Red packet</item><item>Milestone</item>
+	</string-array>
+	<string-array name="settings_kw_calendar">
+		<item>System calendar</item><item>Events</item><item>Confirmation</item>
+	</string-array>
+	<string-array name="settings_kw_background">
+		<item>Battery optimization</item><item>Autostart</item><item>Keep alive</item><item>HyperOS</item><item>MIUI</item>
+	</string-array>
+	<string-array name="settings_kw_backup">
+		<item>Export</item><item>Import</item><item>Restore</item><item>Auto backup</item><item>Media</item>
+	</string-array>
+	<string-array name="settings_kw_language">
+		<item>Chinese</item><item>English</item><item>Locale</item>
+	</string-array>
+	<string-array name="settings_kw_advanced">
+		<item>Prompt modules</item><item>Memory prompts</item><item>Content filter</item><item>Context log</item><item>Performance</item><item>Embedder</item>
+	</string-array>
+	<string-array name="settings_kw_about">
+		<item>Version</item><item>Agreement</item><item>License</item><item>Credits</item>
+	</string-array>
+
+	<string name="settings_adv_info">For hands-on tuning. Leave settings unchanged if you are unsure; prompt and filter pages support resetting to defaults.</string>
+	<string name="settings_adv_group_prompts">Prompts</string>
+	<string name="settings_adv_group_reply">Reply Processing</string>
+	<string name="settings_adv_group_diagnostics">Diagnostics</string>
+	<string name="settings_adv_prompt_modules_sub">Turn prompt blocks on or off, or edit their wording</string>
+	<string name="settings_adv_memory_prompts_title">Memory Prompts</string>
+	<string name="settings_adv_memory_prompts_sub">Customize how memories are extracted and injected</string>
+	<string name="settings_adv_content_filter_sub">Clean or replace unwanted patterns in AI replies</string>
+	<string name="settings_adv_context_log_sub">Inspect what was actually sent and received</string>
+	<string name="settings_adv_perf_sub">Record local performance samples for troubleshooting</string>
+
+	<string name="settings_voice_service_row">Voice Service</string>
+	<string name="settings_voice_service_sub">Choose system or cloud speech provider and default voice</string>
+	<string name="settings_wb_trigger_row_sub">Scan depth, character budget, and recursion rules</string>
+	<string name="settings_api_delete_confirm_title">Delete AI configuration?</string>
+	<string name="settings_api_delete_confirm_body">Delete \"%1$s\"? Its saved API key and configuration on this device will be removed.</string>
+	<string name="settings_api_missing_fields">Please fill in: %1$s</string>
+	<string name="settings_schedule_master_sub">Characters live through daily routines and send timely updates</string>
+	<string name="settings_schedule_disabled_reason">Turn on Schedule first to adjust how often characters meet</string>
+	<string name="settings_growth_master_title">Character Growth</string>
+	<string name="settings_growth_master_sub">Characters develop memories, interests, and relationship depth over time</string>
+	<string name="settings_growth_disabled_reason">Turn on Character Growth above to adjust these parameters</string>
+	<string name="settings_growth_notif_link">Milestone Notifications</string>
+	<string name="settings_growth_notif_link_sub">Manage notifications in System › Notifications</string>
+	<string name="settings_pet_master_title">Pet System</string>
+	<string name="settings_pet_master_sub">Adopt virtual pets together and care for them daily</string>
+	<string name="settings_pet_disabled_reason">Turn on Pet System above to enable pet diaries</string>
+	<string name="settings_wallet_master_title">Wallet &amp; Currency</string>
+	<string name="settings_wallet_master_sub">Use virtual coins for gifts, red packets, and daily life</string>
+	<string name="settings_wallet_disabled_reason">Turn on Wallet &amp; Currency above to let characters send gifts</string>
+	<string name="settings_wallet_notif_link">Wallet &amp; Gift Notifications</string>
+	<string name="settings_wallet_notif_link_sub">Manage economy and red packet alerts in Notifications</string>
+	<string name="settings_world_new_resident_sub">Creates a new character living in your world</string>
+	<string name="settings_story_reset_defaults">Reset to Factory Defaults</string>
+	<string name="settings_story_reset_confirm_title">Reset global story preferences?</string>
+	<string name="settings_story_reset_confirm_body">This clears your global banned phrases, scene beats, and taste profile back to defaults. Per-book overrides stay untouched.</string>
+	<string name="notif_character_msg_title">Character Message Notifications</string>
+	<string name="notif_character_msg_sub">Covers proactive messages, replies while away, meeting afterglow, and world updates</string>
+	<string name="notif_disabled_reason">Turn on Character Message Notifications above first</string>
+	<string name="notif_group_other">Other Notifications</string>
+	<string name="notif_red_packet_expiring_title">Red Packet Expiring Soon</string>
+	<string name="notif_red_packet_expiring_sub">Remind before an unclaimed red packet expires</string>
+	<string name="notif_meeting_reminder_title">Scheduled Meeting Reminder</string>
+	<string name="notif_meeting_reminder_sub">Notify when it is time for an offline date you agreed on</string>
+	<string name="notif_story_finished_title">Story Generation Finished</string>
+	<string name="notif_story_finished_sub">Notify when a chapter finishes generating or fails in the background</string>
+	<string name="notif_moment_interaction_title">Moment Comments &amp; Likes</string>
+	<string name="notif_moment_interaction_sub">Notify when characters comment on or like your moments</string>
+	<string name="notif_where_else_info">Pet care reminders are managed inside each pet\'s page; story update alerts follow each book\'s settings.</string>
+	<string name="backup_include_media_v2">Include photos, voice, and avatars</string>
+	<string name="settings_cal_disabled_reason">Turn on Calendar Integration above first</string>
+	<string name="settings_reply_wait_start">Quick reply</string>
+	<string name="settings_reply_wait_end">Wait longer</string>
+	<string name="settings_reply_temp_start">Steady</string>
+	<string name="settings_reply_temp_end">Creative</string>
+	<string name="settings_voice_interrupt_start">Less sensitive</string>
+	<string name="settings_voice_interrupt_end">More sensitive</string>
 </resources>

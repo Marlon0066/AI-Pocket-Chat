@@ -7,14 +7,11 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -27,11 +24,17 @@ import com.situ.aichat.data.local.entity.WorldBookEntryEntity
 import com.situ.aichat.R
 import com.situ.aichat.ui.components.SettingsSwitchRow
 import com.situ.aichat.ui.components.clickableScale
-import com.situ.aichat.ui.designsystem.AppShapes
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppSlider
 import com.situ.aichat.ui.designsystem.AppTextField
 import com.situ.aichat.ui.designsystem.AppTheme
+import com.situ.aichat.ui.designsystem.AppTypography
+import com.situ.aichat.ui.designsystem.appCardSurface
 import kotlin.math.roundToInt
+
+private val LocalWorldBookGroupSurface = compositionLocalOf<@Composable () -> Modifier> {
+    { Modifier.appCardSurface() }
+}
 
 /**
  * 条目编辑器·高级设置四组（WB7b·契约 §12.4 人话对照表）：进阶匹配 / 插入方式 / 概率与时效 /
@@ -42,13 +45,16 @@ import kotlin.math.roundToInt
 internal fun EntryAdvancedSections(
     entry: WorldBookEntryEntity,
     viewModel: WorldBookEntryEditViewModel,
+    cardModifier: @Composable () -> Modifier = { Modifier.appCardSurface() },
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        MatchingGroup(entry, viewModel)
-        InsertionGroup(entry, viewModel)
-        TimingGroup(entry, viewModel)
-        RecursionGroup(entry, viewModel)
-        MiscGroup(entry, viewModel)
+    CompositionLocalProvider(LocalWorldBookGroupSurface provides cardModifier) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            MatchingGroup(entry, viewModel)
+            InsertionGroup(entry, viewModel)
+            TimingGroup(entry, viewModel)
+            RecursionGroup(entry, viewModel)
+            MiscGroup(entry, viewModel)
+        }
     }
 }
 
@@ -66,6 +72,8 @@ private fun MatchingGroup(entry: WorldBookEntryEntity, viewModel: WorldBookEntry
                 keys = viewModel.secondaryKeys(entry),
                 onAdd = { viewModel.addKeys(it, secondary = true) },
                 onRemove = { viewModel.removeKey(it, secondary = true) },
+                inputValue = viewModel.pendingSecondaryKeyInput,
+                onInputValueChange = { viewModel.pendingSecondaryKeyInput = it },
             )
             DropdownRow(
                 label = stringResource(R.string.wb_logic_label),
@@ -173,7 +181,7 @@ private fun TimingGroup(entry: WorldBookEntryEntity, viewModel: WorldBookEntryEd
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
                     stringResource(R.string.wb_probability_label),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = AppTypography.body,
                     color = colors.text.primary,
                 )
                 AppSlider(
@@ -182,7 +190,7 @@ private fun TimingGroup(entry: WorldBookEntryEntity, viewModel: WorldBookEntryEd
                     valueRange = 0f..100f,
                     modifier = Modifier.weight(1f),
                 )
-                Text("${entry.probability}%", style = MaterialTheme.typography.bodyMedium, color = colors.text.secondary)
+                Text("${entry.probability}%", style = AppTypography.secondary, color = colors.text.secondary)
             }
             NullableCountStepper(R.string.wb_sticky_label, entry.sticky) { v -> viewModel.update { it.copy(sticky = v) } }
             NullableCountStepper(R.string.wb_cooldown_label, entry.cooldown) { v -> viewModel.update { it.copy(cooldown = v) } }
@@ -274,29 +282,28 @@ private fun GroupCard(
 ) {
     val colors = AppTheme.colors
     var expanded by rememberSaveable { mutableStateOf(initiallyExpanded) }
-    Surface(shape = AppShapes.medium, tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickableScale { expanded = !expanded }
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(stringResource(titleRes), style = MaterialTheme.typography.titleSmall, color = colors.text.primary)
-                    Text(stringResource(subtitleRes), style = MaterialTheme.typography.bodySmall, color = colors.text.secondary)
-                }
-                Icon(
-                    if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                    contentDescription = null,
-                    tint = colors.text.secondary,
-                )
+    val surface = LocalWorldBookGroupSurface.current
+    Column(modifier = Modifier.fillMaxWidth().then(surface())) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickableScale { expanded = !expanded }
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(stringResource(titleRes), style = AppTypography.titleSmall, color = colors.text.primary)
+                Text(stringResource(subtitleRes), style = AppTypography.caption, color = colors.text.secondary)
             }
-            if (expanded) {
-                Column(modifier = Modifier.padding(bottom = 12.dp)) { content() }
-            }
+            Icon(
+                if (expanded) AppActionIcons.ChevronUp else AppActionIcons.ChevronDown,
+                contentDescription = null,
+                tint = colors.text.secondary,
+            )
+        }
+        if (expanded) {
+            Column(modifier = Modifier.padding(bottom = 12.dp)) { content() }
         }
     }
 }

@@ -7,10 +7,12 @@ import com.situ.aichat.data.local.dao.WorldNativeDao
 import com.situ.aichat.data.local.entity.CharacterEntity
 import com.situ.aichat.data.local.entity.WorldNativeStateEntity
 import com.situ.aichat.data.worldbook.WorldBookRepository
+import com.situ.aichat.world.member.WorldMembershipService
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertFalse
@@ -22,11 +24,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
- * [WorldBookBindingViewModel] T2（W13 复核 R1 🟡-2）：世界书互斥「同屏陈旧态」单向击穿的 bind 侧守卫。
- *
- * 断言从 🟡-2 修改指令独立反推：① 已加入时 selectSole/toggle 对 repository **零调用**（[WorldBookBindingViewModel.isJoinedWorldNow]
- * 直读库守卫）② 未加入时正常委托 ③ nativeOrigin 态派生（原住民出身 → 段副标 native_locked 的数据来源）。
- * MockK 假 dao/repository·Robolectric 主循环驱动 viewModelScope。
+ * [WorldBookBindingViewModel] T2：响应式同步 + 未确认击穿守卫 + 确认后单事务 `switchLeaveAndBind` + 原住民拒绝。
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -36,69 +34,98 @@ class WorldBookBindingViewModelTest {
 
     private val uuid = "c1"
 
-    private fun buildVm(
+    private class Harness(
+        val vm: WorldBookBindingViewModel,
+        val repo: WorldBookRepository,
+        val membership: WorldMembershipService,
+        val charFlow: MutableStateFlow<CharacterEntity?>,
+    )
+
+    private fun buildHarness(
         joined: Boolean = false,
         native: Boolean = false,
-    ): Pair<WorldBookBindingViewModel, WorldBookRepository> {
+    ): Harness {
+        val charEntity = CharacterEntity(uuid = uuid, name = "苏晚", creationDate = 0L, joinedWorld = joined)
+        val charFlow = MutableStateFlow<CharacterEntity?>(charEntity)
+        val nativeEntity = if (native) WorldNativeStateEntity(nativeId = "native:x", recruitedCharacterUuid = uuid) else null
+        val nativeFlow = MutableStateFlow(listOfNotNull(nativeEntity))
+
         val characterDao = mockk<CharacterDao> {
-            coEvery { getByUuid(uuid) } returns
-                CharacterEntity(uuid = uuid, name = "苏晚", creationDate = 0L, joinedWorld = joined)
+            every { observeByUuid(uuid) } returns charFlow
+            coEvery { getByUuid(uuid) } answers { charFlow.value }
         }
         val worldNativeDao = mockk<WorldNativeDao> {
-            coEvery { getByRecruitedUuid(uuid) } returns
-                if (native) WorldNativeStateEntity(nativeId = "native:x", recruitedCharacterUuid = uuid) else null
+            every { observeAll() } returns nativeFlow
+            coEvery { getByRecruitedUuid(uuid) } returns nativeEntity
         }
-        // 三个 observe* 在属性初始化时即被调用来搭 Flow 链（stateIn 上游需真 Flow）——显式桩住。
         val repository = mockk<WorldBookRepository>(relaxed = true) {
             every { observeBoundBookUuidsForCharacter(uuid) } returns flowOf(emptyList())
             every { observeBookSummaries() } returns flowOf(emptyList())
             every { observeAllBooks() } returns flowOf(emptyList())
         }
+        val membership = mockk<WorldMembershipService>(relaxed = true)
         val vm = WorldBookBindingViewModel(
-            repository, characterDao, worldNativeDao,
+            repository, characterDao, worldNativeDao, membership,
             SavedStateHandle(mapOf("characterUuid" to uuid)),
         )
         idle()
-        return vm to repository
+        return Harness(vm, repository, membership, charFlow)
     }
 
     @Test
     fun `未加入_selectSole与toggle正常委托repository`() {
-        val (vm, repo) = buildVm(joined = false)
-        vm.selectSole("book1")
-        vm.toggle("book2", bound = true)
-        vm.toggle("book3", bound = false)
+        val h = buildHarness(joined = false)
+        h.vm.selectSole("book1")
+        h.vm.toggle("book2", bound = true)
+        h.vm.toggle("book3", bound = false)
         idle()
-        coVerify(exactly = 1) { repo.setSoleBinding(uuid, "book1") }
-        coVerify(exactly = 1) { repo.bind(uuid, "book2") }
-        coVerify(exactly = 1) { repo.unbind(uuid, "book3") }
+        coVerify(exactly = 1) { h.repo.setSoleBinding(uuid, "book1") }
+        coVerify(exactly = 1) { h.repo.bind(uuid, "book2") }
+        coVerify(exactly = 1) { h.repo.unbind(uuid, "book3") }
     }
 
     @Test
-    fun `已加入_selectSole与toggle对repository零调用_击穿被挡`() {
-        val (vm, repo) = buildVm(joined = true)
-        vm.selectSole("book1")
-        vm.toggle("book2", bound = true)
-        vm.toggle("book3", bound = false)
+    fun `已加入_未确认直接绑书被挡_但摘书清理脏数据放行`() {
+        val h = buildHarness(joined = true)
+        h.vm.selectSole("book1")
+        h.vm.toggle("book2", bound = true)
         idle()
-        coVerify(exactly = 0) { repo.setSoleBinding(any(), any()) }
-        coVerify(exactly = 0) { repo.bind(any(), any()) }
-        coVerify(exactly = 0) { repo.unbind(any(), any()) }
+        coVerify(exactly = 0) { h.repo.setSoleBinding(uuid, "book1") }
+        coVerify(exactly = 0) { h.repo.bind(any(), any()) }
+
+        // 摘书（null / bound=false）允许清理历史残留脏绑定
+        h.vm.selectSole(null)
+        h.vm.toggle("book3", bound = false)
+        idle()
+        coVerify(exactly = 1) { h.repo.setSoleBinding(uuid, null) }
+        coVerify(exactly = 1) { h.repo.unbind(uuid, "book3") }
     }
 
     @Test
-    fun `isJoinedWorldNow_直读库为真时返回真并回写joinedWorld`() = runBlocking {
-        val (vm, _) = buildVm(joined = true)
-        assertTrue(vm.isJoinedWorldNow())
-        assertTrue(vm.joinedWorld.value)
+    fun `已加入_确认切换switchLeaveAndBind委托membership单事务`() {
+        val h = buildHarness(joined = true)
+        h.vm.switchLeaveAndBind("book1", sole = true)
+        idle()
+        coVerify(exactly = 1) { h.membership.leaveAndBindWorldBook(uuid, "book1", sole = true, nowMs = any()) }
     }
 
     @Test
-    fun `nativeOrigin态派生`() {
-        val (vmNative, _) = buildVm(joined = true, native = true)
-        assertTrue("原住民出身", vmNative.nativeOrigin.value)
+    fun `原住民_所有写操作零调用`() {
+        val h = buildHarness(joined = true, native = true)
+        assertTrue(h.vm.nativeOrigin.value)
+        h.vm.selectSole("book1")
+        h.vm.switchLeaveAndBind("book1", sole = true)
+        idle()
+        coVerify(exactly = 0) { h.repo.setSoleBinding(any(), any()) }
+        coVerify(exactly = 0) { h.membership.leaveAndBindWorldBook(any(), any(), any(), any()) }
+    }
 
-        val (vmPlain, _) = buildVm(joined = false, native = false)
-        assertFalse("普通角色", vmPlain.nativeOrigin.value)
+    @Test
+    fun `同屏响应式同步_世界开关翻转后joinedWorld立即跟随`() = runBlocking {
+        val h = buildHarness(joined = true)
+        assertTrue(h.vm.joinedWorld.value)
+        h.charFlow.value = h.charFlow.value?.copy(joinedWorld = false)
+        idle()
+        assertFalse(h.vm.joinedWorld.value)
     }
 }

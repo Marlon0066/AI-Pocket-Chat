@@ -20,11 +20,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -50,6 +45,8 @@ import com.situ.aichat.R
 import com.situ.aichat.ui.components.AppMotion
 import com.situ.aichat.ui.components.LocalAppHaptics
 import com.situ.aichat.ui.components.rememberReduceMotion
+import com.situ.aichat.ui.designsystem.AppActionIcons
+import com.situ.aichat.ui.designsystem.AppIconButton
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
@@ -125,12 +122,18 @@ internal fun OurDaysPeriodHeader(title: String, showToday: Boolean, onToday: () 
             )
             Spacer(Modifier.width(6.dp))
         }
-        IconButton(onClick = { onShift(-1) }) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = stringResource(R.string.our_days_a11y_prev), tint = colors.text.secondary)
-        }
-        IconButton(onClick = { onShift(1) }) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = stringResource(R.string.our_days_a11y_next), tint = colors.text.secondary)
-        }
+        AppIconButton(
+            icon = AppActionIcons.ChevronLeft,
+            contentDescription = stringResource(R.string.our_days_a11y_prev),
+            onClick = { onShift(-1) },
+            tint = colors.text.secondary,
+        )
+        AppIconButton(
+            icon = AppActionIcons.ChevronRight,
+            contentDescription = stringResource(R.string.our_days_a11y_next),
+            onClick = { onShift(1) },
+            tint = colors.text.secondary,
+        )
     }
 }
 

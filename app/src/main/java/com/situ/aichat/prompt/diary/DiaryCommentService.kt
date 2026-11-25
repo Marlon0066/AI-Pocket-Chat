@@ -48,6 +48,12 @@ class DiaryCommentService @Inject constructor(
     private val settingsRepo: SettingsRepository,
     private val backgroundScheduler: BackgroundScheduler,
 ) {
+    private var worldBookAmbient: com.situ.aichat.worldbook.WorldBookAmbientInjector? = null
+
+    @Inject
+    fun bindWorldBookAmbient(injector: com.situ.aichat.worldbook.WorldBookAmbientInjector) {
+        worldBookAmbient = injector
+    }
 
     /** 发布日记后调度延迟评论。delay = delayMinutes*60 + random(0..60)s（1:1 iOS）。 */
     fun scheduleComments(entryUuid: String, delayMinutes: Int) {
@@ -101,7 +107,8 @@ class DiaryCommentService @Inject constructor(
         val root = comments.firstOrNull { it.id == rootCommentId } ?: return
         val children = comments.filter { it.parentCommentId == rootCommentId }
         val strings = DiaryCommentPromptStrings.from(PromptStrings(context))
-        val userName = userProfileDao.get()?.nickname?.trim()?.takeIf { it.isNotEmpty() }
+        val profile = userProfileDao.get()
+        val userName = profile?.nickname?.trim()?.takeIf { it.isNotEmpty() }
             ?: context.getString(R.string.diary_user_fallback)
 
         // R6-1 交换日记留言：用户顶层留言 + 这封信有作者 → 作者回应。
@@ -110,6 +117,12 @@ class DiaryCommentService @Inject constructor(
             // 幂等：作者已回应过这条留言 → 不再生成（1 轮上限的服务端兜底）。
             if (children.any { !it.isFromUser }) return
             val author = characterDao.getByUuid(exchangeAuthorUuid) ?: return
+            val worldInfoSection = worldBookAmbient?.buildAmbientSection(
+                character = author,
+                userName = userName,
+                userBio = profile?.bio.orEmpty(),
+                contextText = "${entry.content}\n${root.content}",
+            )
             val system = DiaryCommentPromptBuilder.buildExchangeReply(
                 strings = strings,
                 characterName = author.name,
@@ -119,6 +132,7 @@ class DiaryCommentService @Inject constructor(
                 entryContent = entry.content,
                 userComment = root.content,
                 photoCount = entry.imagePaths.size,
+                worldInfoSection = worldInfoSection,
             )
             val content = completeComment(system, strings.replyUserMessage, author.name, config) ?: return
             diaryRepository.addComment(
@@ -137,6 +151,12 @@ class DiaryCommentService @Inject constructor(
         // 幂等：该用户回复之后角色已回应过 → 不再生成（1 轮上限的服务端兜底）。
         if (children.any { !it.isFromUser && it.timestamp > userReply.timestamp }) return
         val character = characterDao.getByUuid(characterUuid) ?: return
+        val worldInfoSection = worldBookAmbient?.buildAmbientSection(
+            character = character,
+            userName = userName,
+            userBio = profile?.bio.orEmpty(),
+            contextText = "${entry.content}\n${root.content}\n${userReply.content}",
+        )
 
         val system = DiaryCommentPromptBuilder.buildReply(
             strings = strings,
@@ -148,6 +168,7 @@ class DiaryCommentService @Inject constructor(
             rootComment = root.content,
             userReply = userReply.content,
             photoCount = entry.imagePaths.size,
+            worldInfoSection = worldInfoSection,
         )
         val content = completeComment(system, strings.replyUserMessage, character.name, config) ?: return
         diaryRepository.addComment(
@@ -213,9 +234,14 @@ class DiaryCommentService @Inject constructor(
         entryContent: String,
         userName: String,
         config: com.situ.aichat.data.remote.llm.ApiConfigValues,
-        /** 日记附图张数（§B8）：>0 时给角色一句「有 N 张照片但你看不到」，免得评论与照片脱节。 */
         photoCount: Int,
     ): String? {
+        val worldInfoSection = worldBookAmbient?.buildAmbientSection(
+            character = character,
+            userName = userName,
+            userBio = userProfileDao.get()?.bio.orEmpty(),
+            contextText = entryContent,
+        )
         val system = DiaryCommentPromptBuilder.build(
             strings = strings,
             characterName = character.name,
@@ -224,6 +250,7 @@ class DiaryCommentService @Inject constructor(
             userName = userName,
             entryContent = entryContent,
             photoCount = photoCount,
+            worldInfoSection = worldInfoSection,
         )
         return completeComment(system, strings.userMessage, character.name, config)
     }

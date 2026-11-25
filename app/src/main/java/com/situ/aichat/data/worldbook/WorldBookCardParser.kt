@@ -59,22 +59,29 @@ internal object WorldBookCardParser {
 
     private fun mapCardEntry(obj: JsonObject, bookUuid: String, index: Int): WorldBookEntryEntity {
         val ext = obj["extensions"] as? JsonObject ?: JsonObject(emptyMap())
+        val primaryKeys = obj.lenientKeywordList("keys") ?: obj.lenientKeywordList("key") ?: emptyList()
+        val secondaryKeys = obj.lenientKeywordList("secondary_keys")
+            ?: obj.lenientKeywordList("keysecondary")
+            ?: emptyList()
         return WorldBookEntryEntity(
             bookUuid = bookUuid,
-            uid = obj.lenientInt("id") ?: index,
-            displayIndex = ext.lenientInt("display_index") ?: index,
-            keysJson = encodeStringList(obj.lenientStringList("keys") ?: emptyList()),
-            secondaryKeysJson = encodeStringList(obj.lenientStringList("secondary_keys") ?: emptyList()),
-            comment = obj.lenientString("comment") ?: "",
+            uid = obj.lenientInt("id") ?: obj.lenientInt("uid") ?: index,
+            displayIndex = ext.lenientInt("display_index") ?: obj.lenientInt("displayIndex") ?: index,
+            keysJson = encodeStringList(primaryKeys),
+            secondaryKeysJson = encodeStringList(secondaryKeys),
+            comment = obj.lenientString("comment")?.takeIf { it.isNotEmpty() }
+                ?: obj.lenientString("name")
+                ?: "",
             content = obj.lenientString("content") ?: "",
             constant = obj.lenientBool("constant") ?: false,
-            // 卡格式默认 false（与酒馆导入一致），≠ 独立格式默认 true。
+            // 卡格式默认 false（与酒馆导入一致）；若无显式 selective 但携次要关键词且属混血导出，保留显式值优先。
             selective = obj.lenientBool("selective") ?: false,
-            vectorized = ext.lenientBool("vectorized") ?: false,
-            selectiveLogic = ext.lenientInt("selectiveLogic") ?: 0,
-            enabled = obj.lenientBool("enabled") ?: true,
-            insertionOrder = obj.lenientInt("insertion_order") ?: 100,
+            vectorized = ext.lenientBool("vectorized") ?: obj.lenientBool("vectorized") ?: false,
+            selectiveLogic = ext.lenientInt("selectiveLogic") ?: obj.lenientInt("selectiveLogic") ?: 0,
+            enabled = obj.lenientBool("enabled") ?: obj.lenientBool("disable")?.not() ?: true,
+            insertionOrder = obj.lenientInt("insertion_order") ?: obj.lenientInt("order") ?: 100,
             position = ext.lenientInt("position")
+                ?: obj.lenientInt("position")
                 ?: if (obj.lenientString("position") == "before_char") 0 else 1,
             depth = ext.lenientInt("depth") ?: 4,
             role = ext.lenientInt("role") ?: 0,

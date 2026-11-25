@@ -27,7 +27,6 @@ data class LiuliDiarySettingsCallbacks(
     val onSetAutoGenerate: (Boolean) -> Unit,
     val onOpenTimePicker: () -> Unit,
     val onSetAutoPublish: (Boolean) -> Unit,
-    val onSetPetAutoGenerate: (Boolean) -> Unit,
     val onSelectExchangePartner: (String) -> Unit,
     val onSetCommentEnabled: (Boolean) -> Unit,
     val onSetCommentDelay: (Int) -> Unit,
@@ -74,12 +73,6 @@ internal fun ColumnScope.liuliDiarySettingsGroups(
                 onCheckedChange = callbacks.onSetAutoPublish,
             )
         }
-        // 宠物日记自动生成（独立开关·不受用户日记开关门控）。
-        LiuliToggleRow(
-            title = stringResource(R.string.diary_settings_pet_autogen_label),
-            checked = state.petAutoGenerateEnabled,
-            onCheckedChange = callbacks.onSetPetAutoGenerate,
-        )
     }
 
     // R4 交换日记：笔友选择（空 = 自动「当天聊得最多」·O1 锁定「兼有」）。

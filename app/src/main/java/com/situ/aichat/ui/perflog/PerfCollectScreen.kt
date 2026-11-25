@@ -18,8 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +44,7 @@ import com.situ.aichat.diagnostics.perf.PerfChecklist
 import com.situ.aichat.ui.components.SettingsSection
 import com.situ.aichat.ui.components.SettingsSwitchRow
 import com.situ.aichat.ui.contextlog.LogShareActions
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppDialog
 import com.situ.aichat.ui.designsystem.AppDialogTone
 import com.situ.aichat.ui.designsystem.AppTheme
@@ -168,7 +167,7 @@ fun PerfCollectScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Icon(
-                    Icons.Filled.Lock,
+                    AppActionIcons.Lock,
                     contentDescription = null,
                     tint = AppTheme.colors.text.tertiary,
                     modifier = Modifier.width(18.dp),

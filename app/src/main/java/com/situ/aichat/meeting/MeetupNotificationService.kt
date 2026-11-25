@@ -7,10 +7,12 @@ import com.situ.aichat.data.local.dao.MeetingAppointmentDao
 import com.situ.aichat.data.local.entity.MeetingAppointmentEntity
 import com.situ.aichat.data.model.MeetingStatus
 import com.situ.aichat.data.repository.CharacterRepository
+import com.situ.aichat.data.repository.SettingsRepository
 import com.situ.aichat.notification.NotificationAlarmScheduler
 import com.situ.aichat.notification.NotificationPayload
 import com.situ.aichat.notification.Notifier
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -38,11 +40,17 @@ class MeetupNotificationService @Inject constructor(
     private val dao: MeetingAppointmentDao,
     private val characterRepository: CharacterRepository,
     private val alarmScheduler: NotificationAlarmScheduler,
+    private val settingsRepository: SettingsRepository,
 ) {
 
     /** 全量对账重排：最近 [MAX_MEETUP_NOTIFICATIONS] 条 confirmed-future 排到点闹钟，其余约定一律撤（幂等可反复调）。 */
     suspend fun rescheduleAll(now: Long = System.currentTimeMillis()) {
         val all = dao.getAllAppointments()
+        if (!settingsRepository.appSettings.first().notifMeetingReminderEnabled) {
+            Log.i(TAG, "约见面到点提醒已关闭·撤销全部 ${all.size} 条约定闹钟")
+            for (appt in all) alarmScheduler.cancel(requestKey(appt.uuid))
+            return
+        }
         val toSchedule = upcomingToSchedule(all, now).map { it.uuid }.toSet()
         Log.i(TAG, "约定通知全量对账·排 ${toSchedule.size} 条/共 ${all.size} 条")
         for (appt in all) {

@@ -19,10 +19,8 @@ import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bedtime
-import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Handshake
@@ -166,7 +164,7 @@ internal fun SharedMemoryCard(
                         contentPadding = PaddingValues(vertical = 4.dp),
                         modifier = Modifier.alpha(if (editInProgressBlocked) 0.45f else 1f),
                     ) {
-                        Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(13.dp))
+                        Icon(com.situ.aichat.ui.designsystem.AppActionIcons.Edit, contentDescription = null, modifier = Modifier.size(13.dp))
                         Spacer(Modifier.size(4.dp))
                         Text(
                             stringResource(R.string.profile_memory_edit_action),
@@ -332,7 +330,7 @@ private fun buildMemoryChips(stats: StructuredMemoryStats.Result, sm: Structured
     val cs = MaterialTheme.colorScheme
 
     stats.firstMeetDate?.let {
-        chips += MemoryChipData(Icons.Filled.CalendarMonth, stringResource(R.string.profile_memory_first_meet), fmt(it, memYmd), MemColor.Blue)
+        chips += MemoryChipData(com.situ.aichat.ui.designsystem.AppActionIcons.Calendar, stringResource(R.string.profile_memory_first_meet), fmt(it, memYmd), MemColor.Blue)
     }
     stats.busiestDay?.let {
         chips += MemoryChipData(

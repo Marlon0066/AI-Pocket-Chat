@@ -118,7 +118,9 @@ class AssistantTurnTrailingAssistantReasoningTest {
             promiseRepository = mockk(relaxed = true), promiseToolHandler = mockk(relaxed = true),
             ourDayRepository = mockk(relaxed = true) { coEvery { injectableForCharacter(any()) } returns emptyList() },
             meetingAppointmentStore = mockk(relaxed = true),
-            worldBookPromptService = mockk { coEvery { activateForTurn(any(), any(), any(), any(), any(), any(), any()) } answers { worldInfo } },
+            worldBookPromptService = mockk {
+                coEvery { activateForTurn(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } answers { worldInfo }
+            },
             worldChatContextProvider = mockk(relaxed = true),
             errorFlow = MutableStateFlow(null), infoToastFlow = MutableStateFlow(null), isDelivering = MutableStateFlow(false),
         )

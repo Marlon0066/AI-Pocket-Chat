@@ -35,6 +35,7 @@ import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.liuli.designsystem.LiuliButton
 import com.situ.aichat.ui.liuli.designsystem.LiuliButtonStyle
+import com.situ.aichat.ui.liuli.designsystem.LiuliDialog
 import com.situ.aichat.ui.liuli.designsystem.LiuliSheetShell
 import com.situ.aichat.ui.liuli.designsystem.LiuliTileTone
 import com.situ.aichat.ui.liuli.page.LiuliGroup
@@ -43,6 +44,7 @@ import com.situ.aichat.ui.liuli.page.LiuliPageGeometry
 import com.situ.aichat.ui.liuli.page.LiuliRadioRow
 import com.situ.aichat.ui.liuli.page.LiuliToggleRow
 import com.situ.aichat.ui.liuli.page.LiuliValueRow
+import com.situ.aichat.ui.worldbook.PendingWorldBookSwitch
 import com.situ.aichat.ui.worldbook.WorldBookBindingViewModel
 import kotlinx.coroutines.launch
 
@@ -50,8 +52,7 @@ import kotlinx.coroutines.launch
 private const val DISABLED_BOOK_ALPHA = 0.55f
 
 /**
- * 世界观组外壳（§4.11·仅编辑）：照暖陶 `WorldBookBindingSection` 自取 [WorldBookBindingViewModel]；进组刷新「是否已加入世界」，
- * 点入口前直读库守卫（同屏先开加入世界、状态陈旧时也挡住开弹层·复核 R1 🟡-2）。
+ * 世界观组外壳（§4.11·编辑态）：自取 [WorldBookBindingViewModel]；仅原住民锁死，已入世普通角色可点开选书弹层并一键确认离世切换。
  */
 @Composable
 internal fun LiuliWorldBookGroup(onManageBooks: () -> Unit, viewModel: WorldBookBindingViewModel = hiltViewModel()) {
@@ -69,11 +70,12 @@ internal fun LiuliWorldBookGroup(onManageBooks: () -> Unit, viewModel: WorldBook
         nativeOrigin = nativeOrigin,
         selectableBooks = selectableBooks,
         globalBooks = globalBooks,
-        sheetVisible = showSheet && !joinedWorld,
-        onOpen = { scope.launch { if (!viewModel.isJoinedWorldNow()) showSheet = true } },
+        sheetVisible = showSheet && !nativeOrigin,
+        onOpen = { scope.launch { if (!viewModel.isNativeOriginNow()) showSheet = true } },
         onDismissSheet = { showSheet = false },
         onSelectSole = viewModel::selectSole,
         onToggle = viewModel::toggle,
+        onSwitchLeaveAndBind = viewModel::switchLeaveAndBind,
         onManageBooks = {
             showSheet = false
             onManageBooks()
@@ -81,7 +83,42 @@ internal fun LiuliWorldBookGroup(onManageBooks: () -> Unit, viewModel: WorldBook
     )
 }
 
-/** 世界观组内容（无状态·可单测）：五态入口行 + 选择弹层（单选主脸 / 叠加多本）。 */
+/** 新建角色页世界观组（4A·琉璃脸）：尚未落库，选书自动关加入世界，无需确认弹窗。 */
+@Composable
+internal fun LiuliWorldBookCreateGroup(
+    selectedBookUuids: List<String>,
+    joinedWorld: Boolean,
+    onSelectSole: (String?) -> Unit,
+    onToggle: (String, Boolean) -> Unit,
+    onManageBooks: () -> Unit,
+    viewModel: WorldBookBindingViewModel = hiltViewModel(),
+) {
+    val selectableBooks by viewModel.selectableBooks.collectAsStateWithLifecycle()
+    val globalBooks by viewModel.globalBooks.collectAsStateWithLifecycle()
+    val boundBooks = remember(selectedBookUuids, selectableBooks) {
+        selectedBookUuids.mapNotNull { id -> selectableBooks.firstOrNull { it.book.uuid == id } }
+    }
+    var showSheet by remember { mutableStateOf(false) }
+    LiuliWorldBookGroupContent(
+        boundBooks = boundBooks,
+        joinedWorld = joinedWorld && boundBooks.isEmpty(),
+        nativeOrigin = false,
+        selectableBooks = selectableBooks,
+        globalBooks = globalBooks,
+        sheetVisible = showSheet,
+        onOpen = { showSheet = true },
+        onDismissSheet = { showSheet = false },
+        onSelectSole = onSelectSole,
+        onToggle = onToggle,
+        isCreateMode = true,
+        onManageBooks = {
+            showSheet = false
+            onManageBooks()
+        },
+    )
+}
+
+/** 世界观组内容（无状态·可单测）：仅原住民锁死；在世界里也可开选书弹层并经确认后离世换书。 */
 @Composable
 internal fun LiuliWorldBookGroupContent(
     boundBooks: List<WorldBookSummary>,
@@ -95,13 +132,17 @@ internal fun LiuliWorldBookGroupContent(
     onSelectSole: (String?) -> Unit,
     onToggle: (String, Boolean) -> Unit,
     onManageBooks: () -> Unit,
+    onSwitchLeaveAndBind: (String, Boolean) -> Unit = { bookUuid, sole ->
+        if (sole) onSelectSole(bookUuid) else onToggle(bookUuid, true)
+    },
+    isCreateMode: Boolean = false,
 ) {
+    var pendingSwitch by remember { mutableStateOf<PendingWorldBookSwitch?>(null) }
+
     LiuliGroup(header = stringResource(R.string.wb_binding_section), footer = stringResource(R.string.wb_binding_footer)) {
         when (val card = worldBookCardState(nativeOrigin = nativeOrigin, joinedWorld = joinedWorld, bound = boundBooks)) {
-            WorldBookCardState.NativeLocked, WorldBookCardState.WorldLocked -> LiuliValueRow(
-                title = stringResource(
-                    if (card == WorldBookCardState.NativeLocked) R.string.wb_binding_native_locked else R.string.wb_binding_world_locked,
-                ),
+            WorldBookCardState.NativeLocked -> LiuliValueRow(
+                title = stringResource(R.string.wb_binding_native_locked),
                 value = "",
                 icon = AppFeatureIcons.Worldbook,
                 tileColor = LiuliTileTone.Lilac,
@@ -110,6 +151,7 @@ internal fun LiuliWorldBookGroupContent(
             )
             else -> LiuliNavRow(
                 title = when (card) {
+                    WorldBookCardState.WorldLocked -> stringResource(R.string.wb_binding_world_locked)
                     is WorldBookCardState.Single -> card.name
                     is WorldBookCardState.Multi -> stringResource(R.string.wb_binding_multi, card.firstName, card.extra)
                     else -> stringResource(R.string.wb_binding_none)
@@ -117,13 +159,60 @@ internal fun LiuliWorldBookGroupContent(
                 onClick = onOpen,
                 icon = AppFeatureIcons.Worldbook,
                 tileColor = LiuliTileTone.Lilac,
-                subtitle = (card as? WorldBookCardState.Single)?.let { stringResource(R.string.wb_book_meta_unbound, it.entryCount) },
+                subtitle = when (card) {
+                    is WorldBookCardState.Single -> {
+                        val meta = stringResource(R.string.wb_book_meta_unbound, card.entryCount)
+                        if (isCreateMode) "$meta · ${stringResource(R.string.wb_binding_create_sub_selected)}" else meta
+                    }
+                    is WorldBookCardState.Multi -> if (isCreateMode) stringResource(R.string.wb_binding_create_sub_selected) else null
+                    else -> null
+                },
                 divider = false,
             )
         }
     }
+
     if (sheetVisible) {
-        LiuliWorldBookSheet(boundBooks, selectableBooks, globalBooks, onDismissSheet, onSelectSole, onToggle, onManageBooks)
+        LiuliWorldBookSheet(
+            boundBooks = boundBooks,
+            selectableBooks = selectableBooks,
+            globalBooks = globalBooks,
+            onDismiss = onDismissSheet,
+            onSelectSole = { bookUuid ->
+                if (!isCreateMode && bookUuid != null && joinedWorld) {
+                    val bookName = selectableBooks.firstOrNull { it.book.uuid == bookUuid }?.book?.name.orEmpty()
+                    pendingSwitch = PendingWorldBookSwitch(bookUuid = bookUuid, bookName = bookName, sole = true)
+                } else {
+                    onSelectSole(bookUuid)
+                    onDismissSheet()
+                }
+            },
+            onToggle = { bookUuid, bound ->
+                if (!isCreateMode && bound && joinedWorld) {
+                    val bookName = selectableBooks.firstOrNull { it.book.uuid == bookUuid }?.book?.name.orEmpty()
+                    pendingSwitch = PendingWorldBookSwitch(bookUuid = bookUuid, bookName = bookName, sole = false)
+                } else {
+                    onToggle(bookUuid, bound)
+                }
+            },
+            onManageBooks = onManageBooks,
+        )
+    }
+
+    pendingSwitch?.let { target ->
+        LiuliDialog(
+            onDismissRequest = { pendingSwitch = null },
+            title = stringResource(R.string.wb_binding_switch_leave_title),
+            body = stringResource(R.string.wb_binding_switch_leave_body, target.bookName),
+            confirmText = stringResource(R.string.wb_binding_switch_leave_confirm),
+            onConfirm = {
+                onSwitchLeaveAndBind(target.bookUuid, target.sole)
+                if (target.sole) onDismissSheet()
+                pendingSwitch = null
+            },
+            dismissText = stringResource(R.string.action_cancel),
+            onDismiss = { pendingSwitch = null },
+        )
     }
 }
 
@@ -146,16 +235,11 @@ private fun LiuliWorldBookSheet(
     LiuliSheetShell(onDismissRequest = onDismiss, title = stringResource(R.string.wb_binding_sheet_title)) {
         Column(Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
             LiuliGroup(Modifier.padding(horizontal = LiuliPageGeometry.gutter)) {
-                // 卷五 §11 D-5（复核 R1 核准）：§4.11 用 LiuliRadioRow 做单选；它默认「点已选中项不回调」，暖陶点已选中项照样
-                // selectSole + 关弹层 → 传 notifyWhenSelected = true 保持暖陶行为（§11 D-5）。
                 if (!effectiveMulti) {
                     LiuliRadioRow(
                         title = stringResource(R.string.wb_binding_not_use),
                         selected = boundUuids.isEmpty(),
-                        onSelect = {
-                            onSelectSole(null)
-                            onDismiss()
-                        },
+                        onSelect = { onSelectSole(null) },
                         divider = false,
                         notifyWhenSelected = true,
                     )
@@ -179,10 +263,7 @@ private fun LiuliWorldBookSheet(
                         LiuliRadioRow(
                             title = summary.book.name,
                             selected = bound,
-                            onSelect = {
-                                onSelectSole(summary.book.uuid)
-                                onDismiss()
-                            },
+                            onSelect = { onSelectSole(summary.book.uuid) },
                             modifier = rowModifier,
                             subtitle = subtitle,
                             notifyWhenSelected = true,

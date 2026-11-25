@@ -22,7 +22,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,6 +43,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
 import com.situ.aichat.ui.components.contentMaxWidth
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.liuli.designsystem.LiuliButton
@@ -172,15 +172,17 @@ internal fun LiuliCalendarAwarenessContent(
                             onCheckedChange = onSetIntegrationEnabled,
                             divider = false,
                         )
-                        // 「操作确认」只在集成开启时出现（逐字照暖陶 :134）——这里用 `if` 包行不用
-                        // AnimatedVisibility：隐着的 AnimatedVisibility 是 0 高节点，会在组里留一条孤发丝。
-                        if (integrationEnabled) {
-                            LiuliToggleRow(
-                                title = stringResource(R.string.cal_action_confirm_label),
-                                checked = actionConfirmation,
-                                onCheckedChange = onSetActionConfirmation,
-                            )
-                        }
+                        LiuliToggleRow(
+                            title = stringResource(R.string.cal_action_confirm_label),
+                            checked = integrationEnabled && actionConfirmation,
+                            enabled = integrationEnabled,
+                            disabledReason = if (!integrationEnabled) {
+                                stringResource(R.string.settings_cal_disabled_reason)
+                            } else {
+                                null
+                            },
+                            onCheckedChange = onSetActionConfirmation,
+                        )
                     }
 
                     // 仅在集成开启时展示运行时授权 UI + 隐私提示（关闭时无需授权·逐字照暖陶 :144）。
@@ -206,7 +208,7 @@ internal fun LiuliCalendarAwarenessContent(
                                         )
                                         val statusColor = if (granted) colors.status.onSuccess else colors.status.onError
                                         Icon(
-                                            imageVector = if (granted) Icons.Filled.CheckCircle else Icons.Filled.Warning,
+                                            imageVector = if (granted) Icons.Filled.CheckCircle else AppActionIcons.Warning,
                                             contentDescription = null,
                                             tint = statusColor,
                                             modifier = Modifier.size(STATUS_ICON),

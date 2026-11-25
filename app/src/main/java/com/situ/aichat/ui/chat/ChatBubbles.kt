@@ -24,10 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.animation.core.snap
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -61,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.clickable
 import com.situ.aichat.ui.components.AppMotion
 import com.situ.aichat.ui.components.rememberReduceMotion
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppShapes
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
@@ -104,7 +102,7 @@ internal fun BubbleInlineTimestamp(timestampMs: Long, isUser: Boolean, read: Boo
             Crossfade(targetState = read, label = "receipt") { isRead ->
                 if (isRead) {
                     Icon(
-                        Icons.Filled.DoneAll,
+                        AppActionIcons.DoneAll,
                         contentDescription = stringResource(R.string.a11y_message_read),
                         tint = tone?.color ?: colors.accent.text,
                         modifier = Modifier.size(14.dp),
@@ -118,7 +116,7 @@ internal fun BubbleInlineTimestamp(timestampMs: Long, isUser: Boolean, read: Boo
                     }
                     if (revealed) {
                         Icon(
-                            Icons.Filled.Check,
+                            AppActionIcons.Check,
                             contentDescription = stringResource(R.string.a11y_message_delivered),
                             tint = tone?.color ?: colors.text.secondary,
                             modifier = Modifier.size(14.dp),

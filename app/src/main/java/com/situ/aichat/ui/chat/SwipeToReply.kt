@@ -9,9 +9,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material3.Icon
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -79,7 +78,7 @@ fun SwipeToReplyBox(
         )
         if (offsetX.value > revealPx) {
             Icon(
-                Icons.AutoMirrored.Filled.Reply,
+                AppActionIcons.Reply,
                 contentDescription = null,
                 tint = if (offsetX.value >= thresholdPx) AppTheme.colors.accent.primary else AppTheme.colors.text.tertiary,
                 modifier = Modifier

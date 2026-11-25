@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,6 +35,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.situ.aichat.R
 import com.situ.aichat.ui.components.clickableScale
+import com.situ.aichat.ui.designsystem.AppActionIcons
 import com.situ.aichat.ui.designsystem.AppTheme
 import com.situ.aichat.ui.designsystem.AppTypography
 import com.situ.aichat.ui.designsystem.appCardSurface
@@ -66,7 +65,7 @@ fun OurDaysStrip(onClick: () -> Unit, viewModel: OurDaysStripViewModel = hiltVie
             Spacer(Modifier.width(8.dp))
             Text(subText, style = AppTypography.secondary.copy(fontSize = 12.sp), color = colors.text.secondary)
             Spacer(Modifier.weight(1f))
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = colors.text.tertiary)
+            Icon(AppActionIcons.ChevronRight, contentDescription = null, tint = colors.text.tertiary)
         }
         Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             state.week.forEach { cell -> StripCell(cell, Modifier.weight(1f)) }
